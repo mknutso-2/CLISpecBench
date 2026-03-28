@@ -11,4 +11,7 @@
   }
   Keys in "active_modal_codes" must be RS274 modal group numbers encoded as JSON strings
   (for example: {"1": "G1", "3": "G90"}).
+  "active_modal_codes" must track the currently active G-code for each active G-code modal group.
+  If a later block emits another code from the same modal group, it replaces the earlier value for
+  that group.
 - Exit 0 on success, 1 for invalid input, 2 for internal errors

@@ -63,6 +63,8 @@ Technical note (required for compatibility with the test system):
     "active_modal_codes": {"<group_number>": string, ...},
     "error": string | null
   }
+  Keys in "active_modal_codes" are modal group numbers encoded as JSON strings, and each value is
+  the currently active G-code for that modal group.
 - Exit 0 on success, 1 for invalid input, 2 for internal errors
 ---
 
