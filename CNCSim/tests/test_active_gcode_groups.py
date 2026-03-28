@@ -85,6 +85,10 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
     ),
 ]
 
+
+# See CNCSim/prompt/docs/RS274NGC.md section 3.4 "Modal Groups" and Table 4:
+# only one member of a modal group may be in force at a time, so the last
+# emitted G-code from a group should be the active one reported in the output.
 @pytest.mark.parametrize(
     ("input_gcode", "group_number", "expected_active_gcode"),
     ACTIVE_GCODE_GROUP_CASES,
