@@ -20,75 +20,84 @@ from swe_buildbench.cncsim.modal_groups import (
     GCODE_MODAL_GROUP_UNITS,
 )
 
+ActiveGcodeGroupCase = tuple[str, str, str]
 
-def _active_gcode_group_case(input_gcode: str, expected_active_modal_codes: dict[str, str]) -> Any:
-    group_number, active_gcode = next(iter(expected_active_modal_codes.items()))
-    return pytest.param(
-        input_gcode,
-        expected_active_modal_codes,
-        id=f"group-{group_number}-{active_gcode.lower()}",
-    )
-
+ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
+    (
+        "G0 X0\n"
+        "G1 X0\n",
+        GCODE_MODAL_GROUP_MOTION,
+        "G1",
+    ),
+    (
+        "G17\n"
+        "G18\n",
+        GCODE_MODAL_GROUP_PLANE_SELECTION,
+        "G18",
+    ),
+    (
+        "G90\n"
+        "G91\n",
+        GCODE_MODAL_GROUP_DISTANCE_MODE,
+        "G91",
+    ),
+    (
+        "G94\n"
+        "G93\n",
+        GCODE_MODAL_GROUP_FEED_RATE_MODE,
+        "G93",
+    ),
+    (
+        "G20\n"
+        "G21\n",
+        GCODE_MODAL_GROUP_UNITS,
+        "G21",
+    ),
+    (
+        "G40\n"
+        "G41\n",
+        GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION,
+        "G41",
+    ),
+    (
+        "G49\n"
+        "G43 H0\n",
+        GCODE_MODAL_GROUP_TOOL_LENGTH_OFFSET,
+        "G43",
+    ),
+    (
+        "G98\n"
+        "G99\n",
+        GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
+        "G99",
+    ),
+    (
+        "G54\n"
+        "G55\n",
+        GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
+        "G55",
+    ),
+    (
+        "G61\n"
+        "G64\n",
+        GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
+        "G64",
+    ),
+]
 
 @pytest.mark.parametrize(
-    ("input_gcode", "expected_active_modal_codes"),
-    [
-        _active_gcode_group_case(
-            "G0 X0\n"
-            "G1 X0\n",
-            {GCODE_MODAL_GROUP_MOTION: "G1"},
-        ),
-        _active_gcode_group_case(
-            "G17\n"
-            "G18\n",
-            {GCODE_MODAL_GROUP_PLANE_SELECTION: "G18"},
-        ),
-        _active_gcode_group_case(
-            "G90\n"
-            "G91\n",
-            {GCODE_MODAL_GROUP_DISTANCE_MODE: "G91"},
-        ),
-        _active_gcode_group_case(
-            "G94\n"
-            "G93\n",
-            {GCODE_MODAL_GROUP_FEED_RATE_MODE: "G93"},
-        ),
-        _active_gcode_group_case(
-            "G20\n"
-            "G21\n",
-            {GCODE_MODAL_GROUP_UNITS: "G21"},
-        ),
-        _active_gcode_group_case(
-            "G40\n"
-            "G41\n",
-            {GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION: "G41"},
-        ),
-        _active_gcode_group_case(
-            "G49\n"
-            "G43 H0\n",
-            {GCODE_MODAL_GROUP_TOOL_LENGTH_OFFSET: "G43"},
-        ),
-        _active_gcode_group_case(
-            "G98\n"
-            "G99\n",
-            {GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES: "G99"},
-        ),
-        _active_gcode_group_case(
-            "G54\n"
-            "G55\n",
-            {GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION: "G55"},
-        ),
-        _active_gcode_group_case(
-            "G61\n"
-            "G64\n",
-            {GCODE_MODAL_GROUP_PATH_CONTROL_MODE: "G64"},
-        ),
+    ("input_gcode", "group_number", "expected_active_gcode"),
+    ACTIVE_GCODE_GROUP_CASES,
+    ids=[
+        f"group-{group_number}-{expected_active_gcode.lower()}"
+        for _, group_number, expected_active_gcode in ACTIVE_GCODE_GROUP_CASES
     ],
 )
 def test_application_tracks_active_gcode_groups(
     built_executable_path: Path,
     input_gcode: str,
-    expected_active_modal_codes: dict[str, str],
+    group_number: str,
+    expected_active_gcode: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = _run_cncsim(
@@ -99,9 +108,7 @@ def test_application_tracks_active_gcode_groups(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-
-    for group_number, active_gcode in expected_active_modal_codes.items():
-        assert payload["active_modal_codes"][group_number] == active_gcode
+    assert payload["active_modal_codes"][group_number] == expected_active_gcode
 
 
 def _run_cncsim(
