@@ -39,6 +39,38 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G1 X-0.5 Y1.5 Z2.0\n",
         {"x": 10.5, "y": 23.5, "z": 35.0},
     ),
+    (
+        "g2-updates-arc-endpoint",
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G2 X0.0 Y-1.0 Z4.0 I-1.0 J0.0\n",
+        {"x": 0.0, "y": -1.0, "z": 4.0},
+    ),
+    (
+        "g3-updates-arc-endpoint",
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G3 X0.0 Y1.0 Z6.0 I-1.0 J0.0\n",
+        {"x": 0.0, "y": 1.0, "z": 6.0},
+    ),
+    (
+        "g2-radius-format-updates-arc-endpoint",
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G2 X0.0 Y-1.0 Z4.0 R1.0\n",
+        {"x": 0.0, "y": -1.0, "z": 4.0},
+    ),
+    (
+        "g3-radius-format-updates-arc-endpoint",
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G3 X0.0 Y1.0 Z6.0 R1.0\n",
+        {"x": 0.0, "y": 1.0, "z": 6.0},
+    ),
 ]
 
 POSITION_TRACKING_PARAMS = [
@@ -51,9 +83,10 @@ POSITION_TRACKING_PARAMS = [
 # the controller always has a current position, but this section does not assign
 # a fixed startup X/Y/Z location. The incremental cases therefore establish a
 # known position first before asserting relative motion.
-# See sections 3.5.1 and 3.5.2 for linear motion with axis words, and section
-# 3.5.17 for how G90/G91 control whether X/Y/Z values are interpreted as
-# absolute positions or incremental offsets.
+# See sections 3.5.1 and 3.5.2 for linear motion with axis words, section
+# 3.5.3 for G2/G3 arc endpoint programming, section 3.5.3.1 for radius-format
+# arcs, and section 3.5.17 for how G90/G91 control whether X/Y/Z values are
+# interpreted as absolute positions or incremental offsets.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_final_position"),
     POSITION_TRACKING_PARAMS,

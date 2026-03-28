@@ -146,6 +146,10 @@ ParsedLine parse_line(std::string_view raw_line) {
         switch (letter) {
             case 'D':
             case 'H':
+            case 'I':
+            case 'J':
+            case 'K':
+            case 'R':
                 static_cast<void>(parse_numeric_suffix(word));
                 break;
             case 'F':
