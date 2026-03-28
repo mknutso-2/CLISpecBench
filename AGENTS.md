@@ -12,3 +12,4 @@ Contents:
 Agent workflow note:
 - `.vscode/settings.json` save actions are only applied by VS Code during editor saves. They are not automatically applied to files created or modified by AI agents via patches, shell commands, scripts, or other direct filesystem writes.
 - When editing Python files, run Ruff explicitly as needed instead of assuming editor integrations will format code, fix lint issues, or organize imports.
+- For Python packages, keep `__init__.py` minimal. Do not re-export module-level constants, helpers, or other names from the package root unless they are intentionally part of a stable public API. Prefer importing from the defining module directly.

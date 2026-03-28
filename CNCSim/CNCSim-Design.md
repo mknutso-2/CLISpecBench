@@ -60,7 +60,7 @@ Technical note (required for compatibility with the test system):
     "feed_rate": float,
     "spindle_speed": float,
     "spindle_direction": "CW" | "CCW" | "OFF",
-    "active_modal_codes": {"motion": string, "coordinate_mode": string},
+    "active_modal_codes": {"<group_number>": string, ...},
     "error": string | null
   }
 - Exit 0 on success, 1 for invalid input, 2 for internal errors

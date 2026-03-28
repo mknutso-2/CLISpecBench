@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 from typing import cast
 
@@ -80,4 +81,48 @@ def build_result(
         implementation_target,
         build_dir=build_dir,
         timeout_seconds=build_timeout_seconds,
+    )
+
+
+@pytest.fixture(scope="session")
+def built_executable_path(build_result: CMakeBuildResult) -> Path:
+    candidates = [
+        path
+        for path in build_result.build_dir.rglob("*")
+        if _is_executable_candidate(path, build_result.build_dir)
+    ]
+    if not candidates:
+        raise AssertionError(f"Could not find a built executable under {build_result.build_dir}")
+
+    return min(candidates, key=lambda path: _executable_sort_key(path, build_result.build_dir))
+
+
+def _is_executable_candidate(path: Path, build_dir: Path) -> bool:
+    if not path.is_file():
+        return False
+
+    relative_parts = {part.lower() for part in path.relative_to(build_dir).parts}
+    if {"cmakefiles", "testing", "_deps"} & relative_parts:
+        return False
+
+    lower_name = path.name.lower()
+    if lower_name.startswith(("cmtc_", "compilerid")):
+        return False
+
+    if sys.platform == "win32":
+        return path.suffix.lower() == ".exe"
+
+    if not os.access(path, os.X_OK):
+        return False
+
+    return path.suffix.lower() not in {".a", ".dylib", ".o", ".obj", ".so"}
+
+
+def _executable_sort_key(path: Path, build_dir: Path) -> tuple[int, int, float, str]:
+    relative_path = path.relative_to(build_dir)
+    return (
+        0 if "cncsim" in path.name.lower() else 1,
+        len(relative_path.parts),
+        -path.stat().st_mtime,
+        str(relative_path),
     )
