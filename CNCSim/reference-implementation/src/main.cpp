@@ -51,6 +51,7 @@ constexpr int kMinParameterIndex = 1;
 constexpr int kMaxParameterIndex = 5399;
 constexpr int kParameterCount = kMaxParameterIndex + 1;
 constexpr int kSelectedCoordinateSystemParameter = 5220;
+constexpr double kNearIntegerTolerance = 0.0001;
 
 std::map<std::string, Position> make_default_coordinate_system_offsets() {
     return {
@@ -142,6 +143,9 @@ double parse_unary_operation_value(std::string_view text, std::size_t& position,
 int parse_parameter_index(std::string_view text, std::size_t& position, const MachineState& state);
 int require_parameter_index(double value);
 int require_non_negative_integer(double value, std::string_view word);
+bool is_close_to_integer(double value);
+int round_if_close_to_integer(double value, std::string_view error_message);
+int round_g_code_tenths_if_close(double value);
 void parse_segment(std::string_view text, std::size_t& position, const MachineState& state, ParsedLine& parsed_line);
 void parse_parameter_setting(
     std::string_view text,
@@ -191,7 +195,6 @@ void register_modal_m_code(
     std::string_view group_number,
     std::string_view active_mcode
 );
-bool code_value_matches(double actual, double expected);
 std::string coordinate_system_number_for_g_code(std::string_view active_gcode);
 std::string active_g_code_for_coordinate_system_number(int system_number);
 int parameter_index_for_coordinate_system_axis(int system_number, int axis_index);
@@ -302,12 +305,35 @@ double parse_numeric_literal(std::string_view text, std::size_t& position) {
     }
 }
 
+bool is_close_to_integer(double value) {
+    return std::abs(value - std::round(value)) <= kNearIntegerTolerance;
+}
+
+int round_if_close_to_integer(double value, std::string_view error_message) {
+    if (!is_close_to_integer(value)) {
+        throw InputError(std::string(error_message));
+    }
+
+    return static_cast<int>(std::llround(value));
+}
+
+int round_g_code_tenths_if_close(double value) {
+    const double scaled_value = value * 10.0;
+    if (!is_close_to_integer(scaled_value)) {
+        throw InputError("Unsupported G code value");
+    }
+
+    return static_cast<int>(std::llround(scaled_value));
+}
+
 int require_parameter_index(double value) {
-    if (std::floor(value) != value || value < kMinParameterIndex || value > kMaxParameterIndex) {
+    const int parameter_index =
+        round_if_close_to_integer(value, "Parameter index must be an integer from 1 to 5399");
+    if (parameter_index < kMinParameterIndex || parameter_index > kMaxParameterIndex) {
         throw InputError("Parameter index must be an integer from 1 to 5399");
     }
 
-    return static_cast<int>(value);
+    return parameter_index;
 }
 
 bool matches_case_insensitive_keyword(
@@ -606,11 +632,15 @@ double parse_real_value(std::string_view text, std::size_t& position, const Mach
 }
 
 int require_non_negative_integer(double value, std::string_view word) {
-    if (std::floor(value) != value || value < 0.0) {
+    const int integer_value = round_if_close_to_integer(
+        value,
+        "Expected non-negative integer value for word: " + std::string(word)
+    );
+    if (integer_value < 0) {
         throw InputError("Expected non-negative integer value for word: " + std::string(word));
     }
 
-    return static_cast<int>(value);
+    return integer_value;
 }
 
 void parse_parameter_setting(
@@ -1099,10 +1129,6 @@ void apply_coordinate_system_axis_value(std::optional<double> value, double& axi
     axis = *value;
 }
 
-bool code_value_matches(double actual, double expected) {
-    return std::abs(actual - expected) < 1e-9;
-}
-
 std::string active_g_code_for_coordinate_system_number(int system_number) {
     switch (system_number) {
         case 1:
@@ -1187,39 +1213,40 @@ void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) 
 }
 
 void apply_g_code_value(double value, ParsedLine& parsed_line) {
-    if (code_value_matches(value, 38.2)) {
+    const int g_code_tenths = round_g_code_tenths_if_close(value);
+
+    if (g_code_tenths == 382) {
         apply_g_code_word("G38.2", parsed_line);
         return;
     }
-    if (code_value_matches(value, 59.1)) {
+    if (g_code_tenths == 591) {
         apply_g_code_word("G59.1", parsed_line);
         return;
     }
-    if (code_value_matches(value, 59.2)) {
+    if (g_code_tenths == 592) {
         apply_g_code_word("G59.2", parsed_line);
         return;
     }
-    if (code_value_matches(value, 59.3)) {
+    if (g_code_tenths == 593) {
         apply_g_code_word("G59.3", parsed_line);
         return;
     }
-    if (code_value_matches(value, 61.1)) {
+    if (g_code_tenths == 611) {
         apply_g_code_word("G61.1", parsed_line);
         return;
     }
-    if (std::floor(value) != value) {
+    if (g_code_tenths % 10 != 0) {
         throw InputError("Unsupported G code value");
     }
 
-    apply_g_code_word("G" + std::to_string(static_cast<int>(value)), parsed_line);
+    apply_g_code_word("G" + std::to_string(g_code_tenths / 10), parsed_line);
 }
 
 void apply_m_code_value(double value, ParsedLine& parsed_line) {
-    if (std::floor(value) != value) {
-        throw InputError("Unsupported M code value");
-    }
-
-    apply_m_code_word("M" + std::to_string(static_cast<int>(value)), parsed_line);
+    apply_m_code_word(
+        "M" + std::to_string(round_if_close_to_integer(value, "Unsupported M code value")),
+        parsed_line
+    );
 }
 
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {

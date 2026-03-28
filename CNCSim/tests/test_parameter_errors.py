@@ -41,6 +41,42 @@ PARAMETER_ERROR_CASES: list[ParameterErrorCase] = [
         "G0 X#0\n",
     ),
     # RS274 section 3.3.2.2 "Parameter Value":
+    # the parameter index in a read must evaluate to an integer in 1..5399.
+    (
+        "parameter-read-index-too-high",
+        "G0 X#5400\n",
+    ),
+    # RS274 section 3.3.2.2 "Parameter Value":
+    # the parameter index in a read must evaluate to an integer in 1..5399.
+    (
+        "parameter-read-index-non-integer",
+        "G0 X#1.5\n",
+    ),
+    # RS274 section 3.3.2.3 "Expressions and Binary Operations":
+    # an expression must end with a balancing right bracket.
+    (
+        "expression-missing-closing-bracket",
+        "G0 X[1+2\n",
+    ),
+    # RS274 section 3.3.2.3 "Expressions and Binary Operations":
+    # binary operations appear only inside expressions.
+    (
+        "binary-operation-outside-expression",
+        "G0 X1+2\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # ATAN requires one expression divided by another expression.
+    (
+        "atan-missing-second-expression",
+        "G0 XATAN[1]\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # unary operation names other than ATAN must be followed by an expression.
+    (
+        "unary-operation-missing-expression",
+        "G0 XSIN30\n",
+    ),
+    # RS274 section 3.3.2.2 "Parameter Value":
     # repeated # indirection is allowed, but the resulting index must still
     # evaluate to an integer in 1..5399.
     (
@@ -50,6 +86,25 @@ PARAMETER_ERROR_CASES: list[ParameterErrorCase] = [
         "G54\n"
         "G90\n"
         "G0 X##1\n",
+    ),
+    # RS274 section 3.3.2.1 "Number":
+    # indexes are only considered close enough if within 0.0001 of an integer.
+    (
+        "parameter-setting-index-not-close-enough-to-integer",
+        "#1.0002=1\n",
+    ),
+    # RS274 section 3.3.2.1 "Number":
+    # G codes multiplied by ten are only considered close enough if within
+    # 0.0001 of an integer.
+    (
+        "g-code-not-close-enough-to-supported-value",
+        "G53.99998\n",
+    ),
+    # RS274 section 3.3.2.1 "Number":
+    # M codes are only considered close enough if within 0.0001 of an integer.
+    (
+        "m-code-not-close-enough-to-integer",
+        "M2.9998\n",
     ),
 ]
 
