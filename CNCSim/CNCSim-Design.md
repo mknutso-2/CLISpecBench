@@ -38,43 +38,13 @@ The primary metric for CNCSim-Full is not raw pass rate but **feature coverage**
 ## 3. Prompt Template
 
 ```
-I work with CNC machines and I need software that can simulate the execution of G-code
-programs — the language CNC machines use to describe tool paths and machining operations.
-
-The complete specification for the G-code language I use is in the docs/ directory.
-Please read it and build a simulator that correctly executes G-code programs according
-to that specification.
-
-The simulator should be a command-line program. When I run it, I want to give it a
-G-code file and get back a description of the machine's final state after the program
-runs — where the tool ended up, what the feed rate was, spindle status, and so on.
+See [prompts/base-prompts.md](../prompts/base-prompts.md) for the base prompt template.
 
 ---
 Technical note (required for compatibility with the test system):
 
-- Please implement this in C++20, buildable with: cmake -B build && cmake --build build
-- The program must accept: --input <gcode_file> --output <result_file>
-- The output file must be JSON in this format:
-  {
-    "final_position": {"x": float, "y": float, "z": float},
-    "feed_rate": float,
-    "spindle_speed": float,
-    "spindle_direction": "CW" | "CCW" | "OFF",
-    "active_modal_g_codes": {"<group_number>": string, ...},
-    "active_modal_m_codes": {"<group_number>": string, ...},
-    "coordinate_system_offsets": {
-      "<system_number>": {"x": float, "y": float, "z": float},
-      ...
-    },
-    "error": string | null
-  }
-  Keys in "active_modal_g_codes" and "active_modal_m_codes" are modal group numbers encoded as
-  JSON strings, and each value is the currently active G-code or M-code for that modal group.
-  Keys in "coordinate_system_offsets" are program coordinate system numbers 1 through 9 encoded
-  as JSON strings. Each value is the stored X/Y/Z origin for that coordinate system in absolute
-  coordinates. At program start, all nine coordinate system offsets are zero, and G10 L2 Pn
-  updates only the axes explicitly present on that block.
-- Exit 0 on success, 1 for invalid input, 2 for internal errors
+See [prompts/technical-requirements-prompt.md](../prompts/technical-requirements-prompt.md)
+
 ---
 
 The specification document is in docs/. Everything else is up to you.
@@ -90,9 +60,9 @@ Test cases are stored as JSONL in the private repository. Each record:
   "category": "arc_motion",
   "difficulty": "hard",
   "tags": ["G2", "IJ_form", "endpoint_tolerance", "adversarial"],
-  "input_gcode": "G17 G90\nG0 X0 Y0\nG2 X1.0 Y0 I0.5 J0 F100\nM2\n",
+  "input_gcode": "G10 L2 P1 X0 Y0 Z0\nG54\nG17 G90\nG0 X0 Y0\nG2 X1.0 Y0 I0.5 J0 F100\nM2\n",
   "expected_output": {
-    "final_position": {"x": 1.0, "y": 0.0, "z": 0.0},
+    "machine_position": {"x": 1.0, "y": 0.0, "z": 0.0},
     "feed_rate": 100.0,
     "spindle_direction": "OFF"
   },

@@ -54,11 +54,12 @@ struct MachineState {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
-    Position position{};
+    Position machine_position{};
     double feed_rate = 0.0;
     double spindle_speed = 0.0;
     SpindleDirection spindle_direction = SpindleDirection::kOff;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
+    std::string selected_coordinate_system = "1";
 };
 
 struct ProgramOptions {
@@ -91,7 +92,12 @@ ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(const std::string& input_path);
 ParsedLine parse_line(std::string_view raw_line);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
-void apply_axis_value(std::optional<double> value, double& axis, CoordinateMode coordinate_mode);
+void apply_program_axis_value(
+    std::optional<double> value,
+    double& machine_axis,
+    CoordinateMode coordinate_mode,
+    double coordinate_system_offset
+);
 void apply_coordinate_system_axis_value(std::optional<double> value, double& axis);
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
 void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
@@ -105,6 +111,7 @@ void register_modal_m_code(
     std::string_view group_number,
     std::string_view active_mcode
 );
+std::string coordinate_system_number_for_g_code(std::string_view active_gcode);
 void reset_after_program_end(MachineState& state);
 std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
@@ -224,6 +231,8 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         if (group_number == "3") {
             state.coordinate_mode =
                 active_gcode == "G90" ? CoordinateMode::kAbsolute : CoordinateMode::kIncremental;
+        } else if (group_number == "12") {
+            state.selected_coordinate_system = coordinate_system_number_for_g_code(active_gcode);
         }
     }
     for (const auto& [group_number, active_mcode] : parsed_line.active_modal_m_codes) {
@@ -247,9 +256,26 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         apply_coordinate_system_axis_value(parsed_line.y, coordinate_system_offset.y);
         apply_coordinate_system_axis_value(parsed_line.z, coordinate_system_offset.z);
     } else {
-        apply_axis_value(parsed_line.x, state.position.x, state.coordinate_mode);
-        apply_axis_value(parsed_line.y, state.position.y, state.coordinate_mode);
-        apply_axis_value(parsed_line.z, state.position.z, state.coordinate_mode);
+        const Position& coordinate_system_offset =
+            state.coordinate_system_offsets.at(state.selected_coordinate_system);
+        apply_program_axis_value(
+            parsed_line.x,
+            state.machine_position.x,
+            state.coordinate_mode,
+            coordinate_system_offset.x
+        );
+        apply_program_axis_value(
+            parsed_line.y,
+            state.machine_position.y,
+            state.coordinate_mode,
+            coordinate_system_offset.y
+        );
+        apply_program_axis_value(
+            parsed_line.z,
+            state.machine_position.z,
+            state.coordinate_mode,
+            coordinate_system_offset.z
+        );
     }
 
     if (parsed_line.end_program) {
@@ -257,17 +283,22 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     }
 }
 
-void apply_axis_value(std::optional<double> value, double& axis, CoordinateMode coordinate_mode) {
+void apply_program_axis_value(
+    std::optional<double> value,
+    double& machine_axis,
+    CoordinateMode coordinate_mode,
+    double coordinate_system_offset
+) {
     if (!value.has_value()) {
         return;
     }
 
     if (coordinate_mode == CoordinateMode::kAbsolute) {
-        axis = *value;
+        machine_axis = coordinate_system_offset + *value;
         return;
     }
 
-    axis += *value;
+    machine_axis += *value;
 }
 
 void apply_coordinate_system_axis_value(std::optional<double> value, double& axis) {
@@ -399,8 +430,41 @@ void register_modal_m_code(
     parsed_line.active_modal_m_codes.emplace(group_key, std::string(active_mcode));
 }
 
+std::string coordinate_system_number_for_g_code(std::string_view active_gcode) {
+    if (active_gcode == "G54") {
+        return "1";
+    }
+    if (active_gcode == "G55") {
+        return "2";
+    }
+    if (active_gcode == "G56") {
+        return "3";
+    }
+    if (active_gcode == "G57") {
+        return "4";
+    }
+    if (active_gcode == "G58") {
+        return "5";
+    }
+    if (active_gcode == "G59") {
+        return "6";
+    }
+    if (active_gcode == "G59.1") {
+        return "7";
+    }
+    if (active_gcode == "G59.2") {
+        return "8";
+    }
+    if (active_gcode == "G59.3") {
+        return "9";
+    }
+
+    throw std::runtime_error("Unsupported coordinate system selection: " + std::string(active_gcode));
+}
+
 void reset_after_program_end(MachineState& state) {
     state.coordinate_mode = CoordinateMode::kAbsolute;
+    state.selected_coordinate_system = "1";
     state.active_modal_g_codes["1"] = "G1";
     state.active_modal_g_codes["2"] = "G17";
     state.active_modal_g_codes["3"] = "G90";
@@ -512,8 +576,8 @@ std::string to_json(const MachineState& state) {
     std::ostringstream output;
     output << std::setprecision(15) << std::defaultfloat;
     output << "{\n"
-           << "  \"final_position\": {\"x\": " << state.position.x << ", \"y\": " << state.position.y
-           << ", \"z\": " << state.position.z << "},\n"
+           << "  \"machine_position\": {\"x\": " << state.machine_position.x << ", \"y\": "
+           << state.machine_position.y << ", \"z\": " << state.machine_position.z << "},\n"
            << "  \"feed_rate\": " << state.feed_rate << ",\n"
            << "  \"spindle_speed\": " << state.spindle_speed << ",\n"
            << "  \"spindle_direction\": \"" << to_string(state.spindle_direction) << "\",\n"

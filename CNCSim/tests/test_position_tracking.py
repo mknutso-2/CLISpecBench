@@ -8,15 +8,21 @@ from swe_buildbench.cncsim.test_support import run_cncsim
 
 PositionTrackingCase = tuple[str, str, dict[str, float]]
 
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\n"
+
 POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     (
         "absolute-xyz",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G90\n"
         "G0 X1.0 Y2.0 Z3.0\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
     ),
     (
         "absolute-updates-only-programmed-axes",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G90\n"
         "G0 X1.0 Y2.0 Z3.0\n"
         "G1 X4.0\n",
@@ -24,6 +30,8 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "incremental-xyz",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G90\n"
         "G0 X10.0 Y20.0 Z30.0\n"
         "G91\n"
@@ -32,6 +40,8 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "incremental-accumulates-from-current-position",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G90\n"
         "G0 X10.0 Y20.0 Z30.0\n"
         "G91\n"
@@ -41,6 +51,8 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g2-updates-arc-endpoint",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
@@ -49,6 +61,8 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g3-updates-arc-endpoint",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
@@ -57,6 +71,8 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g2-radius-format-updates-arc-endpoint",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
@@ -65,6 +81,8 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g3-radius-format-updates-arc-endpoint",
+        ZERO_OFFSET_P1_SETUP
+        +
         "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
@@ -74,28 +92,29 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
 ]
 
 POSITION_TRACKING_PARAMS = [
-    (input_gcode, expected_final_position)
-    for _, input_gcode, expected_final_position in POSITION_TRACKING_CASES
+    (input_gcode, expected_machine_position)
+    for _, input_gcode, expected_machine_position in POSITION_TRACKING_CASES
 ]
 
 
 # See CNCSim/prompt/docs/RS274NGC.md section 2.1.2.10 "Current Position":
-# the controller always has a current position, but this section does not assign
-# a fixed startup X/Y/Z location. The incremental cases therefore establish a
-# known position first before asserting relative motion.
+# the controller always has a current position, but the spec does not assign a
+# fixed startup machine location or startup work-offset values. These cases
+# therefore explicitly activate coordinate system 1 with zero offsets so the
+# assertions isolate XYZ motion tracking rather than work-offset behavior.
 # See sections 3.5.1 and 3.5.2 for linear motion with axis words, section
 # 3.5.3 for G2/G3 arc endpoint programming, section 3.5.3.1 for radius-format
 # arcs, and section 3.5.17 for how G90/G91 control whether X/Y/Z values are
 # interpreted as absolute positions or incremental offsets.
 @pytest.mark.parametrize(
-    ("input_gcode", "expected_final_position"),
+    ("input_gcode", "expected_machine_position"),
     POSITION_TRACKING_PARAMS,
     ids=[case_id for case_id, _, _ in POSITION_TRACKING_CASES],
 )
-def test_application_tracks_final_position(
+def test_application_tracks_machine_position(
     built_executable_path: Path,
     input_gcode: str,
-    expected_final_position: dict[str, float],
+    expected_machine_position: dict[str, float],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
@@ -106,4 +125,4 @@ def test_application_tracks_final_position(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["final_position"] == expected_final_position
+    assert payload["machine_position"] == expected_machine_position
