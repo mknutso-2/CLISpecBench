@@ -113,6 +113,8 @@ void apply_coordinate_system_axis_value(std::optional<double> value, double& axi
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
 void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
 bool is_arc_motion(std::string_view active_gcode);
+bool is_linear_motion(std::string_view active_gcode);
+bool is_feed_rate_motion(std::string_view active_gcode);
 Plane plane_for_g_code(std::string_view active_gcode);
 double resolved_program_axis_endpoint(
     std::optional<double> value,
@@ -120,6 +122,9 @@ double resolved_program_axis_endpoint(
     CoordinateMode coordinate_mode,
     double coordinate_system_offset
 );
+bool has_linear_axis_word(const ParsedLine& parsed_line);
+bool line_has_motion_axis_word(const ParsedLine& parsed_line);
+void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state);
 void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state);
 void register_modal_g_code(
     ParsedLine& parsed_line,
@@ -288,6 +293,7 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         apply_coordinate_system_axis_value(parsed_line.y, coordinate_system_offset.y);
         apply_coordinate_system_axis_value(parsed_line.z, coordinate_system_offset.z);
     } else {
+        validate_linear_motion_command(parsed_line, state);
         validate_arc_command(parsed_line, state);
         const Position& coordinate_system_offset =
             state.coordinate_system_offsets.at(state.selected_coordinate_system);
@@ -338,6 +344,14 @@ bool is_arc_motion(std::string_view active_gcode) {
     return active_gcode == "G2" || active_gcode == "G3";
 }
 
+bool is_linear_motion(std::string_view active_gcode) {
+    return active_gcode == "G0" || active_gcode == "G1";
+}
+
+bool is_feed_rate_motion(std::string_view active_gcode) {
+    return active_gcode == "G1" || active_gcode == "G2" || active_gcode == "G3";
+}
+
 Plane plane_for_g_code(std::string_view active_gcode) {
     if (active_gcode == "G17") {
         return Plane::kXY;
@@ -366,6 +380,44 @@ double resolved_program_axis_endpoint(
     }
 
     return current_machine_axis + *value;
+}
+
+bool has_linear_axis_word(const ParsedLine& parsed_line) {
+    return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value();
+}
+
+bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
+    return has_linear_axis_word(parsed_line);
+}
+
+void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state) {
+    const auto current_motion = state.active_modal_g_codes.find("1");
+    if (current_motion == state.active_modal_g_codes.end()) {
+        return;
+    }
+
+    const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
+    const std::string_view effective_motion = explicit_motion
+        ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
+        : std::string_view(current_motion->second);
+    const bool implicit_motion = !explicit_motion && line_has_motion_axis_word(parsed_line);
+
+    if (explicit_motion && is_linear_motion(effective_motion) && !has_linear_axis_word(parsed_line)) {
+        throw InputError("G0/G1 requires at least one axis word");
+    }
+
+    const auto feed_rate_mode = state.active_modal_g_codes.find("5");
+    const bool inverse_time_feed_rate = feed_rate_mode != state.active_modal_g_codes.end()
+        && feed_rate_mode->second == "G93";
+    if (!inverse_time_feed_rate) {
+        return;
+    }
+
+    if ((explicit_motion || implicit_motion) && is_feed_rate_motion(effective_motion)
+        && !parsed_line.feed_rate.has_value())
+    {
+        throw InputError("Inverse time feed rate motion requires an F word");
+    }
 }
 
 void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state) {
