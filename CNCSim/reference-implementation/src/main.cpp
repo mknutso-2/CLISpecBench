@@ -64,6 +64,9 @@ struct MachineState {
     double feed_rate = 0.0;
     double spindle_speed = 0.0;
     SpindleDirection spindle_direction = SpindleDirection::kOff;
+    std::optional<int> cutter_radius_compensation_number;
+    std::optional<int> tool_length_offset_index;
+    std::optional<int> selected_tool;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
     Plane selected_plane = Plane::kXY;
     std::string selected_coordinate_system = "1";
@@ -80,12 +83,15 @@ struct ParsedLine {
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
+    std::optional<double> d;
+    std::optional<int> h;
     std::optional<double> i;
     std::optional<double> j;
     std::optional<double> k;
     std::optional<double> l;
     std::optional<double> p;
     std::optional<double> r;
+    std::optional<int> t;
     std::optional<std::string> coordinate_system_offset_target;
     std::optional<double> feed_rate;
     std::optional<double> spindle_speed;
@@ -142,6 +148,7 @@ std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
 std::vector<std::string> split_words(std::string_view line);
 double parse_numeric_suffix(const std::string& word);
+int parse_non_negative_integer_suffix(const std::string& word);
 std::string json_escape(std::string_view text);
 std::string to_json(const MachineState& state, std::optional<std::string_view> error = std::nullopt);
 std::string to_string(SpindleDirection direction);
@@ -201,8 +208,10 @@ ParsedLine parse_line(std::string_view raw_line) {
         const char letter = word.front();
         switch (letter) {
             case 'D':
+                parsed_line.d = parse_numeric_suffix(word);
+                break;
             case 'H':
-                static_cast<void>(parse_numeric_suffix(word));
+                parsed_line.h = parse_non_negative_integer_suffix(word);
                 break;
             case 'F':
                 parsed_line.feed_rate = parse_numeric_suffix(word);
@@ -235,6 +244,9 @@ ParsedLine parse_line(std::string_view raw_line) {
                 break;
             case 'S':
                 parsed_line.spindle_speed = parse_numeric_suffix(word);
+                break;
+            case 'T':
+                parsed_line.t = parse_non_negative_integer_suffix(word);
                 break;
             case 'X':
                 parsed_line.x = parse_numeric_suffix(word);
@@ -284,6 +296,26 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     }
     if (parsed_line.spindle_direction.has_value()) {
         state.spindle_direction = *parsed_line.spindle_direction;
+    }
+    if (parsed_line.t.has_value()) {
+        state.selected_tool = *parsed_line.t;
+    }
+
+    if (parsed_line.active_modal_g_codes.contains("7")) {
+        const std::string_view active_crc = parsed_line.active_modal_g_codes.at("7");
+        if (active_crc == "G40") {
+            state.cutter_radius_compensation_number = std::nullopt;
+        } else if (parsed_line.d.has_value()) {
+            state.cutter_radius_compensation_number = static_cast<int>(*parsed_line.d);
+        }
+    }
+    if (parsed_line.active_modal_g_codes.contains("8")) {
+        const std::string_view active_tlo = parsed_line.active_modal_g_codes.at("8");
+        if (active_tlo == "G49") {
+            state.tool_length_offset_index = std::nullopt;
+        } else if (parsed_line.h.has_value()) {
+            state.tool_length_offset_index = *parsed_line.h;
+        }
     }
 
     if (parsed_line.coordinate_system_offset_target.has_value()) {
@@ -818,6 +850,15 @@ double parse_numeric_suffix(const std::string& word) {
     }
 }
 
+int parse_non_negative_integer_suffix(const std::string& word) {
+    const double value = parse_numeric_suffix(word);
+    if (std::floor(value) != value || value < 0.0) {
+        throw InputError("Expected non-negative integer value for word: " + word);
+    }
+
+    return static_cast<int>(value);
+}
+
 std::string to_json(const MachineState& state, std::optional<std::string_view> error) {
     std::ostringstream output;
     output << std::setprecision(15) << std::defaultfloat;
@@ -827,6 +868,27 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
            << "  \"feed_rate\": " << state.feed_rate << ",\n"
            << "  \"spindle_speed\": " << state.spindle_speed << ",\n"
            << "  \"spindle_direction\": \"" << to_string(state.spindle_direction) << "\",\n"
+           << "  \"cutter_radius_compensation_number\": ";
+    if (state.cutter_radius_compensation_number.has_value()) {
+        output << *state.cutter_radius_compensation_number;
+    } else {
+        output << "null";
+    }
+    output << ",\n"
+           << "  \"tool_length_offset_index\": ";
+    if (state.tool_length_offset_index.has_value()) {
+        output << *state.tool_length_offset_index;
+    } else {
+        output << "null";
+    }
+    output << ",\n"
+           << "  \"selected_tool\": ";
+    if (state.selected_tool.has_value()) {
+        output << *state.selected_tool;
+    } else {
+        output << "null";
+    }
+    output << ",\n"
            << "  \"active_modal_g_codes\": {";
 
     bool is_first_modal_code = true;
