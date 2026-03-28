@@ -34,7 +34,7 @@ to drive 3-axis to 6-axis machining centers. Input to the interpreter is RS274 c
 dialect defined by the Next Generation Controller (NGC) project, with modifications.
 The interpreter may be compiled as a stand-alone computer program or may be
 integrated with the NIST Enhanced Machine Controller (EMC) control system. Input
-can come from a file or from a user typing on a computer keyboard. Output commands
+can come from a file or from a user typing on a computer keyboard. Output commands~
 can either be printed for future use or be executed directly on a machining center. The
 report includes a full description of the RS274/NGC input language and the canonical
 machining functions called by the interpreter. It is a complete users manual.
