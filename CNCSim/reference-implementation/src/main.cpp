@@ -766,21 +766,36 @@ std::string strip_comments(std::string_view raw_line) {
     std::string cleaned;
     bool in_parenthetical_comment = false;
 
-    for (const char character : raw_line) {
+    for (const char raw_character : raw_line) {
+        const auto character = static_cast<unsigned char>(raw_character);
         if (!in_parenthetical_comment && character == ';') {
             break;
         }
         if (character == '(') {
+            if (in_parenthetical_comment) {
+                throw InputError("Comments may not be nested");
+            }
             in_parenthetical_comment = true;
             continue;
         }
         if (character == ')') {
+            if (!in_parenthetical_comment) {
+                throw InputError("Unmatched right parenthesis");
+            }
             in_parenthetical_comment = false;
             continue;
         }
-        if (!in_parenthetical_comment) {
-            cleaned.push_back(character);
+        if (in_parenthetical_comment) {
+            if (character != '\t' && std::isprint(character) == 0) {
+                throw InputError("Comments may contain only printable characters, space, and tab");
+            }
+            continue;
         }
+        cleaned.push_back(static_cast<char>(character));
+    }
+
+    if (in_parenthetical_comment) {
+        throw InputError("Unterminated parenthetical comment");
     }
 
     return cleaned;
