@@ -14,6 +14,8 @@
     },
     "error": string | null
   }
+  Write this JSON file on both success and error. On success, "error" must be null. On invalid
+  input or internal failure, "error" must be a non-empty string.
   Serialize "machine_position" as the tool position in the absolute machine coordinate system
   (the coordinate space used by G53).
   Serialize "active_modal_g_codes" as a JSON object whose keys are RS274 modal group numbers

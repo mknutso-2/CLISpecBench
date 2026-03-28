@@ -24,6 +24,12 @@ enum class CoordinateMode {
     kIncremental,
 };
 
+enum class Plane {
+    kXY,
+    kXZ,
+    kYZ,
+};
+
 enum class SpindleDirection {
     kClockwise,
     kCounterClockwise,
@@ -59,6 +65,7 @@ struct MachineState {
     double spindle_speed = 0.0;
     SpindleDirection spindle_direction = SpindleDirection::kOff;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
+    Plane selected_plane = Plane::kXY;
     std::string selected_coordinate_system = "1";
 };
 
@@ -73,8 +80,12 @@ struct ParsedLine {
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
+    std::optional<double> i;
+    std::optional<double> j;
+    std::optional<double> k;
     std::optional<double> l;
     std::optional<double> p;
+    std::optional<double> r;
     std::optional<std::string> coordinate_system_offset_target;
     std::optional<double> feed_rate;
     std::optional<double> spindle_speed;
@@ -101,6 +112,15 @@ void apply_program_axis_value(
 void apply_coordinate_system_axis_value(std::optional<double> value, double& axis);
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
 void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
+bool is_arc_motion(std::string_view active_gcode);
+Plane plane_for_g_code(std::string_view active_gcode);
+double resolved_program_axis_endpoint(
+    std::optional<double> value,
+    double current_machine_axis,
+    CoordinateMode coordinate_mode,
+    double coordinate_system_offset
+);
+void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state);
 void register_modal_g_code(
     ParsedLine& parsed_line,
     std::string_view group_number,
@@ -117,8 +137,10 @@ std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
 std::vector<std::string> split_words(std::string_view line);
 double parse_numeric_suffix(const std::string& word);
-std::string to_json(const MachineState& state);
+std::string json_escape(std::string_view text);
+std::string to_json(const MachineState& state, std::optional<std::string_view> error = std::nullopt);
 std::string to_string(SpindleDirection direction);
+void write_output_file(const std::string& output_path, const std::string& contents);
 
 ProgramOptions parse_command_line(int argc, char* argv[]) {
     ProgramOptions options;
@@ -175,10 +197,6 @@ ParsedLine parse_line(std::string_view raw_line) {
         switch (letter) {
             case 'D':
             case 'H':
-            case 'I':
-            case 'J':
-            case 'K':
-            case 'R':
                 static_cast<void>(parse_numeric_suffix(word));
                 break;
             case 'F':
@@ -186,6 +204,15 @@ ParsedLine parse_line(std::string_view raw_line) {
                 break;
             case 'G':
                 apply_g_code_word(word, parsed_line);
+                break;
+            case 'I':
+                parsed_line.i = parse_numeric_suffix(word);
+                break;
+            case 'J':
+                parsed_line.j = parse_numeric_suffix(word);
+                break;
+            case 'K':
+                parsed_line.k = parse_numeric_suffix(word);
                 break;
             case 'L':
                 parsed_line.l = parse_numeric_suffix(word);
@@ -197,6 +224,9 @@ ParsedLine parse_line(std::string_view raw_line) {
                 break;
             case 'P':
                 parsed_line.p = parse_numeric_suffix(word);
+                break;
+            case 'R':
+                parsed_line.r = parse_numeric_suffix(word);
                 break;
             case 'S':
                 parsed_line.spindle_speed = parse_numeric_suffix(word);
@@ -231,6 +261,8 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         if (group_number == "3") {
             state.coordinate_mode =
                 active_gcode == "G90" ? CoordinateMode::kAbsolute : CoordinateMode::kIncremental;
+        } else if (group_number == "2") {
+            state.selected_plane = plane_for_g_code(active_gcode);
         } else if (group_number == "12") {
             state.selected_coordinate_system = coordinate_system_number_for_g_code(active_gcode);
         }
@@ -256,6 +288,7 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         apply_coordinate_system_axis_value(parsed_line.y, coordinate_system_offset.y);
         apply_coordinate_system_axis_value(parsed_line.z, coordinate_system_offset.z);
     } else {
+        validate_arc_command(parsed_line, state);
         const Position& coordinate_system_offset =
             state.coordinate_system_offsets.at(state.selected_coordinate_system);
         apply_program_axis_value(
@@ -299,6 +332,137 @@ void apply_program_axis_value(
     }
 
     machine_axis += *value;
+}
+
+bool is_arc_motion(std::string_view active_gcode) {
+    return active_gcode == "G2" || active_gcode == "G3";
+}
+
+Plane plane_for_g_code(std::string_view active_gcode) {
+    if (active_gcode == "G17") {
+        return Plane::kXY;
+    }
+    if (active_gcode == "G18") {
+        return Plane::kXZ;
+    }
+    if (active_gcode == "G19") {
+        return Plane::kYZ;
+    }
+
+    throw std::runtime_error("Unsupported plane selection: " + std::string(active_gcode));
+}
+
+double resolved_program_axis_endpoint(
+    std::optional<double> value,
+    double current_machine_axis,
+    CoordinateMode coordinate_mode,
+    double coordinate_system_offset
+) {
+    if (!value.has_value()) {
+        return current_machine_axis;
+    }
+    if (coordinate_mode == CoordinateMode::kAbsolute) {
+        return coordinate_system_offset + *value;
+    }
+
+    return current_machine_axis + *value;
+}
+
+void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state) {
+    const auto current_motion = state.active_modal_g_codes.find("1");
+    const bool explicit_arc = parsed_line.active_modal_g_codes.contains("1")
+        && is_arc_motion(parsed_line.active_modal_g_codes.at("1"));
+    const bool line_mentions_arc_data = explicit_arc || parsed_line.r.has_value() || parsed_line.i.has_value()
+        || parsed_line.j.has_value() || parsed_line.k.has_value() || parsed_line.x.has_value()
+        || parsed_line.y.has_value() || parsed_line.z.has_value();
+    if (current_motion == state.active_modal_g_codes.end() || !is_arc_motion(current_motion->second)
+        || !line_mentions_arc_data)
+    {
+        return;
+    }
+
+    const Position& coordinate_system_offset =
+        state.coordinate_system_offsets.at(state.selected_coordinate_system);
+    bool has_selected_plane_axis = false;
+    bool has_center_offset = false;
+    double current_first_axis = 0.0;
+    double current_second_axis = 0.0;
+    double end_first_axis = 0.0;
+    double end_second_axis = 0.0;
+
+    switch (state.selected_plane) {
+        case Plane::kXY:
+            has_selected_plane_axis = parsed_line.x.has_value() || parsed_line.y.has_value();
+            has_center_offset = parsed_line.i.has_value() || parsed_line.j.has_value();
+            current_first_axis = state.machine_position.x;
+            current_second_axis = state.machine_position.y;
+            end_first_axis = resolved_program_axis_endpoint(
+                parsed_line.x,
+                state.machine_position.x,
+                state.coordinate_mode,
+                coordinate_system_offset.x
+            );
+            end_second_axis = resolved_program_axis_endpoint(
+                parsed_line.y,
+                state.machine_position.y,
+                state.coordinate_mode,
+                coordinate_system_offset.y
+            );
+            break;
+        case Plane::kXZ:
+            has_selected_plane_axis = parsed_line.x.has_value() || parsed_line.z.has_value();
+            has_center_offset = parsed_line.i.has_value() || parsed_line.k.has_value();
+            current_first_axis = state.machine_position.x;
+            current_second_axis = state.machine_position.z;
+            end_first_axis = resolved_program_axis_endpoint(
+                parsed_line.x,
+                state.machine_position.x,
+                state.coordinate_mode,
+                coordinate_system_offset.x
+            );
+            end_second_axis = resolved_program_axis_endpoint(
+                parsed_line.z,
+                state.machine_position.z,
+                state.coordinate_mode,
+                coordinate_system_offset.z
+            );
+            break;
+        case Plane::kYZ:
+            has_selected_plane_axis = parsed_line.y.has_value() || parsed_line.z.has_value();
+            has_center_offset = parsed_line.j.has_value() || parsed_line.k.has_value();
+            current_first_axis = state.machine_position.y;
+            current_second_axis = state.machine_position.z;
+            end_first_axis = resolved_program_axis_endpoint(
+                parsed_line.y,
+                state.machine_position.y,
+                state.coordinate_mode,
+                coordinate_system_offset.y
+            );
+            end_second_axis = resolved_program_axis_endpoint(
+                parsed_line.z,
+                state.machine_position.z,
+                state.coordinate_mode,
+                coordinate_system_offset.z
+            );
+            break;
+    }
+
+    if (parsed_line.r.has_value()) {
+        if (!has_selected_plane_axis) {
+            throw InputError("Arc radius format requires an endpoint in the selected plane");
+        }
+        if (end_first_axis == current_first_axis && end_second_axis == current_second_axis) {
+            throw InputError("Arc radius format cannot reuse the current point as the endpoint");
+        }
+        return;
+    }
+
+    if (!has_selected_plane_axis) {
+        throw InputError("Arc center format requires an endpoint in the selected plane");
+    }
+    if (!has_center_offset) {
+        throw InputError("Arc center format requires a center offset in the selected plane");
+    }
 }
 
 void apply_coordinate_system_axis_value(std::optional<double> value, double& axis) {
@@ -464,6 +628,7 @@ std::string coordinate_system_number_for_g_code(std::string_view active_gcode) {
 
 void reset_after_program_end(MachineState& state) {
     state.coordinate_mode = CoordinateMode::kAbsolute;
+    state.selected_plane = Plane::kXY;
     state.selected_coordinate_system = "1";
     state.active_modal_g_codes["1"] = "G1";
     state.active_modal_g_codes["2"] = "G17";
@@ -520,6 +685,35 @@ std::string strip_comments(std::string_view raw_line) {
     return cleaned;
 }
 
+std::string json_escape(std::string_view text) {
+    std::string escaped;
+    escaped.reserve(text.size());
+    for (const char character : text) {
+        switch (character) {
+            case '\\':
+                escaped += "\\\\";
+                break;
+            case '"':
+                escaped += "\\\"";
+                break;
+            case '\n':
+                escaped += "\\n";
+                break;
+            case '\r':
+                escaped += "\\r";
+                break;
+            case '\t':
+                escaped += "\\t";
+                break;
+            default:
+                escaped.push_back(character);
+                break;
+        }
+    }
+
+    return escaped;
+}
+
 std::vector<std::string> split_words(std::string_view line) {
     std::vector<std::string> words;
     std::string current_word;
@@ -572,7 +766,7 @@ double parse_numeric_suffix(const std::string& word) {
     }
 }
 
-std::string to_json(const MachineState& state) {
+std::string to_json(const MachineState& state, std::optional<std::string_view> error) {
     std::ostringstream output;
     output << std::setprecision(15) << std::defaultfloat;
     output << "{\n"
@@ -619,8 +813,13 @@ std::string to_json(const MachineState& state) {
     }
 
     output << "},\n"
-           << "  \"error\": null\n"
-           << "}\n";
+           << "  \"error\": ";
+    if (error.has_value()) {
+        output << '"' << json_escape(*error) << '"';
+    } else {
+        output << "null";
+    }
+    output << "\n}\n";
     return output.str();
 }
 
@@ -637,23 +836,39 @@ std::string to_string(SpindleDirection direction) {
     throw std::runtime_error("Unknown spindle direction");
 }
 
+void write_output_file(const std::string& output_path, const std::string& contents) {
+    std::ofstream output_stream(output_path, std::ios::trunc);
+    if (!output_stream.is_open()) {
+        throw std::runtime_error("Could not open output file: " + output_path);
+    }
+
+    output_stream << contents;
+}
+
 }  // namespace
 
 int main(int argc, char* argv[]) {
+    ProgramOptions options;
     try {
-        const ProgramOptions options = parse_command_line(argc, argv);
-        const MachineState final_state = execute_program(options.input_path);
-
-        std::ofstream output_stream(options.output_path, std::ios::trunc);
-        if (!output_stream.is_open()) {
-            throw std::runtime_error("Could not open output file: " + options.output_path);
-        }
-        output_stream << to_json(final_state);
-        return static_cast<int>(ExitCode::kSuccess);
+        options = parse_command_line(argc, argv);
     } catch (const InputError& error) {
         std::cerr << error.what() << '\n';
         return static_cast<int>(ExitCode::kInvalidInput);
     } catch (const std::exception& error) {
+        std::cerr << error.what() << '\n';
+        return static_cast<int>(ExitCode::kInternalError);
+    }
+
+    try {
+        const MachineState final_state = execute_program(options.input_path);
+        write_output_file(options.output_path, to_json(final_state));
+        return static_cast<int>(ExitCode::kSuccess);
+    } catch (const InputError& error) {
+        write_output_file(options.output_path, to_json(MachineState{}, error.what()));
+        std::cerr << error.what() << '\n';
+        return static_cast<int>(ExitCode::kInvalidInput);
+    } catch (const std::exception& error) {
+        write_output_file(options.output_path, to_json(MachineState{}, error.what()));
         std::cerr << error.what() << '\n';
         return static_cast<int>(ExitCode::kInternalError);
     }

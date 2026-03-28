@@ -27,3 +27,21 @@ def run_cncsim(
     assert output_path.is_file(), completed.stderr
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     return completed, payload
+
+
+def run_cncsim_invalid_input(
+    executable_path: Path,
+    *,
+    input_gcode: str,
+    tmp_path: Path,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
+    completed, payload = run_cncsim(
+        executable_path,
+        input_gcode=input_gcode,
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 1, completed.stderr
+    assert isinstance(payload["error"], str)
+    assert payload["error"]
+    return completed, payload
