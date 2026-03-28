@@ -62,10 +62,18 @@ Technical note (required for compatibility with the test system):
     "spindle_direction": "CW" | "CCW" | "OFF",
     "active_modal_g_codes": {"<group_number>": string, ...},
     "active_modal_m_codes": {"<group_number>": string, ...},
+    "coordinate_system_offsets": {
+      "<system_number>": {"x": float, "y": float, "z": float},
+      ...
+    },
     "error": string | null
   }
   Keys in "active_modal_g_codes" and "active_modal_m_codes" are modal group numbers encoded as
   JSON strings, and each value is the currently active G-code or M-code for that modal group.
+  Keys in "coordinate_system_offsets" are program coordinate system numbers 1 through 9 encoded
+  as JSON strings. Each value is the stored X/Y/Z origin for that coordinate system in absolute
+  coordinates. At program start, all nine coordinate system offsets are zero, and G10 L2 Pn
+  updates only the axes explicitly present on that block.
 - Exit 0 on success, 1 for invalid input, 2 for internal errors
 ---
 

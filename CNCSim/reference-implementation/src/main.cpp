@@ -1,4 +1,5 @@
 #include <cctype>
+#include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -35,9 +36,24 @@ struct Position {
     double z = 0.0;
 };
 
+std::map<std::string, Position> make_default_coordinate_system_offsets() {
+    return {
+        {"1", {}},
+        {"2", {}},
+        {"3", {}},
+        {"4", {}},
+        {"5", {}},
+        {"6", {}},
+        {"7", {}},
+        {"8", {}},
+        {"9", {}},
+    };
+}
+
 struct MachineState {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
+    std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
     Position position{};
     double feed_rate = 0.0;
     double spindle_speed = 0.0;
@@ -56,9 +72,13 @@ struct ParsedLine {
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
+    std::optional<double> l;
+    std::optional<double> p;
+    std::optional<std::string> coordinate_system_offset_target;
     std::optional<double> feed_rate;
     std::optional<double> spindle_speed;
     std::optional<SpindleDirection> spindle_direction;
+    bool has_g10 = false;
     bool end_program = false;
 };
 
@@ -72,6 +92,7 @@ MachineState execute_program(const std::string& input_path);
 ParsedLine parse_line(std::string_view raw_line);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
 void apply_axis_value(std::optional<double> value, double& axis, CoordinateMode coordinate_mode);
+void apply_coordinate_system_axis_value(std::optional<double> value, double& axis);
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
 void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
 void register_modal_g_code(
@@ -85,6 +106,7 @@ void register_modal_m_code(
     std::string_view active_mcode
 );
 void reset_after_program_end(MachineState& state);
+std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
 std::vector<std::string> split_words(std::string_view line);
 double parse_numeric_suffix(const std::string& word);
@@ -158,10 +180,16 @@ ParsedLine parse_line(std::string_view raw_line) {
             case 'G':
                 apply_g_code_word(word, parsed_line);
                 break;
+            case 'L':
+                parsed_line.l = parse_numeric_suffix(word);
+                break;
             case 'M':
                 apply_m_code_word(word, parsed_line);
                 break;
             case 'N':
+                break;
+            case 'P':
+                parsed_line.p = parse_numeric_suffix(word);
                 break;
             case 'S':
                 parsed_line.spindle_speed = parse_numeric_suffix(word);
@@ -178,6 +206,13 @@ ParsedLine parse_line(std::string_view raw_line) {
             default:
                 throw InputError("Unsupported word: " + word);
         }
+    }
+
+    if (!parsed_line.has_g10 && (parsed_line.l.has_value() || parsed_line.p.has_value())) {
+        throw InputError("Unsupported L or P word without G10");
+    }
+    if (parsed_line.has_g10) {
+        parsed_line.coordinate_system_offset_target = parse_g10_coordinate_system_number(parsed_line);
     }
 
     return parsed_line;
@@ -205,9 +240,17 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         state.spindle_direction = *parsed_line.spindle_direction;
     }
 
-    apply_axis_value(parsed_line.x, state.position.x, state.coordinate_mode);
-    apply_axis_value(parsed_line.y, state.position.y, state.coordinate_mode);
-    apply_axis_value(parsed_line.z, state.position.z, state.coordinate_mode);
+    if (parsed_line.coordinate_system_offset_target.has_value()) {
+        Position& coordinate_system_offset =
+            state.coordinate_system_offsets.at(*parsed_line.coordinate_system_offset_target);
+        apply_coordinate_system_axis_value(parsed_line.x, coordinate_system_offset.x);
+        apply_coordinate_system_axis_value(parsed_line.y, coordinate_system_offset.y);
+        apply_coordinate_system_axis_value(parsed_line.z, coordinate_system_offset.z);
+    } else {
+        apply_axis_value(parsed_line.x, state.position.x, state.coordinate_mode);
+        apply_axis_value(parsed_line.y, state.position.y, state.coordinate_mode);
+        apply_axis_value(parsed_line.z, state.position.z, state.coordinate_mode);
+    }
 
     if (parsed_line.end_program) {
         reset_after_program_end(state);
@@ -227,9 +270,21 @@ void apply_axis_value(std::optional<double> value, double& axis, CoordinateMode 
     axis += *value;
 }
 
+void apply_coordinate_system_axis_value(std::optional<double> value, double& axis) {
+    if (!value.has_value()) {
+        return;
+    }
+
+    axis = *value;
+}
+
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     const std::string code = word.substr(1);
 
+    if (code == "10") {
+        parsed_line.has_g10 = true;
+        return;
+    }
     if (
         code == "0" || code == "1" || code == "2" || code == "3" || code == "38.2"
         || code == "80" || code == "81" || code == "82" || code == "83" || code == "84"
@@ -359,6 +414,24 @@ void reset_after_program_end(MachineState& state) {
     state.spindle_direction = SpindleDirection::kOff;
 }
 
+std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line) {
+    if (!parsed_line.l.has_value()) {
+        throw InputError("G10 requires an L word");
+    }
+    if (std::floor(*parsed_line.l) != *parsed_line.l || *parsed_line.l != 2.0) {
+        throw InputError("Only G10 L2 is supported");
+    }
+    if (!parsed_line.p.has_value()) {
+        throw InputError("G10 L2 requires a P word");
+    }
+    if (std::floor(*parsed_line.p) != *parsed_line.p || *parsed_line.p < 1.0 || *parsed_line.p > 9.0)
+    {
+        throw InputError("G10 L2 P number must be an integer from 1 to 9");
+    }
+
+    return std::to_string(static_cast<int>(*parsed_line.p));
+}
+
 std::string strip_comments(std::string_view raw_line) {
     std::string cleaned;
     bool in_parenthetical_comment = false;
@@ -465,6 +538,20 @@ std::string to_json(const MachineState& state) {
         }
         output << "\"" << group_number << "\": \"" << active_mcode << "\"";
         is_first_active_mcode = false;
+    }
+
+    output << "},\n"
+           << "  \"coordinate_system_offsets\": {";
+
+    bool is_first_coordinate_system = true;
+    for (const auto& [system_number, offset] : state.coordinate_system_offsets) {
+        if (!is_first_coordinate_system) {
+            output << ", ";
+        }
+        output << "\"" << system_number << "\": "
+               << "{\"x\": " << offset.x << ", \"y\": " << offset.y << ", \"z\": " << offset.z
+               << "}";
+        is_first_coordinate_system = false;
     }
 
     output << "},\n"
