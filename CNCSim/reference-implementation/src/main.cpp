@@ -561,6 +561,9 @@ void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     const std::string code = word.substr(1);
 
     if (code == "10") {
+        if (parsed_line.has_g10) {
+            throw InputError("Multiple G codes from the same modal group in the same block");
+        }
         parsed_line.has_g10 = true;
         return;
     }
