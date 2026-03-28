@@ -109,6 +109,8 @@ ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(const std::string& input_path);
 ParsedLine parse_line(std::string_view raw_line);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
+template <typename T>
+void assign_unique_word(std::optional<T>& destination, T value, std::string_view word);
 void apply_program_axis_value(
     std::optional<double> value,
     double& machine_axis,
@@ -208,28 +210,28 @@ ParsedLine parse_line(std::string_view raw_line) {
         const char letter = word.front();
         switch (letter) {
             case 'D':
-                parsed_line.d = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.d, parse_numeric_suffix(word), word);
                 break;
             case 'H':
-                parsed_line.h = parse_non_negative_integer_suffix(word);
+                assign_unique_word(parsed_line.h, parse_non_negative_integer_suffix(word), word);
                 break;
             case 'F':
-                parsed_line.feed_rate = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.feed_rate, parse_numeric_suffix(word), word);
                 break;
             case 'G':
                 apply_g_code_word(word, parsed_line);
                 break;
             case 'I':
-                parsed_line.i = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.i, parse_numeric_suffix(word), word);
                 break;
             case 'J':
-                parsed_line.j = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.j, parse_numeric_suffix(word), word);
                 break;
             case 'K':
-                parsed_line.k = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.k, parse_numeric_suffix(word), word);
                 break;
             case 'L':
-                parsed_line.l = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.l, parse_numeric_suffix(word), word);
                 break;
             case 'M':
                 apply_m_code_word(word, parsed_line);
@@ -237,25 +239,25 @@ ParsedLine parse_line(std::string_view raw_line) {
             case 'N':
                 break;
             case 'P':
-                parsed_line.p = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.p, parse_numeric_suffix(word), word);
                 break;
             case 'R':
-                parsed_line.r = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.r, parse_numeric_suffix(word), word);
                 break;
             case 'S':
-                parsed_line.spindle_speed = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.spindle_speed, parse_numeric_suffix(word), word);
                 break;
             case 'T':
-                parsed_line.t = parse_non_negative_integer_suffix(word);
+                assign_unique_word(parsed_line.t, parse_non_negative_integer_suffix(word), word);
                 break;
             case 'X':
-                parsed_line.x = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.x, parse_numeric_suffix(word), word);
                 break;
             case 'Y':
-                parsed_line.y = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.y, parse_numeric_suffix(word), word);
                 break;
             case 'Z':
-                parsed_line.z = parse_numeric_suffix(word);
+                assign_unique_word(parsed_line.z, parse_numeric_suffix(word), word);
                 break;
             default:
                 throw InputError("Unsupported word: " + word);
@@ -270,6 +272,15 @@ ParsedLine parse_line(std::string_view raw_line) {
     }
 
     return parsed_line;
+}
+
+template <typename T>
+void assign_unique_word(std::optional<T>& destination, T value, std::string_view word) {
+    if (destination.has_value()) {
+        throw InputError("Multiple words with the same letter in the same block: " + std::string(word));
+    }
+
+    destination = value;
 }
 
 void apply_line(const ParsedLine& parsed_line, MachineState& state) {
