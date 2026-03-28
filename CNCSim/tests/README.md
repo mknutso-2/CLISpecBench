@@ -27,3 +27,10 @@ uv run pytest CNCSim/tests
 ```
 
 If no buildable implementation exists at the default location, the build test is skipped with a clear message.
+
+When adding or changing tests, keep the agent-facing prompt sources aligned with what the tests
+assert:
+
+- Put harness compatibility changes in `CNCSim/prompt/technical-requirements-prompt.md`.
+- Put CNC/domain behavior requirements in `CNCSim/prompt/base-prompt.md` or
+  `CNCSim/prompt/docs/`, not in `technical-requirements-prompt.md`.

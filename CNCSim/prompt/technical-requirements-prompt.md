@@ -8,15 +8,19 @@
     "spindle_direction": "CW" | "CCW" | "OFF",
     "active_modal_g_codes": {"<group_number>": string, ...},
     "active_modal_m_codes": {"<group_number>": string, ...},
+    "coordinate_system_offsets": {
+      "<system_number>": {"x": float, "y": float, "z": float},
+      ...
+    },
     "error": string | null
   }
-  Keys in "active_modal_g_codes" must be RS274 modal group numbers encoded as JSON strings
-  (for example: {"1": "G1", "3": "G90"}).
-  "active_modal_g_codes" must track the currently active G-code for each active G-code modal
-  group. If a later block emits another code from the same modal group, it replaces the earlier
-  value for that group.
-  Keys in "active_modal_m_codes" must be RS274 M-code modal group numbers encoded as JSON
-  strings (for example: {"7": "M5"}). "active_modal_m_codes" must track the currently active
-  M-code for each active M-code modal group. If a later block emits another code from the same
-  modal group, it replaces the earlier value for that group.
+  Serialize "active_modal_g_codes" as a JSON object whose keys are RS274 modal group numbers
+  encoded as JSON strings and whose values are G-code strings (for example:
+  {"1": "G1", "3": "G90"}).
+  Serialize "active_modal_m_codes" as a JSON object whose keys are RS274 M-code modal group
+  numbers encoded as JSON strings and whose values are M-code strings (for example:
+  {"7": "M5"}).
+  Serialize "coordinate_system_offsets" as a JSON object whose keys are program coordinate
+  system numbers 1 through 9 encoded as JSON strings and whose values are objects of the form
+  {"x": float, "y": float, "z": float}.
 - Exit 0 on success, 1 for invalid input, 2 for internal errors
