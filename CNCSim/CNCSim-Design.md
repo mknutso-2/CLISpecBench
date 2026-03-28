@@ -73,6 +73,8 @@ Test categories for CNCSim-Lite:
 - Adversarial: cases designed to catch common misreadings of the spec
 - Performance: large input files (e.g., 100MB NC programs) with a domain-meaningful `timeout_seconds`; catches O(n²) or worse parsing
 
+**Requirement provenance policy.** The RS274/NGC document is the sole behavioral source of truth, and CNCSim tests should only assert behavior that is explicit and unambiguous in that document. If a behavior is only supportable via a nontrivial inference across multiple clauses, it should not be turned into a requirement-bearing test unless the requirement is first clarified in non-RS274 eval docs such as this design doc or `prompt/base-prompt.md`. In other words, the suite should not require an implementer to reconstruct hidden policy from ambiguous spec composition, and it should not depend on editing `prompt/docs/RS274NGC.md`.
+
 ## 5. Extension Tasks
 
 CNCSim includes extension tasks for both the Lite and Full variants. These are hidden prompts injected after the base implementation is scored — the agent does not know they are coming.

@@ -42,6 +42,16 @@ struct Position {
     double z = 0.0;
 };
 
+struct ParameterWrite {
+    int index = 0;
+    double value = 0.0;
+};
+
+constexpr int kMinParameterIndex = 1;
+constexpr int kMaxParameterIndex = 5399;
+constexpr int kParameterCount = kMaxParameterIndex + 1;
+constexpr int kSelectedCoordinateSystemParameter = 5220;
+
 std::map<std::string, Position> make_default_coordinate_system_offsets() {
     return {
         {"1", {}},
@@ -56,10 +66,17 @@ std::map<std::string, Position> make_default_coordinate_system_offsets() {
     };
 }
 
+std::vector<double> make_default_parameters() {
+    std::vector<double> parameters(kParameterCount, 0.0);
+    parameters[kSelectedCoordinateSystemParameter] = 1.0;
+    return parameters;
+}
+
 struct MachineState {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
+    std::vector<double> parameters = make_default_parameters();
     Position machine_position{};
     double feed_rate = 0.0;
     double spindle_speed = 0.0;
@@ -80,6 +97,7 @@ struct ProgramOptions {
 struct ParsedLine {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
+    std::vector<ParameterWrite> parameter_writes;
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
@@ -107,10 +125,30 @@ public:
 
 ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(const std::string& input_path);
-ParsedLine parse_line(std::string_view raw_line);
+ParsedLine parse_line(std::string_view raw_line, const MachineState& state);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
 template <typename T>
 void assign_unique_word(std::optional<T>& destination, T value, std::string_view word);
+std::string remove_ignorable_whitespace(std::string_view line);
+double parse_numeric_literal(std::string_view text, std::size_t& position);
+double parse_real_value(std::string_view text, std::size_t& position, const MachineState& state);
+int parse_parameter_index(std::string_view text, std::size_t& position);
+int require_parameter_index(double value);
+int require_non_negative_integer(double value, std::string_view word);
+void parse_segment(std::string_view text, std::size_t& position, const MachineState& state, ParsedLine& parsed_line);
+void parse_parameter_setting(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state,
+    ParsedLine& parsed_line
+);
+void parse_word_segment(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state,
+    ParsedLine& parsed_line
+);
+void parse_line_number(std::string_view text, std::size_t& position);
 void apply_program_axis_value(
     std::optional<double> value,
     double& machine_axis,
@@ -118,7 +156,9 @@ void apply_program_axis_value(
     double coordinate_system_offset
 );
 void apply_coordinate_system_axis_value(std::optional<double> value, double& axis);
+void apply_g_code_value(double value, ParsedLine& parsed_line);
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
+void apply_m_code_value(double value, ParsedLine& parsed_line);
 void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
 bool is_arc_motion(std::string_view active_gcode);
 bool is_linear_motion(std::string_view active_gcode);
@@ -144,13 +184,17 @@ void register_modal_m_code(
     std::string_view group_number,
     std::string_view active_mcode
 );
+bool code_value_matches(double actual, double expected);
 std::string coordinate_system_number_for_g_code(std::string_view active_gcode);
+std::string active_g_code_for_coordinate_system_number(int system_number);
+int parameter_index_for_coordinate_system_axis(int system_number, int axis_index);
+bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index);
+void set_selected_coordinate_system(MachineState& state, int system_number);
+void set_coordinate_system_axis(MachineState& state, int system_number, int axis_index, double value);
+void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state);
 void reset_after_program_end(MachineState& state);
 std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
-std::vector<std::string> split_words(std::string_view line);
-double parse_numeric_suffix(const std::string& word);
-int parse_non_negative_integer_suffix(const std::string& word);
 std::string json_escape(std::string_view text);
 std::string to_json(const MachineState& state, std::optional<std::string_view> error = std::nullopt);
 std::string to_string(SpindleDirection direction);
@@ -189,9 +233,11 @@ MachineState execute_program(const std::string& input_path) {
     MachineState state;
     std::string line;
     while (std::getline(input_stream, line)) {
-        const ParsedLine parsed_line = parse_line(line);
+        const ParsedLine parsed_line = parse_line(line, state);
         apply_line(parsed_line, state);
+        apply_parameter_writes(parsed_line, state);
         if (parsed_line.end_program) {
+            reset_after_program_end(state);
             break;
         }
     }
@@ -199,69 +245,278 @@ MachineState execute_program(const std::string& input_path) {
     return state;
 }
 
-ParsedLine parse_line(std::string_view raw_line) {
-    ParsedLine parsed_line;
+std::string remove_ignorable_whitespace(std::string_view line) {
+    std::string compact;
+    compact.reserve(line.size());
 
-    for (const std::string& word : split_words(strip_comments(raw_line))) {
-        if (word.empty()) {
+    for (const char raw_character : line) {
+        if (raw_character == ' ' || raw_character == '\t') {
             continue;
         }
+        compact.push_back(raw_character);
+    }
 
-        const char letter = word.front();
-        switch (letter) {
-            case 'D':
-                assign_unique_word(parsed_line.d, parse_numeric_suffix(word), word);
-                break;
-            case 'H':
-                assign_unique_word(parsed_line.h, parse_non_negative_integer_suffix(word), word);
-                break;
-            case 'F':
-                assign_unique_word(parsed_line.feed_rate, parse_numeric_suffix(word), word);
-                break;
-            case 'G':
-                apply_g_code_word(word, parsed_line);
-                break;
-            case 'I':
-                assign_unique_word(parsed_line.i, parse_numeric_suffix(word), word);
-                break;
-            case 'J':
-                assign_unique_word(parsed_line.j, parse_numeric_suffix(word), word);
-                break;
-            case 'K':
-                assign_unique_word(parsed_line.k, parse_numeric_suffix(word), word);
-                break;
-            case 'L':
-                assign_unique_word(parsed_line.l, parse_numeric_suffix(word), word);
-                break;
-            case 'M':
-                apply_m_code_word(word, parsed_line);
-                break;
-            case 'N':
-                break;
-            case 'P':
-                assign_unique_word(parsed_line.p, parse_numeric_suffix(word), word);
-                break;
-            case 'R':
-                assign_unique_word(parsed_line.r, parse_numeric_suffix(word), word);
-                break;
-            case 'S':
-                assign_unique_word(parsed_line.spindle_speed, parse_numeric_suffix(word), word);
-                break;
-            case 'T':
-                assign_unique_word(parsed_line.t, parse_non_negative_integer_suffix(word), word);
-                break;
-            case 'X':
-                assign_unique_word(parsed_line.x, parse_numeric_suffix(word), word);
-                break;
-            case 'Y':
-                assign_unique_word(parsed_line.y, parse_numeric_suffix(word), word);
-                break;
-            case 'Z':
-                assign_unique_word(parsed_line.z, parse_numeric_suffix(word), word);
-                break;
-            default:
-                throw InputError("Unsupported word: " + word);
+    return compact;
+}
+
+double parse_numeric_literal(std::string_view text, std::size_t& position) {
+    const std::size_t start = position;
+    if (position < text.size() && (text[position] == '+' || text[position] == '-')) {
+        ++position;
+    }
+
+    bool saw_digit = false;
+    bool saw_decimal_point = false;
+    while (position < text.size()) {
+        const unsigned char character = static_cast<unsigned char>(text[position]);
+        if (std::isdigit(character) != 0) {
+            saw_digit = true;
+            ++position;
+            continue;
         }
+        if (text[position] == '.' && !saw_decimal_point) {
+            saw_decimal_point = true;
+            ++position;
+            continue;
+        }
+        break;
+    }
+
+    if (!saw_digit) {
+        throw InputError("Invalid numeric value");
+    }
+
+    try {
+        return std::stod(std::string(text.substr(start, position - start)));
+    } catch (const std::invalid_argument&) {
+        throw InputError("Invalid numeric value");
+    } catch (const std::out_of_range&) {
+        throw InputError("Numeric value out of range");
+    }
+}
+
+int require_parameter_index(double value) {
+    if (std::floor(value) != value || value < kMinParameterIndex || value > kMaxParameterIndex) {
+        throw InputError("Parameter index must be an integer from 1 to 5399");
+    }
+
+    return static_cast<int>(value);
+}
+
+int parse_parameter_index(std::string_view text, std::size_t& position) {
+    if (position >= text.size()) {
+        throw InputError("Missing parameter index");
+    }
+    if (text[position] == '#') {
+        throw InputError("Parameter indirection is not supported");
+    }
+    if (text[position] == '[') {
+        throw InputError("Expressions are not supported");
+    }
+
+    return require_parameter_index(parse_numeric_literal(text, position));
+}
+
+double parse_real_value(std::string_view text, std::size_t& position, const MachineState& state) {
+    if (position >= text.size()) {
+        throw InputError("Missing real value");
+    }
+    if (text[position] == '[') {
+        throw InputError("Expressions are not supported");
+    }
+    if (text[position] == '#') {
+        ++position;
+        const int parameter_index = parse_parameter_index(text, position);
+        return state.parameters.at(parameter_index);
+    }
+
+    return parse_numeric_literal(text, position);
+}
+
+int require_non_negative_integer(double value, std::string_view word) {
+    if (std::floor(value) != value || value < 0.0) {
+        throw InputError("Expected non-negative integer value for word: " + std::string(word));
+    }
+
+    return static_cast<int>(value);
+}
+
+void parse_parameter_setting(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state,
+    ParsedLine& parsed_line
+) {
+    ++position;
+    const int parameter_index = parse_parameter_index(text, position);
+    if (position >= text.size() || text[position] != '=') {
+        throw InputError("Parameter setting requires '='");
+    }
+    ++position;
+
+    parsed_line.parameter_writes.push_back(
+        ParameterWrite{parameter_index, parse_real_value(text, position, state)}
+    );
+}
+
+void parse_line_number(std::string_view text, std::size_t& position) {
+    const double value = parse_numeric_literal(text, position);
+    if (std::floor(value) != value || value < 0.0 || value > 99999.0) {
+        throw InputError("Line number must be an integer from 0 to 99999");
+    }
+}
+
+void parse_word_segment(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state,
+    ParsedLine& parsed_line
+) {
+    const char letter = static_cast<char>(std::toupper(static_cast<unsigned char>(text[position++])));
+    switch (letter) {
+        case 'D':
+            assign_unique_word(
+                parsed_line.d,
+                parse_real_value(text, position, state),
+                std::string_view("D")
+            );
+            return;
+        case 'F':
+            assign_unique_word(
+                parsed_line.feed_rate,
+                parse_real_value(text, position, state),
+                std::string_view("F")
+            );
+            return;
+        case 'G':
+            apply_g_code_value(parse_real_value(text, position, state), parsed_line);
+            return;
+        case 'H':
+            assign_unique_word(
+                parsed_line.h,
+                require_non_negative_integer(
+                    parse_real_value(text, position, state),
+                    std::string_view("H")
+                ),
+                std::string_view("H")
+            );
+            return;
+        case 'I':
+            assign_unique_word(
+                parsed_line.i,
+                parse_real_value(text, position, state),
+                std::string_view("I")
+            );
+            return;
+        case 'J':
+            assign_unique_word(
+                parsed_line.j,
+                parse_real_value(text, position, state),
+                std::string_view("J")
+            );
+            return;
+        case 'K':
+            assign_unique_word(
+                parsed_line.k,
+                parse_real_value(text, position, state),
+                std::string_view("K")
+            );
+            return;
+        case 'L':
+            assign_unique_word(
+                parsed_line.l,
+                parse_real_value(text, position, state),
+                std::string_view("L")
+            );
+            return;
+        case 'M':
+            apply_m_code_value(parse_real_value(text, position, state), parsed_line);
+            return;
+        case 'N':
+            parse_line_number(text, position);
+            return;
+        case 'P':
+            assign_unique_word(
+                parsed_line.p,
+                parse_real_value(text, position, state),
+                std::string_view("P")
+            );
+            return;
+        case 'R':
+            assign_unique_word(
+                parsed_line.r,
+                parse_real_value(text, position, state),
+                std::string_view("R")
+            );
+            return;
+        case 'S':
+            assign_unique_word(
+                parsed_line.spindle_speed,
+                parse_real_value(text, position, state),
+                std::string_view("S")
+            );
+            return;
+        case 'T':
+            assign_unique_word(
+                parsed_line.t,
+                require_non_negative_integer(
+                    parse_real_value(text, position, state),
+                    std::string_view("T")
+                ),
+                std::string_view("T")
+            );
+            return;
+        case 'X':
+            assign_unique_word(
+                parsed_line.x,
+                parse_real_value(text, position, state),
+                std::string_view("X")
+            );
+            return;
+        case 'Y':
+            assign_unique_word(
+                parsed_line.y,
+                parse_real_value(text, position, state),
+                std::string_view("Y")
+            );
+            return;
+        case 'Z':
+            assign_unique_word(
+                parsed_line.z,
+                parse_real_value(text, position, state),
+                std::string_view("Z")
+            );
+            return;
+        default:
+            throw InputError("Unsupported word");
+    }
+}
+
+void parse_segment(std::string_view text, std::size_t& position, const MachineState& state, ParsedLine& parsed_line) {
+    if (text[position] == '#') {
+        parse_parameter_setting(text, position, state, parsed_line);
+        return;
+    }
+
+    const unsigned char character = static_cast<unsigned char>(text[position]);
+    if (std::isalpha(character) != 0) {
+        parse_word_segment(text, position, state, parsed_line);
+        return;
+    }
+
+    throw InputError("Unexpected character in line");
+}
+
+ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
+    ParsedLine parsed_line;
+    const std::string compact_line = remove_ignorable_whitespace(strip_comments(raw_line));
+    std::size_t position = 0;
+    if (position < compact_line.size() && compact_line[position] == '/') {
+        ++position;
+    }
+
+    while (position < compact_line.size()) {
+        parse_segment(compact_line, position, state, parsed_line);
     }
 
     if (!parsed_line.has_g10 && (parsed_line.l.has_value() || parsed_line.p.has_value())) {
@@ -292,7 +547,10 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         } else if (group_number == "2") {
             state.selected_plane = plane_for_g_code(active_gcode);
         } else if (group_number == "12") {
-            state.selected_coordinate_system = coordinate_system_number_for_g_code(active_gcode);
+            set_selected_coordinate_system(
+                state,
+                std::stoi(coordinate_system_number_for_g_code(active_gcode))
+            );
         }
     }
     for (const auto& [group_number, active_mcode] : parsed_line.active_modal_m_codes) {
@@ -330,11 +588,16 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     }
 
     if (parsed_line.coordinate_system_offset_target.has_value()) {
-        Position& coordinate_system_offset =
-            state.coordinate_system_offsets.at(*parsed_line.coordinate_system_offset_target);
-        apply_coordinate_system_axis_value(parsed_line.x, coordinate_system_offset.x);
-        apply_coordinate_system_axis_value(parsed_line.y, coordinate_system_offset.y);
-        apply_coordinate_system_axis_value(parsed_line.z, coordinate_system_offset.z);
+        const int system_number = std::stoi(*parsed_line.coordinate_system_offset_target);
+        if (parsed_line.x.has_value()) {
+            set_coordinate_system_axis(state, system_number, 0, *parsed_line.x);
+        }
+        if (parsed_line.y.has_value()) {
+            set_coordinate_system_axis(state, system_number, 1, *parsed_line.y);
+        }
+        if (parsed_line.z.has_value()) {
+            set_coordinate_system_axis(state, system_number, 2, *parsed_line.z);
+        }
     } else {
         validate_linear_motion_command(parsed_line, state);
         validate_arc_command(parsed_line, state);
@@ -358,10 +621,6 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
             state.coordinate_mode,
             coordinate_system_offset.z
         );
-    }
-
-    if (parsed_line.end_program) {
-        reset_after_program_end(state);
     }
 }
 
@@ -568,6 +827,129 @@ void apply_coordinate_system_axis_value(std::optional<double> value, double& axi
     axis = *value;
 }
 
+bool code_value_matches(double actual, double expected) {
+    return std::abs(actual - expected) < 1e-9;
+}
+
+std::string active_g_code_for_coordinate_system_number(int system_number) {
+    switch (system_number) {
+        case 1:
+            return "G54";
+        case 2:
+            return "G55";
+        case 3:
+            return "G56";
+        case 4:
+            return "G57";
+        case 5:
+            return "G58";
+        case 6:
+            return "G59";
+        case 7:
+            return "G59.1";
+        case 8:
+            return "G59.2";
+        case 9:
+            return "G59.3";
+        default:
+            throw InputError("Coordinate system number must be from 1 to 9");
+    }
+}
+
+int parameter_index_for_coordinate_system_axis(int system_number, int axis_index) {
+    return 5221 + ((system_number - 1) * 20) + axis_index;
+}
+
+bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index) {
+    if (parameter_index < 5221 || parameter_index > 5383) {
+        return false;
+    }
+
+    const int relative_index = parameter_index - 5221;
+    const int within_system_block = relative_index % 20;
+    if (within_system_block < 0 || within_system_block > 2) {
+        return false;
+    }
+
+    system_number = (relative_index / 20) + 1;
+    axis_index = within_system_block;
+    return system_number >= 1 && system_number <= 9;
+}
+
+void set_selected_coordinate_system(MachineState& state, int system_number) {
+    state.selected_coordinate_system = std::to_string(system_number);
+    state.parameters[kSelectedCoordinateSystemParameter] = static_cast<double>(system_number);
+    state.active_modal_g_codes["12"] = active_g_code_for_coordinate_system_number(system_number);
+}
+
+void set_coordinate_system_axis(MachineState& state, int system_number, int axis_index, double value) {
+    Position& coordinate_system_offset = state.coordinate_system_offsets.at(std::to_string(system_number));
+    switch (axis_index) {
+        case 0:
+            coordinate_system_offset.x = value;
+            break;
+        case 1:
+            coordinate_system_offset.y = value;
+            break;
+        case 2:
+            coordinate_system_offset.z = value;
+            break;
+        default:
+            throw std::runtime_error("Unsupported coordinate system axis");
+    }
+
+    state.parameters[parameter_index_for_coordinate_system_axis(system_number, axis_index)] = value;
+}
+
+void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
+    for (const ParameterWrite& parameter_write : parsed_line.parameter_writes) {
+        state.parameters[parameter_write.index] = parameter_write.value;
+
+        int system_number = 0;
+        int axis_index = 0;
+        if (decode_coordinate_system_axis_parameter(parameter_write.index, system_number, axis_index)) {
+            // Direct writes to offset backing parameters update the stored offset data.
+            set_coordinate_system_axis(state, system_number, axis_index, parameter_write.value);
+        }
+    }
+}
+
+void apply_g_code_value(double value, ParsedLine& parsed_line) {
+    if (code_value_matches(value, 38.2)) {
+        apply_g_code_word("G38.2", parsed_line);
+        return;
+    }
+    if (code_value_matches(value, 59.1)) {
+        apply_g_code_word("G59.1", parsed_line);
+        return;
+    }
+    if (code_value_matches(value, 59.2)) {
+        apply_g_code_word("G59.2", parsed_line);
+        return;
+    }
+    if (code_value_matches(value, 59.3)) {
+        apply_g_code_word("G59.3", parsed_line);
+        return;
+    }
+    if (code_value_matches(value, 61.1)) {
+        apply_g_code_word("G61.1", parsed_line);
+        return;
+    }
+    if (std::floor(value) != value) {
+        throw InputError("Unsupported G code value");
+    }
+
+    apply_g_code_word("G" + std::to_string(static_cast<int>(value)), parsed_line);
+}
+
+void apply_m_code_value(double value, ParsedLine& parsed_line) {
+    if (std::floor(value) != value) {
+        throw InputError("Unsupported M code value");
+    }
+
+    apply_m_code_word("M" + std::to_string(static_cast<int>(value)), parsed_line);
+}
+
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     const std::string code = word.substr(1);
 
@@ -730,14 +1112,13 @@ std::string coordinate_system_number_for_g_code(std::string_view active_gcode) {
 void reset_after_program_end(MachineState& state) {
     state.coordinate_mode = CoordinateMode::kAbsolute;
     state.selected_plane = Plane::kXY;
-    state.selected_coordinate_system = "1";
     state.active_modal_g_codes["1"] = "G1";
     state.active_modal_g_codes["2"] = "G17";
     state.active_modal_g_codes["3"] = "G90";
     state.active_modal_g_codes["5"] = "G94";
     state.active_modal_g_codes["7"] = "G40";
-    state.active_modal_g_codes["12"] = "G54";
     state.active_modal_g_codes["13"] = "G64";
+    set_selected_coordinate_system(state, 1);
     state.active_modal_m_codes["7"] = "M5";
     state.active_modal_m_codes["8"] = "M9";
     state.active_modal_m_codes["9"] = "M48";

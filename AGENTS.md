@@ -9,6 +9,9 @@ Contents:
 - CNCSim/prompt/docs/RS274NGC.md contains the RS274 documentation converted to markdown. **Do not edit files in this folder unless explicitly asked to do so.**
 - CNCSim/reference-implementation/ contains a running reference implementation of the eval. At each commit, it should contain an implementation that passes all the tests in the eval.
 
+Test-authoring rule for CNCSim:
+- The RS274 spec is the source of truth, and tests should only enforce behavior that is explicit and unambiguous in that document. If a proposed test depends on a nontrivial inference across multiple clauses rather than a plainly stated requirement, do not add it as a requirement-bearing test. Instead, either leave it untested or first clarify the requirement in non-RS274 eval docs such as `CNCSim/CNCSim-Design.md` or `CNCSim/prompt/base-prompt.md`. Do not rely on changing `CNCSim/prompt/docs/RS274NGC.md` for this.
+
 Agent workflow note:
 - `.vscode/settings.json` save actions are only applied by VS Code during editor saves. They are not automatically applied to files created or modified by AI agents via patches, shell commands, scripts, or other direct filesystem writes.
 - When editing Python files, run Ruff explicitly as needed instead of assuming editor integrations will format code, fix lint issues, or organize imports.
