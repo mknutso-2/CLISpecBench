@@ -37,18 +37,9 @@ The primary metric for CNCSim-Full is not raw pass rate but **feature coverage**
 
 ## 3. Prompt Template
 
-```
-See [prompts/base-prompts.md](../prompts/base-prompts.md) for the base prompt template.
+See [prompt/base-prompt.md](prompt/base-prompt.md) for the base prompt template.
 
----
-Technical note (required for compatibility with the test system):
-
-See [prompts/technical-requirements-prompt.md](../prompts/technical-requirements-prompt.md)
-
----
-
-The specification document is in docs/. Everything else is up to you.
-```
+See [prompt/technical-requirements-prompt.md](prompt/technical-requirements-prompt.md) for the technical requirements section that is appended to the base prompt.
 
 ## 4. Test Case Design
 
