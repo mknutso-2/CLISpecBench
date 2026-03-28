@@ -27,11 +27,29 @@ PARAMETER_ERROR_CASES: list[ParameterErrorCase] = [
         "parameter-setting-index-non-integer",
         "#1.5=1\n",
     ),
+    # RS274 section 3.3.3 "Parameter Setting":
+    # the parameter index in a setting is a real value, but it must still
+    # evaluate to an integer in 1..5399.
+    (
+        "parameter-setting-expression-index-too-low",
+        "#[1-1]=1\n",
+    ),
     # RS274 section 3.3.2.2 "Parameter Value":
     # the parameter index in a read must evaluate to an integer in 1..5399.
     (
         "parameter-read-index-too-low",
         "G0 X#0\n",
+    ),
+    # RS274 section 3.3.2.2 "Parameter Value":
+    # repeated # indirection is allowed, but the resulting index must still
+    # evaluate to an integer in 1..5399.
+    (
+        "parameter-read-indirection-index-non-integer",
+        "#1=1.5\n"
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G90\n"
+        "G0 X##1\n",
     ),
 ]
 

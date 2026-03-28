@@ -132,7 +132,14 @@ void assign_unique_word(std::optional<T>& destination, T value, std::string_view
 std::string remove_ignorable_whitespace(std::string_view line);
 double parse_numeric_literal(std::string_view text, std::size_t& position);
 double parse_real_value(std::string_view text, std::size_t& position, const MachineState& state);
-int parse_parameter_index(std::string_view text, std::size_t& position);
+double parse_expression(std::string_view text, std::size_t& position, const MachineState& state);
+double parse_expression_group3(std::string_view text, std::size_t& position, const MachineState& state);
+double parse_expression_group2(std::string_view text, std::size_t& position, const MachineState& state);
+double parse_expression_group1(std::string_view text, std::size_t& position, const MachineState& state);
+double parse_atomic_real_value(std::string_view text, std::size_t& position, const MachineState& state);
+double parse_parameter_value(std::string_view text, std::size_t& position, const MachineState& state);
+double parse_unary_operation_value(std::string_view text, std::size_t& position, const MachineState& state);
+int parse_parameter_index(std::string_view text, std::size_t& position, const MachineState& state);
 int require_parameter_index(double value);
 int require_non_negative_integer(double value, std::string_view word);
 void parse_segment(std::string_view text, std::size_t& position, const MachineState& state, ParsedLine& parsed_line);
@@ -303,34 +310,299 @@ int require_parameter_index(double value) {
     return static_cast<int>(value);
 }
 
-int parse_parameter_index(std::string_view text, std::size_t& position) {
+bool matches_case_insensitive_keyword(
+    std::string_view text,
+    std::size_t position,
+    std::string_view keyword
+) {
+    if (position + keyword.size() > text.size()) {
+        return false;
+    }
+
+    for (std::size_t index = 0; index < keyword.size(); ++index) {
+        if (std::toupper(static_cast<unsigned char>(text[position + index]))
+            != std::toupper(static_cast<unsigned char>(keyword[index])))
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool consume_case_insensitive_keyword(
+    std::string_view text,
+    std::size_t& position,
+    std::string_view keyword
+) {
+    if (!matches_case_insensitive_keyword(text, position, keyword)) {
+        return false;
+    }
+
+    position += keyword.size();
+    return true;
+}
+
+double degrees_to_radians(double degrees) {
+    return degrees * 3.14159265358979323846 / 180.0;
+}
+
+double radians_to_degrees(double radians) {
+    return radians * 180.0 / 3.14159265358979323846;
+}
+
+double require_finite_real_value(double value, std::string_view context) {
+    if (!std::isfinite(value)) {
+        throw InputError("Invalid real value in " + std::string(context));
+    }
+
+    return value;
+}
+
+double apply_binary_operation(double lhs, std::string_view op, double rhs) {
+    if (op == "**") {
+        return require_finite_real_value(std::pow(lhs, rhs), "expression");
+    }
+    if (op == "*") {
+        return lhs * rhs;
+    }
+    if (op == "/") {
+        if (rhs == 0.0) {
+            throw InputError("Division by zero in expression");
+        }
+        return lhs / rhs;
+    }
+    if (op == "MOD") {
+        if (rhs == 0.0) {
+            throw InputError("Modulo by zero in expression");
+        }
+        return std::fmod(lhs, rhs);
+    }
+    if (op == "+") {
+        return lhs + rhs;
+    }
+    if (op == "-") {
+        return lhs - rhs;
+    }
+    if (op == "AND") {
+        return (lhs != 0.0 && rhs != 0.0) ? 1.0 : 0.0;
+    }
+    if (op == "OR") {
+        return (lhs != 0.0 || rhs != 0.0) ? 1.0 : 0.0;
+    }
+    if (op == "XOR") {
+        return ((lhs != 0.0) != (rhs != 0.0)) ? 1.0 : 0.0;
+    }
+
+    throw std::runtime_error("Unsupported binary operation");
+}
+
+double parse_expression(std::string_view text, std::size_t& position, const MachineState& state) {
+    if (position >= text.size() || text[position] != '[') {
+        throw InputError("Expression must start with '['");
+    }
+
+    ++position;
+    const double value = parse_expression_group3(text, position, state);
+    if (position >= text.size() || text[position] != ']') {
+        throw InputError("Expression requires closing ']'");
+    }
+    ++position;
+    return value;
+}
+
+double parse_expression_group3(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state
+) {
+    double value = parse_expression_group2(text, position, state);
+    while (position < text.size()) {
+        std::string_view op;
+        if (consume_case_insensitive_keyword(text, position, "AND")) {
+            op = "AND";
+        } else if (consume_case_insensitive_keyword(text, position, "XOR")) {
+            op = "XOR";
+        } else if (consume_case_insensitive_keyword(text, position, "OR")) {
+            op = "OR";
+        } else if (text[position] == '+') {
+            ++position;
+            op = "+";
+        } else if (text[position] == '-') {
+            ++position;
+            op = "-";
+        } else {
+            break;
+        }
+
+        value = apply_binary_operation(value, op, parse_expression_group2(text, position, state));
+    }
+
+    return value;
+}
+
+double parse_expression_group2(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state
+) {
+    double value = parse_expression_group1(text, position, state);
+    while (position < text.size()) {
+        std::string_view op;
+        if (consume_case_insensitive_keyword(text, position, "MOD")) {
+            op = "MOD";
+        } else if (text[position] == '*') {
+            if (position + 1 < text.size() && text[position + 1] == '*') {
+                break;
+            }
+            ++position;
+            op = "*";
+        } else if (text[position] == '/') {
+            ++position;
+            op = "/";
+        } else {
+            break;
+        }
+
+        value = apply_binary_operation(value, op, parse_expression_group1(text, position, state));
+    }
+
+    return value;
+}
+
+double parse_expression_group1(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state
+) {
+    double value = parse_atomic_real_value(text, position, state);
+    while (position + 1 < text.size() && text[position] == '*' && text[position + 1] == '*') {
+        position += 2;
+        value = apply_binary_operation(value, "**", parse_atomic_real_value(text, position, state));
+    }
+
+    return value;
+}
+
+double parse_parameter_value(std::string_view text, std::size_t& position, const MachineState& state) {
+    if (position >= text.size() || text[position] != '#') {
+        throw InputError("Parameter value must start with '#'");
+    }
+
+    ++position;
+    const int parameter_index = parse_parameter_index(text, position, state);
+    return state.parameters.at(parameter_index);
+}
+
+double parse_unary_operation_value(
+    std::string_view text,
+    std::size_t& position,
+    const MachineState& state
+) {
+    auto parse_single_expression_argument = [&](std::string_view name) {
+        const double argument = parse_expression(text, position, state);
+        if (name == "ABS") {
+            return std::abs(argument);
+        }
+        if (name == "ACOS") {
+            return require_finite_real_value(radians_to_degrees(std::acos(argument)), "unary operation");
+        }
+        if (name == "ASIN") {
+            return require_finite_real_value(radians_to_degrees(std::asin(argument)), "unary operation");
+        }
+        if (name == "COS") {
+            return std::cos(degrees_to_radians(argument));
+        }
+        if (name == "EXP") {
+            return require_finite_real_value(std::exp(argument), "unary operation");
+        }
+        if (name == "FIX") {
+            return std::floor(argument);
+        }
+        if (name == "FUP") {
+            return std::ceil(argument);
+        }
+        if (name == "LN") {
+            return require_finite_real_value(std::log(argument), "unary operation");
+        }
+        if (name == "ROUND") {
+            return std::round(argument);
+        }
+        if (name == "SIN") {
+            return std::sin(degrees_to_radians(argument));
+        }
+        if (name == "SQRT") {
+            return require_finite_real_value(std::sqrt(argument), "unary operation");
+        }
+        if (name == "TAN") {
+            return require_finite_real_value(std::tan(degrees_to_radians(argument)), "unary operation");
+        }
+
+        throw std::runtime_error("Unsupported unary operation");
+    };
+
+    if (consume_case_insensitive_keyword(text, position, "ATAN")) {
+        const double numerator = parse_expression(text, position, state);
+        if (position >= text.size() || text[position] != '/') {
+            throw InputError("ATAN requires two expressions separated by '/'");
+        }
+        ++position;
+        const double denominator = parse_expression(text, position, state);
+        return radians_to_degrees(std::atan2(numerator, denominator));
+    }
+
+    for (const std::string_view name :
+         {std::string_view("ABS"),
+          std::string_view("ACOS"),
+          std::string_view("ASIN"),
+          std::string_view("COS"),
+          std::string_view("EXP"),
+          std::string_view("FIX"),
+          std::string_view("FUP"),
+          std::string_view("LN"),
+          std::string_view("ROUND"),
+          std::string_view("SIN"),
+          std::string_view("SQRT"),
+          std::string_view("TAN")})
+    {
+        if (consume_case_insensitive_keyword(text, position, name)) {
+            return parse_single_expression_argument(name);
+        }
+    }
+
+    throw InputError("Unsupported unary operation");
+}
+
+double parse_atomic_real_value(std::string_view text, std::size_t& position, const MachineState& state) {
+    if (position >= text.size()) {
+        throw InputError("Missing real value");
+    }
+    if (text[position] == '[') {
+        return parse_expression(text, position, state);
+    }
+    if (text[position] == '#') {
+        return parse_parameter_value(text, position, state);
+    }
+    if (std::isalpha(static_cast<unsigned char>(text[position])) != 0) {
+        return parse_unary_operation_value(text, position, state);
+    }
+
+    return parse_numeric_literal(text, position);
+}
+
+int parse_parameter_index(std::string_view text, std::size_t& position, const MachineState& state) {
     if (position >= text.size()) {
         throw InputError("Missing parameter index");
     }
-    if (text[position] == '#') {
-        throw InputError("Parameter indirection is not supported");
-    }
-    if (text[position] == '[') {
-        throw InputError("Expressions are not supported");
-    }
-
-    return require_parameter_index(parse_numeric_literal(text, position));
+    return require_parameter_index(parse_real_value(text, position, state));
 }
 
 double parse_real_value(std::string_view text, std::size_t& position, const MachineState& state) {
     if (position >= text.size()) {
         throw InputError("Missing real value");
     }
-    if (text[position] == '[') {
-        throw InputError("Expressions are not supported");
-    }
-    if (text[position] == '#') {
-        ++position;
-        const int parameter_index = parse_parameter_index(text, position);
-        return state.parameters.at(parameter_index);
-    }
 
-    return parse_numeric_literal(text, position);
+    return parse_atomic_real_value(text, position, state);
 }
 
 int require_non_negative_integer(double value, std::string_view word) {
@@ -348,7 +620,7 @@ void parse_parameter_setting(
     ParsedLine& parsed_line
 ) {
     ++position;
-    const int parameter_index = parse_parameter_index(text, position);
+    const int parameter_index = parse_parameter_index(text, position, state);
     if (position >= text.size() || text[position] != '=') {
         throw InputError("Parameter setting requires '='");
     }
