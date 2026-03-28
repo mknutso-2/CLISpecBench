@@ -677,6 +677,9 @@ void register_modal_m_code(
     if (parsed_line.active_modal_m_codes.contains(group_key)) {
         throw InputError("Multiple M codes from the same modal group in the same block");
     }
+    if (parsed_line.active_modal_m_codes.size() >= 4) {
+        throw InputError("A line may have at most four M words");
+    }
 
     parsed_line.active_modal_m_codes.emplace(group_key, std::string(active_mcode));
 }
