@@ -36,7 +36,8 @@ struct Position {
 };
 
 struct MachineState {
-    std::map<std::string, std::string> active_modal_codes;
+    std::map<std::string, std::string> active_modal_g_codes;
+    std::map<std::string, std::string> active_modal_m_codes;
     Position position{};
     double feed_rate = 0.0;
     double spindle_speed = 0.0;
@@ -50,7 +51,8 @@ struct ProgramOptions {
 };
 
 struct ParsedLine {
-    std::map<std::string, std::string> active_modal_codes;
+    std::map<std::string, std::string> active_modal_g_codes;
+    std::map<std::string, std::string> active_modal_m_codes;
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
@@ -71,10 +73,16 @@ ParsedLine parse_line(std::string_view raw_line);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
 void apply_axis_value(std::optional<double> value, double& axis, CoordinateMode coordinate_mode);
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
+void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
 void register_modal_g_code(
     ParsedLine& parsed_line,
     std::string_view group_number,
     std::string_view active_gcode
+);
+void register_modal_m_code(
+    ParsedLine& parsed_line,
+    std::string_view group_number,
+    std::string_view active_mcode
 );
 void reset_after_program_end(MachineState& state);
 std::string strip_comments(std::string_view raw_line);
@@ -146,27 +154,9 @@ ParsedLine parse_line(std::string_view raw_line) {
             case 'G':
                 apply_g_code_word(word, parsed_line);
                 break;
-            case 'M': {
-                const std::string code = word.substr(1);
-                if (code == "2" || code == "30") {
-                    parsed_line.end_program = true;
-                    break;
-                }
-                if (code == "3") {
-                    parsed_line.spindle_direction = SpindleDirection::kClockwise;
-                    break;
-                }
-                if (code == "4") {
-                    parsed_line.spindle_direction = SpindleDirection::kCounterClockwise;
-                    break;
-                }
-                if (code == "5") {
-                    parsed_line.spindle_direction = SpindleDirection::kOff;
-                    break;
-                }
-
-                throw InputError("Unsupported M code: " + word);
-            }
+            case 'M':
+                apply_m_code_word(word, parsed_line);
+                break;
             case 'N':
                 break;
             case 'S':
@@ -190,12 +180,15 @@ ParsedLine parse_line(std::string_view raw_line) {
 }
 
 void apply_line(const ParsedLine& parsed_line, MachineState& state) {
-    for (const auto& [group_number, active_gcode] : parsed_line.active_modal_codes) {
-        state.active_modal_codes[group_number] = active_gcode;
+    for (const auto& [group_number, active_gcode] : parsed_line.active_modal_g_codes) {
+        state.active_modal_g_codes[group_number] = active_gcode;
         if (group_number == "3") {
             state.coordinate_mode =
                 active_gcode == "G90" ? CoordinateMode::kAbsolute : CoordinateMode::kIncremental;
         }
+    }
+    for (const auto& [group_number, active_mcode] : parsed_line.active_modal_m_codes) {
+        state.active_modal_m_codes[group_number] = active_mcode;
     }
 
     if (parsed_line.feed_rate.has_value()) {
@@ -284,28 +277,81 @@ void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     throw InputError("Unsupported G code: " + word);
 }
 
+void apply_m_code_word(const std::string& word, ParsedLine& parsed_line) {
+    const std::string code = word.substr(1);
+
+    if (code == "0" || code == "1" || code == "2" || code == "30" || code == "60") {
+        register_modal_m_code(parsed_line, "4", word);
+        if (code == "2" || code == "30") {
+            parsed_line.end_program = true;
+        }
+        return;
+    }
+    if (code == "6") {
+        register_modal_m_code(parsed_line, "6", word);
+        return;
+    }
+    if (code == "3" || code == "4" || code == "5") {
+        register_modal_m_code(parsed_line, "7", word);
+        if (code == "3") {
+            parsed_line.spindle_direction = SpindleDirection::kClockwise;
+        } else if (code == "4") {
+            parsed_line.spindle_direction = SpindleDirection::kCounterClockwise;
+        } else {
+            parsed_line.spindle_direction = SpindleDirection::kOff;
+        }
+        return;
+    }
+    if (code == "7" || code == "8" || code == "9") {
+        register_modal_m_code(parsed_line, "8", word);
+        return;
+    }
+    if (code == "48" || code == "49") {
+        register_modal_m_code(parsed_line, "9", word);
+        return;
+    }
+
+    throw InputError("Unsupported M code: " + word);
+}
+
 void register_modal_g_code(
     ParsedLine& parsed_line,
     std::string_view group_number,
     std::string_view active_gcode
 ) {
     const std::string group_key(group_number);
-    if (parsed_line.active_modal_codes.contains(group_key)) {
+    if (parsed_line.active_modal_g_codes.contains(group_key)) {
         throw InputError("Multiple G codes from the same modal group in the same block");
     }
 
-    parsed_line.active_modal_codes.emplace(group_key, std::string(active_gcode));
+    parsed_line.active_modal_g_codes.emplace(group_key, std::string(active_gcode));
+}
+
+void register_modal_m_code(
+    ParsedLine& parsed_line,
+    std::string_view group_number,
+    std::string_view active_mcode
+) {
+    const std::string group_key(group_number);
+    if (parsed_line.active_modal_m_codes.contains(group_key)) {
+        throw InputError("Multiple M codes from the same modal group in the same block");
+    }
+
+    parsed_line.active_modal_m_codes.emplace(group_key, std::string(active_mcode));
 }
 
 void reset_after_program_end(MachineState& state) {
     state.coordinate_mode = CoordinateMode::kAbsolute;
-    state.active_modal_codes["1"] = "G1";
-    state.active_modal_codes["2"] = "G17";
-    state.active_modal_codes["3"] = "G90";
-    state.active_modal_codes["5"] = "G94";
-    state.active_modal_codes["7"] = "G40";
-    state.active_modal_codes["12"] = "G54";
-    state.active_modal_codes["13"] = "G64";
+    state.active_modal_g_codes["1"] = "G1";
+    state.active_modal_g_codes["2"] = "G17";
+    state.active_modal_g_codes["3"] = "G90";
+    state.active_modal_g_codes["5"] = "G94";
+    state.active_modal_g_codes["7"] = "G40";
+    state.active_modal_g_codes["12"] = "G54";
+    state.active_modal_g_codes["13"] = "G64";
+    state.active_modal_m_codes["7"] = "M5";
+    state.active_modal_m_codes["8"] = "M9";
+    state.active_modal_m_codes["9"] = "M48";
     state.spindle_direction = SpindleDirection::kOff;
 }
 
@@ -394,15 +440,27 @@ std::string to_json(const MachineState& state) {
            << "  \"feed_rate\": " << state.feed_rate << ",\n"
            << "  \"spindle_speed\": " << state.spindle_speed << ",\n"
            << "  \"spindle_direction\": \"" << to_string(state.spindle_direction) << "\",\n"
-           << "  \"active_modal_codes\": {";
+           << "  \"active_modal_g_codes\": {";
 
     bool is_first_modal_code = true;
-    for (const auto& [group_number, active_gcode] : state.active_modal_codes) {
+    for (const auto& [group_number, active_gcode] : state.active_modal_g_codes) {
         if (!is_first_modal_code) {
             output << ", ";
         }
         output << "\"" << group_number << "\": \"" << active_gcode << "\"";
         is_first_modal_code = false;
+    }
+
+    output << "},\n"
+           << "  \"active_modal_m_codes\": {";
+
+    bool is_first_active_mcode = true;
+    for (const auto& [group_number, active_mcode] : state.active_modal_m_codes) {
+        if (!is_first_active_mcode) {
+            output << ", ";
+        }
+        output << "\"" << group_number << "\": \"" << active_mcode << "\"";
+        is_first_active_mcode = false;
     }
 
     output << "},\n"
