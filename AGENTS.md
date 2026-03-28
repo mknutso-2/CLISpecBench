@@ -8,3 +8,7 @@ Contents:
 - CNCSim/prompt/technical-requirements-prompt.md is the 'technical' prompt presented to the AI coding agent for the sole purpose of documenting the requirements enforced by the testing harness. **You should update this document whenever new requirements are incurred by the testing harness. e.g. when new state variables are added to the output schema. Agents must be able to, theoretically, pass every test in the suite using only base-prompt.md, technical-requirements.prompt.md, and the docs/ folder.**
 - CNCSim/prompt/docs/RS274NGC.md contains the RS274 documentation converted to markdown. **Do not edit files in this folder unless explicitly asked to do so.**
 - CNCSim/reference-implementation/ contains a running reference implementation of the eval. At each commit, it should contain an implementation that passes all the tests in the eval.
+
+Agent workflow note:
+- `.vscode/settings.json` save actions are only applied by VS Code during editor saves. They are not automatically applied to files created or modified by AI agents via patches, shell commands, scripts, or other direct filesystem writes.
+- When editing Python files, run Ruff explicitly as needed instead of assuming editor integrations will format code, fix lint issues, or organize imports.
