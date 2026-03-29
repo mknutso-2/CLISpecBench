@@ -41,10 +41,21 @@ enum class SpindleDirection {
     kOff,
 };
 
+enum class CutterCompSide {
+    kOff,
+    kLeft,
+    kRight,
+};
+
 struct Position {
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
+};
+
+struct Point2D {
+    double x = 0.0;
+    double y = 0.0;
 };
 
 struct ParameterWrite {
@@ -111,10 +122,15 @@ struct MachineState {
     double spindle_speed = 0.0;
     SpindleDirection spindle_direction = SpindleDirection::kOff;
     std::optional<int> cutter_radius_compensation_number;
+    CutterCompSide cutter_comp_side = CutterCompSide::kOff;
+    bool pending_first_cutter_comp_move = false;
+    std::optional<Point2D> cutter_comp_programmed_xy;
+    std::optional<Point2D> cutter_comp_last_linear_direction;
     std::optional<int> tool_length_offset_index;
     std::optional<double> active_tool_length_offset;
     std::optional<LengthUnit> active_tool_length_offset_unit;
     std::optional<int> selected_tool;
+    std::optional<int> tool_in_spindle;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
     Plane selected_plane = Plane::kXY;
     LengthUnit current_length_unit = LengthUnit::kInches;
@@ -136,7 +152,7 @@ struct ParsedLine {
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
-    std::optional<double> d;
+    std::optional<int> d;
     std::optional<int> h;
     std::optional<double> i;
     std::optional<double> j;
@@ -216,6 +232,7 @@ void apply_g_code_value(double value, ParsedLine& parsed_line);
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line);
 void apply_m_code_value(double value, ParsedLine& parsed_line);
 void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
+bool has_xy_axis_word(const ParsedLine& parsed_line);
 bool is_arc_motion(std::string_view active_gcode);
 bool is_linear_motion(std::string_view active_gcode);
 bool is_feed_rate_motion(std::string_view active_gcode);
@@ -268,6 +285,23 @@ void apply_length_unit_change(MachineState& state, LengthUnit new_unit);
 double parameter_length_value_in_current_units(const MachineState& state, int parameter_index);
 double active_tool_length_offset_in_current_units(const MachineState& state);
 void apply_tool_length_offset_change(MachineState& state, std::optional<int> new_index);
+bool cutter_radius_compensation_is_active(const MachineState& state);
+CutterCompSide cutter_comp_side_for_g_code(std::string_view active_gcode);
+void activate_cutter_radius_compensation(
+    MachineState& state,
+    CutterCompSide side,
+    std::optional<int> d_number
+);
+void deactivate_cutter_radius_compensation(MachineState& state);
+double active_cutter_radius(const MachineState& state);
+Point2D resolve_programmed_xy_endpoint(const ParsedLine& parsed_line, const MachineState& state);
+Point2D compute_first_cutter_comp_linear_endpoint(
+    Point2D current_tool_center,
+    Point2D programmed_endpoint,
+    double tool_radius,
+    CutterCompSide side
+);
+void apply_cutter_compensated_linear_xy_motion(MachineState& state, const ParsedLine& parsed_line);
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state);
 void reset_after_program_end(MachineState& state);
 std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
@@ -910,7 +944,10 @@ void parse_word_segment(
         case 'D':
             assign_unique_word(
                 parsed_line.d,
-                parse_real_value(text, position, state),
+                require_non_negative_integer(
+                    parse_real_value(text, position, state),
+                    std::string_view("D")
+                ),
                 std::string_view("D")
             );
             return;
@@ -1071,6 +1108,14 @@ ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
     {
         throw InputError("G92 requires at least one axis word");
     }
+    if (parsed_line.d.has_value()) {
+        const auto cutter_compensation = parsed_line.active_modal_g_codes.find("7");
+        if (cutter_compensation == parsed_line.active_modal_g_codes.end()
+            || (cutter_compensation->second != "G41" && cutter_compensation->second != "G42"))
+        {
+            throw InputError("D word requires G41 or G42");
+        }
+    }
 
     return parsed_line;
 }
@@ -1085,10 +1130,10 @@ void assign_unique_word(std::optional<T>& destination, T value, std::string_view
 }
 
 void apply_line(const ParsedLine& parsed_line, MachineState& state) {
-    if (parsed_line.active_modal_g_codes.contains("6") && state.cutter_radius_compensation_number.has_value()) {
+    if (parsed_line.active_modal_g_codes.contains("6") && cutter_radius_compensation_is_active(state)) {
         throw InputError("Cannot change units with cutter radius compensation active");
     }
-    if (parsed_line.active_modal_g_codes.contains("12") && state.cutter_radius_compensation_number.has_value()) {
+    if (parsed_line.active_modal_g_codes.contains("12") && cutter_radius_compensation_is_active(state)) {
         throw InputError("Cannot change coordinate systems with cutter radius compensation active");
     }
 
@@ -1124,13 +1169,22 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     if (parsed_line.t.has_value()) {
         state.selected_tool = *parsed_line.t;
     }
+    if (parsed_line.active_modal_m_codes.contains("6")
+        && parsed_line.active_modal_m_codes.at("6") == "M6")
+    {
+        state.tool_in_spindle = state.selected_tool;
+    }
 
     if (parsed_line.active_modal_g_codes.contains("7")) {
         const std::string_view active_crc = parsed_line.active_modal_g_codes.at("7");
         if (active_crc == "G40") {
-            state.cutter_radius_compensation_number = std::nullopt;
-        } else if (parsed_line.d.has_value()) {
-            state.cutter_radius_compensation_number = static_cast<int>(*parsed_line.d);
+            deactivate_cutter_radius_compensation(state);
+        } else {
+            activate_cutter_radius_compensation(
+                state,
+                cutter_comp_side_for_g_code(active_crc),
+                parsed_line.d
+            );
         }
     }
     if (parsed_line.active_modal_g_codes.contains("8")) {
@@ -1200,6 +1254,14 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
             apply_coordinate_system_axis_value(parsed_line.x, state.machine_position.x);
             apply_coordinate_system_axis_value(parsed_line.y, state.machine_position.y);
             apply_coordinate_system_axis_value(parsed_line.z, state.machine_position.z);
+        } else if (cutter_radius_compensation_is_active(state) && has_xy_axis_word(parsed_line)) {
+            apply_cutter_compensated_linear_xy_motion(state, parsed_line);
+            apply_program_axis_value(
+                parsed_line.z,
+                state.machine_position.z,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 2)
+            );
         } else {
             apply_program_axis_value(
                 parsed_line.x,
@@ -1285,6 +1347,10 @@ double resolved_program_axis_endpoint(
 
 bool has_linear_axis_word(const ParsedLine& parsed_line) {
     return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value();
+}
+
+bool has_xy_axis_word(const ParsedLine& parsed_line) {
+    return parsed_line.x.has_value() || parsed_line.y.has_value();
 }
 
 bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
@@ -1600,6 +1666,205 @@ double active_tool_length_offset_in_current_units(const MachineState& state) {
         *state.active_tool_length_offset_unit,
         state.current_length_unit
     );
+}
+
+bool cutter_radius_compensation_is_active(const MachineState& state) {
+    return state.cutter_comp_side != CutterCompSide::kOff;
+}
+
+CutterCompSide cutter_comp_side_for_g_code(std::string_view active_gcode) {
+    if (active_gcode == "G41") {
+        return CutterCompSide::kLeft;
+    }
+    if (active_gcode == "G42") {
+        return CutterCompSide::kRight;
+    }
+
+    throw std::runtime_error("Unsupported cutter compensation code: " + std::string(active_gcode));
+}
+
+void activate_cutter_radius_compensation(
+    MachineState& state,
+    CutterCompSide side,
+    std::optional<int> d_number
+) {
+    if (state.selected_plane != Plane::kXY) {
+        throw InputError("Cutter radius compensation requires the XY plane");
+    }
+    if (cutter_radius_compensation_is_active(state)) {
+        throw InputError("Cannot turn cutter radius compensation on when it is already on");
+    }
+
+    if (d_number.has_value()) {
+        state.cutter_radius_compensation_number = *d_number;
+    } else {
+        state.cutter_radius_compensation_number = state.tool_in_spindle;
+    }
+    state.cutter_comp_side = side;
+    state.pending_first_cutter_comp_move = true;
+    state.cutter_comp_programmed_xy = std::nullopt;
+    state.cutter_comp_last_linear_direction = std::nullopt;
+}
+
+void deactivate_cutter_radius_compensation(MachineState& state) {
+    state.cutter_radius_compensation_number = std::nullopt;
+    state.cutter_comp_side = CutterCompSide::kOff;
+    state.pending_first_cutter_comp_move = false;
+    state.cutter_comp_programmed_xy = std::nullopt;
+    state.cutter_comp_last_linear_direction = std::nullopt;
+}
+
+double active_cutter_radius(const MachineState& state) {
+    if (!state.cutter_radius_compensation_number.has_value()) {
+        throw InputError(
+            "First compensated move requires a D number or a tool in the spindle when compensation was turned on"
+        );
+    }
+
+    const int d_number = *state.cutter_radius_compensation_number;
+    if (d_number == 0) {
+        return 0.0;
+    }
+
+    const auto tool_entry = state.tool_table.find(d_number);
+    if (tool_entry == state.tool_table.end()) {
+        throw InputError("G41/G42 requires a matching tool-table entry for the active D number");
+    }
+    if (tool_entry->second.diameter < 0.0) {
+        throw InputError("Tool diameter must be non-negative");
+    }
+
+    return tool_entry->second.diameter / 2.0;
+}
+
+Point2D resolve_programmed_xy_endpoint(const ParsedLine& parsed_line, const MachineState& state) {
+    const Point2D base = state.cutter_comp_programmed_xy.value_or(
+        Point2D{state.machine_position.x, state.machine_position.y}
+    );
+    Point2D endpoint = base;
+    if (state.coordinate_mode == CoordinateMode::kAbsolute) {
+        endpoint.x = parsed_line.x.has_value()
+            ? active_program_origin_offset_for_axis(state, 0) + *parsed_line.x
+            : base.x;
+        endpoint.y = parsed_line.y.has_value()
+            ? active_program_origin_offset_for_axis(state, 1) + *parsed_line.y
+            : base.y;
+        return endpoint;
+    }
+
+    if (parsed_line.x.has_value()) {
+        endpoint.x += *parsed_line.x;
+    }
+    if (parsed_line.y.has_value()) {
+        endpoint.y += *parsed_line.y;
+    }
+    return endpoint;
+}
+
+Point2D compute_first_cutter_comp_linear_endpoint(
+    Point2D current_tool_center,
+    Point2D programmed_endpoint,
+    double tool_radius,
+    CutterCompSide side
+) {
+    if (tool_radius == 0.0) {
+        return programmed_endpoint;
+    }
+
+    const double dx = current_tool_center.x - programmed_endpoint.x;
+    const double dy = current_tool_center.y - programmed_endpoint.y;
+    const double distance_squared = (dx * dx) + (dy * dy);
+    const double radius_squared = tool_radius * tool_radius;
+    if (distance_squared + kNearIntegerTolerance < radius_squared) {
+        throw InputError("First cutter compensation move gouges the programmed endpoint");
+    }
+
+    const double tangent_length = distance_squared <= radius_squared
+        ? 0.0
+        : std::sqrt(distance_squared - radius_squared);
+    const double radial_scale = radius_squared / distance_squared;
+    const double tangent_scale = (tool_radius * tangent_length) / distance_squared;
+
+    const Point2D candidate_a{
+        programmed_endpoint.x + (radial_scale * dx) - (tangent_scale * dy),
+        programmed_endpoint.y + (radial_scale * dy) + (tangent_scale * dx),
+    };
+    const Point2D candidate_b{
+        programmed_endpoint.x + (radial_scale * dx) + (tangent_scale * dy),
+        programmed_endpoint.y + (radial_scale * dy) - (tangent_scale * dx),
+    };
+
+    const auto contour_is_on_requested_side = [&](const Point2D& candidate) {
+        const double motion_x = candidate.x - current_tool_center.x;
+        const double motion_y = candidate.y - current_tool_center.y;
+        const double contour_offset_x = programmed_endpoint.x - candidate.x;
+        const double contour_offset_y = programmed_endpoint.y - candidate.y;
+        const double cross =
+            (motion_x * contour_offset_y) - (motion_y * contour_offset_x);
+        if (side == CutterCompSide::kLeft) {
+            return cross <= kNearIntegerTolerance;
+        }
+        return cross >= -kNearIntegerTolerance;
+    };
+
+    return contour_is_on_requested_side(candidate_a) ? candidate_a : candidate_b;
+}
+
+void apply_cutter_compensated_linear_xy_motion(MachineState& state, const ParsedLine& parsed_line) {
+    const auto current_motion = state.active_modal_g_codes.find("1");
+    if (current_motion == state.active_modal_g_codes.end() || !is_linear_motion(current_motion->second)) {
+        throw InputError("Cutter radius compensation currently supports only straight G0/G1 XY motion");
+    }
+
+    const Point2D programmed_endpoint = resolve_programmed_xy_endpoint(parsed_line, state);
+    if (state.pending_first_cutter_comp_move) {
+        const Point2D compensated_endpoint = compute_first_cutter_comp_linear_endpoint(
+            Point2D{state.machine_position.x, state.machine_position.y},
+            programmed_endpoint,
+            active_cutter_radius(state),
+            state.cutter_comp_side
+        );
+        state.machine_position.x = compensated_endpoint.x;
+        state.machine_position.y = compensated_endpoint.y;
+        state.pending_first_cutter_comp_move = false;
+        state.cutter_comp_programmed_xy = programmed_endpoint;
+        state.cutter_comp_last_linear_direction = std::nullopt;
+        return;
+    }
+
+    const Point2D current_programmed_xy = state.cutter_comp_programmed_xy.value_or(programmed_endpoint);
+    const Point2D segment{
+        programmed_endpoint.x - current_programmed_xy.x,
+        programmed_endpoint.y - current_programmed_xy.y,
+    };
+    const double segment_length = std::hypot(segment.x, segment.y);
+    if (segment_length <= kNearIntegerTolerance) {
+        state.cutter_comp_programmed_xy = programmed_endpoint;
+        return;
+    }
+
+    if (state.cutter_comp_last_linear_direction.has_value()) {
+        const Point2D& previous_segment = *state.cutter_comp_last_linear_direction;
+        const double turn =
+            (previous_segment.x * segment.y) - (previous_segment.y * segment.x);
+        const double side_sign = state.cutter_comp_side == CutterCompSide::kLeft ? 1.0 : -1.0;
+        if ((turn * side_sign) > kNearIntegerTolerance) {
+            throw InputError("Concave corner with cutter radius compensation");
+        }
+    }
+
+    double normal_x = -segment.y / segment_length;
+    double normal_y = segment.x / segment_length;
+    if (state.cutter_comp_side == CutterCompSide::kRight) {
+        normal_x = -normal_x;
+        normal_y = -normal_y;
+    }
+
+    const double tool_radius = active_cutter_radius(state);
+    state.machine_position.x = programmed_endpoint.x + (normal_x * tool_radius);
+    state.machine_position.y = programmed_endpoint.y + (normal_y * tool_radius);
+    state.cutter_comp_programmed_xy = programmed_endpoint;
+    state.cutter_comp_last_linear_direction = segment;
 }
 
 void initialize_state_from_parameters(MachineState& state) {
@@ -2019,6 +2284,7 @@ void reset_after_program_end(MachineState& state) {
     state.active_modal_g_codes["5"] = "G94";
     state.active_modal_g_codes["7"] = "G40";
     state.active_modal_g_codes["13"] = "G64";
+    deactivate_cutter_radius_compensation(state);
     set_selected_coordinate_system(state, 1);
     reset_g92_axis_offsets(state, false);
     state.active_modal_m_codes["7"] = "M5";
