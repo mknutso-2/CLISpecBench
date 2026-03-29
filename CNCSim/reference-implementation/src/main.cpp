@@ -51,6 +51,9 @@ constexpr int kMinParameterIndex = 1;
 constexpr int kMaxParameterIndex = 5399;
 constexpr int kParameterCount = kMaxParameterIndex + 1;
 constexpr int kSelectedCoordinateSystemParameter = 5220;
+constexpr int kG92XAxisOffsetParameter = 5211;
+constexpr int kG92YAxisOffsetParameter = 5212;
+constexpr int kG92ZAxisOffsetParameter = 5213;
 constexpr double kNearIntegerTolerance = 0.0001;
 
 std::map<std::string, Position> make_default_coordinate_system_offsets() {
@@ -79,6 +82,7 @@ struct MachineState {
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
     std::vector<double> parameters = make_default_parameters();
     Position machine_position{};
+    Position g92_axis_offsets{};
     double feed_rate = 0.0;
     double spindle_speed = 0.0;
     SpindleDirection spindle_direction = SpindleDirection::kOff;
@@ -112,6 +116,7 @@ struct ParsedLine {
     std::optional<double> r;
     std::optional<int> t;
     std::optional<std::string> coordinate_system_offset_target;
+    std::optional<std::string> g92_command;
     std::optional<double> feed_rate;
     std::optional<double> spindle_speed;
     std::optional<SpindleDirection> spindle_direction;
@@ -185,6 +190,7 @@ bool has_linear_axis_word(const ParsedLine& parsed_line);
 bool line_has_motion_axis_word(const ParsedLine& parsed_line);
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state);
 void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state);
+void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode);
 void register_modal_g_code(
     ParsedLine& parsed_line,
     std::string_view group_number,
@@ -201,6 +207,10 @@ int parameter_index_for_coordinate_system_axis(int system_number, int axis_index
 bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index);
 void set_selected_coordinate_system(MachineState& state, int system_number);
 void set_coordinate_system_axis(MachineState& state, int system_number, int axis_index, double value);
+void set_g92_axis_offset(MachineState& state, int axis_index, double value);
+void reset_g92_axis_offsets(MachineState& state, bool reset_parameters);
+void restore_g92_axis_offsets_from_parameters(MachineState& state);
+double active_program_origin_offset_for_axis(const MachineState& state, int axis_index);
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state);
 void reset_after_program_end(MachineState& state);
 std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
@@ -827,6 +837,11 @@ ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
     if (parsed_line.has_g10) {
         parsed_line.coordinate_system_offset_target = parse_g10_coordinate_system_number(parsed_line);
     }
+    if (parsed_line.g92_command.has_value() && *parsed_line.g92_command == "G92"
+        && !has_linear_axis_word(parsed_line))
+    {
+        throw InputError("G92 requires at least one axis word");
+    }
 
     return parsed_line;
 }
@@ -900,28 +915,61 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         if (parsed_line.z.has_value()) {
             set_coordinate_system_axis(state, system_number, 2, *parsed_line.z);
         }
+    } else if (parsed_line.g92_command.has_value()) {
+        const std::string& g92_command = *parsed_line.g92_command;
+        if (g92_command == "G92") {
+            const Position& coordinate_system_offset =
+                state.coordinate_system_offsets.at(state.selected_coordinate_system);
+            if (parsed_line.x.has_value()) {
+                set_g92_axis_offset(
+                    state,
+                    0,
+                    state.machine_position.x - coordinate_system_offset.x - *parsed_line.x
+                );
+            }
+            if (parsed_line.y.has_value()) {
+                set_g92_axis_offset(
+                    state,
+                    1,
+                    state.machine_position.y - coordinate_system_offset.y - *parsed_line.y
+                );
+            }
+            if (parsed_line.z.has_value()) {
+                set_g92_axis_offset(
+                    state,
+                    2,
+                    state.machine_position.z - coordinate_system_offset.z - *parsed_line.z
+                );
+            }
+        } else if (g92_command == "G92.1") {
+            reset_g92_axis_offsets(state, true);
+        } else if (g92_command == "G92.2") {
+            reset_g92_axis_offsets(state, false);
+        } else if (g92_command == "G92.3") {
+            restore_g92_axis_offsets_from_parameters(state);
+        } else {
+            throw std::runtime_error("Unsupported G92 command");
+        }
     } else {
         validate_linear_motion_command(parsed_line, state);
         validate_arc_command(parsed_line, state);
-        const Position& coordinate_system_offset =
-            state.coordinate_system_offsets.at(state.selected_coordinate_system);
         apply_program_axis_value(
             parsed_line.x,
             state.machine_position.x,
             state.coordinate_mode,
-            coordinate_system_offset.x
+            active_program_origin_offset_for_axis(state, 0)
         );
         apply_program_axis_value(
             parsed_line.y,
             state.machine_position.y,
             state.coordinate_mode,
-            coordinate_system_offset.y
+            active_program_origin_offset_for_axis(state, 1)
         );
         apply_program_axis_value(
             parsed_line.z,
             state.machine_position.z,
             state.coordinate_mode,
-            coordinate_system_offset.z
+            active_program_origin_offset_for_axis(state, 2)
         );
     }
 }
@@ -1037,8 +1085,6 @@ void validate_arc_command(const ParsedLine& parsed_line, const MachineState& sta
         return;
     }
 
-    const Position& coordinate_system_offset =
-        state.coordinate_system_offsets.at(state.selected_coordinate_system);
     bool has_selected_plane_axis = false;
     bool has_center_offset = false;
     double current_first_axis = 0.0;
@@ -1056,13 +1102,13 @@ void validate_arc_command(const ParsedLine& parsed_line, const MachineState& sta
                 parsed_line.x,
                 state.machine_position.x,
                 state.coordinate_mode,
-                coordinate_system_offset.x
+                active_program_origin_offset_for_axis(state, 0)
             );
             end_second_axis = resolved_program_axis_endpoint(
                 parsed_line.y,
                 state.machine_position.y,
                 state.coordinate_mode,
-                coordinate_system_offset.y
+                active_program_origin_offset_for_axis(state, 1)
             );
             break;
         case Plane::kXZ:
@@ -1074,13 +1120,13 @@ void validate_arc_command(const ParsedLine& parsed_line, const MachineState& sta
                 parsed_line.x,
                 state.machine_position.x,
                 state.coordinate_mode,
-                coordinate_system_offset.x
+                active_program_origin_offset_for_axis(state, 0)
             );
             end_second_axis = resolved_program_axis_endpoint(
                 parsed_line.z,
                 state.machine_position.z,
                 state.coordinate_mode,
-                coordinate_system_offset.z
+                active_program_origin_offset_for_axis(state, 2)
             );
             break;
         case Plane::kYZ:
@@ -1092,13 +1138,13 @@ void validate_arc_command(const ParsedLine& parsed_line, const MachineState& sta
                 parsed_line.y,
                 state.machine_position.y,
                 state.coordinate_mode,
-                coordinate_system_offset.y
+                active_program_origin_offset_for_axis(state, 1)
             );
             end_second_axis = resolved_program_axis_endpoint(
                 parsed_line.z,
                 state.machine_position.z,
                 state.coordinate_mode,
-                coordinate_system_offset.z
+                active_program_origin_offset_for_axis(state, 2)
             );
             break;
     }
@@ -1199,6 +1245,55 @@ void set_coordinate_system_axis(MachineState& state, int system_number, int axis
     state.parameters[parameter_index_for_coordinate_system_axis(system_number, axis_index)] = value;
 }
 
+void set_g92_axis_offset(MachineState& state, int axis_index, double value) {
+    switch (axis_index) {
+        case 0:
+            state.g92_axis_offsets.x = value;
+            state.parameters[kG92XAxisOffsetParameter] = value;
+            return;
+        case 1:
+            state.g92_axis_offsets.y = value;
+            state.parameters[kG92YAxisOffsetParameter] = value;
+            return;
+        case 2:
+            state.g92_axis_offsets.z = value;
+            state.parameters[kG92ZAxisOffsetParameter] = value;
+            return;
+        default:
+            throw std::runtime_error("Unsupported G92 axis");
+    }
+}
+
+void reset_g92_axis_offsets(MachineState& state, bool reset_parameters) {
+    state.g92_axis_offsets = {};
+    if (reset_parameters) {
+        state.parameters[kG92XAxisOffsetParameter] = 0.0;
+        state.parameters[kG92YAxisOffsetParameter] = 0.0;
+        state.parameters[kG92ZAxisOffsetParameter] = 0.0;
+    }
+}
+
+void restore_g92_axis_offsets_from_parameters(MachineState& state) {
+    state.g92_axis_offsets.x = state.parameters[kG92XAxisOffsetParameter];
+    state.g92_axis_offsets.y = state.parameters[kG92YAxisOffsetParameter];
+    state.g92_axis_offsets.z = state.parameters[kG92ZAxisOffsetParameter];
+}
+
+double active_program_origin_offset_for_axis(const MachineState& state, int axis_index) {
+    const Position& coordinate_system_offset =
+        state.coordinate_system_offsets.at(state.selected_coordinate_system);
+    switch (axis_index) {
+        case 0:
+            return coordinate_system_offset.x + state.g92_axis_offsets.x;
+        case 1:
+            return coordinate_system_offset.y + state.g92_axis_offsets.y;
+        case 2:
+            return coordinate_system_offset.z + state.g92_axis_offsets.z;
+        default:
+            throw std::runtime_error("Unsupported axis index");
+    }
+}
+
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
     for (const ParameterWrite& parameter_write : parsed_line.parameter_writes) {
         state.parameters[parameter_write.index] = parameter_write.value;
@@ -1235,6 +1330,18 @@ void apply_g_code_value(double value, ParsedLine& parsed_line) {
         apply_g_code_word("G61.1", parsed_line);
         return;
     }
+    if (g_code_tenths == 921) {
+        apply_g_code_word("G92.1", parsed_line);
+        return;
+    }
+    if (g_code_tenths == 922) {
+        apply_g_code_word("G92.2", parsed_line);
+        return;
+    }
+    if (g_code_tenths == 923) {
+        apply_g_code_word("G92.3", parsed_line);
+        return;
+    }
     if (g_code_tenths % 10 != 0) {
         throw InputError("Unsupported G code value");
     }
@@ -1249,14 +1356,28 @@ void apply_m_code_value(double value, ParsedLine& parsed_line) {
     );
 }
 
+void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode) {
+    if (parsed_line.has_g10 || parsed_line.g92_command.has_value()) {
+        throw InputError("Multiple G codes from the same modal group in the same block");
+    }
+
+    if (active_gcode == "G10") {
+        parsed_line.has_g10 = true;
+        return;
+    }
+
+    parsed_line.g92_command = std::string(active_gcode);
+}
+
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     const std::string code = word.substr(1);
 
     if (code == "10") {
-        if (parsed_line.has_g10) {
-            throw InputError("Multiple G codes from the same modal group in the same block");
-        }
-        parsed_line.has_g10 = true;
+        register_non_modal_g_code(parsed_line, "G10");
+        return;
+    }
+    if (code == "92" || code == "92.1" || code == "92.2" || code == "92.3") {
+        register_non_modal_g_code(parsed_line, word);
         return;
     }
     if (
@@ -1418,6 +1539,7 @@ void reset_after_program_end(MachineState& state) {
     state.active_modal_g_codes["7"] = "G40";
     state.active_modal_g_codes["13"] = "G64";
     set_selected_coordinate_system(state, 1);
+    reset_g92_axis_offsets(state, false);
     state.active_modal_m_codes["7"] = "M5";
     state.active_modal_m_codes["8"] = "M9";
     state.active_modal_m_codes["9"] = "M48";
