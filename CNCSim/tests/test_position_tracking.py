@@ -148,6 +148,18 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         {"x": 0.0, "y": -1.0, "z": 4.0},
     ),
     (
+        "g2-accepts-parameter-values-in-i-and-j",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "#1=-1.0\n"
+        "#2=0.0\n"
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G2 X0.0 Y-1.0 Z4.0 I#1 J#2\n",
+        {"x": 0.0, "y": -1.0, "z": 4.0},
+    ),
+    (
         "g2-updates-g18-arc-endpoint",
         ZERO_OFFSET_P1_SETUP
         +
@@ -155,6 +167,16 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G90\n"
         "G0 X1.0 Y5.0 Z0.0\n"
         "G2 X0.0 Y4.0 Z-1.0 I-1.0 K0.0\n",
+        {"x": 0.0, "y": 4.0, "z": -1.0},
+    ),
+    (
+        "g2-accepts-expressions-in-i-and-k",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G18\n"
+        "G90\n"
+        "G0 X1.0 Y5.0 Z0.0\n"
+        "G2 X0.0 Y4.0 Z-1.0 I[-2/2] K[0+0]\n",
         {"x": 0.0, "y": 4.0, "z": -1.0},
     ),
     (
@@ -178,6 +200,18 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         {"x": 4.0, "y": 0.0, "z": 1.0},
     ),
     (
+        "g3-accepts-parameter-values-in-j-and-k",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "#1=-1.0\n"
+        "#2=0.0\n"
+        "G19\n"
+        "G90\n"
+        "G0 X5.0 Y1.0 Z0.0\n"
+        "G3 X4.0 Y0.0 Z1.0 J#1 K#2\n",
+        {"x": 4.0, "y": 0.0, "z": 1.0},
+    ),
+    (
         "g2-radius-format-updates-arc-endpoint",
         ZERO_OFFSET_P1_SETUP
         +
@@ -185,6 +219,16 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
         "G2 X0.0 Y-1.0 Z4.0 R1.0\n",
+        {"x": 0.0, "y": -1.0, "z": 4.0},
+    ),
+    (
+        "g2-radius-format-accepts-expressions-in-r",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G2 X0.0 Y-1.0 Z4.0 R[0.5+0.5]\n",
         {"x": 0.0, "y": -1.0, "z": 4.0},
     ),
     (
@@ -239,10 +283,10 @@ POSITION_TRACKING_PARAMS = [
 # technical-requirements-prompt.md defines that machine_position is serialized
 # in the currently active length units. Section 3.5.12 says G53 moves use
 # absolute machine coordinates, are non-modal, and may omit G0/G1 only when one
-# of those linear modes is already active. Section 3.3.2 says axis words take
-# real values, and sections 3.3.2.2 and 3.3.2.3 define parameter values and
-# expressions as real values, so those forms belong in the motion suite rather
-# than the parameter suite.
+# of those linear modes is already active. Section 3.3.2 says axis words and
+# arc words such as I, J, K, and R take real values, and sections 3.3.2.2 and
+# 3.3.2.3 define parameter values and expressions as real values, so those
+# forms belong in the motion suite rather than the parameter suite.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_machine_position"),
     POSITION_TRACKING_PARAMS,
