@@ -270,6 +270,8 @@ std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
 std::string json_escape(std::string_view text);
 std::string to_json(const MachineState& state, std::optional<std::string_view> error = std::nullopt);
+bool is_required_non_rotational_parameter(int parameter_index);
+std::string to_parameter_file(const MachineState& state);
 std::string to_string(SpindleDirection direction);
 void write_output_file(const std::string& output_path, const std::string& contents);
 
@@ -2184,6 +2186,39 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
     return output.str();
 }
 
+bool is_required_non_rotational_parameter(int parameter_index) {
+    if (
+        parameter_index == 5161 || parameter_index == 5162 || parameter_index == 5163
+        || parameter_index == 5181 || parameter_index == 5182 || parameter_index == 5183
+        || parameter_index == 5211 || parameter_index == 5212 || parameter_index == 5213
+        || parameter_index == 5220
+    ) {
+        return true;
+    }
+
+    int system_number = 0;
+    int axis_index = 0;
+    return decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index);
+}
+
+std::string to_parameter_file(const MachineState& state) {
+    std::ostringstream output;
+    output << "RS274 parameter file\n\n";
+
+    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterIndex; ++parameter_index) {
+        if (
+            !is_required_non_rotational_parameter(parameter_index)
+            && !state.reported_parameters.at(parameter_index)
+        ) {
+            continue;
+        }
+
+        output << parameter_index << ' ' << state.parameters.at(parameter_index) << '\n';
+    }
+
+    return output.str();
+}
+
 std::string to_string(SpindleDirection direction) {
     switch (direction) {
         case SpindleDirection::kClockwise:
@@ -2227,6 +2262,9 @@ int main(int argc, char* argv[]) {
             options.tool_table_path
         );
         write_output_file(options.output_path, to_json(final_state));
+        if (options.parameter_output_path.has_value()) {
+            write_output_file(*options.parameter_output_path, to_parameter_file(final_state));
+        }
         return static_cast<int>(ExitCode::kSuccess);
     } catch (const InputError& error) {
         write_output_file(options.output_path, to_json(MachineState{}, error.what()));

@@ -6,6 +6,9 @@
   --parameter-output <parameter_file>
   If provided, these files use the RS274 parameter-file format from section 3.2.1 of the
   specification.
+  If --parameter-output is provided and execution succeeds, write a parameter file at that path.
+  For the written file, follow the RS274 section 3.2.1 rules and include any additional parameters
+  that were loaded from --parameter-input or set during execution.
 - The output file must be JSON in this format:
   {
     "machine_position": {"x": float, "y": float, "z": float},
