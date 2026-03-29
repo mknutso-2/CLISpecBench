@@ -10,6 +10,8 @@ def run_cncsim(
     executable_path: Path,
     *,
     input_gcode: str,
+    parameter_input_content: str | None = None,
+    pass_parameter_output: bool = False,
     tool_table_content: str | None = None,
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
@@ -18,6 +20,13 @@ def run_cncsim(
     input_path.write_text(input_gcode, encoding="utf-8")
 
     command = [str(executable_path), "--input", str(input_path), "--output", str(output_path)]
+    if parameter_input_content is not None:
+        parameter_input_path = tmp_path / "parameters-in.var"
+        parameter_input_path.write_text(parameter_input_content, encoding="utf-8")
+        command.extend(["--parameter-input", str(parameter_input_path)])
+    if pass_parameter_output:
+        parameter_output_path = tmp_path / "parameters-out.var"
+        command.extend(["--parameter-output", str(parameter_output_path)])
     if tool_table_content is not None:
         tool_table_path = tmp_path / "tool.tbl"
         tool_table_path.write_text(tool_table_content, encoding="utf-8")
@@ -40,12 +49,16 @@ def run_cncsim_invalid_input(
     executable_path: Path,
     *,
     input_gcode: str,
+    parameter_input_content: str | None = None,
+    pass_parameter_output: bool = False,
     tool_table_content: str | None = None,
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     completed, payload = run_cncsim(
         executable_path,
         input_gcode=input_gcode,
+        parameter_input_content=parameter_input_content,
+        pass_parameter_output=pass_parameter_output,
         tool_table_content=tool_table_content,
         tmp_path=tmp_path,
     )

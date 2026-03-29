@@ -124,6 +124,8 @@ struct MachineState {
 struct ProgramOptions {
     std::string input_path;
     std::string output_path;
+    std::optional<std::string> parameter_input_path;
+    std::optional<std::string> parameter_output_path;
     std::optional<std::string> tool_table_path;
 };
 
@@ -281,6 +283,14 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
             options.output_path = argv[++index];
             continue;
         }
+        if (argument == "--parameter-input" && index + 1 < argc) {
+            options.parameter_input_path = argv[++index];
+            continue;
+        }
+        if (argument == "--parameter-output" && index + 1 < argc) {
+            options.parameter_output_path = argv[++index];
+            continue;
+        }
         if (argument == "--tool-table" && index + 1 < argc) {
             options.tool_table_path = argv[++index];
             continue;
@@ -288,6 +298,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
+            "[--parameter-input <parameter_file>] [--parameter-output <parameter_file>] "
             "[--tool-table <tool_file>]"
         );
     }
@@ -295,6 +306,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
     if (options.input_path.empty() || options.output_path.empty()) {
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
+            "[--parameter-input <parameter_file>] [--parameter-output <parameter_file>] "
             "[--tool-table <tool_file>]"
         );
     }

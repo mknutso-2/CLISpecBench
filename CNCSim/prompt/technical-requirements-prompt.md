@@ -2,6 +2,10 @@
 - The program must accept: --input <gcode_file> --output <result_file>
 - The harness may also pass: --tool-table <tool_file>
   If provided, this file uses the RS274 tool-file format from section 2.3 of the specification.
+- The harness may also pass: --parameter-input <parameter_file> and/or
+  --parameter-output <parameter_file>
+  If provided, these files use the RS274 parameter-file format from section 3.2.1 of the
+  specification.
 - The output file must be JSON in this format:
   {
     "machine_position": {"x": float, "y": float, "z": float},
