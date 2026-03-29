@@ -147,6 +147,37 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G64",
     ),
+    (
+        "G64\n"
+        "G61\n",
+        GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
+        "G61",
+    ),
+    (
+        "G61\n"
+        "G61.1\n",
+        GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
+        "G61.1",
+    ),
+    (
+        "#1=61.1\n"
+        "G64\n"
+        "G#1\n",
+        GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
+        "G61.1",
+    ),
+    (
+        "G61.1\n"
+        "G[32*2]\n",
+        GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
+        "G64",
+    ),
+    (
+        "G64\n"
+        "G64\n",
+        GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
+        "G64",
+    ),
 ]
 
 COORDINATE_SYSTEM_SELECTION_CASES: list[CoordinateSystemSelectionCase] = [
