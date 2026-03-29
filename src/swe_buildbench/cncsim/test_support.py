@@ -5,25 +5,17 @@ import subprocess
 from pathlib import Path
 from typing import Any, cast
 
+from swe_buildbench.cncsim.rs274_parameters import (
+    REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES,
+    SELECTED_COORDINATE_SYSTEM_PARAMETER,
+)
+
 
 def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
-    entries: dict[int, float] = {
-        5161: 0.0,
-        5162: 0.0,
-        5163: 0.0,
-        5181: 0.0,
-        5182: 0.0,
-        5183: 0.0,
-        5211: 0.0,
-        5212: 0.0,
-        5213: 0.0,
-        5220: 1.0,
+    entries = {
+        parameter_index: 0.0 for parameter_index in REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES
     }
-    for system_number in range(1, 10):
-        base = 5221 + ((system_number - 1) * 20)
-        entries[base] = 0.0
-        entries[base + 1] = 0.0
-        entries[base + 2] = 0.0
+    entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] = 1.0
 
     if overrides is not None:
         entries.update(overrides)

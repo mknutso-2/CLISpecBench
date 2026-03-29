@@ -147,6 +147,7 @@ struct ParsedLine {
     std::optional<int> t;
     std::optional<std::string> coordinate_system_offset_target;
     std::optional<std::string> g92_command;
+    std::optional<std::string> home_command;
     std::optional<double> feed_rate;
     std::optional<double> spindle_speed;
     std::optional<SpindleDirection> spindle_direction;
@@ -244,6 +245,8 @@ std::string coordinate_system_number_for_g_code(std::string_view active_gcode);
 std::string active_g_code_for_coordinate_system_number(int system_number);
 int parameter_index_for_coordinate_system_axis(int system_number, int axis_index);
 bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index);
+int parameter_index_for_home_axis(bool secondary_home, int axis_index);
+bool decode_home_axis_parameter(int parameter_index, bool& secondary_home, int& axis_index);
 bool decode_g92_axis_parameter(int parameter_index, int& axis_index);
 void set_parameter_value(
     MachineState& state,
@@ -257,6 +260,7 @@ void set_g92_axis_offset(MachineState& state, int axis_index, double value);
 void reset_g92_axis_offsets(MachineState& state, bool reset_parameters);
 void restore_g92_axis_offsets_from_parameters(MachineState& state);
 double active_program_origin_offset_for_axis(const MachineState& state, int axis_index);
+void apply_home_return(MachineState& state, const ParsedLine& parsed_line, bool secondary_home);
 double convert_length_value(double value, LengthUnit from, LengthUnit to);
 void convert_position_in_place(Position& position, LengthUnit from, LengthUnit to);
 LengthUnit length_unit_for_g_code(std::string_view active_gcode);
@@ -391,8 +395,10 @@ void load_parameter_file(const std::string& parameter_input_path, MachineState& 
 
         int system_number = 0;
         int axis_index = 0;
+        bool secondary_home = false;
         if (
             decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index)
+            || decode_home_axis_parameter(parameter_index, secondary_home, axis_index)
             || decode_g92_axis_parameter(parameter_index, axis_index)
         ) {
             state.parameter_length_units[parameter_index] = state.current_length_unit;
@@ -1182,6 +1188,8 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         } else {
             throw std::runtime_error("Unsupported G92 command");
         }
+    } else if (parsed_line.home_command.has_value()) {
+        apply_home_return(state, parsed_line, *parsed_line.home_command == "G30");
     } else {
         validate_linear_motion_command(parsed_line, state);
         validate_arc_command(parsed_line, state);
@@ -1478,6 +1486,25 @@ bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_nu
     return system_number >= 1 && system_number <= 9;
 }
 
+int parameter_index_for_home_axis(bool secondary_home, int axis_index) {
+    return (secondary_home ? 5181 : 5161) + axis_index;
+}
+
+bool decode_home_axis_parameter(int parameter_index, bool& secondary_home, int& axis_index) {
+    if (parameter_index >= 5161 && parameter_index <= 5163) {
+        secondary_home = false;
+        axis_index = parameter_index - 5161;
+        return true;
+    }
+    if (parameter_index >= 5181 && parameter_index <= 5183) {
+        secondary_home = true;
+        axis_index = parameter_index - 5181;
+        return true;
+    }
+
+    return false;
+}
+
 bool decode_g92_axis_parameter(int parameter_index, int& axis_index) {
     if (parameter_index < kG92XAxisOffsetParameter || parameter_index > kG92ZAxisOffsetParameter) {
         return false;
@@ -1664,13 +1691,52 @@ double active_program_origin_offset_for_axis(const MachineState& state, int axis
     }
 }
 
+void apply_home_return(MachineState& state, const ParsedLine& parsed_line, bool secondary_home) {
+    apply_program_axis_value(
+        parsed_line.x,
+        state.machine_position.x,
+        state.coordinate_mode,
+        active_program_origin_offset_for_axis(state, 0)
+    );
+    apply_program_axis_value(
+        parsed_line.y,
+        state.machine_position.y,
+        state.coordinate_mode,
+        active_program_origin_offset_for_axis(state, 1)
+    );
+    apply_program_axis_value(
+        parsed_line.z,
+        state.machine_position.z,
+        state.coordinate_mode,
+        active_program_origin_offset_for_axis(state, 2)
+    );
+
+    state.machine_position.x =
+        parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 0));
+    state.machine_position.y =
+        parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 1));
+    state.machine_position.z =
+        parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 2));
+}
+
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
     for (const ParameterWrite& parameter_write : parsed_line.parameter_writes) {
         int system_number = 0;
         int axis_index = 0;
+        bool secondary_home = false;
         if (decode_coordinate_system_axis_parameter(parameter_write.index, system_number, axis_index)) {
             // Direct writes to offset backing parameters update the stored offset data.
             set_coordinate_system_axis(state, system_number, axis_index, parameter_write.value);
+            continue;
+        }
+
+        if (decode_home_axis_parameter(parameter_write.index, secondary_home, axis_index)) {
+            set_parameter_value(
+                state,
+                parameter_write.index,
+                parameter_write.value,
+                state.current_length_unit
+            );
             continue;
         }
 
@@ -1740,7 +1806,7 @@ void apply_m_code_value(double value, ParsedLine& parsed_line) {
 void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode) {
     if (
         parsed_line.has_g4 || parsed_line.has_g10 || parsed_line.g92_command.has_value()
-        || parsed_line.use_machine_coordinates
+        || parsed_line.use_machine_coordinates || parsed_line.home_command.has_value()
     ) {
         throw InputError("Multiple G codes from the same modal group in the same block");
     }
@@ -1757,6 +1823,10 @@ void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_
         parsed_line.use_machine_coordinates = true;
         return;
     }
+    if (active_gcode == "G28" || active_gcode == "G30") {
+        parsed_line.home_command = std::string(active_gcode);
+        return;
+    }
 
     parsed_line.g92_command = std::string(active_gcode);
 }
@@ -1770,6 +1840,14 @@ void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     }
     if (code == "10") {
         register_non_modal_g_code(parsed_line, "G10");
+        return;
+    }
+    if (code == "28") {
+        register_non_modal_g_code(parsed_line, "G28");
+        return;
+    }
+    if (code == "30") {
+        register_non_modal_g_code(parsed_line, "G30");
         return;
     }
     if (code == "53") {

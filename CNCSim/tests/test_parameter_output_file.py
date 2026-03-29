@@ -2,6 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from swe_buildbench.cncsim.rs274_parameters import (
+    G92_X_OFFSET_PARAMETER,
+    G92_Y_OFFSET_PARAMETER,
+    G92_Z_OFFSET_PARAMETER,
+    REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES,
+    SELECTED_COORDINATE_SYSTEM_PARAMETER,
+    coordinate_system_xyz_parameter_indices,
+)
 from swe_buildbench.cncsim.test_support import (
     build_parameter_file,
     run_cncsim_with_parameter_output,
@@ -9,22 +17,7 @@ from swe_buildbench.cncsim.test_support import (
 
 
 def required_non_rotational_parameter_indices() -> set[int]:
-    indices = {
-        5161,
-        5162,
-        5163,
-        5181,
-        5182,
-        5183,
-        5211,
-        5212,
-        5213,
-        5220,
-    }
-    for system_number in range(1, 10):
-        base = 5221 + ((system_number - 1) * 20)
-        indices.update({base, base + 1, base + 2})
-    return indices
+    return set(REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES)
 
 
 def parse_parameter_output_file(parameter_output: str) -> dict[int, float]:
@@ -66,7 +59,7 @@ def test_application_writes_required_parameter_output_file_entries(
 
     parsed_entries = parse_parameter_output_file(parameter_output)
     assert required_non_rotational_parameter_indices() <= set(parsed_entries)
-    assert parsed_entries[5220] == 1.0
+    assert parsed_entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] == 1.0
 
 
 # RS274 section 3.2.1 explicitly says any parameter included in the file read
@@ -98,6 +91,7 @@ def test_application_writes_execution_updates_to_output_parameter_file(
     built_executable_path: Path,
     tmp_path: Path,
 ) -> None:
+    cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
     completed, payload, parameter_output = run_cncsim_with_parameter_output(
         built_executable_path,
         input_gcode=(
@@ -116,10 +110,10 @@ def test_application_writes_execution_updates_to_output_parameter_file(
 
     parsed_entries = parse_parameter_output_file(parameter_output)
     assert parsed_entries[1] == 5.5
-    assert parsed_entries[5220] == 2.0
-    assert parsed_entries[5241] == 10.0
-    assert parsed_entries[5242] == 20.0
-    assert parsed_entries[5243] == 30.0
-    assert parsed_entries[5211] == -3.0
-    assert parsed_entries[5212] == -3.0
-    assert parsed_entries[5213] == -3.0
+    assert parsed_entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] == 2.0
+    assert parsed_entries[cs2_x_parameter] == 10.0
+    assert parsed_entries[cs2_y_parameter] == 20.0
+    assert parsed_entries[cs2_z_parameter] == 30.0
+    assert parsed_entries[G92_X_OFFSET_PARAMETER] == -3.0
+    assert parsed_entries[G92_Y_OFFSET_PARAMETER] == -3.0
+    assert parsed_entries[G92_Z_OFFSET_PARAMETER] == -3.0

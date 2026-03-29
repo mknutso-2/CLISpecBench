@@ -4,6 +4,13 @@ from pathlib import Path
 
 import pytest
 
+from swe_buildbench.cncsim.rs274_parameters import (
+    G92_X_OFFSET_PARAMETER,
+    G92_Y_OFFSET_PARAMETER,
+    G92_Z_OFFSET_PARAMETER,
+    SELECTED_COORDINATE_SYSTEM_PARAMETER,
+    coordinate_system_xyz_parameter_indices,
+)
 from swe_buildbench.cncsim.test_support import (
     build_parameter_file,
     get_parameter_value,
@@ -76,7 +83,7 @@ def test_application_uses_selected_coordinate_system_loaded_from_input_file(
     completed, payload = run_cncsim(
         built_executable_path,
         input_gcode="",
-        parameter_input_content=build_parameter_file({5220: 2.0}),
+        parameter_input_content=build_parameter_file({SELECTED_COORDINATE_SYSTEM_PARAMETER: 2.0}),
         tmp_path=tmp_path,
     )
 
@@ -85,7 +92,7 @@ def test_application_uses_selected_coordinate_system_loaded_from_input_file(
     active_modal_g_codes = payload["active_modal_g_codes"]
     assert isinstance(active_modal_g_codes, dict)
     assert active_modal_g_codes["12"] == "G55"
-    assert get_parameter_value(payload, 5220) == 2.0
+    assert get_parameter_value(payload, SELECTED_COORDINATE_SYSTEM_PARAMETER) == 2.0
 
 
 # RS274 section 3.2.1 says the coordinate-system origin parameters in Table 2
@@ -95,14 +102,15 @@ def test_application_initializes_coordinate_system_offsets_from_input_file(
     built_executable_path: Path,
     tmp_path: Path,
 ) -> None:
+    cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
     completed, payload = run_cncsim(
         built_executable_path,
         input_gcode="G55\nG90\nG0 X1.0 Y2.0 Z3.0\n",
         parameter_input_content=build_parameter_file(
             {
-                5241: 10.0,
-                5242: 20.0,
-                5243: 30.0,
+                cs2_x_parameter: 10.0,
+                cs2_y_parameter: 20.0,
+                cs2_z_parameter: 30.0,
             }
         ),
         tmp_path=tmp_path,
@@ -126,9 +134,9 @@ def test_application_initializes_g92_offsets_from_input_file(
         input_gcode="G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG92.3\nG90\nG0 X1.0 Y2.0 Z3.0\n",
         parameter_input_content=build_parameter_file(
             {
-                5211: 10.0,
-                5212: 20.0,
-                5213: 30.0,
+                G92_X_OFFSET_PARAMETER: 10.0,
+                G92_Y_OFFSET_PARAMETER: 20.0,
+                G92_Z_OFFSET_PARAMETER: 30.0,
             }
         ),
         tmp_path=tmp_path,
@@ -150,7 +158,7 @@ PARAMETER_FILE_ERROR_CASES: list[tuple[str, str]] = [
     ),
     (
         "parameter-file-rejects-invalid-5220",
-        build_parameter_file({5220: 10.0}),
+        build_parameter_file({SELECTED_COORDINATE_SYSTEM_PARAMETER: 10.0}),
     ),
 ]
 

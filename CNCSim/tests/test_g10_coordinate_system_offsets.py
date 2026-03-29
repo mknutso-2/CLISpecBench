@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from swe_buildbench.cncsim.rs274_parameters import coordinate_system_xyz_parameter_indices
 from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
 
 CoordinateSystemOffsetCase = tuple[str, str, dict[str, dict[str, float]]]
@@ -141,9 +142,11 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
         tmp_path=tmp_path,
     )
 
+    cs1_x_parameter, cs1_y_parameter, cs1_z_parameter = coordinate_system_xyz_parameter_indices(1)
+
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
     assert payload["coordinate_system_offsets"]["1"] == expected_offset
-    assert get_parameter_value(payload, 5221) == expected_parameter_values["x"]
-    assert get_parameter_value(payload, 5222) == expected_parameter_values["y"]
-    assert get_parameter_value(payload, 5223) == expected_parameter_values["z"]
+    assert get_parameter_value(payload, cs1_x_parameter) == expected_parameter_values["x"]
+    assert get_parameter_value(payload, cs1_y_parameter) == expected_parameter_values["y"]
+    assert get_parameter_value(payload, cs1_z_parameter) == expected_parameter_values["z"]

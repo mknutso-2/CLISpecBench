@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from swe_buildbench.cncsim.rs274_parameters import SELECTED_COORDINATE_SYSTEM_PARAMETER
 from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
 
 
@@ -82,7 +83,7 @@ def test_startup_uses_the_default_selected_coordinate_system_parameter(
     assert payload["error"] is None
     # RS274 section 3.2.1 Table 2 gives the default value 5220=1.0, and
     # section 3.2.2 says startup selects the active coordinate system from 5220.
-    assert get_parameter_value(payload, 5220) == 1.0
+    assert get_parameter_value(payload, SELECTED_COORDINATE_SYSTEM_PARAMETER) == 1.0
 
 
 def test_payload_reports_parameters_sparsely(
@@ -99,5 +100,5 @@ def test_payload_reports_parameters_sparsely(
     assert payload["error"] is None
     parameters = payload["parameters"]
     assert isinstance(parameters, dict)
-    assert "5220" in parameters
+    assert str(SELECTED_COORDINATE_SYSTEM_PARAMETER) in parameters
     assert "1" not in parameters
