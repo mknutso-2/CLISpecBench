@@ -1,5 +1,7 @@
 - Please implement this in C++20, buildable with: cmake -B build && cmake --build build
 - The program must accept: --input <gcode_file> --output <result_file>
+- The harness may also pass: --tool-table <tool_file>
+  If provided, this file uses the RS274 tool-file format from section 2.3 of the specification.
 - The output file must be JSON in this format:
   {
     "machine_position": {"x": float, "y": float, "z": float},
@@ -20,8 +22,9 @@
   }
   Write this JSON file on both success and error. On success, "error" must be null. On invalid
   input or internal failure, "error" must be a non-empty string.
-  Serialize "machine_position" as the tool position in the absolute machine coordinate system
-  (the coordinate space used by G53).
+  Serialize "machine_position" as the absolute machine-coordinate position of the RS274
+  controlled point (the coordinate space used by G53), after applying any active tool length
+  compensation.
   Serialize "machine_position" and "coordinate_system_offsets" in the currently active RS274
   length units at end of program.
   Serialize "cutter_radius_compensation_number" as the active D number, or null if no explicit

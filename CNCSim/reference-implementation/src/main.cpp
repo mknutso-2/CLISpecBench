@@ -52,6 +52,11 @@ struct ParameterWrite {
     double value = 0.0;
 };
 
+struct ToolTableEntry {
+    double tool_length_offset = 0.0;
+    double diameter = 0.0;
+};
+
 constexpr int kMinParameterIndex = 1;
 constexpr int kMaxParameterIndex = 5399;
 constexpr int kParameterCount = kMaxParameterIndex + 1;
@@ -96,6 +101,7 @@ struct MachineState {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
+    std::map<int, ToolTableEntry> tool_table;
     std::vector<double> parameters = make_default_parameters();
     std::vector<bool> reported_parameters = make_default_reported_parameters();
     std::vector<std::optional<LengthUnit>> parameter_length_units = make_default_parameter_length_units();
@@ -106,6 +112,8 @@ struct MachineState {
     SpindleDirection spindle_direction = SpindleDirection::kOff;
     std::optional<int> cutter_radius_compensation_number;
     std::optional<int> tool_length_offset_index;
+    std::optional<double> active_tool_length_offset;
+    std::optional<LengthUnit> active_tool_length_offset_unit;
     std::optional<int> selected_tool;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
     Plane selected_plane = Plane::kXY;
@@ -116,6 +124,7 @@ struct MachineState {
 struct ProgramOptions {
     std::string input_path;
     std::string output_path;
+    std::optional<std::string> tool_table_path;
 };
 
 struct ParsedLine {
@@ -150,7 +159,11 @@ public:
 };
 
 ProgramOptions parse_command_line(int argc, char* argv[]);
-MachineState execute_program(const std::string& input_path);
+MachineState execute_program(
+    const std::string& input_path,
+    const std::optional<std::string>& tool_table_path
+);
+void load_tool_table(const std::string& tool_table_path, MachineState& state);
 ParsedLine parse_line(std::string_view raw_line, const MachineState& state);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
 template <typename T>
@@ -243,6 +256,8 @@ void convert_position_in_place(Position& position, LengthUnit from, LengthUnit t
 LengthUnit length_unit_for_g_code(std::string_view active_gcode);
 void apply_length_unit_change(MachineState& state, LengthUnit new_unit);
 double parameter_length_value_in_current_units(const MachineState& state, int parameter_index);
+double active_tool_length_offset_in_current_units(const MachineState& state);
+void apply_tool_length_offset_change(MachineState& state, std::optional<int> new_index);
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state);
 void reset_after_program_end(MachineState& state);
 std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
@@ -265,24 +280,41 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
             options.output_path = argv[++index];
             continue;
         }
+        if (argument == "--tool-table" && index + 1 < argc) {
+            options.tool_table_path = argv[++index];
+            continue;
+        }
 
-        throw InputError("Usage: cncsim_reference --input <gcode_file> --output <result_file>");
+        throw InputError(
+            "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
+            "[--tool-table <tool_file>]"
+        );
     }
 
     if (options.input_path.empty() || options.output_path.empty()) {
-        throw InputError("Usage: cncsim_reference --input <gcode_file> --output <result_file>");
+        throw InputError(
+            "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
+            "[--tool-table <tool_file>]"
+        );
     }
 
     return options;
 }
 
-MachineState execute_program(const std::string& input_path) {
+MachineState execute_program(
+    const std::string& input_path,
+    const std::optional<std::string>& tool_table_path
+) {
     std::ifstream input_stream(input_path);
     if (!input_stream.is_open()) {
         throw InputError("Could not open input file: " + input_path);
     }
 
     MachineState state;
+    if (tool_table_path.has_value()) {
+        load_tool_table(*tool_table_path, state);
+    }
+
     std::string line;
     while (std::getline(input_stream, line)) {
         const ParsedLine parsed_line = parse_line(line, state);
@@ -295,6 +327,42 @@ MachineState execute_program(const std::string& input_path) {
     }
 
     return state;
+}
+
+void load_tool_table(const std::string& tool_table_path, MachineState& state) {
+    std::ifstream tool_table_stream(tool_table_path);
+    if (!tool_table_stream.is_open()) {
+        throw InputError("Could not open tool table file: " + tool_table_path);
+    }
+
+    std::string line;
+    bool in_data_section = false;
+    while (std::getline(tool_table_stream, line)) {
+        if (!in_data_section) {
+            if (line.empty()) {
+                in_data_section = true;
+            }
+            continue;
+        }
+
+        if (line.empty()) {
+            continue;
+        }
+
+        std::istringstream line_stream(line);
+        int pocket = 0;
+        int fms = 0;
+        double tool_length_offset = 0.0;
+        double diameter = 0.0;
+        if (!(line_stream >> pocket >> fms >> tool_length_offset >> diameter)) {
+            throw InputError("Invalid tool table entry");
+        }
+        if (pocket < 0) {
+            throw InputError("Tool table pocket number must be non-negative");
+        }
+
+        state.tool_table[pocket] = ToolTableEntry{tool_length_offset, diameter};
+    }
 }
 
 std::string remove_ignorable_whitespace(std::string_view line) {
@@ -978,9 +1046,12 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     if (parsed_line.active_modal_g_codes.contains("8")) {
         const std::string_view active_tlo = parsed_line.active_modal_g_codes.at("8");
         if (active_tlo == "G49") {
-            state.tool_length_offset_index = std::nullopt;
-        } else if (parsed_line.h.has_value()) {
-            state.tool_length_offset_index = *parsed_line.h;
+            apply_tool_length_offset_change(state, std::nullopt);
+        } else {
+            if (!parsed_line.h.has_value()) {
+                throw InputError("G43 requires an H word");
+            }
+            apply_tool_length_offset_change(state, parsed_line.h);
         }
     }
 
@@ -1403,6 +1474,51 @@ double parameter_length_value_in_current_units(const MachineState& state, int pa
     }
 
     return convert_length_value(raw_value, *raw_unit, state.current_length_unit);
+}
+
+double active_tool_length_offset_in_current_units(const MachineState& state) {
+    if (!state.active_tool_length_offset.has_value()) {
+        return 0.0;
+    }
+    if (!state.active_tool_length_offset_unit.has_value()) {
+        return *state.active_tool_length_offset;
+    }
+
+    return convert_length_value(
+        *state.active_tool_length_offset,
+        *state.active_tool_length_offset_unit,
+        state.current_length_unit
+    );
+}
+
+void apply_tool_length_offset_change(MachineState& state, std::optional<int> new_index) {
+    const double previous_offset = active_tool_length_offset_in_current_units(state);
+
+    std::optional<double> new_offset_raw;
+    std::optional<LengthUnit> new_offset_unit;
+    if (new_index.has_value()) {
+        if (*new_index == 0) {
+            new_offset_raw = 0.0;
+            new_offset_unit = state.current_length_unit;
+        } else {
+            const auto tool_entry = state.tool_table.find(*new_index);
+            if (tool_entry == state.tool_table.end()) {
+                throw InputError("G43 H number requires a matching tool-table entry");
+            }
+            if (tool_entry->second.tool_length_offset < 0.0) {
+                throw InputError("Tool length offset must be non-negative");
+            }
+
+            new_offset_raw = tool_entry->second.tool_length_offset;
+            new_offset_unit = state.current_length_unit;
+        }
+    }
+
+    const double new_offset = new_offset_raw.value_or(0.0);
+    state.machine_position.z += previous_offset - new_offset;
+    state.tool_length_offset_index = new_index;
+    state.active_tool_length_offset = new_offset_raw;
+    state.active_tool_length_offset_unit = new_offset_unit;
 }
 
 void reset_g92_axis_offsets(MachineState& state, bool reset_parameters) {
@@ -1983,7 +2099,7 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        const MachineState final_state = execute_program(options.input_path);
+        const MachineState final_state = execute_program(options.input_path, options.tool_table_path);
         write_output_file(options.output_path, to_json(final_state));
         return static_cast<int>(ExitCode::kSuccess);
     } catch (const InputError& error) {

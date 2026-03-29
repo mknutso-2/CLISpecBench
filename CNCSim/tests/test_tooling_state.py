@@ -8,6 +8,13 @@ from swe_buildbench.cncsim.test_support import run_cncsim
 
 ToolingStateCase = tuple[str, str, int | None, int | None, int | None]
 
+TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
+
+4 4 0.5 0.25 finisher
+7 7 1.5 0.5 endmill
+12 12 2.0 0.75 drill
+"""
+
 TOOLING_STATE_CASES: list[ToolingStateCase] = [
     (
         "tracks-cutter-radius-compensation-number",
@@ -141,6 +148,7 @@ def test_application_tracks_tooling_state(
     completed, payload = run_cncsim(
         built_executable_path,
         input_gcode=input_gcode,
+        tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
     )
 
