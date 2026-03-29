@@ -128,6 +128,7 @@ struct ParsedLine {
     std::optional<double> spindle_speed;
     std::optional<SpindleDirection> spindle_direction;
     bool has_g10 = false;
+    bool use_machine_coordinates = false;
     bool end_program = false;
 };
 
@@ -961,24 +962,30 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     } else {
         validate_linear_motion_command(parsed_line, state);
         validate_arc_command(parsed_line, state);
-        apply_program_axis_value(
-            parsed_line.x,
-            state.machine_position.x,
-            state.coordinate_mode,
-            active_program_origin_offset_for_axis(state, 0)
-        );
-        apply_program_axis_value(
-            parsed_line.y,
-            state.machine_position.y,
-            state.coordinate_mode,
-            active_program_origin_offset_for_axis(state, 1)
-        );
-        apply_program_axis_value(
-            parsed_line.z,
-            state.machine_position.z,
-            state.coordinate_mode,
-            active_program_origin_offset_for_axis(state, 2)
-        );
+        if (parsed_line.use_machine_coordinates) {
+            apply_coordinate_system_axis_value(parsed_line.x, state.machine_position.x);
+            apply_coordinate_system_axis_value(parsed_line.y, state.machine_position.y);
+            apply_coordinate_system_axis_value(parsed_line.z, state.machine_position.z);
+        } else {
+            apply_program_axis_value(
+                parsed_line.x,
+                state.machine_position.x,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 0)
+            );
+            apply_program_axis_value(
+                parsed_line.y,
+                state.machine_position.y,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 1)
+            );
+            apply_program_axis_value(
+                parsed_line.z,
+                state.machine_position.z,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 2)
+            );
+        }
     }
 }
 
@@ -1052,11 +1059,31 @@ bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
 
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state) {
     const auto current_motion = state.active_modal_g_codes.find("1");
+    const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
+
+    if (parsed_line.use_machine_coordinates) {
+        if (!explicit_motion && current_motion == state.active_modal_g_codes.end()) {
+            throw InputError("G53 requires G0 or G1 to be active");
+        }
+
+        const std::string_view effective_motion = explicit_motion
+            ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
+            : std::string_view(current_motion->second);
+        if (!is_linear_motion(effective_motion)) {
+            throw InputError("G53 requires G0 or G1 to be active");
+        }
+        if (!has_linear_axis_word(parsed_line)) {
+            throw InputError("G53 requires at least one axis word");
+        }
+        if (state.cutter_radius_compensation_number.has_value()) {
+            throw InputError("G53 cannot be used while cutter radius compensation is active");
+        }
+    }
+
     if (current_motion == state.active_modal_g_codes.end()) {
         return;
     }
 
-    const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
     const std::string_view effective_motion = explicit_motion
         ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
         : std::string_view(current_motion->second);
@@ -1370,12 +1397,16 @@ void apply_m_code_value(double value, ParsedLine& parsed_line) {
 }
 
 void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode) {
-    if (parsed_line.has_g10 || parsed_line.g92_command.has_value()) {
+    if (parsed_line.has_g10 || parsed_line.g92_command.has_value() || parsed_line.use_machine_coordinates) {
         throw InputError("Multiple G codes from the same modal group in the same block");
     }
 
     if (active_gcode == "G10") {
         parsed_line.has_g10 = true;
+        return;
+    }
+    if (active_gcode == "G53") {
+        parsed_line.use_machine_coordinates = true;
         return;
     }
 
@@ -1387,6 +1418,10 @@ void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
 
     if (code == "10") {
         register_non_modal_g_code(parsed_line, "G10");
+        return;
+    }
+    if (code == "53") {
+        register_non_modal_g_code(parsed_line, "G53");
         return;
     }
     if (code == "92" || code == "92.1" || code == "92.2" || code == "92.3") {

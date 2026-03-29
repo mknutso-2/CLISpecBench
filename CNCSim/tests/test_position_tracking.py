@@ -38,6 +38,37 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G0 X[1+2] Y[8/2] Z[5-2]\n",
         {"x": 3.0, "y": 4.0, "z": 3.0},
     ),
+    # RS274 section 3.5.12: G53 moves to absolute machine coordinates.
+    (
+        "g53-uses-machine-coordinates",
+        "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+        "G54\n"
+        "G90\n"
+        "G0 X0.0 Y0.0 Z0.0\n"
+        "G92 X5.0 Y6.0 Z7.0\n"
+        "G53 G0 X1.0 Y2.0 Z3.0\n",
+        {"x": 1.0, "y": 2.0, "z": 3.0},
+    ),
+    # RS274 section 3.5.12: G53 is not modal and must be programmed on each line.
+    (
+        "g53-is-not-modal",
+        "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+        "G54\n"
+        "G90\n"
+        "G53 G0 X1.0 Y2.0 Z3.0\n"
+        "G0 X4.0 Y5.0 Z6.0\n",
+        {"x": 14.0, "y": 25.0, "z": 36.0},
+    ),
+    # RS274 section 3.5.12: G0 or G1 is optional on a G53 line if one is already active.
+    (
+        "g53-may-omit-g0-or-g1-when-linear-motion-is-active",
+        "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+        "G54\n"
+        "G90\n"
+        "G1 X0.0 Y0.0 Z0.0 F1.0\n"
+        "G53 X4.0 Y5.0 Z6.0\n",
+        {"x": 4.0, "y": 5.0, "z": 6.0},
+    ),
     (
         "absolute-updates-only-programmed-axes",
         ZERO_OFFSET_P1_SETUP
@@ -165,9 +196,11 @@ POSITION_TRACKING_PARAMS = [
 # 3.5.3 for G2/G3 arc endpoint programming in the selected plane, section
 # 3.5.3.1 for radius-format arcs, and section 3.5.17 for how G90/G91 control
 # whether X/Y/Z values are interpreted as absolute positions or incremental
-# offsets. Section 3.3.2 says axis words take real values, and sections
-# 3.3.2.2 and 3.3.2.3 define parameter values and expressions as real values,
-# so those forms belong in the motion suite rather than the parameter suite.
+# offsets. Section 3.5.12 says G53 moves use absolute machine coordinates, are
+# non-modal, and may omit G0/G1 only when one of those linear modes is already
+# active. Section 3.3.2 says axis words take real values, and sections 3.3.2.2
+# and 3.3.2.3 define parameter values and expressions as real values, so those
+# forms belong in the motion suite rather than the parameter suite.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_machine_position"),
     POSITION_TRACKING_PARAMS,
