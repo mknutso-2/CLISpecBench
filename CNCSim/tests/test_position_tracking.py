@@ -8,7 +8,7 @@ from swe_buildbench.cncsim.test_support import run_cncsim
 
 PositionTrackingCase = tuple[str, str, dict[str, float]]
 
-ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\n"
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG94\n"
 
 POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     (
@@ -272,8 +272,9 @@ POSITION_TRACKING_PARAMS = [
 # See CNCSim/prompt/docs/RS274NGC.md section 2.1.2.10 "Current Position":
 # the controller always has a current position, but the spec does not assign a
 # fixed startup machine location or startup work-offset values. These cases
-# therefore explicitly activate coordinate system 1 with zero offsets so the
-# assertions isolate XYZ motion tracking rather than work-offset behavior.
+# therefore explicitly activate coordinate system 1 with zero offsets and
+# explicitly select G94 so the assertions isolate XYZ motion tracking rather
+# than work-offset behavior or an assumed startup feed-rate mode.
 # See sections 3.5.1 and 3.5.2 for linear motion with axis words, section
 # 3.5.3 for G2/G3 arc endpoint programming in the selected plane, section
 # 3.5.3.1 for radius-format arcs, and section 3.5.17 for how G90/G91 control

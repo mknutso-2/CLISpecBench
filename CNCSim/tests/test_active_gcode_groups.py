@@ -23,6 +23,7 @@ CoordinateSystemSelectionCase = tuple[str, str, dict[str, float]]
 
 ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
     (
+        "G94\n"
         "G0 X0\n"
         "G1 X0\n",
         GCODE_MODAL_GROUP_MOTION,
