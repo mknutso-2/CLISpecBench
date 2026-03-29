@@ -1088,6 +1088,9 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     if (parsed_line.active_modal_g_codes.contains("6") && state.cutter_radius_compensation_number.has_value()) {
         throw InputError("Cannot change units with cutter radius compensation active");
     }
+    if (parsed_line.active_modal_g_codes.contains("12") && state.cutter_radius_compensation_number.has_value()) {
+        throw InputError("Cannot change coordinate systems with cutter radius compensation active");
+    }
 
     for (const auto& [group_number, active_gcode] : parsed_line.active_modal_g_codes) {
         state.active_modal_g_codes[group_number] = active_gcode;
