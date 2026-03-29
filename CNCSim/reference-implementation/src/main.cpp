@@ -76,11 +76,18 @@ std::vector<double> make_default_parameters() {
     return parameters;
 }
 
+std::vector<bool> make_default_reported_parameters() {
+    std::vector<bool> reported_parameters(kParameterCount, false);
+    reported_parameters[kSelectedCoordinateSystemParameter] = true;
+    return reported_parameters;
+}
+
 struct MachineState {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
     std::vector<double> parameters = make_default_parameters();
+    std::vector<bool> reported_parameters = make_default_reported_parameters();
     Position machine_position{};
     Position g92_axis_offsets{};
     double feed_rate = 0.0;
@@ -205,6 +212,7 @@ std::string coordinate_system_number_for_g_code(std::string_view active_gcode);
 std::string active_g_code_for_coordinate_system_number(int system_number);
 int parameter_index_for_coordinate_system_axis(int system_number, int axis_index);
 bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index);
+void set_parameter_value(MachineState& state, int parameter_index, double value);
 void set_selected_coordinate_system(MachineState& state, int system_number);
 void set_coordinate_system_axis(MachineState& state, int system_number, int axis_index, double value);
 void set_g92_axis_offset(MachineState& state, int axis_index, double value);
@@ -1220,9 +1228,14 @@ bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_nu
     return system_number >= 1 && system_number <= 9;
 }
 
+void set_parameter_value(MachineState& state, int parameter_index, double value) {
+    state.parameters[parameter_index] = value;
+    state.reported_parameters[parameter_index] = true;
+}
+
 void set_selected_coordinate_system(MachineState& state, int system_number) {
     state.selected_coordinate_system = std::to_string(system_number);
-    state.parameters[kSelectedCoordinateSystemParameter] = static_cast<double>(system_number);
+    set_parameter_value(state, kSelectedCoordinateSystemParameter, static_cast<double>(system_number));
     state.active_modal_g_codes["12"] = active_g_code_for_coordinate_system_number(system_number);
 }
 
@@ -1242,22 +1255,22 @@ void set_coordinate_system_axis(MachineState& state, int system_number, int axis
             throw std::runtime_error("Unsupported coordinate system axis");
     }
 
-    state.parameters[parameter_index_for_coordinate_system_axis(system_number, axis_index)] = value;
+    set_parameter_value(state, parameter_index_for_coordinate_system_axis(system_number, axis_index), value);
 }
 
 void set_g92_axis_offset(MachineState& state, int axis_index, double value) {
     switch (axis_index) {
         case 0:
             state.g92_axis_offsets.x = value;
-            state.parameters[kG92XAxisOffsetParameter] = value;
+            set_parameter_value(state, kG92XAxisOffsetParameter, value);
             return;
         case 1:
             state.g92_axis_offsets.y = value;
-            state.parameters[kG92YAxisOffsetParameter] = value;
+            set_parameter_value(state, kG92YAxisOffsetParameter, value);
             return;
         case 2:
             state.g92_axis_offsets.z = value;
-            state.parameters[kG92ZAxisOffsetParameter] = value;
+            set_parameter_value(state, kG92ZAxisOffsetParameter, value);
             return;
         default:
             throw std::runtime_error("Unsupported G92 axis");
@@ -1267,9 +1280,9 @@ void set_g92_axis_offset(MachineState& state, int axis_index, double value) {
 void reset_g92_axis_offsets(MachineState& state, bool reset_parameters) {
     state.g92_axis_offsets = {};
     if (reset_parameters) {
-        state.parameters[kG92XAxisOffsetParameter] = 0.0;
-        state.parameters[kG92YAxisOffsetParameter] = 0.0;
-        state.parameters[kG92ZAxisOffsetParameter] = 0.0;
+        set_parameter_value(state, kG92XAxisOffsetParameter, 0.0);
+        set_parameter_value(state, kG92YAxisOffsetParameter, 0.0);
+        set_parameter_value(state, kG92ZAxisOffsetParameter, 0.0);
     }
 }
 
@@ -1296,7 +1309,7 @@ double active_program_origin_offset_for_axis(const MachineState& state, int axis
 
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
     for (const ParameterWrite& parameter_write : parsed_line.parameter_writes) {
-        state.parameters[parameter_write.index] = parameter_write.value;
+        set_parameter_value(state, parameter_write.index, parameter_write.value);
 
         int system_number = 0;
         int axis_index = 0;
@@ -1758,6 +1771,21 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
                << "{\"x\": " << offset.x << ", \"y\": " << offset.y << ", \"z\": " << offset.z
                << "}";
         is_first_coordinate_system = false;
+    }
+
+    output << "},\n"
+           << "  \"parameters\": {";
+
+    bool is_first_parameter = true;
+    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterIndex; ++parameter_index) {
+        if (!state.reported_parameters.at(parameter_index)) {
+            continue;
+        }
+        if (!is_first_parameter) {
+            output << ", ";
+        }
+        output << "\"" << parameter_index << "\": " << state.parameters.at(parameter_index);
+        is_first_parameter = false;
     }
 
     output << "},\n"

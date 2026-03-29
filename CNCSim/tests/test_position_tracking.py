@@ -20,6 +20,25 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         {"x": 1.0, "y": 2.0, "z": 3.0},
     ),
     (
+        "absolute-xyz-from-parameter-values",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "#1=1.5\n"
+        "#2=2.5\n"
+        "#3=3.5\n"
+        "G90\n"
+        "G0 X#1 Y#2 Z#3\n",
+        {"x": 1.5, "y": 2.5, "z": 3.5},
+    ),
+    (
+        "absolute-xyz-from-expressions",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G90\n"
+        "G0 X[1+2] Y[8/2] Z[5-2]\n",
+        {"x": 3.0, "y": 4.0, "z": 3.0},
+    ),
+    (
         "absolute-updates-only-programmed-axes",
         ZERO_OFFSET_P1_SETUP
         +
@@ -146,7 +165,9 @@ POSITION_TRACKING_PARAMS = [
 # 3.5.3 for G2/G3 arc endpoint programming in the selected plane, section
 # 3.5.3.1 for radius-format arcs, and section 3.5.17 for how G90/G91 control
 # whether X/Y/Z values are interpreted as absolute positions or incremental
-# offsets.
+# offsets. Section 3.3.2 says axis words take real values, and sections
+# 3.3.2.2 and 3.3.2.3 define parameter values and expressions as real values,
+# so those forms belong in the motion suite rather than the parameter suite.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_machine_position"),
     POSITION_TRACKING_PARAMS,

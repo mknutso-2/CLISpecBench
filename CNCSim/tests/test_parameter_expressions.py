@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
 
 BinaryExpressionCase = tuple[str, str, float]
 UnaryOperationCase = tuple[str, str, float]
@@ -136,7 +136,7 @@ def test_application_supports_expression_based_parameter_indices(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 7.0, "y": 0.0, "z": 0.0}
+    assert get_parameter_value(payload, 3) == 7.0
 
 
 def test_application_supports_expression_valued_parameter_settings(
@@ -159,7 +159,7 @@ def test_application_supports_expression_valued_parameter_settings(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 5.0, "y": 0.0, "z": 0.0}
+    assert get_parameter_value(payload, 1) == 5.0
 
 
 def test_application_supports_bracketed_parameter_reads(
@@ -205,7 +205,7 @@ def test_application_supports_repeated_parameter_indirection(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 0.375, "y": 0.0, "z": 0.0}
+    assert get_parameter_value(payload, 2) == 0.375
 
 
 def test_application_evaluates_expressions_before_parameter_settings_take_effect(
@@ -231,6 +231,7 @@ def test_application_evaluates_expressions_before_parameter_settings_take_effect
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
     assert payload["machine_position"] == {"x": 16.0, "y": 6.0, "z": 0.0}
+    assert get_parameter_value(payload, 3) == 6.0
 
 
 def test_application_accepts_close_to_integer_parameter_indices(
@@ -253,7 +254,7 @@ def test_application_accepts_close_to_integer_parameter_indices(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 5.0, "y": 0.0, "z": 0.0}
+    assert get_parameter_value(payload, 1) == 5.0
 
 
 def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
@@ -278,58 +279,6 @@ def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
     assert payload["error"] is None
     assert payload["machine_position"] == {"x": 4.0, "y": 0.0, "z": 0.0}
     assert payload["spindle_direction"] == "CW"
-
-
-def test_application_reads_expressions_in_g_l_p_and_m_words(
-    built_executable_path: Path,
-    tmp_path: Path,
-) -> None:
-    # RS274 section 3.3.2 says a word is a letter followed by a real value, and
-    # section 3.3.2.3 says a real value may be an expression.
-    completed, payload = run_cncsim(
-        built_executable_path,
-        input_gcode=(
-            "G[5*2] L[1+1] P[1] X[7/2] Y0.0 Z0.0\n"
-            "G[53+1]\n"
-            "G90\n"
-            "M[1+2]\n"
-            "G0 X1.0\n"
-        ),
-        tmp_path=tmp_path,
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 4.5, "y": 0.0, "z": 0.0}
-    assert payload["spindle_direction"] == "CW"
-
-
-def test_application_reads_expressions_in_feed_spindle_and_tooling_words(
-    built_executable_path: Path,
-    tmp_path: Path,
-) -> None:
-    # RS274 section 3.3.2 says a mid-line word is a legal letter plus a real
-    # value, so the currently supported F/S/T/H/D words also accept expressions.
-    completed, payload = run_cncsim(
-        built_executable_path,
-        input_gcode=(
-            "F[500/2]\n"
-            "S[600*2] M3\n"
-            "T[3+3]\n"
-            "G43 H[3+4]\n"
-            "G41 D[2+2]\n"
-        ),
-        tmp_path=tmp_path,
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["feed_rate"] == 250.0
-    assert payload["spindle_speed"] == 1200.0
-    assert payload["spindle_direction"] == "CW"
-    assert payload["selected_tool"] == 6
-    assert payload["tool_length_offset_index"] == 7
-    assert payload["cutter_radius_compensation_number"] == 4
 
 
 def test_application_evaluates_unary_values_inside_expressions(

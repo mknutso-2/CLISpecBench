@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 
 def run_cncsim(
@@ -45,3 +45,13 @@ def run_cncsim_invalid_input(
     assert isinstance(payload["error"], str)
     assert payload["error"]
     return completed, payload
+
+
+def get_parameter_value(payload: dict[str, Any], parameter_index: int) -> float:
+    parameters = payload["parameters"]
+    assert isinstance(parameters, dict)
+    typed_parameters = cast(dict[str, object], parameters)
+
+    value = typed_parameters[str(parameter_index)]
+    assert isinstance(value, int | float)
+    return float(value)

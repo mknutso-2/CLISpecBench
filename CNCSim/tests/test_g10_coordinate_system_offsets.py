@@ -17,6 +17,26 @@ COORDINATE_SYSTEM_OFFSET_CASES: list[CoordinateSystemOffsetCase] = [
         },
     ),
     (
+        "g10-accepts-parameter-values-in-g-l-p-and-axis-words",
+        "#100=10\n"
+        "#101=2\n"
+        "#102=1\n"
+        "#103=3.5\n"
+        "#104=17.2\n"
+        "#105=-4.0\n"
+        "G#100 L#101 P#102 X#103 Y#104 Z#105\n",
+        {
+            "1": {"x": 3.5, "y": 17.2, "z": -4.0},
+        },
+    ),
+    (
+        "g10-accepts-expressions-in-g-l-p-and-axis-words",
+        "G[5*2] L[1+1] P[1] X[7/2] Y[86/5] Z[-2-2]\n",
+        {
+            "1": {"x": 3.5, "y": 17.2, "z": -4.0},
+        },
+    ),
+    (
         "g10-updates-only-programmed-axes",
         "G10 L2 P2 X1.0 Y2.0 Z3.0\n"
         "G10 L2 P2 X4.5 Z-1.0\n",
@@ -38,8 +58,11 @@ COORDINATE_SYSTEM_OFFSET_CASES: list[CoordinateSystemOffsetCase] = [
 
 # See CNCSim/prompt/docs/RS274NGC.md section 3.2.2 for the nine program
 # coordinate systems and section 3.5.5 for G10 L2 Pn setting the stored origin
-# of a selected coordinate system in absolute coordinates. Axis words omitted
-# from a later G10 block keep their previously stored values.
+# of a selected coordinate system in absolute coordinates. Section 3.3.2 says
+# words take real values, and sections 3.3.2.2 and 3.3.2.3 define parameter
+# values and expressions as real values, so the supported G, L, P, and axis
+# words on a G10 block should accept those forms. Axis words omitted from a
+# later G10 block keep their previously stored values.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_offsets"),
     [

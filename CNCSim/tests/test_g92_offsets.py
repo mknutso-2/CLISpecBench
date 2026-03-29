@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
 
 
 # See RS274 section 3.5.18 "Coordinate System Offsets -- G92, G92.1, G92.2,
@@ -28,6 +28,7 @@ def test_g92_sets_offsets_and_backing_parameters(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == -3.0
     assert payload["machine_position"] == {"x": 6.0, "y": -3.0, "z": 0.0}
 
 
@@ -52,6 +53,7 @@ def test_g92_ignores_incremental_distance_mode(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == -3.0
     assert payload["machine_position"] == {"x": 4.0, "y": 0.0, "z": 0.0}
 
 
@@ -76,6 +78,7 @@ def test_g92_accumulates_existing_offsets(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == -5.0
     assert payload["machine_position"] == {"x": 4.0, "y": -5.0, "z": 0.0}
 
 
@@ -100,6 +103,7 @@ def test_g92_affects_all_coordinate_systems(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == -3.0
     assert payload["machine_position"] == {"x": 14.0, "y": 0.0, "z": 0.0}
 
 
@@ -124,6 +128,7 @@ def test_g92_1_cancels_offsets_and_zeros_parameters(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == 0.0
     assert payload["machine_position"] == {"x": 7.0, "y": 0.0, "z": 0.0}
 
 
@@ -148,6 +153,7 @@ def test_g92_2_cancels_offsets_without_zeroing_parameters(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == -3.0
     assert payload["machine_position"] == {"x": 7.0, "y": -3.0, "z": 0.0}
 
 
@@ -170,4 +176,5 @@ def test_g92_3_restores_offsets_from_parameters(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
+    assert get_parameter_value(payload, 5211) == -3.0
     assert payload["machine_position"] == {"x": 4.0, "y": 0.0, "z": 0.0}

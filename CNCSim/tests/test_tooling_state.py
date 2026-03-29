@@ -64,9 +64,35 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         7,
         5,
     ),
+    (
+        "tracks-tooling-state-from-parameter-values",
+        "#1=6\n"
+        "#2=7\n"
+        "#3=4\n"
+        "T#1\n"
+        "G43 H#2\n"
+        "G41 D#3\n",
+        4,
+        7,
+        6,
+    ),
+    (
+        "tracks-tooling-state-from-expressions",
+        "T[3+3]\n"
+        "G43 H[3+4]\n"
+        "G41 D[2+2]\n",
+        4,
+        7,
+        6,
+    ),
 ]
 
 
+#
+# See CNCSim/prompt/docs/RS274NGC.md section 3.3.2 "Words": a word is a
+# letter followed by a real value. Sections 3.3.2.2 and 3.3.2.3 define
+# parameter values and expressions as real values, so the supported T, H, and
+# D words should accept those forms as well as numeric literals.
 @pytest.mark.parametrize(
     (
         "input_gcode",

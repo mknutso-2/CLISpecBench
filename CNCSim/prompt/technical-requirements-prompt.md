@@ -15,6 +15,7 @@
       "<system_number>": {"x": float, "y": float, "z": float},
       ...
     },
+    "parameters": {"<parameter_number>": float, ...},
     "error": string | null
   }
   Write this JSON file on both success and error. On success, "error" must be null. On invalid
@@ -36,6 +37,11 @@
   Serialize "coordinate_system_offsets" as a JSON object whose keys are program coordinate
   system numbers 1 through 9 encoded as JSON strings and whose values are objects of the form
   {"x": float, "y": float, "z": float}.
+  Serialize "parameters" as a JSON object whose keys are RS274 parameter numbers encoded as
+  JSON strings and whose values are the corresponding numeric parameter values.
+  This object may be sparse. Omitted parameter numbers mean the simulator is not reporting a
+  value for that parameter in the payload. Any included parameter number must have a numeric
+  value.
 - Exit 0 on success. If the input program triggers any error condition documented in the
   specification document, treat that as invalid input and exit 1. Use exit 2 only for internal
   errors in the simulator itself rather than spec-defined program errors.

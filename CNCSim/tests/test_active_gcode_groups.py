@@ -76,6 +76,19 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
         "G55",
     ),
     (
+        "#1=54\n"
+        "G55\n"
+        "G#1\n",
+        GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
+        "G54",
+    ),
+    (
+        "G55\n"
+        "G[53+1]\n",
+        GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
+        "G54",
+    ),
+    (
         "G61\n"
         "G64\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
@@ -87,6 +100,9 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
 # See CNCSim/prompt/docs/RS274NGC.md section 3.4 "Modal Groups" and Table 4:
 # only one member of a modal group may be in force at a time, so the last
 # emitted G-code from a group should be the active one reported in the output.
+# Section 3.3.2 says G words take real values, and sections 3.3.2.2 and
+# 3.3.2.3 define parameter values and expressions as real values, so supported
+# G-code selections should accept those forms too.
 @pytest.mark.parametrize(
     ("input_gcode", "group_number", "expected_active_gcode"),
     ACTIVE_GCODE_GROUP_CASES,
