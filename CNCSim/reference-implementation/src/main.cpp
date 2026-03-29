@@ -148,6 +148,7 @@ struct ParsedLine {
     std::optional<double> feed_rate;
     std::optional<double> spindle_speed;
     std::optional<SpindleDirection> spindle_direction;
+    bool has_g4 = false;
     bool has_g10 = false;
     bool use_machine_coordinates = false;
     bool end_program = false;
@@ -973,8 +974,16 @@ ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
         parse_segment(compact_line, position, state, parsed_line);
     }
 
-    if (!parsed_line.has_g10 && (parsed_line.l.has_value() || parsed_line.p.has_value())) {
+    if (!parsed_line.has_g10 && !parsed_line.has_g4 && (parsed_line.l.has_value() || parsed_line.p.has_value())) {
         throw InputError("Unsupported L or P word without G10");
+    }
+    if (parsed_line.has_g4) {
+        if (!parsed_line.p.has_value()) {
+            throw InputError("G4 requires a P word");
+        }
+        if (*parsed_line.p < 0.0) {
+            throw InputError("G4 requires a non-negative P word");
+        }
     }
     if (parsed_line.has_g10) {
         parsed_line.coordinate_system_offset_target = parse_g10_coordinate_system_number(parsed_line);
@@ -1625,10 +1634,17 @@ void apply_m_code_value(double value, ParsedLine& parsed_line) {
 }
 
 void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode) {
-    if (parsed_line.has_g10 || parsed_line.g92_command.has_value() || parsed_line.use_machine_coordinates) {
+    if (
+        parsed_line.has_g4 || parsed_line.has_g10 || parsed_line.g92_command.has_value()
+        || parsed_line.use_machine_coordinates
+    ) {
         throw InputError("Multiple G codes from the same modal group in the same block");
     }
 
+    if (active_gcode == "G4") {
+        parsed_line.has_g4 = true;
+        return;
+    }
     if (active_gcode == "G10") {
         parsed_line.has_g10 = true;
         return;
@@ -1644,6 +1660,10 @@ void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_
 void apply_g_code_word(const std::string& word, ParsedLine& parsed_line) {
     const std::string code = word.substr(1);
 
+    if (code == "4") {
+        register_non_modal_g_code(parsed_line, "G4");
+        return;
+    }
     if (code == "10") {
         register_non_modal_g_code(parsed_line, "G10");
         return;
