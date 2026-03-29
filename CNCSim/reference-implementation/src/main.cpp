@@ -164,9 +164,12 @@ public:
 ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(
     const std::string& input_path,
+    const std::optional<std::string>& parameter_input_path,
     const std::optional<std::string>& tool_table_path
 );
+void load_parameter_file(const std::string& parameter_input_path, MachineState& state);
 void load_tool_table(const std::string& tool_table_path, MachineState& state);
+void initialize_state_from_parameters(MachineState& state);
 ParsedLine parse_line(std::string_view raw_line, const MachineState& state);
 void apply_line(const ParsedLine& parsed_line, MachineState& state);
 template <typename T>
@@ -316,6 +319,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 
 MachineState execute_program(
     const std::string& input_path,
+    const std::optional<std::string>& parameter_input_path,
     const std::optional<std::string>& tool_table_path
 ) {
     std::ifstream input_stream(input_path);
@@ -324,6 +328,10 @@ MachineState execute_program(
     }
 
     MachineState state;
+    if (parameter_input_path.has_value()) {
+        load_parameter_file(*parameter_input_path, state);
+        initialize_state_from_parameters(state);
+    }
     if (tool_table_path.has_value()) {
         load_tool_table(*tool_table_path, state);
     }
@@ -340,6 +348,56 @@ MachineState execute_program(
     }
 
     return state;
+}
+
+void load_parameter_file(const std::string& parameter_input_path, MachineState& state) {
+    std::ifstream parameter_stream(parameter_input_path);
+    if (!parameter_stream.is_open()) {
+        throw InputError("Could not open parameter file: " + parameter_input_path);
+    }
+
+    std::string line;
+    bool in_data_section = false;
+    int previous_parameter_index = 0;
+    while (std::getline(parameter_stream, line)) {
+        if (!in_data_section) {
+            if (line.empty()) {
+                in_data_section = true;
+            }
+            continue;
+        }
+
+        if (line.empty()) {
+            continue;
+        }
+
+        std::istringstream line_stream(line);
+        int parameter_index = 0;
+        double value = 0.0;
+        if (!(line_stream >> parameter_index >> value)) {
+            throw InputError("Invalid parameter file entry");
+        }
+        if (parameter_index < kMinParameterIndex || parameter_index > kMaxParameterIndex) {
+            throw InputError("Parameter file index must be from 1 to 5399");
+        }
+        if (parameter_index <= previous_parameter_index) {
+            throw InputError("Parameter file indices must be in ascending order");
+        }
+
+        state.parameters[parameter_index] = value;
+        state.reported_parameters[parameter_index] = true;
+
+        int system_number = 0;
+        int axis_index = 0;
+        if (
+            decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index)
+            || decode_g92_axis_parameter(parameter_index, axis_index)
+        ) {
+            state.parameter_length_units[parameter_index] = state.current_length_unit;
+        }
+
+        previous_parameter_index = parameter_index;
+    }
 }
 
 void load_tool_table(const std::string& tool_table_path, MachineState& state) {
@@ -1512,6 +1570,38 @@ double active_tool_length_offset_in_current_units(const MachineState& state) {
     );
 }
 
+void initialize_state_from_parameters(MachineState& state) {
+    for (int system_number = 1; system_number <= 9; ++system_number) {
+        Position& coordinate_system_offset = state.coordinate_system_offsets.at(std::to_string(system_number));
+        coordinate_system_offset.x = parameter_length_value_in_current_units(
+            state,
+            parameter_index_for_coordinate_system_axis(system_number, 0)
+        );
+        coordinate_system_offset.y = parameter_length_value_in_current_units(
+            state,
+            parameter_index_for_coordinate_system_axis(system_number, 1)
+        );
+        coordinate_system_offset.z = parameter_length_value_in_current_units(
+            state,
+            parameter_index_for_coordinate_system_axis(system_number, 2)
+        );
+    }
+
+    state.g92_axis_offsets.x = parameter_length_value_in_current_units(state, kG92XAxisOffsetParameter);
+    state.g92_axis_offsets.y = parameter_length_value_in_current_units(state, kG92YAxisOffsetParameter);
+    state.g92_axis_offsets.z = parameter_length_value_in_current_units(state, kG92ZAxisOffsetParameter);
+
+    const int selected_coordinate_system = round_if_close_to_integer(
+        state.parameters[kSelectedCoordinateSystemParameter],
+        "Parameter 5220 must be a whole number from 1 to 9"
+    );
+    if (selected_coordinate_system < 1 || selected_coordinate_system > 9) {
+        throw InputError("Parameter 5220 must be a whole number from 1 to 9");
+    }
+
+    set_selected_coordinate_system(state, selected_coordinate_system);
+}
+
 void apply_tool_length_offset_change(MachineState& state, std::optional<int> new_index) {
     const double previous_offset = active_tool_length_offset_in_current_units(state);
 
@@ -2131,7 +2221,11 @@ int main(int argc, char* argv[]) {
     }
 
     try {
-        const MachineState final_state = execute_program(options.input_path, options.tool_table_path);
+        const MachineState final_state = execute_program(
+            options.input_path,
+            options.parameter_input_path,
+            options.tool_table_path
+        );
         write_output_file(options.output_path, to_json(final_state));
         return static_cast<int>(ExitCode::kSuccess);
     } catch (const InputError& error) {
