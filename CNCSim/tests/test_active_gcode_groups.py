@@ -34,10 +34,36 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
         "G18",
     ),
     (
+        "#1=18\n"
+        "G17\n"
+        "G#1\n",
+        GCODE_MODAL_GROUP_PLANE_SELECTION,
+        "G18",
+    ),
+    (
+        "G17\n"
+        "G[17+2]\n",
+        GCODE_MODAL_GROUP_PLANE_SELECTION,
+        "G19",
+    ),
+    (
         "G90\n"
         "G91\n",
         GCODE_MODAL_GROUP_DISTANCE_MODE,
         "G91",
+    ),
+    (
+        "#1=91\n"
+        "G90\n"
+        "G#1\n",
+        GCODE_MODAL_GROUP_DISTANCE_MODE,
+        "G91",
+    ),
+    (
+        "G90\n"
+        "G[45*2]\n",
+        GCODE_MODAL_GROUP_DISTANCE_MODE,
+        "G90",
     ),
     (
         "G94\n"
@@ -46,8 +72,34 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
         "G93",
     ),
     (
+        "#1=93\n"
+        "G94\n"
+        "G#1\n",
+        GCODE_MODAL_GROUP_FEED_RATE_MODE,
+        "G93",
+    ),
+    (
+        "G93\n"
+        "G[47*2]\n",
+        GCODE_MODAL_GROUP_FEED_RATE_MODE,
+        "G94",
+    ),
+    (
         "G20\n"
         "G21\n",
+        GCODE_MODAL_GROUP_UNITS,
+        "G21",
+    ),
+    (
+        "#1=21\n"
+        "G20\n"
+        "G#1\n",
+        GCODE_MODAL_GROUP_UNITS,
+        "G21",
+    ),
+    (
+        "G20\n"
+        "G[42/2]\n",
         GCODE_MODAL_GROUP_UNITS,
         "G21",
     ),
@@ -102,7 +154,7 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
 # emitted G-code from a group should be the active one reported in the output.
 # Section 3.3.2 says G words take real values, and sections 3.3.2.2 and
 # 3.3.2.3 define parameter values and expressions as real values, so supported
-# G-code selections should accept those forms too.
+# G-code selections in the covered modal groups should accept those forms too.
 @pytest.mark.parametrize(
     ("input_gcode", "group_number", "expected_active_gcode"),
     ACTIVE_GCODE_GROUP_CASES,
