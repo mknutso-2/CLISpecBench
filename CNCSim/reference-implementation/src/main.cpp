@@ -30,6 +30,11 @@ enum class Plane {
     kYZ,
 };
 
+enum class LengthUnit {
+    kInches,
+    kMillimeters,
+};
+
 enum class SpindleDirection {
     kClockwise,
     kCounterClockwise,
@@ -55,6 +60,7 @@ constexpr int kG92XAxisOffsetParameter = 5211;
 constexpr int kG92YAxisOffsetParameter = 5212;
 constexpr int kG92ZAxisOffsetParameter = 5213;
 constexpr double kNearIntegerTolerance = 0.0001;
+constexpr double kMillimetersPerInch = 25.4;
 
 std::map<std::string, Position> make_default_coordinate_system_offsets() {
     return {
@@ -82,12 +88,17 @@ std::vector<bool> make_default_reported_parameters() {
     return reported_parameters;
 }
 
+std::vector<std::optional<LengthUnit>> make_default_parameter_length_units() {
+    return std::vector<std::optional<LengthUnit>>(kParameterCount, std::nullopt);
+}
+
 struct MachineState {
     std::map<std::string, std::string> active_modal_g_codes;
     std::map<std::string, std::string> active_modal_m_codes;
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
     std::vector<double> parameters = make_default_parameters();
     std::vector<bool> reported_parameters = make_default_reported_parameters();
+    std::vector<std::optional<LengthUnit>> parameter_length_units = make_default_parameter_length_units();
     Position machine_position{};
     Position g92_axis_offsets{};
     double feed_rate = 0.0;
@@ -98,6 +109,7 @@ struct MachineState {
     std::optional<int> selected_tool;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
     Plane selected_plane = Plane::kXY;
+    LengthUnit current_length_unit = LengthUnit::kInches;
     std::string selected_coordinate_system = "1";
 };
 
@@ -213,13 +225,24 @@ std::string coordinate_system_number_for_g_code(std::string_view active_gcode);
 std::string active_g_code_for_coordinate_system_number(int system_number);
 int parameter_index_for_coordinate_system_axis(int system_number, int axis_index);
 bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index);
-void set_parameter_value(MachineState& state, int parameter_index, double value);
+bool decode_g92_axis_parameter(int parameter_index, int& axis_index);
+void set_parameter_value(
+    MachineState& state,
+    int parameter_index,
+    double value,
+    std::optional<LengthUnit> length_unit = std::nullopt
+);
 void set_selected_coordinate_system(MachineState& state, int system_number);
 void set_coordinate_system_axis(MachineState& state, int system_number, int axis_index, double value);
 void set_g92_axis_offset(MachineState& state, int axis_index, double value);
 void reset_g92_axis_offsets(MachineState& state, bool reset_parameters);
 void restore_g92_axis_offsets_from_parameters(MachineState& state);
 double active_program_origin_offset_for_axis(const MachineState& state, int axis_index);
+double convert_length_value(double value, LengthUnit from, LengthUnit to);
+void convert_position_in_place(Position& position, LengthUnit from, LengthUnit to);
+LengthUnit length_unit_for_g_code(std::string_view active_gcode);
+void apply_length_unit_change(MachineState& state, LengthUnit new_unit);
+double parameter_length_value_in_current_units(const MachineState& state, int parameter_index);
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state);
 void reset_after_program_end(MachineState& state);
 std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
@@ -394,6 +417,48 @@ double degrees_to_radians(double degrees) {
 
 double radians_to_degrees(double radians) {
     return radians * 180.0 / 3.14159265358979323846;
+}
+
+double convert_length_value(double value, LengthUnit from, LengthUnit to) {
+    if (from == to) {
+        return value;
+    }
+    if (from == LengthUnit::kInches && to == LengthUnit::kMillimeters) {
+        return value * kMillimetersPerInch;
+    }
+
+    return value / kMillimetersPerInch;
+}
+
+void convert_position_in_place(Position& position, LengthUnit from, LengthUnit to) {
+    position.x = convert_length_value(position.x, from, to);
+    position.y = convert_length_value(position.y, from, to);
+    position.z = convert_length_value(position.z, from, to);
+}
+
+LengthUnit length_unit_for_g_code(std::string_view active_gcode) {
+    if (active_gcode == "G20") {
+        return LengthUnit::kInches;
+    }
+    if (active_gcode == "G21") {
+        return LengthUnit::kMillimeters;
+    }
+
+    throw std::runtime_error("Unsupported length unit selection");
+}
+
+void apply_length_unit_change(MachineState& state, LengthUnit new_unit) {
+    if (state.current_length_unit == new_unit) {
+        return;
+    }
+
+    convert_position_in_place(state.machine_position, state.current_length_unit, new_unit);
+    convert_position_in_place(state.g92_axis_offsets, state.current_length_unit, new_unit);
+    for (auto& [_, offset] : state.coordinate_system_offsets) {
+        convert_position_in_place(offset, state.current_length_unit, new_unit);
+    }
+
+    state.current_length_unit = new_unit;
 }
 
 double require_finite_real_value(double value, std::string_view context) {
@@ -865,6 +930,10 @@ void assign_unique_word(std::optional<T>& destination, T value, std::string_view
 }
 
 void apply_line(const ParsedLine& parsed_line, MachineState& state) {
+    if (parsed_line.active_modal_g_codes.contains("6") && state.cutter_radius_compensation_number.has_value()) {
+        throw InputError("Cannot change units with cutter radius compensation active");
+    }
+
     for (const auto& [group_number, active_gcode] : parsed_line.active_modal_g_codes) {
         state.active_modal_g_codes[group_number] = active_gcode;
         if (group_number == "3") {
@@ -872,6 +941,8 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
                 active_gcode == "G90" ? CoordinateMode::kAbsolute : CoordinateMode::kIncremental;
         } else if (group_number == "2") {
             state.selected_plane = plane_for_g_code(active_gcode);
+        } else if (group_number == "6") {
+            apply_length_unit_change(state, length_unit_for_g_code(active_gcode));
         } else if (group_number == "12") {
             set_selected_coordinate_system(
                 state,
@@ -1255,9 +1326,24 @@ bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_nu
     return system_number >= 1 && system_number <= 9;
 }
 
-void set_parameter_value(MachineState& state, int parameter_index, double value) {
+bool decode_g92_axis_parameter(int parameter_index, int& axis_index) {
+    if (parameter_index < kG92XAxisOffsetParameter || parameter_index > kG92ZAxisOffsetParameter) {
+        return false;
+    }
+
+    axis_index = parameter_index - kG92XAxisOffsetParameter;
+    return axis_index >= 0 && axis_index <= 2;
+}
+
+void set_parameter_value(
+    MachineState& state,
+    int parameter_index,
+    double value,
+    std::optional<LengthUnit> length_unit
+) {
     state.parameters[parameter_index] = value;
     state.reported_parameters[parameter_index] = true;
+    state.parameter_length_units[parameter_index] = length_unit;
 }
 
 void set_selected_coordinate_system(MachineState& state, int system_number) {
@@ -1282,41 +1368,56 @@ void set_coordinate_system_axis(MachineState& state, int system_number, int axis
             throw std::runtime_error("Unsupported coordinate system axis");
     }
 
-    set_parameter_value(state, parameter_index_for_coordinate_system_axis(system_number, axis_index), value);
+    set_parameter_value(
+        state,
+        parameter_index_for_coordinate_system_axis(system_number, axis_index),
+        value,
+        state.current_length_unit
+    );
 }
 
 void set_g92_axis_offset(MachineState& state, int axis_index, double value) {
     switch (axis_index) {
         case 0:
             state.g92_axis_offsets.x = value;
-            set_parameter_value(state, kG92XAxisOffsetParameter, value);
+            set_parameter_value(state, kG92XAxisOffsetParameter, value, state.current_length_unit);
             return;
         case 1:
             state.g92_axis_offsets.y = value;
-            set_parameter_value(state, kG92YAxisOffsetParameter, value);
+            set_parameter_value(state, kG92YAxisOffsetParameter, value, state.current_length_unit);
             return;
         case 2:
             state.g92_axis_offsets.z = value;
-            set_parameter_value(state, kG92ZAxisOffsetParameter, value);
+            set_parameter_value(state, kG92ZAxisOffsetParameter, value, state.current_length_unit);
             return;
         default:
             throw std::runtime_error("Unsupported G92 axis");
     }
 }
 
+double parameter_length_value_in_current_units(const MachineState& state, int parameter_index) {
+    const double raw_value = state.parameters.at(parameter_index);
+    const std::optional<LengthUnit>& raw_unit = state.parameter_length_units.at(parameter_index);
+    if (!raw_unit.has_value()) {
+        return raw_value;
+    }
+
+    return convert_length_value(raw_value, *raw_unit, state.current_length_unit);
+}
+
 void reset_g92_axis_offsets(MachineState& state, bool reset_parameters) {
     state.g92_axis_offsets = {};
     if (reset_parameters) {
-        set_parameter_value(state, kG92XAxisOffsetParameter, 0.0);
-        set_parameter_value(state, kG92YAxisOffsetParameter, 0.0);
-        set_parameter_value(state, kG92ZAxisOffsetParameter, 0.0);
+        set_parameter_value(state, kG92XAxisOffsetParameter, 0.0, state.current_length_unit);
+        set_parameter_value(state, kG92YAxisOffsetParameter, 0.0, state.current_length_unit);
+        set_parameter_value(state, kG92ZAxisOffsetParameter, 0.0, state.current_length_unit);
     }
 }
 
 void restore_g92_axis_offsets_from_parameters(MachineState& state) {
-    state.g92_axis_offsets.x = state.parameters[kG92XAxisOffsetParameter];
-    state.g92_axis_offsets.y = state.parameters[kG92YAxisOffsetParameter];
-    state.g92_axis_offsets.z = state.parameters[kG92ZAxisOffsetParameter];
+    state.g92_axis_offsets.x = parameter_length_value_in_current_units(state, kG92XAxisOffsetParameter);
+    state.g92_axis_offsets.y = parameter_length_value_in_current_units(state, kG92YAxisOffsetParameter);
+    state.g92_axis_offsets.z = parameter_length_value_in_current_units(state, kG92ZAxisOffsetParameter);
 }
 
 double active_program_origin_offset_for_axis(const MachineState& state, int axis_index) {
@@ -1336,14 +1437,25 @@ double active_program_origin_offset_for_axis(const MachineState& state, int axis
 
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
     for (const ParameterWrite& parameter_write : parsed_line.parameter_writes) {
-        set_parameter_value(state, parameter_write.index, parameter_write.value);
-
         int system_number = 0;
         int axis_index = 0;
         if (decode_coordinate_system_axis_parameter(parameter_write.index, system_number, axis_index)) {
             // Direct writes to offset backing parameters update the stored offset data.
             set_coordinate_system_axis(state, system_number, axis_index, parameter_write.value);
+            continue;
         }
+
+        if (decode_g92_axis_parameter(parameter_write.index, axis_index)) {
+            set_parameter_value(
+                state,
+                parameter_write.index,
+                parameter_write.value,
+                state.current_length_unit
+            );
+            continue;
+        }
+
+        set_parameter_value(state, parameter_write.index, parameter_write.value);
     }
 }
 

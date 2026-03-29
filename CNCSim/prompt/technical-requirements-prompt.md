@@ -22,6 +22,8 @@
   input or internal failure, "error" must be a non-empty string.
   Serialize "machine_position" as the tool position in the absolute machine coordinate system
   (the coordinate space used by G53).
+  Serialize "machine_position" and "coordinate_system_offsets" in the currently active RS274
+  length units at end of program.
   Serialize "cutter_radius_compensation_number" as the active D number, or null if no explicit
   cutter radius compensation number is active.
   Serialize "tool_length_offset_index" as the active H number, or null if no tool length offset

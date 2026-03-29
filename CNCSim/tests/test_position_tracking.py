@@ -38,6 +38,44 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G0 X[1+2] Y[8/2] Z[5-2]\n",
         {"x": 3.0, "y": 4.0, "z": 3.0},
     ),
+    # RS274 sections 2.1.2.10 and 3.5.7: when length units change, the
+    # numbers representing current position must be adjusted even without axis
+    # motion.
+    (
+        "g20-converts-current-position-numerically-without-motion",
+        "G21\n"
+        + ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G0 X25.4 Y50.8 Z76.2\n"
+        + "G20\n",
+        {"x": 1.0, "y": 2.0, "z": 3.0},
+    ),
+    # RS274 sections 2.1.2.10 and 3.5.7: the same current-position rescaling
+    # requirement applies when switching from inches to millimeters.
+    (
+        "g21-converts-current-position-numerically-without-motion",
+        "G20\n"
+        + ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G21\n",
+        {"x": 25.4, "y": 50.8, "z": 76.2},
+    ),
+    # RS274 section 4.3.3.2: the effective location of the program origin
+    # should not change when units change. The harness contract in
+    # technical-requirements-prompt.md says machine_position is serialized in
+    # the currently active length units.
+    (
+        "motion-after-unit-change-preserves-program-origin-location",
+        "G21\n"
+        "G10 L2 P1 X25.4 Y50.8 Z76.2\n"
+        "G54\n"
+        "G90\n"
+        "G0 X0.0 Y0.0 Z0.0\n"
+        "G20\n"
+        "G0 X1.5 Y2.5 Z3.5\n",
+        {"x": 2.5, "y": 4.5, "z": 6.5},
+    ),
     # RS274 section 3.5.12: G53 moves to absolute machine coordinates.
     (
         "g53-uses-machine-coordinates",
@@ -196,11 +234,15 @@ POSITION_TRACKING_PARAMS = [
 # 3.5.3 for G2/G3 arc endpoint programming in the selected plane, section
 # 3.5.3.1 for radius-format arcs, and section 3.5.17 for how G90/G91 control
 # whether X/Y/Z values are interpreted as absolute positions or incremental
-# offsets. Section 3.5.12 says G53 moves use absolute machine coordinates, are
-# non-modal, and may omit G0/G1 only when one of those linear modes is already
-# active. Section 3.3.2 says axis words take real values, and sections 3.3.2.2
-# and 3.3.2.3 define parameter values and expressions as real values, so those
-# forms belong in the motion suite rather than the parameter suite.
+# offsets. Sections 2.1.2.10, 3.5.7, and 4.3.3.2 cover the explicit unit-change
+# motion behavior exercised here, while the harness contract in
+# technical-requirements-prompt.md defines that machine_position is serialized
+# in the currently active length units. Section 3.5.12 says G53 moves use
+# absolute machine coordinates, are non-modal, and may omit G0/G1 only when one
+# of those linear modes is already active. Section 3.3.2 says axis words take
+# real values, and sections 3.3.2.2 and 3.3.2.3 define parameter values and
+# expressions as real values, so those forms belong in the motion suite rather
+# than the parameter suite.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_machine_position"),
     POSITION_TRACKING_PARAMS,
