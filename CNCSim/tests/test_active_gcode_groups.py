@@ -19,6 +19,7 @@ from swe_buildbench.cncsim.modal_groups import (
 from swe_buildbench.cncsim.test_support import run_cncsim
 
 ActiveGcodeGroupCase = tuple[str, str, str]
+CoordinateSystemSelectionCase = tuple[str, str, dict[str, float]]
 
 ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
     (
@@ -148,6 +149,18 @@ ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
     ),
 ]
 
+COORDINATE_SYSTEM_SELECTION_CASES: list[CoordinateSystemSelectionCase] = [
+    ("G54", "1", {"x": 10.0, "y": 0.0, "z": 0.0}),
+    ("G55", "2", {"x": 20.0, "y": 0.0, "z": 0.0}),
+    ("G56", "3", {"x": 30.0, "y": 0.0, "z": 0.0}),
+    ("G57", "4", {"x": 40.0, "y": 0.0, "z": 0.0}),
+    ("G58", "5", {"x": 50.0, "y": 0.0, "z": 0.0}),
+    ("G59", "6", {"x": 60.0, "y": 0.0, "z": 0.0}),
+    ("G59.1", "7", {"x": 70.0, "y": 0.0, "z": 0.0}),
+    ("G59.2", "8", {"x": 80.0, "y": 0.0, "z": 0.0}),
+    ("G59.3", "9", {"x": 90.0, "y": 0.0, "z": 0.0}),
+]
+
 
 # See CNCSim/prompt/docs/RS274NGC.md section 3.4 "Modal Groups" and Table 4:
 # only one member of a modal group may be in force at a time, so the last
@@ -179,3 +192,45 @@ def test_application_tracks_active_gcode_groups(
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
     assert payload["active_modal_g_codes"][group_number] == expected_active_gcode
+
+
+# RS274 section 3.2.2 defines the nine program coordinate systems, and
+# section 3.5.13 says G54 through G59.3 select among them. This matrix uses one
+# shared setup that assigns a distinct X offset to each system, then verifies
+# that each selection code activates the expected modal code and uses the
+# corresponding stored offset for motion.
+@pytest.mark.parametrize(
+    ("selected_gcode", "expected_system_number", "expected_machine_position"),
+    COORDINATE_SYSTEM_SELECTION_CASES,
+    ids=[selected_gcode.lower() for selected_gcode, _, _ in COORDINATE_SYSTEM_SELECTION_CASES],
+)
+def test_coordinate_system_selection_codes_activate_the_expected_system(
+    built_executable_path: Path,
+    selected_gcode: str,
+    expected_system_number: str,
+    expected_machine_position: dict[str, float],
+    tmp_path: Path,
+) -> None:
+    coordinate_system_setup = "".join(
+        f"G10 L2 P{system_number} X{system_number * 10}.0 Y0.0 Z0.0\n"
+        for system_number in range(1, 10)
+    )
+    completed, payload = run_cncsim(
+        built_executable_path,
+        input_gcode=(
+            coordinate_system_setup
+            + f"{selected_gcode}\n"
+            + "G90\n"
+            + "G0 X0.0 Y0.0 Z0.0\n"
+        ),
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert payload["error"] is None
+    assert (
+        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION]
+        == selected_gcode
+    )
+    assert payload["coordinate_system_offsets"][expected_system_number] == expected_machine_position
+    assert payload["machine_position"] == expected_machine_position
