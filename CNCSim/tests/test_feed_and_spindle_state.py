@@ -56,6 +56,17 @@ STATE_CASES: list[StateCase] = [
         1200.0,
         "CW",
     ),
+    (
+        "tracks-feed-and-spindle-state-from-repeated-parameters-and-unary-ops",
+        "#1=2\n"
+        "#2=250.0\n"
+        "F##1\n"
+        "SABS[-1200.0]\n"
+        "MABS[-3]\n",
+        250.0,
+        1200.0,
+        "CW",
+    ),
 ]
 
 
@@ -63,7 +74,9 @@ STATE_CASES: list[StateCase] = [
 # See CNCSim/prompt/docs/RS274NGC.md section 3.3.2 "Words": a word is a
 # letter followed by a real value. Sections 3.3.2.2 and 3.3.2.3 define
 # parameter values and expressions as real values, so the supported F, S, and
-# M words should accept those forms as well as numeric literals.
+# M words should accept those forms as well as numeric literals. Section
+# 3.3.2.2 also explicitly allows repeated `#`, and section 3.3.2.4 defines
+# unary-operation values as real values.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_feed_rate", "expected_spindle_speed", "expected_spindle_direction"),
     [

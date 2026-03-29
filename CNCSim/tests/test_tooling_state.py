@@ -85,6 +85,17 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         7,
         6,
     ),
+    (
+        "tracks-tooling-state-from-repeated-parameters-and-unary-ops",
+        "#1=2\n"
+        "#2=6\n"
+        "T##1\n"
+        "G43 HABS[-7]\n"
+        "G41 DABS[-4]\n",
+        4,
+        7,
+        6,
+    ),
 ]
 
 
@@ -92,7 +103,9 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
 # See CNCSim/prompt/docs/RS274NGC.md section 3.3.2 "Words": a word is a
 # letter followed by a real value. Sections 3.3.2.2 and 3.3.2.3 define
 # parameter values and expressions as real values, so the supported T, H, and
-# D words should accept those forms as well as numeric literals.
+# D words should accept those forms as well as numeric literals. Section
+# 3.3.2.2 also explicitly allows repeated `#`, and section 3.3.2.4 defines
+# unary-operation values as real values.
 @pytest.mark.parametrize(
     (
         "input_gcode",

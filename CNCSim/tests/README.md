@@ -45,4 +45,4 @@ When documenting why a test is valid:
 
 - [x] Add explicit parameter/expression coverage for arc `I`/`J`/`K`/`R` words.
 - [x] Broaden G-word parameter/expression coverage beyond the current sampled cases to include modal groups such as `G17`/`G18`/`G19`, `G90`/`G91`, `G20`/`G21`, and `G93`/`G94`.
-- [ ] Add explicit unary-operation or repeated-`#` coverage outside axis words, such as in `F`, `S`, `T`, `H`, `D`, or arc words.
+- [x] Add explicit unary-operation or repeated-`#` coverage outside axis words, such as in `F`, `S`, `T`, `H`, `D`, or arc words.
