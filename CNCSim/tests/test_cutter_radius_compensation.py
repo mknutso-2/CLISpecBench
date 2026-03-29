@@ -123,6 +123,22 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
             "G40",
             None,
         ),
+        # RS274 Appendix B.6: after G40, no special exit move occurs, and the
+        # next move behaves as if the previous move had placed the tool at its
+        # current spindle-center position. So this incremental move starts from
+        # the compensated point (3.2, 2.4), not from the programmed contour
+        # point (5.0, 0.0).
+        (
+            "G17 G90 G94\n"
+            "G0 X0.0 Y0.0\n"
+            "G41 D1 G1 X5.0 Y0.0\n"
+            "G40\n"
+            "G91 G1 X1.0 Y0.0\n",
+            4.2,
+            2.4,
+            "G40",
+            None,
+        ),
     ],
     ids=[
         "g41-first-straight-move-left",
@@ -131,6 +147,7 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
         "g41-colinear-follow-on-move-left",
         "g42-colinear-follow-on-move-right",
         "g40-on-motion-line-disables-comp-before-motion",
+        "g40-follow-on-move-starts-from-current-spindle-center",
     ],
 )
 def test_application_tracks_cutter_radius_compensated_spindle_center(
