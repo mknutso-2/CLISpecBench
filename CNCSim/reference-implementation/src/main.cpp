@@ -69,6 +69,12 @@ struct ToolTableEntry {
     double diameter = 0.0;
 };
 
+struct CannedCycleStickyState {
+    std::optional<double> retract_word;
+    std::optional<char> depth_axis_letter;
+    std::optional<double> depth_word;
+};
+
 struct ProbeBox {
     double x_min = 0.0;
     double x_max = 0.0;
@@ -151,6 +157,7 @@ struct MachineState {
     std::optional<int> carousel_slots;
     std::optional<ProbeBox> probe_box;
     std::optional<int> probe_tool_number;
+    CannedCycleStickyState canned_cycle_sticky_state;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
     Plane selected_plane = Plane::kXY;
     LengthUnit current_length_unit = LengthUnit::kInches;
@@ -182,6 +189,7 @@ struct ParsedLine {
     std::optional<double> k;
     std::optional<double> l;
     std::optional<double> p;
+    std::optional<double> q;
     std::optional<double> r;
     std::optional<int> t;
     std::optional<std::string> coordinate_system_offset_target;
@@ -267,6 +275,8 @@ void apply_m_code_word(const std::string& word, ParsedLine& parsed_line);
 bool has_xy_axis_word(const ParsedLine& parsed_line);
 bool is_arc_motion(std::string_view active_gcode);
 bool is_linear_motion(std::string_view active_gcode);
+bool is_any_canned_cycle_motion(std::string_view active_gcode);
+bool is_supported_canned_cycle_motion(std::string_view active_gcode);
 bool is_feed_rate_motion(std::string_view active_gcode);
 Plane plane_for_g_code(std::string_view active_gcode);
 double resolved_program_axis_endpoint(
@@ -277,9 +287,15 @@ double resolved_program_axis_endpoint(
 );
 bool has_linear_axis_word(const ParsedLine& parsed_line);
 bool line_has_motion_axis_word(const ParsedLine& parsed_line);
+bool line_mentions_canned_cycle_words(const ParsedLine& parsed_line);
 bool is_probe_motion(std::string_view active_gcode);
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state);
 void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state);
+void validate_canned_cycle_command(
+    const ParsedLine& parsed_line,
+    const MachineState& state,
+    std::string_view prior_motion_gcode
+);
 void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode);
 void register_modal_g_code(
     ParsedLine& parsed_line,
@@ -319,6 +335,12 @@ std::optional<Position> find_probe_trip_point(
     LengthUnit current_unit
 );
 void apply_probe_motion(MachineState& state, const ParsedLine& parsed_line);
+void apply_canned_cycle_motion(
+    MachineState& state,
+    const ParsedLine& parsed_line,
+    std::string_view active_gcode,
+    bool same_cycle_already_active
+);
 double convert_length_value(double value, LengthUnit from, LengthUnit to);
 void convert_position_in_place(Position& position, LengthUnit from, LengthUnit to);
 LengthUnit length_unit_for_g_code(std::string_view active_gcode);
@@ -1173,6 +1195,13 @@ void parse_word_segment(
                 std::string_view("P")
             );
             return;
+        case 'Q':
+            assign_unique_word(
+                parsed_line.q,
+                parse_real_value(text, position, state),
+                std::string_view("Q")
+            );
+            return;
         case 'R':
             assign_unique_word(
                 parsed_line.r,
@@ -1254,10 +1283,30 @@ ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
         parse_segment(compact_line, position, state, parsed_line);
     }
 
-    if (!parsed_line.has_g10 && !parsed_line.has_g4 && (parsed_line.l.has_value() || parsed_line.p.has_value())) {
-        throw InputError("Unsupported L or P word without G10");
+    const auto current_motion = state.active_modal_g_codes.find("1");
+    const std::string_view effective_motion = parsed_line.active_modal_g_codes.contains("1")
+        ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
+        : current_motion != state.active_modal_g_codes.end()
+            ? std::string_view(current_motion->second)
+            : std::string_view();
+    const bool canned_cycle_context = is_any_canned_cycle_motion(effective_motion);
+
+    if (parsed_line.l.has_value() && !parsed_line.has_g10 && !canned_cycle_context) {
+        throw InputError("L word requires G10 or a canned cycle");
+    }
+    if (
+        parsed_line.p.has_value() && !parsed_line.has_g10 && !parsed_line.has_g4
+        && effective_motion != "G82"
+    ) {
+        throw InputError("P word requires G4, G10, or G82");
+    }
+    if (parsed_line.q.has_value() && effective_motion != "G83") {
+        throw InputError("Q word requires G83");
     }
     if (parsed_line.has_g4) {
+        if (parsed_line.l.has_value() || parsed_line.q.has_value()) {
+            throw InputError("G4 does not use L or Q words");
+        }
         if (!parsed_line.p.has_value()) {
             throw InputError("G4 requires a P word");
         }
@@ -1266,6 +1315,9 @@ ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
         }
     }
     if (parsed_line.has_g10) {
+        if (parsed_line.q.has_value()) {
+            throw InputError("G10 does not use a Q word");
+        }
         parsed_line.coordinate_system_offset_target = parse_g10_coordinate_system_number(parsed_line);
     }
     if (parsed_line.g92_command.has_value() && *parsed_line.g92_command == "G92"
@@ -1295,6 +1347,10 @@ void assign_unique_word(std::optional<T>& destination, T value, std::string_view
 }
 
 void apply_line(const ParsedLine& parsed_line, MachineState& state) {
+    const auto prior_motion = state.active_modal_g_codes.find("1");
+    const std::string prior_motion_gcode =
+        prior_motion != state.active_modal_g_codes.end() ? prior_motion->second : std::string();
+
     if (parsed_line.active_modal_g_codes.contains("6") && cutter_radius_compensation_is_active(state)) {
         throw InputError("Cannot change units with cutter radius compensation active");
     }
@@ -1332,6 +1388,15 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     }
     for (const auto& [group_number, active_mcode] : parsed_line.active_modal_m_codes) {
         state.active_modal_m_codes[group_number] = active_mcode;
+    }
+
+    const auto current_motion = state.active_modal_g_codes.find("1");
+    if (
+        current_motion == state.active_modal_g_codes.end()
+        || !is_supported_canned_cycle_motion(current_motion->second)
+        || current_motion->second != prior_motion_gcode
+    ) {
+        state.canned_cycle_sticky_state = {};
     }
 
     if (parsed_line.feed_rate.has_value()) {
@@ -1430,8 +1495,8 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
         apply_home_return(state, parsed_line, *parsed_line.home_command == "G30");
     } else {
         validate_linear_motion_command(parsed_line, state);
+        validate_canned_cycle_command(parsed_line, state, prior_motion_gcode);
         validate_arc_command(parsed_line, state);
-        const auto current_motion = state.active_modal_g_codes.find("1");
         const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
         const bool implicit_motion = !explicit_motion && line_has_motion_axis_word(parsed_line);
         const std::string_view effective_motion = explicit_motion
@@ -1439,9 +1504,21 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
             : current_motion != state.active_modal_g_codes.end()
                 ? std::string_view(current_motion->second)
                 : std::string_view();
+        const bool same_canned_cycle_already_active = !prior_motion_gcode.empty()
+            && prior_motion_gcode == effective_motion;
+        const bool canned_cycle_line = explicit_motion ? is_any_canned_cycle_motion(effective_motion)
+            : current_motion != state.active_modal_g_codes.end() && is_any_canned_cycle_motion(effective_motion)
+                && line_mentions_canned_cycle_words(parsed_line);
 
         if ((explicit_motion || implicit_motion) && is_probe_motion(effective_motion)) {
             apply_probe_motion(state, parsed_line);
+        } else if (canned_cycle_line && is_supported_canned_cycle_motion(effective_motion)) {
+            apply_canned_cycle_motion(
+                state,
+                parsed_line,
+                effective_motion,
+                same_canned_cycle_already_active
+            );
         } else if (parsed_line.use_machine_coordinates) {
             apply_coordinate_system_axis_value(parsed_line.x, state.machine_position.x);
             apply_coordinate_system_axis_value(parsed_line.y, state.machine_position.y);
@@ -1509,6 +1586,16 @@ bool is_linear_motion(std::string_view active_gcode) {
     return active_gcode == "G0" || active_gcode == "G1";
 }
 
+bool is_any_canned_cycle_motion(std::string_view active_gcode) {
+    return active_gcode == "G81" || active_gcode == "G82" || active_gcode == "G83"
+        || active_gcode == "G84" || active_gcode == "G85" || active_gcode == "G86"
+        || active_gcode == "G87" || active_gcode == "G88" || active_gcode == "G89";
+}
+
+bool is_supported_canned_cycle_motion(std::string_view active_gcode) {
+    return active_gcode == "G81" || active_gcode == "G82" || active_gcode == "G83";
+}
+
 bool is_probe_motion(std::string_view active_gcode) {
     return active_gcode == "G38.2";
 }
@@ -1557,6 +1644,12 @@ bool has_xy_axis_word(const ParsedLine& parsed_line) {
 
 bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
     return has_linear_axis_word(parsed_line);
+}
+
+bool line_mentions_canned_cycle_words(const ParsedLine& parsed_line) {
+    return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value()
+        || parsed_line.l.has_value() || parsed_line.p.has_value() || parsed_line.q.has_value()
+        || parsed_line.r.has_value();
 }
 
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state) {
@@ -1648,6 +1741,102 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
         && !parsed_line.feed_rate.has_value())
     {
         throw InputError("Inverse time feed rate motion requires an F word");
+    }
+}
+
+void validate_canned_cycle_command(
+    const ParsedLine& parsed_line,
+    const MachineState& state,
+    std::string_view prior_motion_gcode
+) {
+    const auto current_motion = state.active_modal_g_codes.find("1");
+    const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
+    const std::string_view effective_motion = explicit_motion
+        ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
+        : current_motion != state.active_modal_g_codes.end()
+            ? std::string_view(current_motion->second)
+            : std::string_view();
+    const bool cycle_line = explicit_motion ? is_any_canned_cycle_motion(effective_motion)
+        : current_motion != state.active_modal_g_codes.end() && is_any_canned_cycle_motion(effective_motion)
+            && line_mentions_canned_cycle_words(parsed_line);
+
+    if (
+        effective_motion == "G80" && has_linear_axis_word(parsed_line)
+        && !parsed_line.has_g10 && !parsed_line.g92_command.has_value()
+        && !parsed_line.home_command.has_value() && !parsed_line.use_machine_coordinates
+    ) {
+        throw InputError("Axis words are not allowed when G80 is active");
+    }
+
+    if (!cycle_line) {
+        return;
+    }
+    if (!is_supported_canned_cycle_motion(effective_motion)) {
+        throw InputError("Only G81, G82, and G83 canned cycles are supported");
+    }
+    if (cutter_radius_compensation_is_active(state)) {
+        throw InputError("Cannot use canned cycles with cutter radius compensation active");
+    }
+
+    const auto feed_rate_mode = state.active_modal_g_codes.find("5");
+    if (feed_rate_mode != state.active_modal_g_codes.end() && feed_rate_mode->second == "G93") {
+        throw InputError("Cannot use canned cycles in inverse time feed rate mode");
+    }
+
+    if (!has_linear_axis_word(parsed_line)) {
+        throw InputError("X, Y, and Z words may not all be omitted during a canned cycle");
+    }
+
+    if (parsed_line.l.has_value()) {
+        const int repeat_count = round_if_close_to_integer(
+            *parsed_line.l,
+            "Canned cycle L word must be a positive integer"
+        );
+        if (repeat_count <= 0) {
+            throw InputError("Canned cycle L word must be a positive integer");
+        }
+    }
+
+    if (effective_motion == "G82") {
+        if (!parsed_line.p.has_value()) {
+            throw InputError("G82 requires a P word");
+        }
+        if (*parsed_line.p < 0.0) {
+            throw InputError("G82 requires a non-negative P word");
+        }
+    }
+    if (effective_motion == "G83") {
+        if (!parsed_line.q.has_value() || *parsed_line.q <= 0.0) {
+            throw InputError("G83 requires a positive Q word");
+        }
+    }
+
+    char depth_axis_letter = 'Z';
+    switch (state.selected_plane) {
+        case Plane::kXY:
+            depth_axis_letter = 'Z';
+            break;
+        case Plane::kXZ:
+            depth_axis_letter = 'Y';
+            break;
+        case Plane::kYZ:
+            depth_axis_letter = 'X';
+            break;
+    }
+
+    const bool same_cycle_already_active = prior_motion_gcode == effective_motion;
+    const bool has_depth_word = depth_axis_letter == 'X'
+        ? parsed_line.x.has_value()
+        : depth_axis_letter == 'Y' ? parsed_line.y.has_value() : parsed_line.z.has_value();
+    if (!has_depth_word) {
+        if (!same_cycle_already_active || !state.canned_cycle_sticky_state.depth_word.has_value()
+            || state.canned_cycle_sticky_state.depth_axis_letter != depth_axis_letter)
+        {
+            throw InputError("The canned-cycle depth word must be programmed the first time");
+        }
+    }
+    if (!parsed_line.r.has_value() && !state.canned_cycle_sticky_state.retract_word.has_value()) {
+        throw InputError("The canned-cycle R word must be programmed the first time");
     }
 }
 
@@ -2599,6 +2788,146 @@ void apply_probe_motion(MachineState& state, const ParsedLine& parsed_line) {
     set_parameter_value(state, kProbeTripAParameter, 0.0);
     set_parameter_value(state, kProbeTripBParameter, 0.0);
     set_parameter_value(state, kProbeTripCParameter, 0.0);
+}
+
+namespace {
+
+struct CannedCycleAxes {
+    int first_axis_index = 0;
+    int second_axis_index = 1;
+    int depth_axis_index = 2;
+    char depth_axis_letter = 'Z';
+};
+
+CannedCycleAxes canned_cycle_axes_for_plane(Plane plane) {
+    switch (plane) {
+        case Plane::kXY:
+            return CannedCycleAxes{0, 1, 2, 'Z'};
+        case Plane::kXZ:
+            return CannedCycleAxes{0, 2, 1, 'Y'};
+        case Plane::kYZ:
+            return CannedCycleAxes{1, 2, 0, 'X'};
+    }
+
+    throw std::runtime_error("Unsupported plane");
+}
+
+double position_axis_value(const Position& position, int axis_index) {
+    switch (axis_index) {
+        case 0:
+            return position.x;
+        case 1:
+            return position.y;
+        case 2:
+            return position.z;
+        default:
+            throw std::runtime_error("Unsupported axis index");
+    }
+}
+
+double& position_axis_ref(Position& position, int axis_index) {
+    switch (axis_index) {
+        case 0:
+            return position.x;
+        case 1:
+            return position.y;
+        case 2:
+            return position.z;
+        default:
+            throw std::runtime_error("Unsupported axis index");
+    }
+}
+
+std::optional<double> parsed_line_axis_word(const ParsedLine& parsed_line, int axis_index) {
+    switch (axis_index) {
+        case 0:
+            return parsed_line.x;
+        case 1:
+            return parsed_line.y;
+        case 2:
+            return parsed_line.z;
+        default:
+            throw std::runtime_error("Unsupported axis index");
+    }
+}
+
+} // namespace
+
+void apply_canned_cycle_motion(
+    MachineState& state,
+    const ParsedLine& parsed_line,
+    std::string_view active_gcode,
+    bool same_cycle_already_active
+) {
+    const CannedCycleAxes axes = canned_cycle_axes_for_plane(state.selected_plane);
+    const std::optional<double> first_axis_word = parsed_line_axis_word(parsed_line, axes.first_axis_index);
+    const std::optional<double> second_axis_word = parsed_line_axis_word(parsed_line, axes.second_axis_index);
+    const std::optional<double> depth_axis_word = parsed_line_axis_word(parsed_line, axes.depth_axis_index);
+
+    const double retract_word = parsed_line.r.has_value()
+        ? *parsed_line.r
+        : *state.canned_cycle_sticky_state.retract_word;
+    const double depth_word = depth_axis_word.has_value()
+        ? *depth_axis_word
+        : *state.canned_cycle_sticky_state.depth_word;
+    const double old_depth = position_axis_value(state.machine_position, axes.depth_axis_index);
+
+    const double current_first = position_axis_value(state.machine_position, axes.first_axis_index);
+    const double current_second = position_axis_value(state.machine_position, axes.second_axis_index);
+    const double first_origin = active_program_origin_offset_for_axis(state, axes.first_axis_index);
+    const double second_origin = active_program_origin_offset_for_axis(state, axes.second_axis_index);
+    const double depth_origin = active_program_origin_offset_for_axis(state, axes.depth_axis_index);
+
+    double retract_position = 0.0;
+    double depth_position = 0.0;
+    double final_first = current_first;
+    double final_second = current_second;
+
+    if (state.coordinate_mode == CoordinateMode::kAbsolute) {
+        final_first = first_axis_word.has_value() ? first_origin + *first_axis_word : current_first;
+        final_second =
+            second_axis_word.has_value() ? second_origin + *second_axis_word : current_second;
+        retract_position = depth_origin + retract_word;
+        depth_position = depth_origin + depth_word;
+    } else {
+        final_first = current_first + (first_axis_word.value_or(0.0));
+        final_second = current_second + (second_axis_word.value_or(0.0));
+        retract_position = old_depth + retract_word;
+        depth_position = retract_position + depth_word;
+
+        const int repeat_count = parsed_line.l.has_value()
+            ? round_if_close_to_integer(*parsed_line.l, "Canned cycle L word must be a positive integer")
+            : 1;
+        final_first = current_first + (first_axis_word.value_or(0.0) * repeat_count);
+        final_second = current_second + (second_axis_word.value_or(0.0) * repeat_count);
+    }
+
+    if (retract_position < depth_position) {
+        throw InputError("Canned cycle R position must not be below the depth position");
+    }
+
+    if (active_gcode == "G82") {
+        (void)parsed_line.p;
+    } else if (active_gcode == "G83") {
+        (void)parsed_line.q;
+    }
+
+    const bool retract_to_old_position = !state.active_modal_g_codes.contains("10")
+        || state.active_modal_g_codes.at("10") == "G98";
+    const double clear_depth =
+        retract_to_old_position && old_depth > retract_position ? old_depth : retract_position;
+
+    position_axis_ref(state.machine_position, axes.first_axis_index) = final_first;
+    position_axis_ref(state.machine_position, axes.second_axis_index) = final_second;
+    position_axis_ref(state.machine_position, axes.depth_axis_index) = clear_depth;
+
+    state.canned_cycle_sticky_state.retract_word = retract_word;
+    state.canned_cycle_sticky_state.depth_axis_letter = axes.depth_axis_letter;
+    state.canned_cycle_sticky_state.depth_word = depth_word;
+
+    if (!same_cycle_already_active) {
+        state.canned_cycle_sticky_state.depth_axis_letter = axes.depth_axis_letter;
+    }
 }
 
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
