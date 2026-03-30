@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 import pytest
 
 from swe_buildbench.cncsim.rs274_parameters import (
+    PROBE_TRIP_A_PARAMETER,
+    PROBE_TRIP_B_PARAMETER,
+    PROBE_TRIP_C_PARAMETER,
     PROBE_TRIP_X_PARAMETER,
     PROBE_TRIP_Y_PARAMETER,
     PROBE_TRIP_Z_PARAMETER,
@@ -146,6 +150,8 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
 # requirements prompt defines the eval-specific probing environment: the
 # harness may pass --probe-box for an axis-aligned absolute machine-coordinate
 # box and --probe-tool for the tool number that should be treated as a probe.
+# These cases pin exact XYZ trip coordinates and also verify that 5064 through
+# 5066 are reported numerically on success.
 @pytest.mark.parametrize(
     ("probe_box", "input_gcode", "expected_trip_parameters", "tool_table_content"),
     [
@@ -181,3 +187,9 @@ def test_application_reports_probe_trip_parameters(
     assert payload["error"] is None
     for parameter_index, expected_value in expected_trip_parameters.items():
         assert get_parameter_value(payload, parameter_index) == expected_value
+    for parameter_index in (
+        PROBE_TRIP_A_PARAMETER,
+        PROBE_TRIP_B_PARAMETER,
+        PROBE_TRIP_C_PARAMETER,
+    ):
+        assert math.isfinite(get_parameter_value(payload, parameter_index))

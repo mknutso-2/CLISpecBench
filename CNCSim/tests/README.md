@@ -44,5 +44,5 @@ When documenting why a test is valid:
 ## Probe Coverage TODO
 
 - [x] Add a `G21` probing case that proves the inch-defined `--probe-box` extents are interpreted correctly after unit conversion.
-- [ ] Add explicit success-path checks for probe-result parameters `5064` through `5066`.
+- [x] Add explicit success-path checks for probe-result parameters `5064` through `5066`.
 - [ ] Decide whether any additional probe/tool validation cross-product cases add meaningful coverage beyond the current wrong-tool, spindle-on, already-tripped, and no-hit matrices.
