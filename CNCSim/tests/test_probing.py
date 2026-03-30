@@ -55,6 +55,22 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
         None,
     ),
     (
+        "x-probe-without-tlc-in-g21-converts-inch-box-extents",
+        (1.0, 2.0, 0.0, 10.0, 0.0, 10.0),
+        "G21\n"
+        "G90 G94\n"
+        "T2 M6\n"
+        "G0 X0.0 Y127.0 Z127.0\n"
+        "F254.0\n"
+        "G38.2 X50.0\n",
+        {
+            PROBE_TRIP_X_PARAMETER: 25.4,
+            PROBE_TRIP_Y_PARAMETER: 127.0,
+            PROBE_TRIP_Z_PARAMETER: 127.0,
+        },
+        None,
+    ),
+    (
         "z-probe-without-tlc",
         (0.0, 10.0, 0.0, 10.0, 2.0, 4.0),
         "G20\n"
