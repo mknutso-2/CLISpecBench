@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 PositionTrackingCase = tuple[str, str, dict[str, float]]
 
@@ -18,6 +18,14 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G90\n"
         "G0 X1.0 Y2.0 Z3.0\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
+    ),
+    (
+        "absolute-abc-does-not-normalize-rotary-values",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G90\n"
+        "G0 A370.0 B-45.0 C720.0\n",
+        {"x": 0.0, "y": 0.0, "z": 0.0, "a": 370.0, "b": -45.0, "c": 720.0},
     ),
     (
         "absolute-xyz-from-parameter-values",
@@ -37,6 +45,17 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G90\n"
         "G0 X[1+2] Y[8/2] Z[5-2]\n",
         {"x": 3.0, "y": 4.0, "z": 3.0},
+    ),
+    (
+        "absolute-abc-from-parameter-values-and-expressions",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "#1=10.0\n"
+        "#2=3.0\n"
+        "#3=30.0\n"
+        "G90\n"
+        "G0 A#1 B[6*7] C##2\n",
+        {"x": 0.0, "y": 0.0, "z": 0.0, "a": 10.0, "b": 42.0, "c": 30.0},
     ),
     # RS274 sections 2.1.2.10 and 3.5.7: when length units change, the
     # numbers representing current position must be adjusted even without axis
@@ -60,6 +79,15 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G21\n",
         {"x": 25.4, "y": 50.8, "z": 76.2},
+    ),
+    (
+        "g21-converts-xyz-but-leaves-abc-unchanged",
+        "G20\n"
+        + ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G0 X1.0 Y2.0 Z3.0 A30.0 B45.0 C60.0\n"
+        + "G21\n",
+        {"x": 25.4, "y": 50.8, "z": 76.2, "a": 30.0, "b": 45.0, "c": 60.0},
     ),
     # RS274 section 4.3.3.2: the effective location of the program origin
     # should not change when units change. The harness contract in
@@ -86,6 +114,16 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G92 X5.0 Y6.0 Z7.0\n"
         "G53 G0 X1.0 Y2.0 Z3.0\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
+    ),
+    (
+        "g53-uses-machine-coordinates-for-rotary-axes",
+        "G10 L2 P1 A10.0 B20.0 C30.0\n"
+        "G54\n"
+        "G90\n"
+        "G0 A0.0 B0.0 C0.0\n"
+        "G92 A5.0 B6.0 C7.0\n"
+        "G53 G0 A1.0 B2.0 C3.0\n",
+        {"x": 0.0, "y": 0.0, "z": 0.0, "a": 1.0, "b": 2.0, "c": 3.0},
     ),
     # RS274 section 3.5.12: G53 is not modal and must be programmed on each line.
     (
@@ -127,6 +165,16 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         {"x": 11.0, "y": 22.0, "z": 33.0},
     ),
     (
+        "incremental-abc",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G90\n"
+        "G0 A10.0 B20.0 C30.0\n"
+        "G91\n"
+        "G0 A1.0 B2.0 C3.0\n",
+        {"x": 0.0, "y": 0.0, "z": 0.0, "a": 11.0, "b": 22.0, "c": 33.0},
+    ),
+    (
         "incremental-accumulates-from-current-position",
         ZERO_OFFSET_P1_SETUP
         +
@@ -146,6 +194,16 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G0 X1.0 Y0.0 Z5.0\n"
         "G2 X0.0 Y-1.0 Z4.0 I-1.0 J0.0\n",
         {"x": 0.0, "y": -1.0, "z": 4.0},
+    ),
+    (
+        "g2-updates-simultaneous-rotary-endpoints",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0 A10.0 B20.0 C30.0\n"
+        "G2 X0.0 Y-1.0 Z4.0 A40.0 B50.0 C60.0 I-1.0 J0.0\n",
+        {"x": 0.0, "y": -1.0, "z": 4.0, "a": 40.0, "b": 50.0, "c": 60.0},
     ),
     (
         "g2-accepts-parameter-values-in-i-and-j",
@@ -273,21 +331,25 @@ POSITION_TRACKING_PARAMS = [
 # the controller always has a current position, but the spec does not assign a
 # fixed startup machine location or startup work-offset values. These cases
 # therefore explicitly activate coordinate system 1 with zero offsets and
-# explicitly select G94 so the assertions isolate XYZ motion tracking rather
-# than work-offset behavior or an assumed startup feed-rate mode.
+# explicitly select G94 so the assertions isolate motion tracking rather than
+# work-offset behavior or an assumed startup feed-rate mode.
 # See sections 3.5.1 and 3.5.2 for linear motion with axis words, section
 # 3.5.3 for G2/G3 arc endpoint programming in the selected plane, section
 # 3.5.3.1 for radius-format arcs, and section 3.5.17 for how G90/G91 control
-# whether X/Y/Z values are interpreted as absolute positions or incremental
-# offsets. Sections 2.1.2.10, 3.5.7, and 4.3.3.2 cover the explicit unit-change
-# motion behavior exercised here, while the harness contract in
-# technical-requirements-prompt.md defines that machine_position is serialized
-# in the currently active length units. Section 3.5.12 says G53 moves use
-# absolute machine coordinates, are non-modal, and may omit G0/G1 only when one
-# of those linear modes is already active. Section 3.3.2 says axis words and
-# arc words such as I, J, K, and R take real values, and sections 3.3.2.2 and
-# 3.3.2.3 define parameter values and expressions as real values, so those
-# forms belong in the motion suite rather than the parameter suite.
+# whether axis values are interpreted as absolute positions or incremental
+# offsets. RS274 section 2.1.2.2 defines A/B/C as wrapped linear axes measured
+# in degrees and unbounded in either direction, so these cases pin the raw
+# rotary endpoint values without modulo normalization. Sections 2.1.2.10,
+# 3.5.7, and 4.3.3.2 cover the explicit unit-change motion behavior exercised
+# here, while the harness contract in technical-requirements-prompt.md defines
+# that machine_position is serialized in the currently active length units for
+# X/Y/Z and in degrees for A/B/C without G20/G21 conversion. Section 3.5.12
+# says G53 moves use absolute machine coordinates, are non-modal, and may omit
+# G0/G1 only when one of those linear modes is already active. Section 3.3.2
+# says axis words and arc words such as I, J, K, and R take real values, and
+# sections 3.3.2.2 and 3.3.2.3 define parameter values and expressions as real
+# values, so those forms belong in the motion suite rather than the parameter
+# suite.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_machine_position"),
     POSITION_TRACKING_PARAMS,
@@ -307,4 +369,4 @@ def test_application_tracks_machine_position(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)

@@ -16,7 +16,7 @@ from swe_buildbench.cncsim.modal_groups import (
     GCODE_MODAL_GROUP_TOOL_LENGTH_OFFSET,
     GCODE_MODAL_GROUP_UNITS,
 )
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 ActiveGcodeGroupCase = tuple[str, str, str]
 CoordinateSystemSelectionCase = tuple[str, str, dict[str, float]]
@@ -264,5 +264,7 @@ def test_coordinate_system_selection_codes_activate_the_expected_system(
         payload["active_modal_g_codes"][GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION]
         == selected_gcode
     )
-    assert payload["coordinate_system_offsets"][expected_system_number] == expected_machine_position
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["coordinate_system_offsets"][expected_system_number] == with_default_rotary_axes(
+        expected_machine_position
+    )
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)

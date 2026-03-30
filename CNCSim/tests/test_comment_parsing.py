@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 CommentParsingCase = tuple[str, str, dict[str, float]]
 
@@ -73,4 +73,4 @@ def test_application_accepts_well_formed_parenthetical_comments(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)

@@ -9,6 +9,9 @@ from swe_buildbench.cncsim.test_support import run_cncsim_invalid_input
 WordRepeatErrorCase = tuple[str, str]
 
 WORD_REPEAT_ERROR_CASES: list[WordRepeatErrorCase] = [
+    ("a-word", "G0 A1.0 A2.0\n"),
+    ("b-word", "G0 B1.0 B2.0\n"),
+    ("c-word", "G0 C1.0 C2.0\n"),
     ("d-word", "G41 D1 D2\n"),
     ("f-word", "G1 F10 F20 X1.0\n"),
     ("h-word", "G43 H1 H2\n"),

@@ -3,12 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from swe_buildbench.cncsim.rs274_parameters import (
+    G92_A_OFFSET_PARAMETER,
+    G92_B_OFFSET_PARAMETER,
+    G92_C_OFFSET_PARAMETER,
     G92_X_OFFSET_PARAMETER,
     G92_Y_OFFSET_PARAMETER,
     G92_Z_OFFSET_PARAMETER,
     REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
     coordinate_system_xyz_parameter_indices,
+    coordinate_system_xyzabc_parameter_indices,
 )
 from swe_buildbench.cncsim.test_support import (
     build_parameter_file,
@@ -92,15 +96,18 @@ def test_application_writes_execution_updates_to_output_parameter_file(
     tmp_path: Path,
 ) -> None:
     cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
+    (_, _, _, cs2_a_parameter, cs2_b_parameter, cs2_c_parameter) = (
+        coordinate_system_xyzabc_parameter_indices(2)
+    )
     completed, payload, parameter_output = run_cncsim_with_parameter_output(
         built_executable_path,
         input_gcode=(
             "#1=5.5\n"
             "G55\n"
-            "G10 L2 P2 X10.0 Y20.0 Z30.0\n"
+            "G10 L2 P2 X10.0 Y20.0 Z30.0 A40.0 B50.0 C60.0\n"
             "G90\n"
-            "G0 X1.0 Y2.0 Z3.0\n"
-            "G92 X4.0 Y5.0 Z6.0\n"
+            "G0 X1.0 Y2.0 Z3.0 A4.0 B5.0 C6.0\n"
+            "G92 X4.0 Y5.0 Z6.0 A7.0 B8.0 C9.0\n"
         ),
         tmp_path=tmp_path,
     )
@@ -114,6 +121,12 @@ def test_application_writes_execution_updates_to_output_parameter_file(
     assert parsed_entries[cs2_x_parameter] == 10.0
     assert parsed_entries[cs2_y_parameter] == 20.0
     assert parsed_entries[cs2_z_parameter] == 30.0
+    assert parsed_entries[cs2_a_parameter] == 40.0
+    assert parsed_entries[cs2_b_parameter] == 50.0
+    assert parsed_entries[cs2_c_parameter] == 60.0
     assert parsed_entries[G92_X_OFFSET_PARAMETER] == -3.0
     assert parsed_entries[G92_Y_OFFSET_PARAMETER] == -3.0
     assert parsed_entries[G92_Z_OFFSET_PARAMETER] == -3.0
+    assert parsed_entries[G92_A_OFFSET_PARAMETER] == -3.0
+    assert parsed_entries[G92_B_OFFSET_PARAMETER] == -3.0
+    assert parsed_entries[G92_C_OFFSET_PARAMETER] == -3.0

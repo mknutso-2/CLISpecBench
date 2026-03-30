@@ -20,7 +20,7 @@
   treated as a probe for G38.2.
 - The output file must be JSON in this format:
   {
-    "machine_position": {"x": float, "y": float, "z": float},
+    "machine_position": {"x": float, "y": float, "z": float, "a": float, "b": float, "c": float},
     "feed_rate": float,
     "spindle_speed": float,
     "spindle_direction": "CW" | "CCW" | "OFF",
@@ -31,7 +31,9 @@
     "active_modal_g_codes": {"<group_number>": string, ...},
     "active_modal_m_codes": {"<group_number>": string, ...},
     "coordinate_system_offsets": {
-      "<system_number>": {"x": float, "y": float, "z": float},
+      "<system_number>": {
+        "x": float, "y": float, "z": float, "a": float, "b": float, "c": float
+      },
       ...
     },
     "parameters": {"<parameter_number>": float, ...},
@@ -44,6 +46,8 @@
   compensation.
   Serialize "machine_position" and "coordinate_system_offsets" in the currently active RS274
   length units at end of program.
+  Serialize rotary axes A, B, and C in degrees, without G20/G21 unit conversion or modulo
+  normalization.
   Serialize "cutter_radius_compensation_number" as the active D number, or null if no explicit
   cutter radius compensation number is active.
   Serialize "tool_length_offset_index" as the active H number, or null if no tool length offset
@@ -60,7 +64,7 @@
   {"7": "M5"}).
   Serialize "coordinate_system_offsets" as a JSON object whose keys are program coordinate
   system numbers 1 through 9 encoded as JSON strings and whose values are objects of the form
-  {"x": float, "y": float, "z": float}.
+  {"x": float, "y": float, "z": float, "a": float, "b": float, "c": float}.
   Serialize "parameters" as a JSON object whose keys are RS274 parameter numbers encoded as
   JSON strings and whose values are the corresponding numeric parameter values.
   This object may be sparse. Omitted parameter numbers mean the simulator is not reporting a

@@ -91,6 +91,30 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         + "R3.0\n",
     ),
     (
+        "canned-cycles-reject-a-axis-motion",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0 A10.0\n"
+        + "G81 X4.0 Y5.0 Z1.5 R2.8 A11.0 F7.0\n",
+    ),
+    (
+        "canned-cycles-reject-b-axis-motion",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0 B20.0\n"
+        + "G81 X4.0 Y5.0 Z1.5 R2.8 B21.0 F7.0\n",
+    ),
+    (
+        "canned-cycles-reject-c-axis-motion",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0 C30.0\n"
+        + "G81 X4.0 Y5.0 Z1.5 R2.8 C31.0 F7.0\n",
+    ),
+    (
         "canned-cycles-reject-inverse-time-mode",
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
@@ -203,6 +227,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
 # modal-group-0 G-code using axis words is programmed. Section 3.5.16 adds the
 # canned-cycle-specific errors checked here:
 # - X/Y/Z may not all be omitted during a canned cycle
+# - A/B/C words may appear only if they do not command rotary motion
 # - R is sticky and must therefore be programmed on first use
 # - the selected-plane depth word is sticky and must therefore be programmed on
 #   first use of a given cycle

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -209,3 +210,14 @@ def get_parameter_value(payload: dict[str, Any], parameter_index: int) -> float:
     value = typed_parameters[str(parameter_index)]
     assert isinstance(value, int | float)
     return float(value)
+
+
+def with_default_rotary_axes(values: Mapping[str, float]) -> dict[str, float]:
+    return {
+        "x": float(values["x"]),
+        "y": float(values["y"]),
+        "z": float(values["z"]),
+        "a": float(values.get("a", 0.0)),
+        "b": float(values.get("b", 0.0)),
+        "c": float(values.get("c", 0.0)),
+    }

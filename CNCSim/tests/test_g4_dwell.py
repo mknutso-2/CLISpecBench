@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 
 # See CNCSim/prompt/docs/RS274NGC.md section 3.5.4 "Dwell -- G4": G4 P...
@@ -21,4 +21,4 @@ def test_application_accepts_g4_dwell(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 4.0, "y": 5.0, "z": 6.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": 5.0, "z": 6.0})

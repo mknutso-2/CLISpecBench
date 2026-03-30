@@ -19,7 +19,11 @@ from swe_buildbench.cncsim.rs274_parameters import (
     G92_Y_OFFSET_PARAMETER,
     G92_Z_OFFSET_PARAMETER,
 )
-from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
+from swe_buildbench.cncsim.test_support import (
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
 
 PROGRAM_END_CODES = ("M2", "M30")
 
@@ -73,7 +77,7 @@ def test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_inval
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 1.0, "y": 2.0, "z": 3.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 1.0, "y": 2.0, "z": 3.0})
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_PLANE_SELECTION] == "G17"
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_DISTANCE_MODE] == "G90"
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_FEED_RATE_MODE] == "G94"
@@ -102,7 +106,7 @@ def test_application_turns_cutter_compensation_off_on_m2_and_m30(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 5.0, "y": 0.0, "z": 0.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 5.0, "y": 0.0, "z": 0.0})
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION] == "G40"
     assert payload["cutter_radius_compensation_number"] is None
 

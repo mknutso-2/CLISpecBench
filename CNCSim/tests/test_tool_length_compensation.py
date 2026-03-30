@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 ToolLengthCompensationCase = tuple[str, str, dict[str, float], int | None]
 
@@ -91,5 +91,5 @@ def test_application_applies_tool_length_compensation_to_current_position(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
     assert payload["tool_length_offset_index"] == expected_tool_length_offset_index

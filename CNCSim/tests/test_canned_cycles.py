@@ -9,7 +9,11 @@ from swe_buildbench.cncsim.modal_groups import (
     GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
 )
 from swe_buildbench.cncsim.rs274_parameters import G92_X_OFFSET_PARAMETER
-from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
+from swe_buildbench.cncsim.test_support import (
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
 
 CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
 RepeatedCannedCycleCase = tuple[str, str, str, dict[str, float], str]
@@ -39,6 +43,18 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G81",
         "G99",
         {"x": 4.0, "y": 5.0, "z": 2.8},
+        "OFF",
+    ),
+    (
+        "g81-allows-stationary-rotary-words",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\n"
+        + "G81 X4.0 Y5.0 Z1.5 R2.8 A10.0 B20.0 C30.0 F7.0\n",
+        "G81",
+        "G98",
+        {"x": 4.0, "y": 5.0, "z": 3.0, "a": 10.0, "b": 20.0, "c": 30.0},
         "OFF",
     ),
     (
@@ -305,7 +321,7 @@ def test_application_tracks_initial_canned_cycle_behavior(
         payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
         == expected_return_mode
     )
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
     assert payload["spindle_direction"] == expected_spindle_direction
 
 
@@ -359,7 +375,7 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
         payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
         == expected_return_mode
     )
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
     assert payload["spindle_direction"] == expected_spindle_direction
 
 
@@ -383,7 +399,9 @@ def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["coordinate_system_offsets"]["2"] == {"x": 4.0, "y": 5.0, "z": 6.0}
+    assert payload["coordinate_system_offsets"]["2"] == with_default_rotary_axes(
+        {"x": 4.0, "y": 5.0, "z": 6.0}
+    )
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -7.0
 
 
@@ -416,4 +434,4 @@ def test_return_mode_change_affects_later_repeats_of_an_active_canned_cycle(
         payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
         == "G99"
     )
-    assert payload["machine_position"] == {"x": 6.0, "y": 7.0, "z": 2.8}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 6.0, "y": 7.0, "z": 2.8})

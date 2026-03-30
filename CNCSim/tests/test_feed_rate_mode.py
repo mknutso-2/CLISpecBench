@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from swe_buildbench.cncsim.modal_groups import GCODE_MODAL_GROUP_FEED_RATE_MODE
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 FeedRateModeCase = tuple[str, str, str, float, dict[str, float]]
 
@@ -94,4 +94,4 @@ def test_application_tracks_feed_rate_mode_behavior(
     assert payload["error"] is None
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_FEED_RATE_MODE] == expected_active_mode
     assert payload["feed_rate"] == expected_feed_rate
-    assert payload["machine_position"] == expected_machine_position
+    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)

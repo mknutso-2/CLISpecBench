@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
+from swe_buildbench.cncsim.test_support import (
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
 
 BinaryExpressionCase = tuple[str, str, float]
 UnaryOperationCase = tuple[str, str, float]
@@ -182,7 +186,7 @@ def test_application_supports_bracketed_parameter_reads(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 7.0, "y": 9.0, "z": 0.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 7.0, "y": 9.0, "z": 0.0})
 
 
 def test_application_supports_repeated_parameter_indirection(
@@ -230,7 +234,7 @@ def test_application_evaluates_expressions_before_parameter_settings_take_effect
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 16.0, "y": 6.0, "z": 0.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 16.0, "y": 6.0, "z": 0.0})
     assert get_parameter_value(payload, 3) == 6.0
 
 
@@ -277,7 +281,7 @@ def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 4.0, "y": 0.0, "z": 0.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": 0.0, "z": 0.0})
     assert payload["spindle_direction"] == "CW"
 
 

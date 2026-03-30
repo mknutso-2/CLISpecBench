@@ -52,6 +52,9 @@ struct Position {
     double x = 0.0;
     double y = 0.0;
     double z = 0.0;
+    double a = 0.0;
+    double b = 0.0;
+    double c = 0.0;
 };
 
 struct Point2D {
@@ -98,6 +101,9 @@ constexpr int kSelectedCoordinateSystemParameter = 5220;
 constexpr int kG92XAxisOffsetParameter = 5211;
 constexpr int kG92YAxisOffsetParameter = 5212;
 constexpr int kG92ZAxisOffsetParameter = 5213;
+constexpr int kG92AAxisOffsetParameter = 5214;
+constexpr int kG92BAxisOffsetParameter = 5215;
+constexpr int kG92CAxisOffsetParameter = 5216;
 constexpr double kNearIntegerTolerance = 0.0001;
 constexpr double kMillimetersPerInch = 25.4;
 
@@ -182,6 +188,9 @@ struct ParsedLine {
     std::optional<double> x;
     std::optional<double> y;
     std::optional<double> z;
+    std::optional<double> a;
+    std::optional<double> b;
+    std::optional<double> c;
     std::optional<int> d;
     std::optional<int> h;
     std::optional<double> i;
@@ -314,6 +323,10 @@ bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_nu
 int parameter_index_for_home_axis(bool secondary_home, int axis_index);
 bool decode_home_axis_parameter(int parameter_index, bool& secondary_home, int& axis_index);
 bool decode_g92_axis_parameter(int parameter_index, int& axis_index);
+bool axis_uses_length_units(int axis_index);
+double position_axis_value(const Position& position, int axis_index);
+double& position_axis_ref(Position& position, int axis_index);
+std::optional<double> parsed_line_axis_word(const ParsedLine& parsed_line, int axis_index);
 void set_parameter_value(
     MachineState& state,
     int parameter_index,
@@ -591,7 +604,9 @@ void load_parameter_file(const std::string& parameter_input_path, MachineState& 
             || decode_home_axis_parameter(parameter_index, secondary_home, axis_index)
             || decode_g92_axis_parameter(parameter_index, axis_index)
         ) {
-            state.parameter_length_units[parameter_index] = state.current_length_unit;
+            state.parameter_length_units[parameter_index] = axis_uses_length_units(axis_index)
+                ? std::optional<LengthUnit>(state.current_length_unit)
+                : std::nullopt;
         }
 
         previous_parameter_index = parameter_index;
@@ -765,6 +780,10 @@ double convert_length_value(double value, LengthUnit from, LengthUnit to) {
     }
 
     return value / kMillimetersPerInch;
+}
+
+bool axis_uses_length_units(int axis_index) {
+    return axis_index >= 0 && axis_index <= 2;
 }
 
 void convert_position_in_place(Position& position, LengthUnit from, LengthUnit to) {
@@ -1116,6 +1135,27 @@ void parse_word_segment(
 ) {
     const char letter = static_cast<char>(std::toupper(static_cast<unsigned char>(text[position++])));
     switch (letter) {
+        case 'A':
+            assign_unique_word(
+                parsed_line.a,
+                parse_real_value(text, position, state),
+                std::string_view("A")
+            );
+            return;
+        case 'B':
+            assign_unique_word(
+                parsed_line.b,
+                parse_real_value(text, position, state),
+                std::string_view("B")
+            );
+            return;
+        case 'C':
+            assign_unique_word(
+                parsed_line.c,
+                parse_real_value(text, position, state),
+                std::string_view("C")
+            );
+            return;
         case 'D':
         {
             const int d_number = require_non_negative_integer(
@@ -1448,39 +1488,28 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
 
     if (parsed_line.coordinate_system_offset_target.has_value()) {
         const int system_number = std::stoi(*parsed_line.coordinate_system_offset_target);
-        if (parsed_line.x.has_value()) {
-            set_coordinate_system_axis(state, system_number, 0, *parsed_line.x);
-        }
-        if (parsed_line.y.has_value()) {
-            set_coordinate_system_axis(state, system_number, 1, *parsed_line.y);
-        }
-        if (parsed_line.z.has_value()) {
-            set_coordinate_system_axis(state, system_number, 2, *parsed_line.z);
+        for (int axis_index = 0; axis_index < 6; ++axis_index) {
+            const std::optional<double> axis_word = parsed_line_axis_word(parsed_line, axis_index);
+            if (axis_word.has_value()) {
+                set_coordinate_system_axis(state, system_number, axis_index, *axis_word);
+            }
         }
     } else if (parsed_line.g92_command.has_value()) {
         const std::string& g92_command = *parsed_line.g92_command;
         if (g92_command == "G92") {
             const Position& coordinate_system_offset =
                 state.coordinate_system_offsets.at(state.selected_coordinate_system);
-            if (parsed_line.x.has_value()) {
+            for (int axis_index = 0; axis_index < 6; ++axis_index) {
+                const std::optional<double> axis_word = parsed_line_axis_word(parsed_line, axis_index);
+                if (!axis_word.has_value()) {
+                    continue;
+                }
+
                 set_g92_axis_offset(
                     state,
-                    0,
-                    state.machine_position.x - coordinate_system_offset.x - *parsed_line.x
-                );
-            }
-            if (parsed_line.y.has_value()) {
-                set_g92_axis_offset(
-                    state,
-                    1,
-                    state.machine_position.y - coordinate_system_offset.y - *parsed_line.y
-                );
-            }
-            if (parsed_line.z.has_value()) {
-                set_g92_axis_offset(
-                    state,
-                    2,
-                    state.machine_position.z - coordinate_system_offset.z - *parsed_line.z
+                    axis_index,
+                    position_axis_value(state.machine_position, axis_index)
+                        - position_axis_value(coordinate_system_offset, axis_index) - *axis_word
                 );
             }
         } else if (g92_command == "G92.1") {
@@ -1521,9 +1550,12 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
                 same_canned_cycle_already_active
             );
         } else if (parsed_line.use_machine_coordinates) {
-            apply_coordinate_system_axis_value(parsed_line.x, state.machine_position.x);
-            apply_coordinate_system_axis_value(parsed_line.y, state.machine_position.y);
-            apply_coordinate_system_axis_value(parsed_line.z, state.machine_position.z);
+            for (int axis_index = 0; axis_index < 6; ++axis_index) {
+                apply_coordinate_system_axis_value(
+                    parsed_line_axis_word(parsed_line, axis_index),
+                    position_axis_ref(state.machine_position, axis_index)
+                );
+            }
         } else if (cutter_radius_compensation_is_active(state) && has_xy_axis_word(parsed_line)) {
             if (current_motion != state.active_modal_g_codes.end()
                 && is_arc_motion(current_motion->second))
@@ -1538,25 +1570,23 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
                 state.coordinate_mode,
                 active_program_origin_offset_for_axis(state, 2)
             );
+            for (int axis_index = 3; axis_index < 6; ++axis_index) {
+                apply_program_axis_value(
+                    parsed_line_axis_word(parsed_line, axis_index),
+                    position_axis_ref(state.machine_position, axis_index),
+                    state.coordinate_mode,
+                    active_program_origin_offset_for_axis(state, axis_index)
+                );
+            }
         } else {
-            apply_program_axis_value(
-                parsed_line.x,
-                state.machine_position.x,
-                state.coordinate_mode,
-                active_program_origin_offset_for_axis(state, 0)
-            );
-            apply_program_axis_value(
-                parsed_line.y,
-                state.machine_position.y,
-                state.coordinate_mode,
-                active_program_origin_offset_for_axis(state, 1)
-            );
-            apply_program_axis_value(
-                parsed_line.z,
-                state.machine_position.z,
-                state.coordinate_mode,
-                active_program_origin_offset_for_axis(state, 2)
-            );
+            for (int axis_index = 0; axis_index < 6; ++axis_index) {
+                apply_program_axis_value(
+                    parsed_line_axis_word(parsed_line, axis_index),
+                    position_axis_ref(state.machine_position, axis_index),
+                    state.coordinate_mode,
+                    active_program_origin_offset_for_axis(state, axis_index)
+                );
+            }
         }
     }
 }
@@ -1638,6 +1668,11 @@ double resolved_program_axis_endpoint(
 }
 
 bool has_linear_axis_word(const ParsedLine& parsed_line) {
+    return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value()
+        || parsed_line.a.has_value() || parsed_line.b.has_value() || parsed_line.c.has_value();
+}
+
+bool has_xyz_axis_word(const ParsedLine& parsed_line) {
     return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value();
 }
 
@@ -1651,9 +1686,31 @@ bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
 
 bool line_mentions_canned_cycle_words(const ParsedLine& parsed_line) {
     return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value()
+        || parsed_line.a.has_value() || parsed_line.b.has_value() || parsed_line.c.has_value()
         || parsed_line.l.has_value() || parsed_line.p.has_value() || parsed_line.q.has_value()
         || parsed_line.r.has_value() || parsed_line.i.has_value() || parsed_line.j.has_value()
         || parsed_line.k.has_value();
+}
+
+bool rotary_axis_words_are_stationary(const ParsedLine& parsed_line, const MachineState& state) {
+    for (int axis_index = 3; axis_index < 6; ++axis_index) {
+        const std::optional<double> axis_word = parsed_line_axis_word(parsed_line, axis_index);
+        if (!axis_word.has_value()) {
+            continue;
+        }
+
+        const double programmed_axis = resolved_program_axis_endpoint(
+            axis_word,
+            position_axis_value(state.machine_position, axis_index),
+            state.coordinate_mode,
+            active_program_origin_offset_for_axis(state, axis_index)
+        );
+        if (programmed_axis != position_axis_value(state.machine_position, axis_index)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state) {
@@ -1695,8 +1752,11 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
     }
 
     if ((explicit_motion || implicit_motion) && is_probe_motion(effective_motion)) {
-        if (!has_linear_axis_word(parsed_line)) {
+        if (!has_xyz_axis_word(parsed_line)) {
             throw InputError("G38.2 requires at least one X, Y, or Z word");
+        }
+        if (!rotary_axis_words_are_stationary(parsed_line, state)) {
+            throw InputError("G38.2 cannot command A, B, or C axis motion");
         }
 
         const Position programmed_point{
@@ -1718,6 +1778,9 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
                 state.coordinate_mode,
                 active_program_origin_offset_for_axis(state, 2)
             ),
+            position_axis_value(state.machine_position, 3),
+            position_axis_value(state.machine_position, 4),
+            position_axis_value(state.machine_position, 5),
         };
         const double min_distance = state.current_length_unit == LengthUnit::kMillimeters ? 0.254 : 0.01;
         const double x_delta = programmed_point.x - state.machine_position.x;
@@ -1787,8 +1850,11 @@ void validate_canned_cycle_command(
         throw InputError("Cannot use canned cycles in inverse time feed rate mode");
     }
 
-    if (!has_linear_axis_word(parsed_line)) {
+    if (!has_xyz_axis_word(parsed_line)) {
         throw InputError("X, Y, and Z words may not all be omitted during a canned cycle");
+    }
+    if (!rotary_axis_words_are_stationary(parsed_line, state)) {
+        throw InputError("Canned cycles cannot command A, B, or C axis motion");
     }
 
     if (parsed_line.l.has_value()) {
@@ -1983,13 +2049,13 @@ int parameter_index_for_coordinate_system_axis(int system_number, int axis_index
 }
 
 bool decode_coordinate_system_axis_parameter(int parameter_index, int& system_number, int& axis_index) {
-    if (parameter_index < 5221 || parameter_index > 5383) {
+    if (parameter_index < 5221 || parameter_index > 5386) {
         return false;
     }
 
     const int relative_index = parameter_index - 5221;
     const int within_system_block = relative_index % 20;
-    if (within_system_block < 0 || within_system_block > 2) {
+    if (within_system_block < 0 || within_system_block > 5) {
         return false;
     }
 
@@ -2003,12 +2069,12 @@ int parameter_index_for_home_axis(bool secondary_home, int axis_index) {
 }
 
 bool decode_home_axis_parameter(int parameter_index, bool& secondary_home, int& axis_index) {
-    if (parameter_index >= 5161 && parameter_index <= 5163) {
+    if (parameter_index >= 5161 && parameter_index <= 5166) {
         secondary_home = false;
         axis_index = parameter_index - 5161;
         return true;
     }
-    if (parameter_index >= 5181 && parameter_index <= 5183) {
+    if (parameter_index >= 5181 && parameter_index <= 5186) {
         secondary_home = true;
         axis_index = parameter_index - 5181;
         return true;
@@ -2018,12 +2084,12 @@ bool decode_home_axis_parameter(int parameter_index, bool& secondary_home, int& 
 }
 
 bool decode_g92_axis_parameter(int parameter_index, int& axis_index) {
-    if (parameter_index < kG92XAxisOffsetParameter || parameter_index > kG92ZAxisOffsetParameter) {
+    if (parameter_index < kG92XAxisOffsetParameter || parameter_index > kG92CAxisOffsetParameter) {
         return false;
     }
 
     axis_index = parameter_index - kG92XAxisOffsetParameter;
-    return axis_index >= 0 && axis_index <= 2;
+    return axis_index >= 0 && axis_index <= 5;
 }
 
 void set_parameter_value(
@@ -2045,45 +2111,24 @@ void set_selected_coordinate_system(MachineState& state, int system_number) {
 
 void set_coordinate_system_axis(MachineState& state, int system_number, int axis_index, double value) {
     Position& coordinate_system_offset = state.coordinate_system_offsets.at(std::to_string(system_number));
-    switch (axis_index) {
-        case 0:
-            coordinate_system_offset.x = value;
-            break;
-        case 1:
-            coordinate_system_offset.y = value;
-            break;
-        case 2:
-            coordinate_system_offset.z = value;
-            break;
-        default:
-            throw std::runtime_error("Unsupported coordinate system axis");
-    }
+    position_axis_ref(coordinate_system_offset, axis_index) = value;
 
     set_parameter_value(
         state,
         parameter_index_for_coordinate_system_axis(system_number, axis_index),
         value,
-        state.current_length_unit
+        axis_uses_length_units(axis_index) ? std::optional<LengthUnit>(state.current_length_unit) : std::nullopt
     );
 }
 
 void set_g92_axis_offset(MachineState& state, int axis_index, double value) {
-    switch (axis_index) {
-        case 0:
-            state.g92_axis_offsets.x = value;
-            set_parameter_value(state, kG92XAxisOffsetParameter, value, state.current_length_unit);
-            return;
-        case 1:
-            state.g92_axis_offsets.y = value;
-            set_parameter_value(state, kG92YAxisOffsetParameter, value, state.current_length_unit);
-            return;
-        case 2:
-            state.g92_axis_offsets.z = value;
-            set_parameter_value(state, kG92ZAxisOffsetParameter, value, state.current_length_unit);
-            return;
-        default:
-            throw std::runtime_error("Unsupported G92 axis");
-    }
+    position_axis_ref(state.g92_axis_offsets, axis_index) = value;
+    set_parameter_value(
+        state,
+        kG92XAxisOffsetParameter + axis_index,
+        value,
+        axis_uses_length_units(axis_index) ? std::optional<LengthUnit>(state.current_length_unit) : std::nullopt
+    );
 }
 
 double parameter_length_value_in_current_units(const MachineState& state, int parameter_index) {
@@ -2564,23 +2609,20 @@ void apply_cutter_compensated_arc_xy_motion(MachineState& state, const ParsedLin
 void initialize_state_from_parameters(MachineState& state) {
     for (int system_number = 1; system_number <= 9; ++system_number) {
         Position& coordinate_system_offset = state.coordinate_system_offsets.at(std::to_string(system_number));
-        coordinate_system_offset.x = parameter_length_value_in_current_units(
-            state,
-            parameter_index_for_coordinate_system_axis(system_number, 0)
-        );
-        coordinate_system_offset.y = parameter_length_value_in_current_units(
-            state,
-            parameter_index_for_coordinate_system_axis(system_number, 1)
-        );
-        coordinate_system_offset.z = parameter_length_value_in_current_units(
-            state,
-            parameter_index_for_coordinate_system_axis(system_number, 2)
-        );
+        for (int axis_index = 0; axis_index < 6; ++axis_index) {
+            position_axis_ref(coordinate_system_offset, axis_index) = parameter_length_value_in_current_units(
+                state,
+                parameter_index_for_coordinate_system_axis(system_number, axis_index)
+            );
+        }
     }
 
-    state.g92_axis_offsets.x = parameter_length_value_in_current_units(state, kG92XAxisOffsetParameter);
-    state.g92_axis_offsets.y = parameter_length_value_in_current_units(state, kG92YAxisOffsetParameter);
-    state.g92_axis_offsets.z = parameter_length_value_in_current_units(state, kG92ZAxisOffsetParameter);
+    for (int axis_index = 0; axis_index < 6; ++axis_index) {
+        position_axis_ref(state.g92_axis_offsets, axis_index) = parameter_length_value_in_current_units(
+            state,
+            kG92XAxisOffsetParameter + axis_index
+        );
+    }
 
     const int selected_coordinate_system = round_if_close_to_integer(
         state.parameters[kSelectedCoordinateSystemParameter],
@@ -2626,59 +2668,50 @@ void apply_tool_length_offset_change(MachineState& state, std::optional<int> new
 void reset_g92_axis_offsets(MachineState& state, bool reset_parameters) {
     state.g92_axis_offsets = {};
     if (reset_parameters) {
-        set_parameter_value(state, kG92XAxisOffsetParameter, 0.0, state.current_length_unit);
-        set_parameter_value(state, kG92YAxisOffsetParameter, 0.0, state.current_length_unit);
-        set_parameter_value(state, kG92ZAxisOffsetParameter, 0.0, state.current_length_unit);
+        for (int axis_index = 0; axis_index < 6; ++axis_index) {
+            set_parameter_value(
+                state,
+                kG92XAxisOffsetParameter + axis_index,
+                0.0,
+                axis_uses_length_units(axis_index) ? std::optional<LengthUnit>(state.current_length_unit)
+                                                   : std::nullopt
+            );
+        }
     }
 }
 
 void restore_g92_axis_offsets_from_parameters(MachineState& state) {
-    state.g92_axis_offsets.x = parameter_length_value_in_current_units(state, kG92XAxisOffsetParameter);
-    state.g92_axis_offsets.y = parameter_length_value_in_current_units(state, kG92YAxisOffsetParameter);
-    state.g92_axis_offsets.z = parameter_length_value_in_current_units(state, kG92ZAxisOffsetParameter);
+    for (int axis_index = 0; axis_index < 6; ++axis_index) {
+        position_axis_ref(state.g92_axis_offsets, axis_index) = parameter_length_value_in_current_units(
+            state,
+            kG92XAxisOffsetParameter + axis_index
+        );
+    }
 }
 
 double active_program_origin_offset_for_axis(const MachineState& state, int axis_index) {
     const Position& coordinate_system_offset =
         state.coordinate_system_offsets.at(state.selected_coordinate_system);
-    switch (axis_index) {
-        case 0:
-            return coordinate_system_offset.x + state.g92_axis_offsets.x;
-        case 1:
-            return coordinate_system_offset.y + state.g92_axis_offsets.y;
-        case 2:
-            return coordinate_system_offset.z + state.g92_axis_offsets.z;
-        default:
-            throw std::runtime_error("Unsupported axis index");
-    }
+    return position_axis_value(coordinate_system_offset, axis_index)
+        + position_axis_value(state.g92_axis_offsets, axis_index);
 }
 
 void apply_home_return(MachineState& state, const ParsedLine& parsed_line, bool secondary_home) {
-    apply_program_axis_value(
-        parsed_line.x,
-        state.machine_position.x,
-        state.coordinate_mode,
-        active_program_origin_offset_for_axis(state, 0)
-    );
-    apply_program_axis_value(
-        parsed_line.y,
-        state.machine_position.y,
-        state.coordinate_mode,
-        active_program_origin_offset_for_axis(state, 1)
-    );
-    apply_program_axis_value(
-        parsed_line.z,
-        state.machine_position.z,
-        state.coordinate_mode,
-        active_program_origin_offset_for_axis(state, 2)
-    );
+    for (int axis_index = 0; axis_index < 6; ++axis_index) {
+        apply_program_axis_value(
+            parsed_line_axis_word(parsed_line, axis_index),
+            position_axis_ref(state.machine_position, axis_index),
+            state.coordinate_mode,
+            active_program_origin_offset_for_axis(state, axis_index)
+        );
+    }
 
-    state.machine_position.x =
-        parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 0));
-    state.machine_position.y =
-        parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 1));
-    state.machine_position.z =
-        parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 2));
+    for (int axis_index = 0; axis_index < 6; ++axis_index) {
+        position_axis_ref(state.machine_position, axis_index) = parameter_length_value_in_current_units(
+            state,
+            parameter_index_for_home_axis(secondary_home, axis_index)
+        );
+    }
 }
 
 bool point_is_inside_probe_box(const Position& point, const ProbeBox& probe_box, LengthUnit current_unit) {
@@ -2740,6 +2773,9 @@ std::optional<Position> find_probe_trip_point(
         start.x + ((programmed_point.x - start.x) * entry_t),
         start.y + ((programmed_point.y - start.y) * entry_t),
         start.z + ((programmed_point.z - start.z) * entry_t),
+        start.a,
+        start.b,
+        start.c,
     };
 }
 
@@ -2779,6 +2815,9 @@ void apply_probe_motion(MachineState& state, const ParsedLine& parsed_line) {
             state.coordinate_mode,
             active_program_origin_offset_for_axis(state, 2)
         ),
+        position_axis_value(state.machine_position, 3),
+        position_axis_value(state.machine_position, 4),
+        position_axis_value(state.machine_position, 5),
     };
 
     const std::optional<Position> trip_point = find_probe_trip_point(
@@ -2795,12 +2834,10 @@ void apply_probe_motion(MachineState& state, const ParsedLine& parsed_line) {
     set_parameter_value(state, kProbeTripXParameter, trip_point->x, state.current_length_unit);
     set_parameter_value(state, kProbeTripYParameter, trip_point->y, state.current_length_unit);
     set_parameter_value(state, kProbeTripZParameter, trip_point->z, state.current_length_unit);
-    set_parameter_value(state, kProbeTripAParameter, 0.0);
-    set_parameter_value(state, kProbeTripBParameter, 0.0);
-    set_parameter_value(state, kProbeTripCParameter, 0.0);
+    set_parameter_value(state, kProbeTripAParameter, state.machine_position.a);
+    set_parameter_value(state, kProbeTripBParameter, state.machine_position.b);
+    set_parameter_value(state, kProbeTripCParameter, state.machine_position.c);
 }
-
-namespace {
 
 struct CannedCycleAxes {
     int first_axis_index = 0;
@@ -2830,6 +2867,12 @@ double position_axis_value(const Position& position, int axis_index) {
             return position.y;
         case 2:
             return position.z;
+        case 3:
+            return position.a;
+        case 4:
+            return position.b;
+        case 5:
+            return position.c;
         default:
             throw std::runtime_error("Unsupported axis index");
     }
@@ -2843,6 +2886,12 @@ double& position_axis_ref(Position& position, int axis_index) {
             return position.y;
         case 2:
             return position.z;
+        case 3:
+            return position.a;
+        case 4:
+            return position.b;
+        case 5:
+            return position.c;
         default:
             throw std::runtime_error("Unsupported axis index");
     }
@@ -2856,12 +2905,16 @@ std::optional<double> parsed_line_axis_word(const ParsedLine& parsed_line, int a
             return parsed_line.y;
         case 2:
             return parsed_line.z;
+        case 3:
+            return parsed_line.a;
+        case 4:
+            return parsed_line.b;
+        case 5:
+            return parsed_line.c;
         default:
             throw std::runtime_error("Unsupported axis index");
     }
 }
-
-} // namespace
 
 void apply_canned_cycle_motion(
     MachineState& state,
@@ -3402,7 +3455,9 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
     output << std::setprecision(15) << std::defaultfloat;
     output << "{\n"
            << "  \"machine_position\": {\"x\": " << state.machine_position.x << ", \"y\": "
-           << state.machine_position.y << ", \"z\": " << state.machine_position.z << "},\n"
+           << state.machine_position.y << ", \"z\": " << state.machine_position.z << ", \"a\": "
+           << state.machine_position.a << ", \"b\": " << state.machine_position.b << ", \"c\": "
+           << state.machine_position.c << "},\n"
            << "  \"feed_rate\": " << state.feed_rate << ",\n"
            << "  \"spindle_speed\": " << state.spindle_speed << ",\n"
            << "  \"spindle_direction\": \"" << to_string(state.spindle_direction) << "\",\n"
@@ -3467,7 +3522,8 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
         }
         output << "\"" << system_number << "\": "
                << "{\"x\": " << offset.x << ", \"y\": " << offset.y << ", \"z\": " << offset.z
-               << "}";
+               << ", \"a\": " << offset.a << ", \"b\": " << offset.b << ", \"c\": "
+               << offset.c << "}";
         is_first_coordinate_system = false;
     }
 
@@ -3509,7 +3565,8 @@ bool is_required_non_rotational_parameter(int parameter_index) {
 
     int system_number = 0;
     int axis_index = 0;
-    return decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index);
+    return decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index)
+        && axis_uses_length_units(axis_index);
 }
 
 std::string to_parameter_file(const MachineState& state) {

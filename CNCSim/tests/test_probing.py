@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import math
 from pathlib import Path
 
 import pytest
@@ -39,6 +38,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 12.0,
             PROBE_TRIP_Y_PARAMETER: 5.0,
             PROBE_TRIP_Z_PARAMETER: 5.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         None,
     ),
@@ -55,6 +57,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 5.0,
             PROBE_TRIP_Y_PARAMETER: 12.0,
             PROBE_TRIP_Z_PARAMETER: 5.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         None,
     ),
@@ -71,6 +76,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 25.4,
             PROBE_TRIP_Y_PARAMETER: 127.0,
             PROBE_TRIP_Z_PARAMETER: 127.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         None,
     ),
@@ -87,6 +95,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 5.0,
             PROBE_TRIP_Y_PARAMETER: 5.0,
             PROBE_TRIP_Z_PARAMETER: 4.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         None,
     ),
@@ -104,6 +115,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 5.0,
             PROBE_TRIP_Y_PARAMETER: 5.0,
             PROBE_TRIP_Z_PARAMETER: 4.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         None,
     ),
@@ -121,6 +135,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 12.0,
             PROBE_TRIP_Y_PARAMETER: 5.0,
             PROBE_TRIP_Z_PARAMETER: 1.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         PROBE_TOOL_TABLE,
     ),
@@ -138,6 +155,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 5.0,
             PROBE_TRIP_Y_PARAMETER: 12.0,
             PROBE_TRIP_Z_PARAMETER: 1.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         PROBE_TOOL_TABLE,
     ),
@@ -155,8 +175,30 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_X_PARAMETER: 5.0,
             PROBE_TRIP_Y_PARAMETER: 5.0,
             PROBE_TRIP_Z_PARAMETER: 4.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
         },
         PROBE_TOOL_TABLE,
+    ),
+    (
+        "probe-accepts-stationary-rotary-words-and-reports-rotary-trip-parameters",
+        (0.0, 10.0, 0.0, 10.0, 2.0, 4.0),
+        "G20\n"
+        "G90 G94\n"
+        "T2 M6\n"
+        "G0 X5.0 Y5.0 Z5.0 A10.0 B20.0 C30.0\n"
+        "F10.0\n"
+        "G38.2 Z0.0 A10.0 B20.0 C30.0\n",
+        {
+            PROBE_TRIP_X_PARAMETER: 5.0,
+            PROBE_TRIP_Y_PARAMETER: 5.0,
+            PROBE_TRIP_Z_PARAMETER: 4.0,
+            PROBE_TRIP_A_PARAMETER: 10.0,
+            PROBE_TRIP_B_PARAMETER: 20.0,
+            PROBE_TRIP_C_PARAMETER: 30.0,
+        },
+        None,
     ),
 ]
 
@@ -167,8 +209,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
 # requirements prompt defines the eval-specific probing environment: the
 # harness may pass --probe-box for an axis-aligned absolute machine-coordinate
 # box and --probe-tool for the tool number that should be treated as a probe.
-# These cases pin exact XYZ trip coordinates and also verify that 5064 through
-# 5066 are reported numerically on success. The "selected tool" case also
+# These cases pin exact 5061 through 5066 trip coordinates, including the
+# current rotary coordinates when A/B/C words are present but unchanged. The
+# "selected tool" case also
 # relies on RS274 section 3.7.3 and section 3.6.3: a T word only changes the
 # selected tool, and the tool in the spindle does not change until M6.
 @pytest.mark.parametrize(
@@ -206,9 +249,3 @@ def test_application_reports_probe_trip_parameters(
     assert payload["error"] is None
     for parameter_index, expected_value in expected_trip_parameters.items():
         assert get_parameter_value(payload, parameter_index) == expected_value
-    for parameter_index in (
-        PROBE_TRIP_A_PARAMETER,
-        PROBE_TRIP_B_PARAMETER,
-        PROBE_TRIP_C_PARAMETER,
-    ):
-        assert math.isfinite(get_parameter_value(payload, parameter_index))

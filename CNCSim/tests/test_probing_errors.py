@@ -43,12 +43,40 @@ PROBE_ERROR_CASES: list[ProbeErrorCase] = [
         "F10.0\n"
         "G38.2 Z4.995\n",
     ),
+    (
+        "g38-2-rejects-a-axis-motion",
+        "G20\n"
+        "G90 G94\n"
+        "T2 M6\n"
+        "G0 X5.0 Y5.0 Z5.0 A10.0\n"
+        "F10.0\n"
+        "G38.2 Z0.0 A11.0\n",
+    ),
+    (
+        "g38-2-rejects-b-axis-motion",
+        "G20\n"
+        "G90 G94\n"
+        "T2 M6\n"
+        "G0 X5.0 Y5.0 Z5.0 B20.0\n"
+        "F10.0\n"
+        "G38.2 Z0.0 B21.0\n",
+    ),
+    (
+        "g38-2-rejects-c-axis-motion",
+        "G20\n"
+        "G90 G94\n"
+        "T2 M6\n"
+        "G0 X5.0 Y5.0 Z5.0 C30.0\n"
+        "F10.0\n"
+        "G38.2 Z0.0 C31.0\n",
+    ),
 ]
 
 
 # RS274 section 3.5.9 explicitly makes these invalid uses of G38.2 errors:
 # no X/Y/Z word, inverse-time feed rate mode, and a programmed point closer
-# than 0.01 inch or 0.254 millimeter to the current point.
+# than 0.01 inch or 0.254 millimeter to the current point. The same section
+# also says rotational axes may appear only if they are not commanded to move.
 @pytest.mark.parametrize(
     "input_gcode",
     [input_gcode for _, input_gcode in PROBE_ERROR_CASES],

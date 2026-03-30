@@ -4,8 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.rs274_parameters import coordinate_system_xyz_parameter_indices
-from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
+from swe_buildbench.cncsim.rs274_parameters import (
+    coordinate_system_xyz_parameter_indices,
+    coordinate_system_xyzabc_parameter_indices,
+)
+from swe_buildbench.cncsim.test_support import (
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
 
 CoordinateSystemOffsetCase = tuple[str, str, dict[str, dict[str, float]]]
 
@@ -15,6 +22,13 @@ COORDINATE_SYSTEM_OFFSET_CASES: list[CoordinateSystemOffsetCase] = [
         "G10 L2 P1 X3.5 Y17.2 Z-4.0\n",
         {
             "1": {"x": 3.5, "y": 17.2, "z": -4.0},
+        },
+    ),
+    (
+        "g10-sets-coordinate-system-1-rotary-offsets",
+        "G10 L2 P1 A10.0 B20.0 C30.0\n",
+        {
+            "1": {"x": 0.0, "y": 0.0, "z": 0.0, "a": 10.0, "b": 20.0, "c": 30.0},
         },
     ),
     (
@@ -100,7 +114,9 @@ def test_application_tracks_g10_coordinate_system_offsets(
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
     for system_number, expected_offset in expected_offsets.items():
-        assert payload["coordinate_system_offsets"][system_number] == expected_offset
+        assert payload["coordinate_system_offsets"][system_number] == with_default_rotary_axes(
+            expected_offset
+        )
 
 
 @pytest.mark.parametrize(
@@ -108,17 +124,17 @@ def test_application_tracks_g10_coordinate_system_offsets(
     [
         (
             "G20\n"
-            "G10 L2 P1 X1.0 Y2.0 Z3.0\n"
+            "G10 L2 P1 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\n"
             "G21\n",
-            {"x": 25.4, "y": 50.8, "z": 76.2},
-            {"x": 1.0, "y": 2.0, "z": 3.0},
+            {"x": 25.4, "y": 50.8, "z": 76.2, "a": 10.0, "b": 20.0, "c": 30.0},
+            {"x": 1.0, "y": 2.0, "z": 3.0, "a": 10.0, "b": 20.0, "c": 30.0},
         ),
         (
             "G21\n"
-            "G10 L2 P1 X25.4 Y50.8 Z76.2\n"
+            "G10 L2 P1 X25.4 Y50.8 Z76.2 A10.0 B20.0 C30.0\n"
             "G20\n",
-            {"x": 1.0, "y": 2.0, "z": 3.0},
-            {"x": 25.4, "y": 50.8, "z": 76.2},
+            {"x": 1.0, "y": 2.0, "z": 3.0, "a": 10.0, "b": 20.0, "c": 30.0},
+            {"x": 25.4, "y": 50.8, "z": 76.2, "a": 10.0, "b": 20.0, "c": 30.0},
         ),
     ],
     ids=["g20-to-g21", "g21-to-g20"],
@@ -143,10 +159,16 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
     )
 
     cs1_x_parameter, cs1_y_parameter, cs1_z_parameter = coordinate_system_xyz_parameter_indices(1)
+    (_, _, _, cs1_a_parameter, cs1_b_parameter, cs1_c_parameter) = (
+        coordinate_system_xyzabc_parameter_indices(1)
+    )
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["coordinate_system_offsets"]["1"] == expected_offset
+    assert payload["coordinate_system_offsets"]["1"] == with_default_rotary_axes(expected_offset)
     assert get_parameter_value(payload, cs1_x_parameter) == expected_parameter_values["x"]
     assert get_parameter_value(payload, cs1_y_parameter) == expected_parameter_values["y"]
     assert get_parameter_value(payload, cs1_z_parameter) == expected_parameter_values["z"]
+    assert get_parameter_value(payload, cs1_a_parameter) == expected_parameter_values["a"]
+    assert get_parameter_value(payload, cs1_b_parameter) == expected_parameter_values["b"]
+    assert get_parameter_value(payload, cs1_c_parameter) == expected_parameter_values["c"]

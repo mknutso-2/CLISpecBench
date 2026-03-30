@@ -5,17 +5,22 @@ from pathlib import Path
 import pytest
 
 from swe_buildbench.cncsim.rs274_parameters import (
+    G92_A_OFFSET_PARAMETER,
+    G92_B_OFFSET_PARAMETER,
+    G92_C_OFFSET_PARAMETER,
     G92_X_OFFSET_PARAMETER,
     G92_Y_OFFSET_PARAMETER,
     G92_Z_OFFSET_PARAMETER,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
     coordinate_system_xyz_parameter_indices,
+    coordinate_system_xyzabc_parameter_indices,
 )
 from swe_buildbench.cncsim.test_support import (
     build_parameter_file,
     get_parameter_value,
     run_cncsim,
     run_cncsim_invalid_input,
+    with_default_rotary_axes,
 )
 
 CLI_CASES: list[tuple[str, str | None, bool]] = [
@@ -51,7 +56,7 @@ def test_application_accepts_parameter_file_cli_arguments(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 1.0, "y": 2.0, "z": 3.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 1.0, "y": 2.0, "z": 3.0})
 
 
 # RS274 section 3.2.1 says the interpreter reads the parameter file when it
@@ -70,7 +75,7 @@ def test_application_uses_parameter_values_loaded_from_input_file(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 4.25, "y": 0.0, "z": 0.0}
+    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.25, "y": 0.0, "z": 0.0})
     assert get_parameter_value(payload, 1) == 4.25
 
 
@@ -103,14 +108,20 @@ def test_application_initializes_coordinate_system_offsets_from_input_file(
     tmp_path: Path,
 ) -> None:
     cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
+    (_, _, _, cs2_a_parameter, cs2_b_parameter, cs2_c_parameter) = (
+        coordinate_system_xyzabc_parameter_indices(2)
+    )
     completed, payload = run_cncsim(
         built_executable_path,
-        input_gcode="G55\nG90\nG0 X1.0 Y2.0 Z3.0\n",
+        input_gcode="G55\nG90\nG0 X1.0 Y2.0 Z3.0 A4.0 B5.0 C6.0\n",
         parameter_input_content=build_parameter_file(
             {
                 cs2_x_parameter: 10.0,
                 cs2_y_parameter: 20.0,
                 cs2_z_parameter: 30.0,
+                cs2_a_parameter: 40.0,
+                cs2_b_parameter: 50.0,
+                cs2_c_parameter: 60.0,
             }
         ),
         tmp_path=tmp_path,
@@ -118,8 +129,12 @@ def test_application_initializes_coordinate_system_offsets_from_input_file(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["coordinate_system_offsets"]["2"] == {"x": 10.0, "y": 20.0, "z": 30.0}
-    assert payload["machine_position"] == {"x": 11.0, "y": 22.0, "z": 33.0}
+    assert payload["coordinate_system_offsets"]["2"] == with_default_rotary_axes(
+        {"x": 10.0, "y": 20.0, "z": 30.0, "a": 40.0, "b": 50.0, "c": 60.0}
+    )
+    assert payload["machine_position"] == with_default_rotary_axes(
+        {"x": 11.0, "y": 22.0, "z": 33.0, "a": 44.0, "b": 55.0, "c": 66.0}
+    )
 
 
 # RS274 section 3.2.1 says parameters 5211-5216 are part of the required
@@ -131,12 +146,21 @@ def test_application_initializes_g92_offsets_from_input_file(
 ) -> None:
     completed, payload = run_cncsim(
         built_executable_path,
-        input_gcode="G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG92.3\nG90\nG0 X1.0 Y2.0 Z3.0\n",
+        input_gcode=(
+            "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\n"
+            "G54\n"
+            "G92.3\n"
+            "G90\n"
+            "G0 X1.0 Y2.0 Z3.0 A4.0 B5.0 C6.0\n"
+        ),
         parameter_input_content=build_parameter_file(
             {
                 G92_X_OFFSET_PARAMETER: 10.0,
                 G92_Y_OFFSET_PARAMETER: 20.0,
                 G92_Z_OFFSET_PARAMETER: 30.0,
+                G92_A_OFFSET_PARAMETER: 40.0,
+                G92_B_OFFSET_PARAMETER: 50.0,
+                G92_C_OFFSET_PARAMETER: 60.0,
             }
         ),
         tmp_path=tmp_path,
@@ -144,7 +168,9 @@ def test_application_initializes_g92_offsets_from_input_file(
 
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
-    assert payload["machine_position"] == {"x": 11.0, "y": 22.0, "z": 33.0}
+    assert payload["machine_position"] == with_default_rotary_axes(
+        {"x": 11.0, "y": 22.0, "z": 33.0, "a": 44.0, "b": 55.0, "c": 66.0}
+    )
 
 
 PARAMETER_FILE_ERROR_CASES: list[tuple[str, str]] = [
