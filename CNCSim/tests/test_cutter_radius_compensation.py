@@ -88,6 +88,18 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
             "G41",
             1,
         ),
+        # The same Appendix B.6 first-move construction applies to G0 as well
+        # as G1, so a rapid first move to the same programmed point reaches
+        # the same compensated spindle-center endpoint.
+        (
+            "G17 G90 G94\n"
+            "G0 X0.0 Y0.0\n"
+            "G41 D1 G0 X5.0 Y0.0\n",
+            3.2,
+            2.4,
+            "G41",
+            1,
+        ),
         # RS274 Appendix B.2.4 also allows D0; with zero radius, compensation
         # stays logically on but the spindle center remains on the programmed
         # contour.
@@ -270,6 +282,7 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
         "g41-first-straight-move-left",
         "g42-first-straight-move-right",
         "g41-omitted-d-uses-tool-in-spindle",
+        "g41-first-rapid-move-left",
         "g41-d0-keeps-spindle-center-on-programmed-path",
         "g42-d0-keeps-spindle-center-on-programmed-path",
         "g41-colinear-follow-on-move-left",
@@ -293,6 +306,10 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
     expected_d_number: int | None,
     tmp_path: Path,
 ) -> None:
+    """Check CRC line/rapid endpoint behavior visible in the payload.
+
+    Governing sections: RS274 Appendix B.6, B.2.3, B.2.4, B.5, and B.5.2.
+    """
     completed, payload = run_cncsim(
         built_executable_path,
         input_gcode=input_gcode,
@@ -430,6 +447,10 @@ def test_application_tracks_cutter_radius_compensated_arc_endpoints(
     expected_d_number: int,
     tmp_path: Path,
 ) -> None:
+    """Check the final tool-center endpoints of the compensated arc cases.
+
+    Governing section: RS274 Appendix B.6.
+    """
     completed, payload = run_cncsim(
         built_executable_path,
         input_gcode=input_gcode,

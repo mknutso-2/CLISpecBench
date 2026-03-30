@@ -57,6 +57,10 @@ GCODE_BODIES_INVALID_WHILE_CRC_IS_ACTIVE = [
     # RS274 Appendix B.5 error 3: probing is not allowed while cutter radius
     # compensation is on.
     ("g38-2", "F10.0\nG38.2 X1.0\n"),
+    # RS274 section 3.5.16 explicitly says canned cycles are invalid while
+    # cutter radius compensation is active. G81 is used here as a
+    # representative supported canned cycle.
+    ("g81", "F10.0\nG81 X1.0 Y1.0 Z-1.0 R0.5\n"),
     # RS274 Appendix B.5 error 1 says axis offsets may not be changed while
     # cutter compensation is on. In the implemented RS274 subset, the explicit
     # axis-offset commands are G92, G92.1, G92.2, and G92.3; section 3.5.18
@@ -83,6 +87,13 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
         "G41 D7\n",
         6,
     ),
+    # RS274 Appendix B.5.4: the D number may not be negative.
+    (
+        "g41-rejects-negative-d-number",
+        "G17 G90 G94\n"
+        "G41 D-1\n",
+        None,
+    ),
     # RS274 Appendix B.5 error 12: a D word may not appear without G41 or G42.
     (
         "d-word-without-g41-or-g42",
@@ -95,6 +106,21 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
         "g42-when-compensation-is-already-on",
         "G17\n"
         "G41 D1\n"
+        "G42 D1\n",
+        None,
+    ),
+    # Same-direction re-enable is the same Appendix B.5 error 5.
+    (
+        "g41-when-g41-is-already-on",
+        "G17\n"
+        "G41 D1\n"
+        "G41 D1\n",
+        None,
+    ),
+    (
+        "g42-when-g42-is-already-on",
+        "G17\n"
+        "G42 D1\n"
         "G42 D1\n",
         None,
     ),
@@ -323,6 +349,11 @@ def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_i
     invalid_gcode_body: str,
     tmp_path: Path,
 ) -> None:
+    """Check the explicit RS274 G-code prohibitions that apply while CRC is active.
+
+    Governing sections: RS274 Appendix B.5 and sections 3.5.10, 3.5.12,
+    3.5.13, and 3.5.16.
+    """
     run_cncsim_invalid_input(
         built_executable_path,
         input_gcode=CRC_ACTIVE_PREFIX + invalid_gcode_body,
