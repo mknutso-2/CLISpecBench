@@ -91,6 +91,23 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
         None,
     ),
     (
+        "selected-tool-does-not-change-the-probe-in-spindle-until-m6",
+        (0.0, 10.0, 0.0, 10.0, 2.0, 4.0),
+        "G20\n"
+        "G90 G94\n"
+        "T2 M6\n"
+        "T1\n"
+        "G0 X5.0 Y5.0 Z5.0\n"
+        "F10.0\n"
+        "G38.2 Z0.0\n",
+        {
+            PROBE_TRIP_X_PARAMETER: 5.0,
+            PROBE_TRIP_Y_PARAMETER: 5.0,
+            PROBE_TRIP_Z_PARAMETER: 4.0,
+        },
+        None,
+    ),
+    (
         "x-probe-with-tlc",
         (12.0, 20.0, 0.0, 10.0, 0.0, 1.0),
         "G20\n"
@@ -151,7 +168,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
 # harness may pass --probe-box for an axis-aligned absolute machine-coordinate
 # box and --probe-tool for the tool number that should be treated as a probe.
 # These cases pin exact XYZ trip coordinates and also verify that 5064 through
-# 5066 are reported numerically on success.
+# 5066 are reported numerically on success. The "selected tool" case also
+# relies on RS274 section 3.7.3 and section 3.6.3: a T word only changes the
+# selected tool, and the tool in the spindle does not change until M6.
 @pytest.mark.parametrize(
     ("probe_box", "input_gcode", "expected_trip_parameters", "tool_table_content"),
     [

@@ -84,6 +84,22 @@ def test_application_requires_the_probe_tool_in_the_spindle(
     )
 
 
+# RS274 section 3.7.3 says a T word only selects a tool, and section 3.6.3
+# says the tool in the spindle changes only when M6 is programmed. So merely
+# selecting the designated probe tool is not enough for G38.2.
+def test_application_requires_the_probe_tool_to_be_loaded_not_just_selected(
+    built_executable_path: Path,
+    tmp_path: Path,
+) -> None:
+    run_cncsim_invalid_input(
+        built_executable_path,
+        input_gcode="G20\nG90 G94\nT2\nG0 X5.0 Y5.0 Z5.0\nF10.0\nG38.2 Z0.0\n",
+        probe_box=PROBE_BOX,
+        probe_tool=PROBE_TOOL,
+        tmp_path=tmp_path,
+    )
+
+
 # RS274 section 4.3.6.6 explicitly says the spindle must not be turning when
 # STRAIGHT_PROBE starts.
 def test_application_rejects_probing_with_the_spindle_turning(
