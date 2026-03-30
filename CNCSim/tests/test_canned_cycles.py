@@ -12,6 +12,7 @@ from swe_buildbench.cncsim.rs274_parameters import G92_X_OFFSET_PARAMETER
 from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
 
 CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
+RepeatedCannedCycleCase = tuple[str, str, str, dict[str, float], str]
 
 ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG17\nG94\n"
 
@@ -210,6 +211,34 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
     ),
 ]
 
+REPEATED_CANNED_CYCLE_CASES: list[RepeatedCannedCycleCase] = [
+    (
+        "g84-reuses-sticky-r-and-z-on-following-line",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n"
+        + "X6.0 Y7.0\n",
+        "G98",
+        {"x": 6.0, "y": 7.0, "z": 3.0},
+        "CW",
+    ),
+    (
+        "g85-reuses-sticky-r-and-z-on-following-line",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G99\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G85 X4.0 Y5.0 Z1.5 R2.8 F7.0\n"
+        + "X6.0 Y7.0\n",
+        "G99",
+        {"x": 6.0, "y": 7.0, "z": 2.8},
+        "OFF",
+    ),
+]
+
 
 # RS274 section 3.5.16 defines the observable end-of-line effects we can check
 # with the current payload:
@@ -272,6 +301,60 @@ def test_application_tracks_initial_canned_cycle_behavior(
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == expected_active_motion
+    assert (
+        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
+        == expected_return_mode
+    )
+    assert payload["machine_position"] == expected_machine_position
+    assert payload["spindle_direction"] == expected_spindle_direction
+
+
+# RS274 section 3.5.16 says sticky R and depth-word behavior applies to canned
+# cycles generally, not only to G81. These two cases extend the repeat
+# coverage to supported cycles with no extra non-sticky arguments. G88 is
+# intentionally omitted from the covered set because its operator-stop/manual
+# retract behavior is not representable in the current single-run payload.
+@pytest.mark.parametrize(
+    (
+        "input_gcode",
+        "expected_return_mode",
+        "expected_machine_position",
+        "expected_spindle_direction",
+    ),
+    [
+        (
+            input_gcode,
+            expected_return_mode,
+            expected_machine_position,
+            expected_spindle_direction,
+        )
+        for (
+            _,
+            input_gcode,
+            expected_return_mode,
+            expected_machine_position,
+            expected_spindle_direction,
+        ) in REPEATED_CANNED_CYCLE_CASES
+    ],
+    ids=[case_id for case_id, _, _, _, _ in REPEATED_CANNED_CYCLE_CASES],
+)
+def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
+    built_executable_path: Path,
+    input_gcode: str,
+    expected_return_mode: str,
+    expected_machine_position: dict[str, float],
+    expected_spindle_direction: str,
+    tmp_path: Path,
+) -> None:
+    completed, payload = run_cncsim(
+        built_executable_path,
+        input_gcode=input_gcode,
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert payload["error"] is None
+    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] in {"G84", "G85"}
     assert (
         payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
         == expected_return_mode
