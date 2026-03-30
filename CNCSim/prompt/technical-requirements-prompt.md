@@ -25,6 +25,7 @@
     "cutter_radius_compensation_number": integer | null,
     "tool_length_offset_index": integer | null,
     "selected_tool": integer | null,
+    "tool_in_spindle": integer | null,
     "active_modal_g_codes": {"<group_number>": string, ...},
     "active_modal_m_codes": {"<group_number>": string, ...},
     "coordinate_system_offsets": {
@@ -47,6 +48,8 @@
   index is active.
   Serialize "selected_tool" as the currently selected T number, or null if no tool has been
   selected.
+  Serialize "tool_in_spindle" as the tool currently loaded in the spindle after any completed M6,
+  or null if the spindle is empty.
   Serialize "active_modal_g_codes" as a JSON object whose keys are RS274 modal group numbers
   encoded as JSON strings and whose values are G-code strings (for example:
   {"1": "G1", "3": "G90"}).

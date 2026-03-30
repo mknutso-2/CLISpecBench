@@ -6,7 +6,7 @@ import pytest
 
 from swe_buildbench.cncsim.test_support import run_cncsim
 
-ToolingStateCase = tuple[str, str, int | None, int | None, int | None]
+ToolingStateCase = tuple[str, str, int | None, int | None, int | None, int | None]
 
 TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 
@@ -22,11 +22,13 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         7,
         None,
         None,
+        None,
     ),
     (
         "clears-cutter-radius-compensation-number-on-g40",
         "G41 D3\n"
         "G40\n",
+        None,
         None,
         None,
         None,
@@ -37,11 +39,13 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         12,
         None,
+        None,
     ),
     (
         "clears-tool-length-offset-index-on-g49",
         "G43 H4\n"
         "G49\n",
+        None,
         None,
         None,
         None,
@@ -52,15 +56,38 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         None,
         8,
+        None,
     ),
     (
-        "tracks-latest-selected-tool",
+        "tracks-tool-in-spindle-after-m6",
         "T2\n"
         "T9\n"
         "M6\n",
         None,
         None,
         9,
+        9,
+    ),
+    (
+        "tracks-selected-tool-separately-from-tool-in-spindle",
+        "T4\n"
+        "M6\n"
+        "T7\n",
+        None,
+        None,
+        7,
+        4,
+    ),
+    (
+        "tracks-empty-spindle-after-t0-m6",
+        "T5\n"
+        "M6\n"
+        "T0\n"
+        "M6\n",
+        None,
+        None,
+        0,
+        None,
     ),
     (
         "tracks-all-tooling-state-together",
@@ -70,6 +97,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         6,
         7,
         5,
+        None,
     ),
     (
         "tracks-tooling-state-from-parameter-values",
@@ -82,6 +110,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         4,
         7,
         6,
+        None,
     ),
     (
         "tracks-tooling-state-from-expressions",
@@ -91,6 +120,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         4,
         7,
         6,
+        None,
     ),
     (
         "tracks-tooling-state-from-repeated-parameters-and-unary-ops",
@@ -102,6 +132,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         4,
         7,
         6,
+        None,
     ),
 ]
 
@@ -112,13 +143,17 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
 # parameter values and expressions as real values, so the supported T, H, and
 # D words should accept those forms as well as numeric literals. Section
 # 3.3.2.2 also explicitly allows repeated `#`, and section 3.3.2.4 defines
-# unary-operation values as real values.
+# unary-operation values as real values. RS274 section 3.7.3 says a T word
+# selects the next tool but does not change the spindle until M6, and section
+# 3.6.3 says that after M6 the selected tool is the tool in the spindle, with
+# T0 leaving the spindle empty after the tool change.
 @pytest.mark.parametrize(
     (
         "input_gcode",
         "expected_cutter_radius_compensation_number",
         "expected_tool_length_offset_index",
         "expected_selected_tool",
+        "expected_tool_in_spindle",
     ),
     [
         (
@@ -126,6 +161,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
             expected_cutter_radius_compensation_number,
             expected_tool_length_offset_index,
             expected_selected_tool,
+            expected_tool_in_spindle,
         )
         for (
             _,
@@ -133,9 +169,10 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
             expected_cutter_radius_compensation_number,
             expected_tool_length_offset_index,
             expected_selected_tool,
+            expected_tool_in_spindle,
         ) in TOOLING_STATE_CASES
     ],
-    ids=[case_id for case_id, _, _, _, _ in TOOLING_STATE_CASES],
+    ids=[case_id for case_id, _, _, _, _, _ in TOOLING_STATE_CASES],
 )
 def test_application_tracks_tooling_state(
     built_executable_path: Path,
@@ -143,6 +180,7 @@ def test_application_tracks_tooling_state(
     expected_cutter_radius_compensation_number: int | None,
     expected_tool_length_offset_index: int | None,
     expected_selected_tool: int | None,
+    expected_tool_in_spindle: int | None,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
@@ -160,3 +198,4 @@ def test_application_tracks_tooling_state(
     )
     assert payload["tool_length_offset_index"] == expected_tool_length_offset_index
     assert payload["selected_tool"] == expected_selected_tool
+    assert payload["tool_in_spindle"] == expected_tool_in_spindle

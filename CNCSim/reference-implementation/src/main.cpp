@@ -1300,7 +1300,11 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     if (parsed_line.active_modal_m_codes.contains("6")
         && parsed_line.active_modal_m_codes.at("6") == "M6")
     {
-        state.tool_in_spindle = state.selected_tool;
+        if (state.selected_tool.has_value() && *state.selected_tool != 0) {
+            state.tool_in_spindle = state.selected_tool;
+        } else {
+            state.tool_in_spindle = std::nullopt;
+        }
     }
 
     if (parsed_line.active_modal_g_codes.contains("7")) {
@@ -3027,6 +3031,13 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
            << "  \"selected_tool\": ";
     if (state.selected_tool.has_value()) {
         output << *state.selected_tool;
+    } else {
+        output << "null";
+    }
+    output << ",\n"
+           << "  \"tool_in_spindle\": ";
+    if (state.tool_in_spindle.has_value()) {
+        output << *state.tool_in_spindle;
     } else {
         output << "null";
     }
