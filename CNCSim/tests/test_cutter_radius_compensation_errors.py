@@ -53,6 +53,37 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G1 X10.0 Y0.0\n"
         "G1 X14.0 Y-3.0\n",
     ),
+    # Mirror-image oblique concave corner for G41. After the compensated
+    # horizontal path is established, the turn from (10, 0) to (14, 3) places
+    # the tool on the inside of the acute corner, so it must also be rejected.
+    (
+        "concave-corner-after-entry-with-g41",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G41 D1 G1 X5.0 Y0.0\n"
+        "G1 X10.0 Y0.0\n"
+        "G1 X14.0 Y3.0\n",
+    ),
+    # Simpler 90-degree concave corner for G41: from +X to +Y while keeping
+    # the tool on the left side of the contour.
+    (
+        "concave-90-degree-corner-with-g41",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G41 D1 G1 X5.0 Y0.0\n"
+        "G1 X10.0 Y0.0\n"
+        "G1 X10.0 Y4.0\n",
+    ),
+    # Simpler 90-degree concave corner for G42: from +X to -Y while keeping
+    # the tool on the right side of the contour.
+    (
+        "concave-90-degree-corner-with-g42",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G42 D1 G1 X5.0 Y0.0\n"
+        "G1 X10.0 Y0.0\n"
+        "G1 X10.0 Y-4.0\n",
+    ),
 ]
 
 
