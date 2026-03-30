@@ -157,6 +157,32 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "CCW",
     ),
     (
+        "g87-restores-clockwise-spindle-and-returns-to-r-under-g99",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G99\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 K2.25 F7.0\n",
+        "G87",
+        "G99",
+        {"x": 4.0, "y": 5.0, "z": 2.8},
+        "CW",
+    ),
+    (
+        "g87-restores-counterclockwise-spindle-and-returns-to-old-z-under-g98",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M4\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 K2.25 F7.0\n",
+        "G87",
+        "G98",
+        {"x": 4.0, "y": 5.0, "z": 3.0},
+        "CCW",
+    ),
+    (
         "g89-retracts-like-g82-at-line-end",
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
@@ -189,8 +215,8 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
 # - G81 retracts to clear Z
 # - G82 adds dwell but otherwise retracts like G81
 # - G83 pecks internally but still ends at clear Z
-# - G84/G86 have spindle side effects, which are observable through the final
-#   spindle direction
+# - G84/G86/G87 have spindle side effects, which are observable through the
+#   final spindle direction
 # - G85 and G89 differ from G81/G82 in feed-vs-traverse retract details, but
 #   the current payload can still confirm their final retract level
 # - G98 retracts to OLD_Z when it is above R; G99 retracts to R

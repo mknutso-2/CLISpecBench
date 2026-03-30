@@ -1596,7 +1596,7 @@ bool is_any_canned_cycle_motion(std::string_view active_gcode) {
 bool is_supported_canned_cycle_motion(std::string_view active_gcode) {
     return active_gcode == "G81" || active_gcode == "G82" || active_gcode == "G83"
         || active_gcode == "G84" || active_gcode == "G85" || active_gcode == "G86"
-        || active_gcode == "G89";
+        || active_gcode == "G87" || active_gcode == "G89";
 }
 
 bool is_probe_motion(std::string_view active_gcode) {
@@ -1652,7 +1652,8 @@ bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
 bool line_mentions_canned_cycle_words(const ParsedLine& parsed_line) {
     return parsed_line.x.has_value() || parsed_line.y.has_value() || parsed_line.z.has_value()
         || parsed_line.l.has_value() || parsed_line.p.has_value() || parsed_line.q.has_value()
-        || parsed_line.r.has_value();
+        || parsed_line.r.has_value() || parsed_line.i.has_value() || parsed_line.j.has_value()
+        || parsed_line.k.has_value();
 }
 
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state) {
@@ -1775,7 +1776,7 @@ void validate_canned_cycle_command(
         return;
     }
     if (!is_supported_canned_cycle_motion(effective_motion)) {
-        throw InputError("Only G81, G82, and G83 canned cycles are supported");
+        throw InputError("Only the currently covered canned cycles are supported");
     }
     if (cutter_radius_compensation_is_active(state)) {
         throw InputError("Cannot use canned cycles with cutter radius compensation active");
@@ -2919,6 +2920,10 @@ void apply_canned_cycle_motion(
         (void)parsed_line.p;
     } else if (active_gcode == "G83") {
         (void)parsed_line.q;
+    } else if (active_gcode == "G87") {
+        (void)parsed_line.i;
+        (void)parsed_line.j;
+        (void)parsed_line.k;
     }
 
     const bool retract_to_old_position = !state.active_modal_g_codes.contains("10")
