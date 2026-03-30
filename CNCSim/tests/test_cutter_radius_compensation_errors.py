@@ -137,6 +137,74 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G1 X10.0 Y0.0\n"
         "G1 X10.0 Y-4.0\n",
     ),
+    # RS274 Appendix B.5.1 error 16: if the tool radius is not less than the
+    # programmed arc radius on an inward compensated arc, the tool cannot stay
+    # tangent to the contour. For G41 on a CCW arc, the tool is on the inside
+    # of the arc, so a radius-3 tool on a radius-3 arc must be rejected.
+    (
+        "g41-tool-radius-not-less-than-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G41 D1 G1 X5.0 Y0.0\n"
+        "G3 X2.0 Y3.0 I-3.0 J0.0\n",
+    ),
+    # Mirror-image inward arc for G42 on a CW move.
+    (
+        "g42-tool-radius-not-less-than-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G42 D1 G1 X5.0 Y0.0\n"
+        "G2 X2.0 Y-3.0 I-3.0 J0.0\n",
+    ),
+    # The same Appendix B.5.1 error also applies when the programmed arc
+    # radius is strictly smaller than the tool radius.
+    (
+        "g41-tool-radius-greater-than-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G41 D1 G1 X5.0 Y0.0\n"
+        "G3 X3.0 Y2.0 I-2.0 J0.0\n",
+    ),
+    # Mirror-image inward arc for G42 with programmed radius 2.0.
+    (
+        "g42-tool-radius-greater-than-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G42 D1 G1 X5.0 Y0.0\n"
+        "G2 X3.0 Y-2.0 I-2.0 J0.0\n",
+    ),
+    # The same inward-arc condition should be rejected in radius format.
+    (
+        "g41-tool-radius-not-less-than-radius-format-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G41 D1 G1 X5.0 Y0.0\n"
+        "G3 X2.0 Y3.0 R3.0\n",
+    ),
+    # Mirror-image radius-format inward arc for G42.
+    (
+        "g42-tool-radius-not-less-than-radius-format-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G42 D1 G1 X5.0 Y0.0\n"
+        "G2 X2.0 Y-3.0 R3.0\n",
+    ),
+    # Smaller-than-tool radius variant in radius format.
+    (
+        "g41-tool-radius-greater-than-radius-format-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G41 D1 G1 X5.0 Y0.0\n"
+        "G3 X3.0 Y2.0 R2.0\n",
+    ),
+    # Mirror-image radius-format inward arc with programmed radius 2.0.
+    (
+        "g42-tool-radius-greater-than-radius-format-arc-radius-with-comp",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G42 D1 G1 X5.0 Y0.0\n"
+        "G2 X3.0 Y-2.0 R2.0\n",
+    ),
 ]
 
 

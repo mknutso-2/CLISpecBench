@@ -243,3 +243,126 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
     assert math.isclose(payload["machine_position"]["z"], 0.0, abs_tol=1e-4)
     assert payload["active_modal_g_codes"]["7"] == expected_crc_mode
     assert payload["cutter_radius_compensation_number"] == expected_d_number
+
+
+# RS274 Appendix B.6 says that if the first move after turning cutter
+# compensation on is an arc, the generated tool-center arc is derived from an
+# auxiliary programmed arc with the programmed center point and programmed end
+# point, while keeping the tool tangent to that auxiliary arc throughout.
+#
+# These cases pick center-format G17 arcs with center O = (0, 0) and tool
+# radius r = 3 so the compensated endpoints are easy to audit:
+# - for G42 on a CCW arc or G41 on a CW arc, the tool is on the outside of the
+#   programmed arc, so the tool-center radius is 4 + 3 = 7
+# - the programmed endpoints are the quarter-circle points (0, 4) and (-4, 0)
+# - the compensated tool-center endpoints are therefore (0, 7) and (-7, 0),
+#   or the mirrored CW values (0, -7) and (-7, 0)
+CRC_ARC_CASES = [
+    (
+        "g42-first-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n",
+        {"x": 0.0, "y": 7.0, "z": 0.0},
+        "G42",
+        1,
+    ),
+    (
+        "g42-subsequent-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n"
+        "G3 X-4.0 Y0.0 I0.0 J-4.0\n",
+        {"x": -7.0, "y": 0.0, "z": 0.0},
+        "G42",
+        1,
+    ),
+    (
+        "g42-subsequent-radius-format-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n"
+        "G3 X-4.0 Y0.0 R4.0\n",
+        {"x": -7.0, "y": 0.0, "z": 0.0},
+        "G42",
+        1,
+    ),
+    (
+        "g41-first-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n",
+        {"x": 0.0, "y": -7.0, "z": 0.0},
+        "G41",
+        1,
+    ),
+    (
+        "g41-subsequent-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n"
+        "G2 X-4.0 Y0.0 I0.0 J4.0\n",
+        {"x": -7.0, "y": 0.0, "z": 0.0},
+        "G41",
+        1,
+    ),
+    (
+        "g41-subsequent-radius-format-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n"
+        "G2 X-4.0 Y0.0 R4.0\n",
+        {"x": -7.0, "y": 0.0, "z": 0.0},
+        "G41",
+        1,
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("input_gcode", "expected_machine_position", "expected_crc_mode", "expected_d_number"),
+    [
+        (
+            input_gcode,
+            expected_machine_position,
+            expected_crc_mode,
+            expected_d_number,
+        )
+        for (
+            _,
+            input_gcode,
+            expected_machine_position,
+            expected_crc_mode,
+            expected_d_number,
+        ) in CRC_ARC_CASES
+    ],
+    ids=[case_id for case_id, _, _, _, _ in CRC_ARC_CASES],
+)
+def test_application_tracks_cutter_radius_compensated_arc_endpoints(
+    built_executable_path: Path,
+    input_gcode: str,
+    expected_machine_position: dict[str, float],
+    expected_crc_mode: str,
+    expected_d_number: int,
+    tmp_path: Path,
+) -> None:
+    completed, payload = run_cncsim(
+        built_executable_path,
+        input_gcode=input_gcode,
+        tool_table_content=TOOL_TABLE,
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert payload["error"] is None
+    assert math.isclose(
+        payload["machine_position"]["x"], expected_machine_position["x"], abs_tol=1e-4
+    )
+    assert math.isclose(
+        payload["machine_position"]["y"], expected_machine_position["y"], abs_tol=1e-4
+    )
+    assert math.isclose(
+        payload["machine_position"]["z"], expected_machine_position["z"], abs_tol=1e-4
+    )
+    assert payload["active_modal_g_codes"]["7"] == expected_crc_mode
+    assert payload["cutter_radius_compensation_number"] == expected_d_number
