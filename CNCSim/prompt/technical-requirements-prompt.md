@@ -2,6 +2,8 @@
 - The program must accept: --input <gcode_file> --output <result_file>
 - The harness may also pass: --tool-table <tool_file>
   If provided, this file uses the RS274 tool-file format from section 2.3 of the specification.
+- The harness may also pass: --block-delete
+  If provided, treat slash-prefixed blocks as skipped, as if the RS274 block-delete switch were ON.
 - The harness may also pass: --carousel-slots <slot_count>
   If provided, this is the number of slots in the carousel/tool changer.
 - The harness may also pass: --parameter-input <parameter_file> and/or

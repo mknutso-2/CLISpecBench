@@ -205,6 +205,51 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         + "G86 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
     ),
     (
+        "g87-requires-i",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G87 X4.0 Y5.0 Z1.5 R2.8 J-0.5 K2.25 F7.0\n",
+    ),
+    (
+        "g87-requires-j",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 K2.25 F7.0\n",
+    ),
+    (
+        "g87-requires-k",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 F7.0\n",
+    ),
+    (
+        "g88-requires-p",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G88 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+    ),
+    (
+        "g88-requires-nonnegative-p",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G88 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
+    ),
+    (
         "g89-requires-p",
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
@@ -238,8 +283,9 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
 # Section 3.5.16.3 requires non-negative P for G82, and section 3.5.16.4
 # requires positive Q for G83. Section 3.5.16.5 requires the spindle to be
 # turning clockwise before G84. Section 3.5.16.7 requires the spindle to be
-# turning before G86. Sections 3.5.16.7 and 3.5.16.10 define G86 and G89 as
-# P-using cycles, so the same explicit non-negative-P requirement applies.
+# turning before G86. Section 3.5.16.8 requires I, J, and K for G87. Sections
+# 3.5.16.7, 3.5.16.9, and 3.5.16.10 define G86, G88, and G89 as P-using
+# cycles, so the same explicit non-negative-P requirement applies.
 @pytest.mark.parametrize(
     "input_gcode",
     [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],

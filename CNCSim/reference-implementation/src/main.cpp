@@ -173,6 +173,7 @@ struct MachineState {
 struct ProgramOptions {
     std::string input_path;
     std::string output_path;
+    bool block_delete = false;
     std::optional<int> carousel_slots;
     std::optional<std::string> parameter_input_path;
     std::optional<std::string> parameter_output_path;
@@ -221,6 +222,7 @@ public:
 ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(
     const std::string& input_path,
+    bool block_delete,
     const std::optional<int>& carousel_slots,
     const std::optional<std::string>& parameter_input_path,
     const std::optional<std::string>& tool_table_path,
@@ -462,6 +464,10 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
             options.output_path = argv[++index];
             continue;
         }
+        if (argument == "--block-delete") {
+            options.block_delete = true;
+            continue;
+        }
         if (argument == "--carousel-slots" && index + 1 < argc) {
             options.carousel_slots =
                 parse_non_negative_integer_argument(argv[++index], "--carousel-slots");
@@ -500,6 +506,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
+            "[--block-delete] "
             "[--carousel-slots <slot_count>] [--parameter-input <parameter_file>] "
             "[--parameter-output <parameter_file>] [--tool-table <tool_file>] "
             "[--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
@@ -510,6 +517,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
     if (options.input_path.empty() || options.output_path.empty()) {
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
+            "[--block-delete] "
             "[--carousel-slots <slot_count>] [--parameter-input <parameter_file>] "
             "[--parameter-output <parameter_file>] [--tool-table <tool_file>] "
             "[--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
@@ -522,6 +530,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 
 MachineState execute_program(
     const std::string& input_path,
+    bool block_delete,
     const std::optional<int>& carousel_slots,
     const std::optional<std::string>& parameter_input_path,
     const std::optional<std::string>& tool_table_path,
@@ -547,6 +556,11 @@ MachineState execute_program(
 
     std::string line;
     while (std::getline(input_stream, line)) {
+        const std::string compact_line = remove_ignorable_whitespace(strip_comments(line));
+        if (block_delete && !compact_line.empty() && compact_line.front() == '/') {
+            continue;
+        }
+
         const ParsedLine parsed_line = parse_line(line, state);
         apply_line(parsed_line, state);
         apply_parameter_writes(parsed_line, state);
@@ -1443,6 +1457,9 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     if (parsed_line.feed_rate.has_value()) {
         state.feed_rate = *parsed_line.feed_rate;
     }
+    if (parsed_line.spindle_speed.has_value() && *parsed_line.spindle_speed < 0.0) {
+        throw InputError("S word must be non-negative");
+    }
     if (parsed_line.spindle_speed.has_value()) {
         state.spindle_speed = *parsed_line.spindle_speed;
     }
@@ -1626,7 +1643,7 @@ bool is_any_canned_cycle_motion(std::string_view active_gcode) {
 bool is_supported_canned_cycle_motion(std::string_view active_gcode) {
     return active_gcode == "G81" || active_gcode == "G82" || active_gcode == "G83"
         || active_gcode == "G84" || active_gcode == "G85" || active_gcode == "G86"
-        || active_gcode == "G87" || active_gcode == "G89";
+        || active_gcode == "G87" || active_gcode == "G88" || active_gcode == "G89";
 }
 
 bool is_probe_motion(std::string_view active_gcode) {
@@ -1867,7 +1884,10 @@ void validate_canned_cycle_command(
         }
     }
 
-    if (effective_motion == "G82" || effective_motion == "G86" || effective_motion == "G89") {
+    if (
+        effective_motion == "G82" || effective_motion == "G86"
+        || effective_motion == "G88" || effective_motion == "G89"
+    ) {
         if (!parsed_line.p.has_value()) {
             throw InputError(std::string(effective_motion) + " requires a P word");
         }
@@ -1885,6 +1905,17 @@ void validate_canned_cycle_command(
     }
     if (effective_motion == "G86" && state.spindle_direction == SpindleDirection::kOff) {
         throw InputError("G86 requires the spindle to be turning");
+    }
+    if (effective_motion == "G87") {
+        if (!parsed_line.i.has_value()) {
+            throw InputError("G87 requires an I word");
+        }
+        if (!parsed_line.j.has_value()) {
+            throw InputError("G87 requires a J word");
+        }
+        if (!parsed_line.k.has_value()) {
+            throw InputError("G87 requires a K word");
+        }
     }
 
     char depth_axis_letter = 'Z';
@@ -3626,6 +3657,7 @@ int main(int argc, char* argv[]) {
     try {
         const MachineState final_state = execute_program(
             options.input_path,
+            options.block_delete,
             options.carousel_slots,
             options.parameter_input_path,
             options.tool_table_path,
