@@ -17,4 +17,10 @@ Agent workflow note:
 - When editing Python files, run Ruff and Pyright explicitly as needed instead of assuming editor integrations will format code, fix lint issues, organize imports, or catch type-checking issues. `pyproject.toml` enables strict Pyright checking for both `src` and `CNCSim/tests`, so Python test changes should be verified with Pyright too, not just Ruff and pytest.
 - For Python packages, keep `__init__.py` minimal. Do not re-export module-level constants, helpers, or other names from the package root unless they are intentionally part of a stable public API. Prefer importing from the defining module directly.
 - Before concluding any task and reporting completion, always invoke the `claude-critique` skill against the changes you made. Point Claude at the exact diff, commit, or files under review, and continue the review until you and Claude agree that the changes have been cross-validated.
+- This Claude-reconciliation requirement also applies to analysis and synthesis tasks, not just code changes. If Claude or another subagent produced findings and you plan to omit, downgrade, reject, or contradict any of them in your response to the user, first do a targeted follow-up review on those exact points.
+- When relaying Claude or subagent output, explicitly distinguish between:
+  - the full superset of findings that were raised
+  - the narrower consensus list you believe remains after reconciliation
+  - findings rejected as stale, incorrect, already covered, or unobservable under the current harness
 - If you and Claude do not agree, do not silently pick one opinion and move on. Create `ARGUMENT.md` at the repo root that records both positions, the relevant files or spec passages, and the unresolved disagreement.
+- If Claude is unavailable, rate-limited, or otherwise cannot complete the needed reconciliation round, create `ARGUMENT.md` before answering and say that the disagreement remains unresolved due to that limitation.
