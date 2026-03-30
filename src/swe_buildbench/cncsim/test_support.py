@@ -10,6 +10,8 @@ from swe_buildbench.cncsim.rs274_parameters import (
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
 )
 
+ProbeBox = tuple[float, float, float, float, float, float]
+
 
 def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
     entries = {
@@ -34,6 +36,8 @@ def _build_cncsim_command(
     input_gcode: str,
     parameter_input_content: str | None,
     pass_parameter_output: bool,
+    probe_box: ProbeBox | None,
+    probe_tool: int | None,
     tool_table_content: str | None,
     tmp_path: Path,
 ) -> tuple[list[str], Path, Path | None]:
@@ -53,6 +57,13 @@ def _build_cncsim_command(
         parameter_output_path = tmp_path / "parameters-out.var"
         command.extend(["--parameter-output", str(parameter_output_path)])
 
+    if probe_box is not None:
+        command.append("--probe-box")
+        command.extend(str(value) for value in probe_box)
+
+    if probe_tool is not None:
+        command.extend(["--probe-tool", str(probe_tool)])
+
     if tool_table_content is not None:
         tool_table_path = tmp_path / "tool.tbl"
         tool_table_path.write_text(tool_table_content, encoding="utf-8")
@@ -67,6 +78,8 @@ def _run_cncsim_and_read_outputs(
     input_gcode: str,
     parameter_input_content: str | None,
     pass_parameter_output: bool,
+    probe_box: ProbeBox | None,
+    probe_tool: int | None,
     tool_table_content: str | None,
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], str | None]:
@@ -75,6 +88,8 @@ def _run_cncsim_and_read_outputs(
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
+        probe_box=probe_box,
+        probe_tool=probe_tool,
         tool_table_content=tool_table_content,
         tmp_path=tmp_path,
     )
@@ -104,6 +119,8 @@ def run_cncsim(
     input_gcode: str,
     parameter_input_content: str | None = None,
     pass_parameter_output: bool = False,
+    probe_box: ProbeBox | None = None,
+    probe_tool: int | None = None,
     tool_table_content: str | None = None,
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
@@ -112,6 +129,8 @@ def run_cncsim(
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
+        probe_box=probe_box,
+        probe_tool=probe_tool,
         tool_table_content=tool_table_content,
         tmp_path=tmp_path,
     )
@@ -124,6 +143,8 @@ def run_cncsim_invalid_input(
     input_gcode: str,
     parameter_input_content: str | None = None,
     pass_parameter_output: bool = False,
+    probe_box: ProbeBox | None = None,
+    probe_tool: int | None = None,
     tool_table_content: str | None = None,
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
@@ -132,6 +153,8 @@ def run_cncsim_invalid_input(
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
+        probe_box=probe_box,
+        probe_tool=probe_tool,
         tool_table_content=tool_table_content,
         tmp_path=tmp_path,
     )
@@ -147,6 +170,8 @@ def run_cncsim_with_parameter_output(
     *,
     input_gcode: str,
     parameter_input_content: str | None = None,
+    probe_box: ProbeBox | None = None,
+    probe_tool: int | None = None,
     tool_table_content: str | None = None,
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], str]:
@@ -155,6 +180,8 @@ def run_cncsim_with_parameter_output(
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=True,
+        probe_box=probe_box,
+        probe_tool=probe_tool,
         tool_table_content=tool_table_content,
         tmp_path=tmp_path,
     )

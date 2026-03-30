@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cctype>
 #include <cmath>
 #include <fstream>
@@ -68,9 +69,25 @@ struct ToolTableEntry {
     double diameter = 0.0;
 };
 
+struct ProbeBox {
+    double x_min = 0.0;
+    double x_max = 0.0;
+    double y_min = 0.0;
+    double y_max = 0.0;
+    double z_min = 0.0;
+    double z_max = 0.0;
+    LengthUnit unit = LengthUnit::kInches;
+};
+
 constexpr int kMinParameterIndex = 1;
 constexpr int kMaxParameterIndex = 5399;
 constexpr int kParameterCount = kMaxParameterIndex + 1;
+constexpr int kProbeTripXParameter = 5061;
+constexpr int kProbeTripYParameter = 5062;
+constexpr int kProbeTripZParameter = 5063;
+constexpr int kProbeTripAParameter = 5064;
+constexpr int kProbeTripBParameter = 5065;
+constexpr int kProbeTripCParameter = 5066;
 constexpr int kSelectedCoordinateSystemParameter = 5220;
 constexpr int kG92XAxisOffsetParameter = 5211;
 constexpr int kG92YAxisOffsetParameter = 5212;
@@ -131,6 +148,8 @@ struct MachineState {
     std::optional<LengthUnit> active_tool_length_offset_unit;
     std::optional<int> selected_tool;
     std::optional<int> tool_in_spindle;
+    std::optional<ProbeBox> probe_box;
+    std::optional<int> probe_tool_number;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
     Plane selected_plane = Plane::kXY;
     LengthUnit current_length_unit = LengthUnit::kInches;
@@ -143,6 +162,8 @@ struct ProgramOptions {
     std::optional<std::string> parameter_input_path;
     std::optional<std::string> parameter_output_path;
     std::optional<std::string> tool_table_path;
+    std::optional<ProbeBox> probe_box;
+    std::optional<int> probe_tool_number;
 };
 
 struct ParsedLine {
@@ -182,7 +203,9 @@ ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(
     const std::string& input_path,
     const std::optional<std::string>& parameter_input_path,
-    const std::optional<std::string>& tool_table_path
+    const std::optional<std::string>& tool_table_path,
+    const std::optional<ProbeBox>& probe_box,
+    const std::optional<int>& probe_tool_number
 );
 void load_parameter_file(const std::string& parameter_input_path, MachineState& state);
 void load_tool_table(const std::string& tool_table_path, MachineState& state);
@@ -245,6 +268,7 @@ double resolved_program_axis_endpoint(
 );
 bool has_linear_axis_word(const ParsedLine& parsed_line);
 bool line_has_motion_axis_word(const ParsedLine& parsed_line);
+bool is_probe_motion(std::string_view active_gcode);
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state);
 void validate_arc_command(const ParsedLine& parsed_line, const MachineState& state);
 void register_non_modal_g_code(ParsedLine& parsed_line, std::string_view active_gcode);
@@ -278,6 +302,14 @@ void reset_g92_axis_offsets(MachineState& state, bool reset_parameters);
 void restore_g92_axis_offsets_from_parameters(MachineState& state);
 double active_program_origin_offset_for_axis(const MachineState& state, int axis_index);
 void apply_home_return(MachineState& state, const ParsedLine& parsed_line, bool secondary_home);
+bool point_is_inside_probe_box(const Position& point, const ProbeBox& probe_box, LengthUnit current_unit);
+std::optional<Position> find_probe_trip_point(
+    const Position& start,
+    const Position& programmed_point,
+    const ProbeBox& probe_box,
+    LengthUnit current_unit
+);
+void apply_probe_motion(MachineState& state, const ParsedLine& parsed_line);
 double convert_length_value(double value, LengthUnit from, LengthUnit to);
 void convert_position_in_place(Position& position, LengthUnit from, LengthUnit to);
 LengthUnit length_unit_for_g_code(std::string_view active_gcode);
@@ -341,6 +373,40 @@ void write_output_file(const std::string& output_path, const std::string& conten
 
 ProgramOptions parse_command_line(int argc, char* argv[]) {
     ProgramOptions options;
+    auto parse_double_argument = [](const char* text, std::string_view argument_name) {
+        try {
+            std::size_t parsed_length = 0;
+            const double value = std::stod(text, &parsed_length);
+            if (parsed_length != std::string_view(text).size()) {
+                throw InputError(
+                    "Expected numeric value for " + std::string(argument_name)
+                );
+            }
+            return value;
+        } catch (const std::invalid_argument&) {
+            throw InputError("Expected numeric value for " + std::string(argument_name));
+        } catch (const std::out_of_range&) {
+            throw InputError("Numeric value out of range for " + std::string(argument_name));
+        }
+    };
+    auto parse_non_negative_integer_argument = [](const char* text, std::string_view argument_name) {
+        try {
+            std::size_t parsed_length = 0;
+            const int value = std::stoi(text, &parsed_length);
+            if (parsed_length != std::string_view(text).size() || value < 0) {
+                throw InputError(
+                    "Expected non-negative integer value for " + std::string(argument_name)
+                );
+            }
+            return value;
+        } catch (const std::invalid_argument&) {
+            throw InputError(
+                "Expected non-negative integer value for " + std::string(argument_name)
+            );
+        } catch (const std::out_of_range&) {
+            throw InputError("Integer value out of range for " + std::string(argument_name));
+        }
+    };
 
     for (int index = 1; index < argc; ++index) {
         const std::string argument = argv[index];
@@ -364,11 +430,30 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
             options.tool_table_path = argv[++index];
             continue;
         }
+        if (argument == "--probe-box" && index + 6 < argc) {
+            const double x_min = parse_double_argument(argv[++index], "--probe-box");
+            const double x_max = parse_double_argument(argv[++index], "--probe-box");
+            const double y_min = parse_double_argument(argv[++index], "--probe-box");
+            const double y_max = parse_double_argument(argv[++index], "--probe-box");
+            const double z_min = parse_double_argument(argv[++index], "--probe-box");
+            const double z_max = parse_double_argument(argv[++index], "--probe-box");
+            if (x_min > x_max || y_min > y_max || z_min > z_max) {
+                throw InputError("Probe-box ranges must be ordered min then max");
+            }
+            options.probe_box = ProbeBox{x_min, x_max, y_min, y_max, z_min, z_max};
+            continue;
+        }
+        if (argument == "--probe-tool" && index + 1 < argc) {
+            options.probe_tool_number =
+                parse_non_negative_integer_argument(argv[++index], "--probe-tool");
+            continue;
+        }
 
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
             "[--parameter-input <parameter_file>] [--parameter-output <parameter_file>] "
-            "[--tool-table <tool_file>]"
+            "[--tool-table <tool_file>] [--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
+            "<z_max>] [--probe-tool <tool_number>]"
         );
     }
 
@@ -376,7 +461,8 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
             "[--parameter-input <parameter_file>] [--parameter-output <parameter_file>] "
-            "[--tool-table <tool_file>]"
+            "[--tool-table <tool_file>] [--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
+            "<z_max>] [--probe-tool <tool_number>]"
         );
     }
 
@@ -386,7 +472,9 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 MachineState execute_program(
     const std::string& input_path,
     const std::optional<std::string>& parameter_input_path,
-    const std::optional<std::string>& tool_table_path
+    const std::optional<std::string>& tool_table_path,
+    const std::optional<ProbeBox>& probe_box,
+    const std::optional<int>& probe_tool_number
 ) {
     std::ifstream input_stream(input_path);
     if (!input_stream.is_open()) {
@@ -394,6 +482,8 @@ MachineState execute_program(
     }
 
     MachineState state;
+    state.probe_box = probe_box;
+    state.probe_tool_number = probe_tool_number;
     if (parameter_input_path.has_value()) {
         load_parameter_file(*parameter_input_path, state);
         initialize_state_from_parameters(state);
@@ -1288,12 +1378,22 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     } else {
         validate_linear_motion_command(parsed_line, state);
         validate_arc_command(parsed_line, state);
-        if (parsed_line.use_machine_coordinates) {
+        const auto current_motion = state.active_modal_g_codes.find("1");
+        const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
+        const bool implicit_motion = !explicit_motion && line_has_motion_axis_word(parsed_line);
+        const std::string_view effective_motion = explicit_motion
+            ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
+            : current_motion != state.active_modal_g_codes.end()
+                ? std::string_view(current_motion->second)
+                : std::string_view();
+
+        if ((explicit_motion || implicit_motion) && is_probe_motion(effective_motion)) {
+            apply_probe_motion(state, parsed_line);
+        } else if (parsed_line.use_machine_coordinates) {
             apply_coordinate_system_axis_value(parsed_line.x, state.machine_position.x);
             apply_coordinate_system_axis_value(parsed_line.y, state.machine_position.y);
             apply_coordinate_system_axis_value(parsed_line.z, state.machine_position.z);
         } else if (cutter_radius_compensation_is_active(state) && has_xy_axis_word(parsed_line)) {
-            const auto current_motion = state.active_modal_g_codes.find("1");
             if (current_motion != state.active_modal_g_codes.end()
                 && is_arc_motion(current_motion->second))
             {
@@ -1354,6 +1454,10 @@ bool is_arc_motion(std::string_view active_gcode) {
 
 bool is_linear_motion(std::string_view active_gcode) {
     return active_gcode == "G0" || active_gcode == "G1";
+}
+
+bool is_probe_motion(std::string_view active_gcode) {
+    return active_gcode == "G38.2";
 }
 
 bool is_feed_rate_motion(std::string_view active_gcode) {
@@ -1440,6 +1544,41 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
         throw InputError("Cannot probe with cutter radius compensation active");
     }
 
+    if ((explicit_motion || implicit_motion) && is_probe_motion(effective_motion)) {
+        if (!has_linear_axis_word(parsed_line)) {
+            throw InputError("G38.2 requires at least one X, Y, or Z word");
+        }
+
+        const Position programmed_point{
+            resolved_program_axis_endpoint(
+                parsed_line.x,
+                state.machine_position.x,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 0)
+            ),
+            resolved_program_axis_endpoint(
+                parsed_line.y,
+                state.machine_position.y,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 1)
+            ),
+            resolved_program_axis_endpoint(
+                parsed_line.z,
+                state.machine_position.z,
+                state.coordinate_mode,
+                active_program_origin_offset_for_axis(state, 2)
+            ),
+        };
+        const double min_distance = state.current_length_unit == LengthUnit::kMillimeters ? 0.254 : 0.01;
+        const double x_delta = programmed_point.x - state.machine_position.x;
+        const double y_delta = programmed_point.y - state.machine_position.y;
+        const double z_delta = programmed_point.z - state.machine_position.z;
+        const double distance = std::sqrt((x_delta * x_delta) + (y_delta * y_delta) + (z_delta * z_delta));
+        if (distance < min_distance) {
+            throw InputError("G38.2 requires the programmed point to be sufficiently far away");
+        }
+    }
+
     if (explicit_motion && is_linear_motion(effective_motion) && !has_linear_axis_word(parsed_line)) {
         throw InputError("G0/G1 requires at least one axis word");
     }
@@ -1451,7 +1590,8 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
         return;
     }
 
-    if ((explicit_motion || implicit_motion) && is_feed_rate_motion(effective_motion)
+    if ((explicit_motion || implicit_motion)
+        && (is_feed_rate_motion(effective_motion) || is_probe_motion(effective_motion))
         && !parsed_line.feed_rate.has_value())
     {
         throw InputError("Inverse time feed rate motion requires an F word");
@@ -2289,6 +2429,125 @@ void apply_home_return(MachineState& state, const ParsedLine& parsed_line, bool 
         parameter_length_value_in_current_units(state, parameter_index_for_home_axis(secondary_home, 2));
 }
 
+bool point_is_inside_probe_box(const Position& point, const ProbeBox& probe_box, LengthUnit current_unit) {
+    const double x_min = convert_length_value(probe_box.x_min, probe_box.unit, current_unit);
+    const double x_max = convert_length_value(probe_box.x_max, probe_box.unit, current_unit);
+    const double y_min = convert_length_value(probe_box.y_min, probe_box.unit, current_unit);
+    const double y_max = convert_length_value(probe_box.y_max, probe_box.unit, current_unit);
+    const double z_min = convert_length_value(probe_box.z_min, probe_box.unit, current_unit);
+    const double z_max = convert_length_value(probe_box.z_max, probe_box.unit, current_unit);
+
+    return point.x >= x_min && point.x <= x_max && point.y >= y_min && point.y <= y_max
+        && point.z >= z_min && point.z <= z_max;
+}
+
+std::optional<Position> find_probe_trip_point(
+    const Position& start,
+    const Position& programmed_point,
+    const ProbeBox& probe_box,
+    LengthUnit current_unit
+) {
+    const double x_min = convert_length_value(probe_box.x_min, probe_box.unit, current_unit);
+    const double x_max = convert_length_value(probe_box.x_max, probe_box.unit, current_unit);
+    const double y_min = convert_length_value(probe_box.y_min, probe_box.unit, current_unit);
+    const double y_max = convert_length_value(probe_box.y_max, probe_box.unit, current_unit);
+    const double z_min = convert_length_value(probe_box.z_min, probe_box.unit, current_unit);
+    const double z_max = convert_length_value(probe_box.z_max, probe_box.unit, current_unit);
+
+    double entry_t = 0.0;
+    double exit_t = 1.0;
+    const auto update_axis_range = [&](double start_axis, double end_axis, double box_min, double box_max) {
+        const double delta = end_axis - start_axis;
+        if (delta == 0.0) {
+            return start_axis >= box_min && start_axis <= box_max;
+        }
+
+        double axis_entry_t = (box_min - start_axis) / delta;
+        double axis_exit_t = (box_max - start_axis) / delta;
+        if (axis_entry_t > axis_exit_t) {
+            std::swap(axis_entry_t, axis_exit_t);
+        }
+
+        entry_t = std::max(entry_t, axis_entry_t);
+        exit_t = std::min(exit_t, axis_exit_t);
+        return entry_t <= exit_t;
+    };
+
+    if (!update_axis_range(start.x, programmed_point.x, x_min, x_max)
+        || !update_axis_range(start.y, programmed_point.y, y_min, y_max)
+        || !update_axis_range(start.z, programmed_point.z, z_min, z_max))
+    {
+        return std::nullopt;
+    }
+
+    if (entry_t < 0.0 || entry_t > 1.0) {
+        return std::nullopt;
+    }
+
+    return Position{
+        start.x + ((programmed_point.x - start.x) * entry_t),
+        start.y + ((programmed_point.y - start.y) * entry_t),
+        start.z + ((programmed_point.z - start.z) * entry_t),
+    };
+}
+
+void apply_probe_motion(MachineState& state, const ParsedLine& parsed_line) {
+    if (!state.probe_box.has_value()) {
+        throw InputError("G38.2 requires --probe-box");
+    }
+    if (!state.probe_tool_number.has_value()) {
+        throw InputError("G38.2 requires --probe-tool");
+    }
+    if (!state.tool_in_spindle.has_value() || *state.tool_in_spindle != *state.probe_tool_number) {
+        throw InputError("G38.2 requires a probe in the spindle");
+    }
+    if (state.spindle_direction != SpindleDirection::kOff) {
+        throw InputError("G38.2 requires the spindle to be stopped");
+    }
+    if (point_is_inside_probe_box(state.machine_position, *state.probe_box, state.current_length_unit)) {
+        throw InputError("G38.2 cannot start with the probe already tripped");
+    }
+
+    const Position programmed_point{
+        resolved_program_axis_endpoint(
+            parsed_line.x,
+            state.machine_position.x,
+            state.coordinate_mode,
+            active_program_origin_offset_for_axis(state, 0)
+        ),
+        resolved_program_axis_endpoint(
+            parsed_line.y,
+            state.machine_position.y,
+            state.coordinate_mode,
+            active_program_origin_offset_for_axis(state, 1)
+        ),
+        resolved_program_axis_endpoint(
+            parsed_line.z,
+            state.machine_position.z,
+            state.coordinate_mode,
+            active_program_origin_offset_for_axis(state, 2)
+        ),
+    };
+
+    const std::optional<Position> trip_point = find_probe_trip_point(
+        state.machine_position,
+        programmed_point,
+        *state.probe_box,
+        state.current_length_unit
+    );
+    if (!trip_point.has_value()) {
+        throw InputError("G38.2 did not trip before the programmed point");
+    }
+
+    state.machine_position = *trip_point;
+    set_parameter_value(state, kProbeTripXParameter, trip_point->x, state.current_length_unit);
+    set_parameter_value(state, kProbeTripYParameter, trip_point->y, state.current_length_unit);
+    set_parameter_value(state, kProbeTripZParameter, trip_point->z, state.current_length_unit);
+    set_parameter_value(state, kProbeTripAParameter, 0.0);
+    set_parameter_value(state, kProbeTripBParameter, 0.0);
+    set_parameter_value(state, kProbeTripCParameter, 0.0);
+}
+
 void apply_parameter_writes(const ParsedLine& parsed_line, MachineState& state) {
     for (const ParameterWrite& parameter_write : parsed_line.parameter_writes) {
         int system_number = 0;
@@ -2908,7 +3167,9 @@ int main(int argc, char* argv[]) {
         const MachineState final_state = execute_program(
             options.input_path,
             options.parameter_input_path,
-            options.tool_table_path
+            options.tool_table_path,
+            options.probe_box,
+            options.probe_tool_number
         );
         write_output_file(options.output_path, to_json(final_state));
         if (options.parameter_output_path.has_value()) {

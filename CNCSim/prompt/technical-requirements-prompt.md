@@ -9,6 +9,13 @@
   If --parameter-output is provided and execution succeeds, write a parameter file at that path.
   For the written file, follow the RS274 section 3.2.1 rules and include any additional parameters
   that were loaded from --parameter-input or set during execution.
+- The harness may also pass: --probe-box <x_min> <x_max> <y_min> <y_max> <z_min> <z_max>
+  and/or --probe-tool <tool_number>
+  If provided, --probe-box defines an axis-aligned probeable box in absolute machine coordinates,
+  with all six numeric extents expressed in inches. For G38.2 in this task, a probe trip occurs
+  when the RS274 controlled point first enters that box; no additional probe-tip length, radius,
+  or stylus shape is modeled. If provided, --probe-tool gives the tool number that should be
+  treated as a probe for G38.2.
 - The output file must be JSON in this format:
   {
     "machine_position": {"x": float, "y": float, "z": float},
