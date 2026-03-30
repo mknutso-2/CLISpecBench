@@ -33,6 +33,7 @@ def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
 def _build_cncsim_command(
     executable_path: Path,
     *,
+    carousel_slots: int | None,
     input_gcode: str,
     parameter_input_content: str | None,
     pass_parameter_output: bool,
@@ -46,6 +47,9 @@ def _build_cncsim_command(
     input_path.write_text(input_gcode, encoding="utf-8")
 
     command = [str(executable_path), "--input", str(input_path), "--output", str(output_path)]
+
+    if carousel_slots is not None:
+        command.extend(["--carousel-slots", str(carousel_slots)])
 
     if parameter_input_content is not None:
         parameter_input_path = tmp_path / "parameters-in.var"
@@ -75,6 +79,7 @@ def _build_cncsim_command(
 def _run_cncsim_and_read_outputs(
     executable_path: Path,
     *,
+    carousel_slots: int | None,
     input_gcode: str,
     parameter_input_content: str | None,
     pass_parameter_output: bool,
@@ -85,6 +90,7 @@ def _run_cncsim_and_read_outputs(
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], str | None]:
     command, output_path, parameter_output_path = _build_cncsim_command(
         executable_path,
+        carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
@@ -116,6 +122,7 @@ def _run_cncsim_and_read_outputs(
 def run_cncsim(
     executable_path: Path,
     *,
+    carousel_slots: int | None = None,
     input_gcode: str,
     parameter_input_content: str | None = None,
     pass_parameter_output: bool = False,
@@ -126,6 +133,7 @@ def run_cncsim(
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     completed, payload, _ = _run_cncsim_and_read_outputs(
         executable_path,
+        carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
@@ -140,6 +148,7 @@ def run_cncsim(
 def run_cncsim_invalid_input(
     executable_path: Path,
     *,
+    carousel_slots: int | None = None,
     input_gcode: str,
     parameter_input_content: str | None = None,
     pass_parameter_output: bool = False,
@@ -150,6 +159,7 @@ def run_cncsim_invalid_input(
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     completed, payload = run_cncsim(
         executable_path,
+        carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
@@ -168,6 +178,7 @@ def run_cncsim_invalid_input(
 def run_cncsim_with_parameter_output(
     executable_path: Path,
     *,
+    carousel_slots: int | None = None,
     input_gcode: str,
     parameter_input_content: str | None = None,
     probe_box: ProbeBox | None = None,
@@ -177,6 +188,7 @@ def run_cncsim_with_parameter_output(
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], str]:
     completed, payload, parameter_output = _run_cncsim_and_read_outputs(
         executable_path,
+        carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         parameter_input_content=parameter_input_content,
         pass_parameter_output=True,

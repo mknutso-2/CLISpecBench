@@ -6,11 +6,12 @@ import pytest
 
 from swe_buildbench.cncsim.test_support import run_cncsim
 
-ToolingStateCase = tuple[str, str, int | None, int | None, int | None, int | None]
+ToolingStateCase = tuple[str, str, int | None, int | None, int | None, int | None, int | None]
 
 TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 
 4 4 0.5 0.25 finisher
+6 6 1.0 0.375 slotdrill
 7 7 1.5 0.5 endmill
 12 12 2.0 0.75 drill
 """
@@ -23,11 +24,13 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         None,
         None,
+        None,
     ),
     (
         "clears-cutter-radius-compensation-number-on-g40",
         "G41 D3\n"
         "G40\n",
+        None,
         None,
         None,
         None,
@@ -40,11 +43,13 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         12,
         None,
         None,
+        None,
     ),
     (
         "clears-tool-length-offset-index-on-g49",
         "G43 H4\n"
         "G49\n",
+        None,
         None,
         None,
         None,
@@ -57,6 +62,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         8,
         None,
+        None,
     ),
     (
         "tracks-tool-in-spindle-after-m6",
@@ -67,6 +73,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         9,
         9,
+        None,
     ),
     (
         "tracks-selected-tool-separately-from-tool-in-spindle",
@@ -77,6 +84,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         7,
         4,
+        None,
     ),
     (
         "tracks-empty-spindle-after-t0-m6",
@@ -88,6 +96,19 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         None,
         0,
         None,
+        None,
+    ),
+    (
+        "accepts-d-h-and-t-equal-to-carousel-slot-count",
+        "T6\n"
+        "M6\n"
+        "G43 H6\n"
+        "G41 D6\n",
+        6,
+        6,
+        6,
+        6,
+        6,
     ),
     (
         "tracks-all-tooling-state-together",
@@ -97,6 +118,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         6,
         7,
         5,
+        None,
         None,
     ),
     (
@@ -111,6 +133,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         7,
         6,
         None,
+        None,
     ),
     (
         "tracks-tooling-state-from-expressions",
@@ -120,6 +143,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         4,
         7,
         6,
+        None,
         None,
     ),
     (
@@ -132,6 +156,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         4,
         7,
         6,
+        None,
         None,
     ),
 ]
@@ -146,7 +171,9 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
 # unary-operation values as real values. RS274 section 3.7.3 says a T word
 # selects the next tool but does not change the spindle until M6, and section
 # 3.6.3 says that after M6 the selected tool is the tool in the spindle, with
-# T0 leaving the spindle empty after the tool change.
+# T0 leaving the spindle empty after the tool change. Sections 3.5.10, 3.5.11,
+# and 3.7.3 all make the carousel-slot-count check a strict `>` comparison, so
+# a D/H/T number equal to the slot count remains valid.
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -154,6 +181,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
         "expected_tool_length_offset_index",
         "expected_selected_tool",
         "expected_tool_in_spindle",
+        "carousel_slots",
     ),
     [
         (
@@ -162,6 +190,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
             expected_tool_length_offset_index,
             expected_selected_tool,
             expected_tool_in_spindle,
+            carousel_slots,
         )
         for (
             _,
@@ -170,9 +199,10 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
             expected_tool_length_offset_index,
             expected_selected_tool,
             expected_tool_in_spindle,
+            carousel_slots,
         ) in TOOLING_STATE_CASES
     ],
-    ids=[case_id for case_id, _, _, _, _, _ in TOOLING_STATE_CASES],
+    ids=[case_id for case_id, _, _, _, _, _, _ in TOOLING_STATE_CASES],
 )
 def test_application_tracks_tooling_state(
     built_executable_path: Path,
@@ -181,10 +211,12 @@ def test_application_tracks_tooling_state(
     expected_tool_length_offset_index: int | None,
     expected_selected_tool: int | None,
     expected_tool_in_spindle: int | None,
+    carousel_slots: int | None,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
         built_executable_path,
+        carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,

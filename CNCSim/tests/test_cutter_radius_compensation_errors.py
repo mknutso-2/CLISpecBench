@@ -12,9 +12,7 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 """
 
 # RS274 Appendix B.5.4 explicitly defines an error for a D number larger than
-# the number of carousel slots. CNCSim does not currently define that slot
-# count in the harness contract, so that specific error is intentionally not
-# asserted here.
+# the number of carousel slots.
 
 CRC_ACTIVE_PREFIX = "G17 G90 G94\nG41 D1\n"
 
@@ -76,11 +74,20 @@ GCODE_BODIES_INVALID_WHILE_CRC_IS_ACTIVE = [
 ]
 
 
-CRC_ERROR_CASES: list[tuple[str, str]] = [
+CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
+    # RS274 section 3.5.10: the D number may not be larger than the number of
+    # carousel slots.
+    (
+        "g41-rejects-d-larger-than-carousel-slots",
+        "G17 G90 G94\n"
+        "G41 D7\n",
+        6,
+    ),
     # RS274 Appendix B.5 error 12: a D word may not appear without G41 or G42.
     (
         "d-word-without-g41-or-g42",
         "D1\n",
+        None,
     ),
     # RS274 section 3.5.10 and Appendix B.5 error 5: compensation may not be
     # turned on when it is already on.
@@ -89,6 +96,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G17\n"
         "G41 D1\n"
         "G42 D1\n",
+        None,
     ),
     # RS274 Appendix B.5.3: the first move is an error if the programmed point
     # is inside the initial cross section of the tool.
@@ -97,6 +105,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G17 G90 G94\n"
         "G0 X0.0 Y0.0\n"
         "G41 D1 G1 X2.0 Y0.0\n",
+        None,
     ),
     # RS274 Appendix B.5.1 and Figure 6: a concave corner into which the tool
     # circle will not fit is an error. After establishing a compensated
@@ -110,6 +119,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G42 D1 G1 X5.0 Y0.0\n"
         "G1 X10.0 Y0.0\n"
         "G1 X14.0 Y-3.0\n",
+        None,
     ),
     # Mirror-image oblique concave corner for G41. After the compensated
     # horizontal path is established, the turn from (10, 0) to (14, 3) places
@@ -121,6 +131,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G41 D1 G1 X5.0 Y0.0\n"
         "G1 X10.0 Y0.0\n"
         "G1 X14.0 Y3.0\n",
+        None,
     ),
     # Simpler 90-degree concave corner for G41: from +X to +Y while keeping
     # the tool on the left side of the contour.
@@ -131,6 +142,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G41 D1 G1 X5.0 Y0.0\n"
         "G1 X10.0 Y0.0\n"
         "G1 X10.0 Y4.0\n",
+        None,
     ),
     # Simpler 90-degree concave corner for G42: from +X to -Y while keeping
     # the tool on the right side of the contour.
@@ -141,6 +153,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G42 D1 G1 X5.0 Y0.0\n"
         "G1 X10.0 Y0.0\n"
         "G1 X10.0 Y-4.0\n",
+        None,
     ),
     # RS274 Appendix B.5.1 error 16: if the tool radius is not less than the
     # programmed arc radius on an inward compensated arc, the tool cannot stay
@@ -152,6 +165,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G41 D1 G1 X5.0 Y0.0\n"
         "G3 X2.0 Y3.0 I-3.0 J0.0\n",
+        None,
     ),
     # Mirror-image inward arc for G42 on a CW move.
     (
@@ -160,6 +174,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G42 D1 G1 X5.0 Y0.0\n"
         "G2 X2.0 Y-3.0 I-3.0 J0.0\n",
+        None,
     ),
     # The same Appendix B.5.1 error also applies when the programmed arc
     # radius is strictly smaller than the tool radius.
@@ -169,6 +184,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G41 D1 G1 X5.0 Y0.0\n"
         "G3 X3.0 Y2.0 I-2.0 J0.0\n",
+        None,
     ),
     # Mirror-image inward arc for G42 with programmed radius 2.0.
     (
@@ -177,6 +193,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G42 D1 G1 X5.0 Y0.0\n"
         "G2 X3.0 Y-2.0 I-2.0 J0.0\n",
+        None,
     ),
     # The same inward-arc condition should be rejected in radius format.
     (
@@ -185,6 +202,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G41 D1 G1 X5.0 Y0.0\n"
         "G3 X2.0 Y3.0 R3.0\n",
+        None,
     ),
     # Mirror-image radius-format inward arc for G42.
     (
@@ -193,6 +211,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G42 D1 G1 X5.0 Y0.0\n"
         "G2 X2.0 Y-3.0 R3.0\n",
+        None,
     ),
     # Smaller-than-tool radius variant in radius format.
     (
@@ -201,6 +220,7 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G41 D1 G1 X5.0 Y0.0\n"
         "G3 X3.0 Y2.0 R2.0\n",
+        None,
     ),
     # Mirror-image radius-format inward arc with programmed radius 2.0.
     (
@@ -209,22 +229,25 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G42 D1 G1 X5.0 Y0.0\n"
         "G2 X3.0 Y-2.0 R2.0\n",
+        None,
     ),
 ]
 
 
 @pytest.mark.parametrize(
-    "input_gcode",
-    [input_gcode for _, input_gcode in CRC_ERROR_CASES],
-    ids=[case_id for case_id, _ in CRC_ERROR_CASES],
+    ("input_gcode", "carousel_slots"),
+    [(input_gcode, carousel_slots) for _, input_gcode, carousel_slots in CRC_ERROR_CASES],
+    ids=[case_id for case_id, _, _ in CRC_ERROR_CASES],
 )
 def test_application_rejects_invalid_cutter_radius_compensation_usage(
     built_executable_path: Path,
     input_gcode: str,
+    carousel_slots: int | None,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
         built_executable_path,
+        carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,

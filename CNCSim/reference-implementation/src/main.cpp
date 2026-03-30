@@ -148,6 +148,7 @@ struct MachineState {
     std::optional<LengthUnit> active_tool_length_offset_unit;
     std::optional<int> selected_tool;
     std::optional<int> tool_in_spindle;
+    std::optional<int> carousel_slots;
     std::optional<ProbeBox> probe_box;
     std::optional<int> probe_tool_number;
     CoordinateMode coordinate_mode = CoordinateMode::kAbsolute;
@@ -159,6 +160,7 @@ struct MachineState {
 struct ProgramOptions {
     std::string input_path;
     std::string output_path;
+    std::optional<int> carousel_slots;
     std::optional<std::string> parameter_input_path;
     std::optional<std::string> parameter_output_path;
     std::optional<std::string> tool_table_path;
@@ -202,6 +204,7 @@ public:
 ProgramOptions parse_command_line(int argc, char* argv[]);
 MachineState execute_program(
     const std::string& input_path,
+    const std::optional<int>& carousel_slots,
     const std::optional<std::string>& parameter_input_path,
     const std::optional<std::string>& tool_table_path,
     const std::optional<ProbeBox>& probe_box,
@@ -227,6 +230,12 @@ double parse_unary_operation_value(std::string_view text, std::size_t& position,
 int parse_parameter_index(std::string_view text, std::size_t& position, const MachineState& state);
 int require_parameter_index(double value);
 int require_non_negative_integer(double value, std::string_view word);
+void validate_tool_slot_number(
+    const MachineState& state,
+    int slot_number,
+    std::string_view letter,
+    bool allow_zero
+);
 bool is_close_to_integer(double value);
 int round_if_close_to_integer(double value, std::string_view error_message);
 int round_g_code_tenths_if_close(double value);
@@ -418,6 +427,11 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
             options.output_path = argv[++index];
             continue;
         }
+        if (argument == "--carousel-slots" && index + 1 < argc) {
+            options.carousel_slots =
+                parse_non_negative_integer_argument(argv[++index], "--carousel-slots");
+            continue;
+        }
         if (argument == "--parameter-input" && index + 1 < argc) {
             options.parameter_input_path = argv[++index];
             continue;
@@ -451,8 +465,9 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
-            "[--parameter-input <parameter_file>] [--parameter-output <parameter_file>] "
-            "[--tool-table <tool_file>] [--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
+            "[--carousel-slots <slot_count>] [--parameter-input <parameter_file>] "
+            "[--parameter-output <parameter_file>] [--tool-table <tool_file>] "
+            "[--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
             "<z_max>] [--probe-tool <tool_number>]"
         );
     }
@@ -460,8 +475,9 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
     if (options.input_path.empty() || options.output_path.empty()) {
         throw InputError(
             "Usage: cncsim_reference --input <gcode_file> --output <result_file> "
-            "[--parameter-input <parameter_file>] [--parameter-output <parameter_file>] "
-            "[--tool-table <tool_file>] [--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
+            "[--carousel-slots <slot_count>] [--parameter-input <parameter_file>] "
+            "[--parameter-output <parameter_file>] [--tool-table <tool_file>] "
+            "[--probe-box <x_min> <x_max> <y_min> <y_max> <z_min> "
             "<z_max>] [--probe-tool <tool_number>]"
         );
     }
@@ -471,6 +487,7 @@ ProgramOptions parse_command_line(int argc, char* argv[]) {
 
 MachineState execute_program(
     const std::string& input_path,
+    const std::optional<int>& carousel_slots,
     const std::optional<std::string>& parameter_input_path,
     const std::optional<std::string>& tool_table_path,
     const std::optional<ProbeBox>& probe_box,
@@ -482,6 +499,7 @@ MachineState execute_program(
     }
 
     MachineState state;
+    state.carousel_slots = carousel_slots;
     state.probe_box = probe_box;
     state.probe_tool_number = probe_tool_number;
     if (parameter_input_path.has_value()) {
@@ -1024,6 +1042,25 @@ int require_non_negative_integer(double value, std::string_view word) {
     return integer_value;
 }
 
+void validate_tool_slot_number(
+    const MachineState& state,
+    int slot_number,
+    std::string_view letter,
+    bool allow_zero
+) {
+    if (!state.carousel_slots.has_value()) {
+        return;
+    }
+    if (slot_number == 0 && allow_zero) {
+        return;
+    }
+    if (slot_number > *state.carousel_slots) {
+        throw InputError(
+            std::string(letter) + " number cannot be larger than the number of carousel slots"
+        );
+    }
+}
+
 void parse_parameter_setting(
     std::string_view text,
     std::size_t& position,
@@ -1058,15 +1095,19 @@ void parse_word_segment(
     const char letter = static_cast<char>(std::toupper(static_cast<unsigned char>(text[position++])));
     switch (letter) {
         case 'D':
+        {
+            const int d_number = require_non_negative_integer(
+                parse_real_value(text, position, state),
+                std::string_view("D")
+            );
+            validate_tool_slot_number(state, d_number, std::string_view("D"), true);
             assign_unique_word(
                 parsed_line.d,
-                require_non_negative_integer(
-                    parse_real_value(text, position, state),
-                    std::string_view("D")
-                ),
+                d_number,
                 std::string_view("D")
             );
             return;
+        }
         case 'F':
             assign_unique_word(
                 parsed_line.feed_rate,
@@ -1078,15 +1119,19 @@ void parse_word_segment(
             apply_g_code_value(parse_real_value(text, position, state), parsed_line);
             return;
         case 'H':
+        {
+            const int h_number = require_non_negative_integer(
+                parse_real_value(text, position, state),
+                std::string_view("H")
+            );
+            validate_tool_slot_number(state, h_number, std::string_view("H"), true);
             assign_unique_word(
                 parsed_line.h,
-                require_non_negative_integer(
-                    parse_real_value(text, position, state),
-                    std::string_view("H")
-                ),
+                h_number,
                 std::string_view("H")
             );
             return;
+        }
         case 'I':
             assign_unique_word(
                 parsed_line.i,
@@ -1143,15 +1188,19 @@ void parse_word_segment(
             );
             return;
         case 'T':
+        {
+            const int t_number = require_non_negative_integer(
+                parse_real_value(text, position, state),
+                std::string_view("T")
+            );
+            validate_tool_slot_number(state, t_number, std::string_view("T"), true);
             assign_unique_word(
                 parsed_line.t,
-                require_non_negative_integer(
-                    parse_real_value(text, position, state),
-                    std::string_view("T")
-                ),
+                t_number,
                 std::string_view("T")
             );
             return;
+        }
         case 'X':
             assign_unique_word(
                 parsed_line.x,
@@ -3177,6 +3226,7 @@ int main(int argc, char* argv[]) {
     try {
         const MachineState final_state = execute_program(
             options.input_path,
+            options.carousel_slots,
             options.parameter_input_path,
             options.tool_table_path,
             options.probe_box,
