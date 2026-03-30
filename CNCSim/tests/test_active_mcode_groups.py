@@ -17,6 +17,21 @@ ActiveMcodeGroupCase = tuple[str, str, str]
 
 ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
     (
+        "M0\n",
+        MCODE_MODAL_GROUP_STOPPING,
+        "M0",
+    ),
+    (
+        "M1\n",
+        MCODE_MODAL_GROUP_STOPPING,
+        "M1",
+    ),
+    (
+        "M60\n",
+        MCODE_MODAL_GROUP_STOPPING,
+        "M60",
+    ),
+    (
         "M0\n"
         "M1\n",
         MCODE_MODAL_GROUP_STOPPING,
@@ -51,6 +66,9 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
 # See CNCSim/prompt/docs/RS274NGC.md section 3.4 "Modal Groups" and Table 4:
 # only one member of a modal group may be in force at a time, so the last
 # emitted M-code from a group should be the active one reported in the output.
+# For stopping-group codes such as M0, M1, and M60, the current harness can
+# only observe acceptance and modal-state tracking, not the full stop/resume or
+# pallet-shuttle behavior from section 3.6.1.
 @pytest.mark.parametrize(
     ("input_gcode", "group_number", "expected_active_mcode"),
     ACTIVE_MCODE_GROUP_CASES,
