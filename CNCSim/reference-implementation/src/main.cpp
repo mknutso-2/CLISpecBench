@@ -1133,8 +1133,20 @@ void apply_line(const ParsedLine& parsed_line, MachineState& state) {
     if (parsed_line.active_modal_g_codes.contains("6") && cutter_radius_compensation_is_active(state)) {
         throw InputError("Cannot change units with cutter radius compensation active");
     }
+    if (
+        parsed_line.active_modal_g_codes.contains("2") && cutter_radius_compensation_is_active(state)
+        && parsed_line.active_modal_g_codes.at("2") != "G17"
+    ) {
+        throw InputError("Cannot change planes away from XY with cutter radius compensation active");
+    }
     if (parsed_line.active_modal_g_codes.contains("12") && cutter_radius_compensation_is_active(state)) {
         throw InputError("Cannot change coordinate systems with cutter radius compensation active");
+    }
+    if (parsed_line.home_command.has_value() && cutter_radius_compensation_is_active(state)) {
+        throw InputError("Cannot use G28 or G30 with cutter radius compensation active");
+    }
+    if (parsed_line.g92_command.has_value() && cutter_radius_compensation_is_active(state)) {
+        throw InputError("Cannot change axis offsets with cutter radius compensation active");
     }
 
     for (const auto& [group_number, active_gcode] : parsed_line.active_modal_g_codes) {
@@ -1360,6 +1372,7 @@ bool line_has_motion_axis_word(const ParsedLine& parsed_line) {
 void validate_linear_motion_command(const ParsedLine& parsed_line, const MachineState& state) {
     const auto current_motion = state.active_modal_g_codes.find("1");
     const bool explicit_motion = parsed_line.active_modal_g_codes.contains("1");
+    const bool implicit_motion = !explicit_motion && line_has_motion_axis_word(parsed_line);
 
     if (parsed_line.use_machine_coordinates) {
         if (!explicit_motion && current_motion == state.active_modal_g_codes.end()) {
@@ -1375,7 +1388,7 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
         if (!has_linear_axis_word(parsed_line)) {
             throw InputError("G53 requires at least one axis word");
         }
-        if (state.cutter_radius_compensation_number.has_value()) {
+        if (cutter_radius_compensation_is_active(state)) {
             throw InputError("G53 cannot be used while cutter radius compensation is active");
         }
     }
@@ -1387,7 +1400,12 @@ void validate_linear_motion_command(const ParsedLine& parsed_line, const Machine
     const std::string_view effective_motion = explicit_motion
         ? std::string_view(parsed_line.active_modal_g_codes.at("1"))
         : std::string_view(current_motion->second);
-    const bool implicit_motion = !explicit_motion && line_has_motion_axis_word(parsed_line);
+
+    if ((explicit_motion || implicit_motion) && effective_motion == "G38.2"
+        && cutter_radius_compensation_is_active(state))
+    {
+        throw InputError("Cannot probe with cutter radius compensation active");
+    }
 
     if (explicit_motion && is_linear_motion(effective_motion) && !has_linear_axis_word(parsed_line)) {
         throw InputError("G0/G1 requires at least one axis word");

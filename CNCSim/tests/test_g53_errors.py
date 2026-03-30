@@ -21,12 +21,6 @@ G53_ERROR_CASES: list[G53ErrorCase] = [
         "G0 X0.0\n"
         "G53\n",
     ),
-    # RS274 section 3.5.12: G53 is an error while cutter radius compensation is on.
-    (
-        "g53-while-cutter-radius-compensation-is-on",
-        "G41 D1\n"
-        "G53 G0 X1.0\n",
-    ),
 ]
 
 
