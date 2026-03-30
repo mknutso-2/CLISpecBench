@@ -8,7 +8,8 @@ from swe_buildbench.cncsim.modal_groups import (
     GCODE_MODAL_GROUP_MOTION,
     GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
 )
-from swe_buildbench.cncsim.test_support import run_cncsim
+from swe_buildbench.cncsim.rs274_parameters import G92_X_OFFSET_PARAMETER
+from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
 
 CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
 
@@ -224,6 +225,8 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
 #   same canned cycle remains active on following lines
 # - L repeats in incremental mode advance the in-plane axes while R and depth
 #   positions remain fixed for the repeats
+# - G98/G99 remain modal while a cycle stays active, so changing return mode on
+#   a later line changes that later line's clear-Z result
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -275,3 +278,59 @@ def test_application_tracks_initial_canned_cycle_behavior(
     )
     assert payload["machine_position"] == expected_machine_position
     assert payload["spindle_direction"] == expected_spindle_direction
+
+
+# RS274 section 3.5.15 says axis words are an error when G80 is active unless
+# a modal-group-0 G-code using axis words is programmed. G10 and G92 are both
+# supported group-0 axis-using commands, so they should still execute while
+# G80 is the current motion mode.
+def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
+    built_executable_path: Path,
+    tmp_path: Path,
+) -> None:
+    completed, payload = run_cncsim(
+        built_executable_path,
+        input_gcode=(
+            "G80\n"
+            "G10 L2 P2 X4.0 Y5.0 Z6.0\n"
+            "G92 X7.0\n"
+        ),
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert payload["error"] is None
+    assert payload["coordinate_system_offsets"]["2"] == {"x": 4.0, "y": 5.0, "z": 6.0}
+    assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -7.0
+
+
+# RS274 section 3.5.16 says the clear-Z height at the end of each repeat is
+# determined by the current retract mode, so changing from G98 to G99 between
+# later lines of the same active canned cycle should change the later line's
+# final retract level.
+def test_return_mode_change_affects_later_repeats_of_an_active_canned_cycle(
+    built_executable_path: Path,
+    tmp_path: Path,
+) -> None:
+    completed, payload = run_cncsim(
+        built_executable_path,
+        input_gcode=(
+            ZERO_OFFSET_P1_SETUP
+            + "G90\n"
+            + "G98\n"
+            + "G0 X1.0 Y2.0 Z3.0\n"
+            + "G81 X4.0 Y5.0 Z1.5 R2.8 F7.0\n"
+            + "G99\n"
+            + "X6.0 Y7.0\n"
+        ),
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert payload["error"] is None
+    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == "G81"
+    assert (
+        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
+        == "G99"
+    )
+    assert payload["machine_position"] == {"x": 6.0, "y": 7.0, "z": 2.8}
