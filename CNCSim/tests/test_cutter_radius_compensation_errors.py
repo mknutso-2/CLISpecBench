@@ -11,6 +11,11 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 1 1 0.0 6.0 rougher
 """
 
+# RS274 Appendix B.5.4 explicitly defines an error for a D number larger than
+# the number of carousel slots. CNCSim does not currently define that slot
+# count in the harness contract, so that specific error is intentionally not
+# asserted here.
+
 CRC_ACTIVE_PREFIX = "G17 G90 G94\nG41 D1\n"
 
 PLANE_CODES_INVALID_WHEN_ENABLING_CRC = [

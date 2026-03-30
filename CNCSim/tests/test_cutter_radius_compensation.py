@@ -10,6 +10,7 @@ from swe_buildbench.cncsim.test_support import run_cncsim
 TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 
 1 1 0.0 6.0 rougher
+2 2 0.0 10.0 finisher
 """
 
 
@@ -87,6 +88,30 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
             "G41",
             1,
         ),
+        # RS274 Appendix B.2.4 also allows D0; with zero radius, compensation
+        # stays logically on but the spindle center remains on the programmed
+        # contour.
+        (
+            "G17 G90 G94\n"
+            "G0 X0.0 Y0.0\n"
+            "G41 D0 G1 X5.0 Y0.0\n"
+            "G1 X6.0 Y0.0\n",
+            6.0,
+            0.0,
+            "G41",
+            0,
+        ),
+        # Mirror-image zero-radius case for G42.
+        (
+            "G17 G90 G94\n"
+            "G0 X0.0 Y0.0\n"
+            "G42 D0 G1 X5.0 Y0.0\n"
+            "G1 X6.0 Y0.0\n",
+            6.0,
+            0.0,
+            "G42",
+            0,
+        ),
         # RS274 Appendix B.6: after the entry move, the tool stays tangent to
         # the programmed path on the selected side. Extending the same
         # left-to-right contour from X5 to X6 puts the tool center at (6, 3).
@@ -122,6 +147,22 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
             0.0,
             "G40",
             None,
+        ),
+        # RS274 Appendix B.5.2 says that after turning compensation off, the
+        # next time it is turned on the following move is treated as a first
+        # move again. Starting from the prior compensated point (3.2, 2.4),
+        # the right-comp first-move construction to programmed point
+        # (8.2, 2.4) gives the shifted endpoint (6.4, 0.0).
+        (
+            "G17 G90 G94\n"
+            "G0 X0.0 Y0.0\n"
+            "G41 D1 G1 X5.0 Y0.0\n"
+            "G40\n"
+            "G42 D1 G1 X8.2 Y2.4\n",
+            6.4,
+            0.0,
+            "G42",
+            1,
         ),
         # RS274 Appendix B.6: after G40, no special exit move occurs, and the
         # next move behaves as if the previous move had placed the tool at its
@@ -205,19 +246,42 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
             "G42",
             1,
         ),
+        # RS274 Appendix B.5 says changing tools while compensation is on is
+        # not an error, and the radius in use stays the one from when
+        # compensation was turned on until G40. Tool 2 has a different
+        # diameter, so if the interpreter incorrectly switched radii here the
+        # final Y value would be 5 instead of 3.
+        (
+            "T1\n"
+            "M6\n"
+            "G17 G90 G94\n"
+            "G0 X0.0 Y0.0\n"
+            "G41 G1 X5.0 Y0.0\n"
+            "T2\n"
+            "M6\n"
+            "G1 X6.0 Y0.0\n",
+            6.0,
+            3.0,
+            "G41",
+            1,
+        ),
     ],
     ids=[
         "g41-first-straight-move-left",
         "g42-first-straight-move-right",
         "g41-omitted-d-uses-tool-in-spindle",
+        "g41-d0-keeps-spindle-center-on-programmed-path",
+        "g42-d0-keeps-spindle-center-on-programmed-path",
         "g41-colinear-follow-on-move-left",
         "g42-colinear-follow-on-move-right",
         "g40-on-motion-line-disables-comp-before-motion",
+        "g40-then-g42-restarts-with-a-first-move",
         "g40-follow-on-move-starts-from-current-spindle-center",
         "g41-convex-corner-follow-on-move",
         "g41-convex-90-degree-corner-follow-on-move",
         "g42-convex-corner-follow-on-move",
         "g42-convex-90-degree-corner-follow-on-move",
+        "tool-change-while-comp-on-keeps-original-radius",
     ],
 )
 def test_application_tracks_cutter_radius_compensated_spindle_center(
