@@ -10,7 +10,7 @@ from swe_buildbench.cncsim.modal_groups import (
 )
 from swe_buildbench.cncsim.test_support import run_cncsim
 
-CannedCycleCase = tuple[str, str, str, str, dict[str, float]]
+CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
 
 ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG17\nG94\n"
 
@@ -25,6 +25,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G81",
         "G98",
         {"x": 4.0, "y": 5.0, "z": 3.0},
+        "OFF",
     ),
     (
         "g81-g99-returns-to-r",
@@ -36,6 +37,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G81",
         "G99",
         {"x": 4.0, "y": 5.0, "z": 2.8},
+        "OFF",
     ),
     (
         "g81-reuses-sticky-r-and-z-on-following-line",
@@ -48,6 +50,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G81",
         "G98",
         {"x": 6.0, "y": 7.0, "z": 3.0},
+        "OFF",
     ),
     (
         "g81-g91-l-repeats-advance-xy",
@@ -59,6 +62,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G81",
         "G98",
         {"x": 13.0, "y": 17.0, "z": 4.8},
+        "OFF",
     ),
     (
         "g82-accepts-p-and-retracts-like-g81",
@@ -70,6 +74,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G82",
         "G98",
         {"x": 4.0, "y": 5.0, "z": 3.0},
+        "OFF",
     ),
     (
         "g83-accepts-q-and-retracts-to-r-under-g99",
@@ -81,6 +86,87 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G83",
         "G99",
         {"x": 4.0, "y": 5.0, "z": 2.8},
+        "OFF",
+    ),
+    (
+        "g81-g18-uses-y-as-the-depth-axis",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G18\n"
+        "G94\n"
+        "G90\n"
+        "G99\n"
+        "G0 X1.0 Y3.0 Z2.0\n"
+        "G81 X4.0 Y1.5 Z5.0 R2.8 F7.0\n",
+        "G81",
+        "G99",
+        {"x": 4.0, "y": 2.8, "z": 5.0},
+        "OFF",
+    ),
+    (
+        "g81-g19-uses-x-as-the-depth-axis",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G19\n"
+        "G94\n"
+        "G90\n"
+        "G99\n"
+        "G0 X3.0 Y1.0 Z2.0\n"
+        "G81 X1.5 Y4.0 Z5.0 R2.8 F7.0\n",
+        "G81",
+        "G99",
+        {"x": 2.8, "y": 4.0, "z": 5.0},
+        "OFF",
+    ),
+    (
+        "g84-restores-clockwise-spindle-after-the-cycle",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+        "G84",
+        "G98",
+        {"x": 4.0, "y": 5.0, "z": 3.0},
+        "CW",
+    ),
+    (
+        "g85-retracts-like-g81-at-line-end",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G99\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G85 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+        "G85",
+        "G99",
+        {"x": 4.0, "y": 5.0, "z": 2.8},
+        "OFF",
+    ),
+    (
+        "g86-restores-the-prior-spindle-direction",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M4\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G86 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
+        "G86",
+        "G98",
+        {"x": 4.0, "y": 5.0, "z": 3.0},
+        "CCW",
+    ),
+    (
+        "g89-retracts-like-g82-at-line-end",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G99\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G89 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
+        "G89",
+        "G99",
+        {"x": 4.0, "y": 5.0, "z": 2.8},
+        "OFF",
     ),
     (
         "g80-cancels-canned-cycle-motion",
@@ -93,6 +179,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G80",
         "G98",
         {"x": 4.0, "y": 5.0, "z": 3.0},
+        "OFF",
     ),
 ]
 
@@ -102,6 +189,10 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
 # - G81 retracts to clear Z
 # - G82 adds dwell but otherwise retracts like G81
 # - G83 pecks internally but still ends at clear Z
+# - G84/G86 have spindle side effects, which are observable through the final
+#   spindle direction
+# - G85 and G89 differ from G81/G82 in feed-vs-traverse retract details, but
+#   the current payload can still confirm their final retract level
 # - G98 retracts to OLD_Z when it is above R; G99 retracts to R
 # - R is always sticky, and the selected-plane depth word is sticky when the
 #   same canned cycle remains active on following lines
@@ -113,6 +204,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "expected_active_motion",
         "expected_return_mode",
         "expected_machine_position",
+        "expected_spindle_direction",
     ),
     [
         (
@@ -120,6 +212,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
             expected_active_motion,
             expected_return_mode,
             expected_machine_position,
+            expected_spindle_direction,
         )
         for (
             _,
@@ -127,9 +220,10 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
             expected_active_motion,
             expected_return_mode,
             expected_machine_position,
+            expected_spindle_direction,
         ) in CANNED_CYCLE_CASES
     ],
-    ids=[case_id for case_id, _, _, _, _ in CANNED_CYCLE_CASES],
+    ids=[case_id for case_id, _, _, _, _, _ in CANNED_CYCLE_CASES],
 )
 def test_application_tracks_initial_canned_cycle_behavior(
     built_executable_path: Path,
@@ -137,6 +231,7 @@ def test_application_tracks_initial_canned_cycle_behavior(
     expected_active_motion: str,
     expected_return_mode: str,
     expected_machine_position: dict[str, float],
+    expected_spindle_direction: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
@@ -153,3 +248,4 @@ def test_application_tracks_initial_canned_cycle_behavior(
         == expected_return_mode
     )
     assert payload["machine_position"] == expected_machine_position
+    assert payload["spindle_direction"] == expected_spindle_direction

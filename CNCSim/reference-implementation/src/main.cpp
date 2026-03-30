@@ -1296,9 +1296,10 @@ ParsedLine parse_line(std::string_view raw_line, const MachineState& state) {
     }
     if (
         parsed_line.p.has_value() && !parsed_line.has_g10 && !parsed_line.has_g4
-        && effective_motion != "G82"
+        && effective_motion != "G82" && effective_motion != "G86" && effective_motion != "G88"
+        && effective_motion != "G89"
     ) {
-        throw InputError("P word requires G4, G10, or G82");
+        throw InputError("P word requires G4, G10, or a supported P-using canned cycle");
     }
     if (parsed_line.q.has_value() && effective_motion != "G83") {
         throw InputError("Q word requires G83");
@@ -1593,7 +1594,9 @@ bool is_any_canned_cycle_motion(std::string_view active_gcode) {
 }
 
 bool is_supported_canned_cycle_motion(std::string_view active_gcode) {
-    return active_gcode == "G81" || active_gcode == "G82" || active_gcode == "G83";
+    return active_gcode == "G81" || active_gcode == "G82" || active_gcode == "G83"
+        || active_gcode == "G84" || active_gcode == "G85" || active_gcode == "G86"
+        || active_gcode == "G89";
 }
 
 bool is_probe_motion(std::string_view active_gcode) {
@@ -1797,18 +1800,24 @@ void validate_canned_cycle_command(
         }
     }
 
-    if (effective_motion == "G82") {
+    if (effective_motion == "G82" || effective_motion == "G86" || effective_motion == "G89") {
         if (!parsed_line.p.has_value()) {
-            throw InputError("G82 requires a P word");
+            throw InputError(std::string(effective_motion) + " requires a P word");
         }
         if (*parsed_line.p < 0.0) {
-            throw InputError("G82 requires a non-negative P word");
+            throw InputError(std::string(effective_motion) + " requires a non-negative P word");
         }
     }
     if (effective_motion == "G83") {
         if (!parsed_line.q.has_value() || *parsed_line.q <= 0.0) {
             throw InputError("G83 requires a positive Q word");
         }
+    }
+    if (effective_motion == "G84" && state.spindle_direction != SpindleDirection::kClockwise) {
+        throw InputError("G84 requires the spindle to be turning clockwise");
+    }
+    if (effective_motion == "G86" && state.spindle_direction == SpindleDirection::kOff) {
+        throw InputError("G86 requires the spindle to be turning");
     }
 
     char depth_axis_letter = 'Z';

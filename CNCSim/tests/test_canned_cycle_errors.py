@@ -38,6 +38,50 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         + "G81 X4.0 Y5.0 Z2.8 R1.5 F7.0\n",
     ),
     (
+        "g18-canned-cycle-requires-y-on-first-use",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G18\n"
+        "G94\n"
+        "G90\n"
+        "G99\n"
+        "G0 X1.0 Y3.0 Z2.0\n"
+        "G81 X4.0 Z5.0 R2.8 F7.0\n",
+    ),
+    (
+        "g18-canned-cycle-rejects-r-below-y",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G18\n"
+        "G94\n"
+        "G90\n"
+        "G99\n"
+        "G0 X1.0 Y3.0 Z2.0\n"
+        "G81 X4.0 Y2.8 Z5.0 R1.5 F7.0\n",
+    ),
+    (
+        "g19-canned-cycle-requires-x-on-first-use",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G19\n"
+        "G94\n"
+        "G90\n"
+        "G99\n"
+        "G0 X3.0 Y1.0 Z2.0\n"
+        "G81 Y4.0 Z5.0 R2.8 F7.0\n",
+    ),
+    (
+        "g19-canned-cycle-rejects-r-below-x",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "G54\n"
+        "G19\n"
+        "G94\n"
+        "G90\n"
+        "G99\n"
+        "G0 X3.0 Y1.0 Z2.0\n"
+        "G81 X2.8 Y4.0 Z5.0 R1.5 F7.0\n",
+    ),
+    (
         "active-g81-rejects-a-following-line-without-x-y-or-z",
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
@@ -93,6 +137,65 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G83 X4.0 Y5.0 Z1.5 R2.8 Q0.0 F7.0\n",
     ),
+    (
+        "g84-requires-clockwise-spindle-not-off",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+    ),
+    (
+        "g84-requires-clockwise-spindle-not-counterclockwise",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M4\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+    ),
+    (
+        "g86-requires-the-spindle-to-be-turning",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G86 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
+    ),
+    (
+        "g86-requires-p",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G86 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+    ),
+    (
+        "g86-requires-nonnegative-p",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "M3\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G86 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
+    ),
+    (
+        "g89-requires-p",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G89 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+    ),
+    (
+        "g89-requires-nonnegative-p",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G98\n"
+        + "G0 X1.0 Y2.0 Z3.0\n"
+        + "G89 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
+    ),
 ]
 
 
@@ -106,9 +209,12 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
 # - L must be a positive integer
 # - inverse time feed and cutter radius compensation are invalid with canned
 #   cycles
-# - in the XY plane, R may not be less than Z
+# - in each selected plane, R may not be less than the sticky depth-axis word
 # Section 3.5.16.3 requires non-negative P for G82, and section 3.5.16.4
-# requires positive Q for G83.
+# requires positive Q for G83. Section 3.5.16.5 requires the spindle to be
+# turning clockwise before G84. Section 3.5.16.7 requires the spindle to be
+# turning before G86. Sections 3.5.16.7 and 3.5.16.10 define G86 and G89 as
+# P-using cycles, so the same explicit non-negative-P requirement applies.
 @pytest.mark.parametrize(
     "input_gcode",
     [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],
