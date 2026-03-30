@@ -18,7 +18,7 @@ from swe_buildbench.cncsim.test_support import (
 CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
 RepeatedCannedCycleCase = tuple[str, str, str, dict[str, float], str]
 
-ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG17\nG94\n"
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\nG17\nG94\n"
 
 CANNED_CYCLE_CASES: list[CannedCycleCase] = [
     (
@@ -55,6 +55,18 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         "G81",
         "G98",
         {"x": 4.0, "y": 5.0, "z": 3.0, "a": 10.0, "b": 20.0, "c": 30.0},
+        "OFF",
+    ),
+    (
+        "g83-allows-stationary-rotary-words",
+        ZERO_OFFSET_P1_SETUP
+        + "G90\n"
+        + "G99\n"
+        + "G0 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\n"
+        + "G83 X4.0 Y5.0 Z1.5 R2.8 Q0.25 A10.0 B20.0 C30.0 F7.0\n",
+        "G83",
+        "G99",
+        {"x": 4.0, "y": 5.0, "z": 2.8, "a": 10.0, "b": 20.0, "c": 30.0},
         "OFF",
     ),
     (

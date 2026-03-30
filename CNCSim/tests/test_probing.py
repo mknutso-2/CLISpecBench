@@ -211,9 +211,9 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
 # box and --probe-tool for the tool number that should be treated as a probe.
 # These cases pin exact 5061 through 5066 trip coordinates, including the
 # current rotary coordinates when A/B/C words are present but unchanged. The
-# "selected tool" case also
-# relies on RS274 section 3.7.3 and section 3.6.3: a T word only changes the
-# selected tool, and the tool in the spindle does not change until M6.
+# "selected tool" case also relies on RS274 section 3.7.3 and section 3.6.3:
+# a T word only changes the selected tool, and the tool in the spindle does
+# not change until M6.
 @pytest.mark.parametrize(
     ("probe_box", "input_gcode", "expected_trip_parameters", "tool_table_content"),
     [

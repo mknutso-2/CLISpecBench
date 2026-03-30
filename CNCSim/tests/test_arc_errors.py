@@ -6,7 +6,7 @@ import pytest
 
 from swe_buildbench.cncsim.test_support import run_cncsim_invalid_input
 
-ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\n"
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\n"
 
 ArcErrorCase = tuple[str, str]
 

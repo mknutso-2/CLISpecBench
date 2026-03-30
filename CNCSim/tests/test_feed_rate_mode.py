@@ -9,7 +9,7 @@ from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_a
 
 FeedRateModeCase = tuple[str, str, str, float, dict[str, float]]
 
-ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\n"
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\n"
 
 FEED_RATE_MODE_CASES: list[FeedRateModeCase] = [
     (

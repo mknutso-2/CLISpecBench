@@ -8,7 +8,7 @@ from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_a
 
 PositionTrackingCase = tuple[str, str, dict[str, float]]
 
-ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG94\n"
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\nG94\n"
 
 POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     (
@@ -173,6 +173,14 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G91\n"
         "G0 A1.0 B2.0 C3.0\n",
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 11.0, "b": 22.0, "c": 33.0},
+    ),
+    (
+        "g1-updates-rotary-endpoint",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G90\n"
+        "G1 A45.0 B-30.0 C90.0 F10.0\n",
+        {"x": 0.0, "y": 0.0, "z": 0.0, "a": 45.0, "b": -30.0, "c": 90.0},
     ),
     (
         "incremental-accumulates-from-current-position",
