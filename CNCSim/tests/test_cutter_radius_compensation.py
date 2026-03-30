@@ -257,12 +257,23 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
 # - the programmed endpoints are the quarter-circle points (0, 4) and (-4, 0)
 # - the compensated tool-center endpoints are therefore (0, 7) and (-7, 0),
 #   or the mirrored CW values (0, -7) and (-7, 0)
+# The same expected endpoints apply whether that auxiliary arc is programmed in
+# center format (I/J) or radius format (R).
 CRC_ARC_CASES = [
     (
         "g42-first-arc-move",
         "G17 G90 G94\n"
         "G0 X7.0 Y0.0\n"
         "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n",
+        {"x": 0.0, "y": 7.0, "z": 0.0},
+        "G42",
+        1,
+    ),
+    (
+        "g42-first-radius-format-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G42 D1 G3 X0.0 Y4.0 R4.0\n",
         {"x": 0.0, "y": 7.0, "z": 0.0},
         "G42",
         1,
@@ -292,6 +303,15 @@ CRC_ARC_CASES = [
         "G17 G90 G94\n"
         "G0 X7.0 Y0.0\n"
         "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n",
+        {"x": 0.0, "y": -7.0, "z": 0.0},
+        "G41",
+        1,
+    ),
+    (
+        "g41-first-radius-format-arc-move",
+        "G17 G90 G94\n"
+        "G0 X7.0 Y0.0\n"
+        "G41 D1 G2 X0.0 Y-4.0 R4.0\n",
         {"x": 0.0, "y": -7.0, "z": 0.0},
         "G41",
         1,

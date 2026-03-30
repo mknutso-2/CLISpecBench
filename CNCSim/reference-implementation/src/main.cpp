@@ -307,6 +307,14 @@ Point2D resolve_radius_format_arc_center(
     double radius_word,
     std::string_view motion_gcode
 );
+Point2D resolve_first_cutter_comp_radius_format_arc_center(
+    Point2D current_tool_center,
+    Point2D programmed_endpoint,
+    double programmed_arc_radius,
+    double tool_center_arc_radius,
+    double radius_word,
+    std::string_view motion_gcode
+);
 double compensated_arc_radius(
     double programmed_arc_radius,
     double tool_radius,
@@ -1882,6 +1890,77 @@ Point2D resolve_radius_format_arc_center(
     return matches_requested_arc(candidate_a) ? candidate_a : candidate_b;
 }
 
+Point2D resolve_first_cutter_comp_radius_format_arc_center(
+    Point2D current_tool_center,
+    Point2D programmed_endpoint,
+    double programmed_arc_radius,
+    double tool_center_arc_radius,
+    double radius_word,
+    std::string_view motion_gcode
+) {
+    const double connector_x = programmed_endpoint.x - current_tool_center.x;
+    const double connector_y = programmed_endpoint.y - current_tool_center.y;
+    const double connector_length = std::hypot(connector_x, connector_y);
+    if (connector_length <= kNearIntegerTolerance) {
+        throw InputError("First cutter compensation arc cannot be constructed");
+    }
+    if (tool_center_arc_radius + programmed_arc_radius + kNearIntegerTolerance < connector_length) {
+        throw InputError("First cutter compensation arc cannot be constructed");
+    }
+    if (connector_length + std::min(tool_center_arc_radius, programmed_arc_radius)
+        + kNearIntegerTolerance
+        < std::max(tool_center_arc_radius, programmed_arc_radius))
+    {
+        throw InputError("First cutter compensation arc cannot be constructed");
+    }
+
+    const double a = (
+        (tool_center_arc_radius * tool_center_arc_radius)
+        - (programmed_arc_radius * programmed_arc_radius)
+        + (connector_length * connector_length)
+    ) / (2.0 * connector_length);
+    const Point2D base_point{
+        current_tool_center.x + ((connector_x * a) / connector_length),
+        current_tool_center.y + ((connector_y * a) / connector_length),
+    };
+    const double height_squared = std::max(
+        0.0,
+        (tool_center_arc_radius * tool_center_arc_radius) - (a * a)
+    );
+    const double height = std::sqrt(height_squared);
+    const Point2D left_normal{
+        -connector_y / connector_length,
+        connector_x / connector_length,
+    };
+    const Point2D candidate_a{
+        base_point.x + (left_normal.x * height),
+        base_point.y + (left_normal.y * height),
+    };
+    const Point2D candidate_b{
+        base_point.x - (left_normal.x * height),
+        base_point.y - (left_normal.y * height),
+    };
+
+    const auto matches_requested_arc = [&](const Point2D& center) {
+        const Point2D generated_endpoint{
+            center.x + (((programmed_endpoint.x - center.x) * tool_center_arc_radius) / programmed_arc_radius),
+            center.y + (((programmed_endpoint.y - center.y) * tool_center_arc_radius) / programmed_arc_radius),
+        };
+        const double start_x = current_tool_center.x - center.x;
+        const double start_y = current_tool_center.y - center.y;
+        const double end_x = generated_endpoint.x - center.x;
+        const double end_y = generated_endpoint.y - center.y;
+        const double cross = (start_x * end_y) - (start_y * end_x);
+        const bool short_arc_is_ccw = cross > 0.0;
+        const bool requested_is_ccw = motion_gcode == "G3";
+        const bool requested_is_short_arc = radius_word >= 0.0;
+        const bool candidate_is_ccw = requested_is_short_arc ? short_arc_is_ccw : !short_arc_is_ccw;
+        return candidate_is_ccw == requested_is_ccw;
+    };
+
+    return matches_requested_arc(candidate_a) ? candidate_a : candidate_b;
+}
+
 double compensated_arc_radius(
     double programmed_arc_radius,
     double tool_radius,
@@ -2010,21 +2089,48 @@ void apply_cutter_compensated_arc_xy_motion(MachineState& state, const ParsedLin
 
     const Point2D programmed_start = resolve_current_programmed_xy(state);
     const Point2D programmed_endpoint = resolve_programmed_xy_endpoint(parsed_line, state);
+    const double tool_radius = active_cutter_radius(state);
+    const bool offsets_outward =
+        cutter_comp_arc_offsets_outward(current_motion->second, state.cutter_comp_side);
     Point2D programmed_center{};
     double programmed_arc_radius = 0.0;
     if (parsed_line.r.has_value()) {
-        if (state.pending_first_cutter_comp_move) {
-            throw InputError(
-                "Cutter radius compensation currently supports only center-format first G17 arcs"
-            );
-        }
-        programmed_center = resolve_radius_format_arc_center(
-            programmed_start,
-            programmed_endpoint,
-            *parsed_line.r,
-            current_motion->second
-        );
         programmed_arc_radius = std::abs(*parsed_line.r);
+        const double tool_center_arc_radius =
+            compensated_arc_radius(programmed_arc_radius, tool_radius, offsets_outward);
+        programmed_center = state.pending_first_cutter_comp_move
+            ? resolve_first_cutter_comp_radius_format_arc_center(
+                  Point2D{state.machine_position.x, state.machine_position.y},
+                  programmed_endpoint,
+                  programmed_arc_radius,
+                  tool_center_arc_radius,
+                  *parsed_line.r,
+                  current_motion->second
+              )
+            : resolve_radius_format_arc_center(
+                  programmed_start,
+                  programmed_endpoint,
+                  *parsed_line.r,
+                  current_motion->second
+              );
+        const double endpoint_center_distance = std::hypot(
+            programmed_endpoint.x - programmed_center.x,
+            programmed_endpoint.y - programmed_center.y
+        );
+        if (endpoint_center_distance <= kNearIntegerTolerance) {
+            throw InputError("Arc endpoint may not be at the arc center");
+        }
+        const double scale = tool_center_arc_radius / endpoint_center_distance;
+        if (state.pending_first_cutter_comp_move) {
+            state.pending_first_cutter_comp_move = false;
+        }
+        state.machine_position.x =
+            programmed_center.x + ((programmed_endpoint.x - programmed_center.x) * scale);
+        state.machine_position.y =
+            programmed_center.y + ((programmed_endpoint.y - programmed_center.y) * scale);
+        state.cutter_comp_programmed_xy = programmed_endpoint;
+        state.cutter_comp_last_linear_direction = std::nullopt;
+        return;
     } else {
         programmed_center = resolve_center_format_arc_center(programmed_start, parsed_line);
         programmed_arc_radius = std::hypot(
@@ -2032,9 +2138,6 @@ void apply_cutter_compensated_arc_xy_motion(MachineState& state, const ParsedLin
             programmed_endpoint.y - programmed_center.y
         );
     }
-    const double tool_radius = active_cutter_radius(state);
-    const bool offsets_outward =
-        cutter_comp_arc_offsets_outward(current_motion->second, state.cutter_comp_side);
     const double tool_center_arc_radius =
         compensated_arc_radius(programmed_arc_radius, tool_radius, offsets_outward);
 
