@@ -40,6 +40,19 @@ CRC_ERROR_CASES: list[tuple[str, str]] = [
         "G0 X0.0 Y0.0\n"
         "G41 D1 G1 X2.0 Y0.0\n",
     ),
+    # RS274 Appendix B.5.1 and Figure 6: a concave corner into which the tool
+    # circle will not fit is an error. After establishing a compensated
+    # horizontal path with G42, the turn from (10, 0) to (14, -3) places the
+    # tool on the inside of the acute corner, so the interpreter must reject
+    # it as a concave-corner error.
+    (
+        "concave-corner-after-entry-with-g42",
+        "G17 G90 G94\n"
+        "G0 X0.0 Y0.0\n"
+        "G42 D1 G1 X5.0 Y0.0\n"
+        "G1 X10.0 Y0.0\n"
+        "G1 X14.0 Y-3.0\n",
+    ),
 ]
 
 
