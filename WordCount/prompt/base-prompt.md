@@ -1,0 +1,1 @@
+I work with large collections of text files and I need a tool that can quickly analyze them. Given any plain-text file, I want it to tell me how many lines, words, and characters are in the file, how many unique words there are, and what the most common words are. The specification for exactly how this should work is in the `docs/` directory.
