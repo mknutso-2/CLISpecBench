@@ -339,9 +339,11 @@ def test_application_tracks_initial_canned_cycle_behavior(
 
 # RS274 section 3.5.16 says sticky R and depth-word behavior applies to canned
 # cycles generally, not only to G81. These two cases extend the repeat
-# coverage to supported cycles with no extra non-sticky arguments. G88 is
-# intentionally omitted from the covered set because its operator-stop/manual
-# retract behavior is not representable in the current single-run payload.
+# coverage to supported cycles with no extra non-sticky arguments. G88 has
+# separate limited success-path coverage below for its observable spindle
+# restart behavior, but it is intentionally omitted from this sticky-word
+# matrix because its operator-stop/manual retract position is not representable
+# in the current single-run payload.
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -388,6 +390,55 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
         == expected_return_mode
     )
     assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
+    assert payload["spindle_direction"] == expected_spindle_direction
+
+
+# RS274 section 3.5.16.9 makes two line-end outcomes explicit that the current
+# payload can observe even though the operator's manual retract position is not
+# deterministic: the active motion mode is G88, and after the stop/retract
+# sequence the spindle is restarted in the direction it was going beforehand.
+@pytest.mark.parametrize(
+    ("input_gcode", "expected_spindle_direction"),
+    [
+        (
+            ZERO_OFFSET_P1_SETUP
+            + "G90\n"
+            + "G98\n"
+            + "M3\n"
+            + "G0 X1.0 Y2.0 Z3.0\n"
+            + "G88 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
+            "CW",
+        ),
+        (
+            ZERO_OFFSET_P1_SETUP
+            + "G90\n"
+            + "G99\n"
+            + "M4\n"
+            + "G0 X1.0 Y2.0 Z3.0\n"
+            + "G88 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
+            "CCW",
+        ),
+    ],
+    ids=[
+        "g88-restores-clockwise-spindle-in-the-observable-success-path",
+        "g88-restores-counterclockwise-spindle-in-the-observable-success-path",
+    ],
+)
+def test_g88_restores_the_prior_spindle_direction_after_the_cycle(
+    built_executable_path: Path,
+    input_gcode: str,
+    expected_spindle_direction: str,
+    tmp_path: Path,
+) -> None:
+    completed, payload = run_cncsim(
+        built_executable_path,
+        input_gcode=input_gcode,
+        tmp_path=tmp_path,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    assert payload["error"] is None
+    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == "G88"
     assert payload["spindle_direction"] == expected_spindle_direction
 
 

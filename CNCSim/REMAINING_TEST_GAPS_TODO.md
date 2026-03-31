@@ -32,11 +32,16 @@ consensus shortlist.
   - Current probing coverage only exercises `G38.2`:
     - [test_probing.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_probing.py)
     - [test_probing_errors.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_probing_errors.py)
+  - Disputed: local re-check suggests these variants are out of scope for the
+    RS274 document in this repo; see [ARGUMENT.md](C:/Git/SWE-BuildBench/ARGUMENT.md)
+    pending a fresh Claude reconciliation round.
 
-- [ ] Add `G88` success-path coverage.
+- [x] Add directly observable `G88` success-path coverage.
   - Current state:
     - error-path coverage exists in [test_canned_cycle_errors.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_canned_cycle_errors.py#L241)
-    - positive-path coverage is explicitly omitted in [test_canned_cycles.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_canned_cycles.py#L342)
+    - positive-path coverage now pins the observable subset from section
+      `3.5.16.9`: `G88` becomes the active motion mode and the spindle is
+      restarted in its prior direction
 
 - [x] Add explicit `M6` spindle-stop coverage.
   - Added: `M6` forces `spindle_direction == "OFF"`
@@ -67,6 +72,10 @@ consensus shortlist.
 
 - [ ] Revisit `G83` peck sub-move behavior.
   - Final state is checked, but the actual peck sequence is still in the intra-line / sub-move bucket.
+
+- [ ] Revisit the operator-manual-retract part of `G88`.
+  - The directly observable subset is now covered, but the operator's manual
+    retract position is not deterministic in the current single-run payload.
 
 ## Earlier Candidate Gaps That Currently Look Closed, Incorrect, or Overstated
 
