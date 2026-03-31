@@ -44,6 +44,16 @@ TOOL_LENGTH_COMPENSATION_CASES: list[ToolLengthCompensationCase] = [
         {"x": 0.0, "y": 0.0, "z": 3.0},
         None,
     ),
+    (
+        "g43-remains-active-during-ordinary-motion",
+        "G20\n"
+        "G90\n"
+        "G0 Z3.0\n"
+        "G43 H2\n"
+        "G1 X4.0 Y5.0 F2.0\n",
+        {"x": 4.0, "y": 5.0, "z": 1.5},
+        2,
+    ),
 ]
 
 

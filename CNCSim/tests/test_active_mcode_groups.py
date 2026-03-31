@@ -49,6 +49,16 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
         "M5",
     ),
     (
+        "M7\n",
+        MCODE_MODAL_GROUP_COOLANT,
+        "M7",
+    ),
+    (
+        "M8\n",
+        MCODE_MODAL_GROUP_COOLANT,
+        "M8",
+    ),
+    (
         "M7\n"
         "M9\n",
         MCODE_MODAL_GROUP_COOLANT,

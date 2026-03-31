@@ -155,6 +155,15 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         {"x": 4.0, "y": 2.0, "z": 3.0},
     ),
     (
+        "implicit-g1-continues-active-linear-motion",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G90\n"
+        "G1 X1.0 Y2.0 Z3.0 F5.0\n"
+        "X4.0\n",
+        {"x": 4.0, "y": 2.0, "z": 3.0},
+    ),
+    (
         "incremental-xyz",
         ZERO_OFFSET_P1_SETUP
         +

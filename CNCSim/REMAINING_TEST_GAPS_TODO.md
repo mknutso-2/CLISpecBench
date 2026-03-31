@@ -6,7 +6,7 @@ consensus shortlist.
 
 ## Directly Testable Remaining Gaps
 
-- [ ] Add expression math-domain error tests.
+- [x] Add expression math-domain error tests.
   - Division by zero
   - `SQRT` of a negative
   - `LN` of zero or a negative number
@@ -15,14 +15,14 @@ consensus shortlist.
     - [test_parameter_expressions.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_parameter_expressions.py)
     - [test_parameter_errors.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_parameter_errors.py)
 
-- [ ] Add `MSG` comment coverage.
+- [x] Add `MSG` comment coverage.
   - Acceptance/parsing for `(MSG,...)`
   - Any explicit malformed cases if RS274 is unambiguous
   - Current related coverage:
     - [test_comment_parsing.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_comment_parsing.py)
     - [test_comment_errors.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_comment_errors.py)
 
-- [ ] Add implicit motion success-path coverage.
+- [x] Add implicit motion success-path coverage.
   - Positive case where a block with only axis words continues the active motion mode
   - Current related error-path coverage:
     - [test_linear_motion_errors.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_linear_motion_errors.py#L31)
@@ -38,17 +38,18 @@ consensus shortlist.
     - error-path coverage exists in [test_canned_cycle_errors.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_canned_cycle_errors.py#L241)
     - positive-path coverage is explicitly omitted in [test_canned_cycles.py](C:/Git/SWE-BuildBench/CNCSim/tests/test_canned_cycles.py#L342)
 
-- [ ] Add explicit `M6` spindle-stop / “no other changes” postcondition coverage.
-  - Candidate checks:
-    - `M6` forces `spindle_direction == "OFF"`
-    - `M6` does not silently change other unrelated observable state
-      (excluding the separately rejected `M6`-cancels-TLC claim)
+- [x] Add explicit `M6` spindle-stop coverage.
+  - Added: `M6` forces `spindle_direction == "OFF"`
 
-- [ ] Add explicit positive coolant-state coverage for `M7`, `M8`, and `M9`.
+- [x] Add at least one explicit `M6` “no other changes” postcondition test for unrelated observable state.
+  - Current coverage keeps coolant/feed state stable while still stopping the spindle.
+  - Excluding the separately rejected `M6`-cancels-TLC claim.
+
+- [x] Add explicit positive coolant-state coverage for `M7`, `M8`, and `M9`.
   - Current coverage is mostly group-conflict and modal-acceptance oriented.
   - Add a direct positive test for the observable coolant-group state that the payload exposes.
 
-- [ ] Add direct ordinary-motion coverage while `G43` stays active.
+- [x] Add direct ordinary-motion coverage while `G43` stays active.
   - Current `G43` use is strongest in probing tests, but there is still no direct non-probing `G0` / `G1` coverage that verifies ordinary motion remains shifted while tool length compensation stays active.
 
 ## Explicit RS274 Areas Still Weakly Covered Because of Observability / Hardware / Timing Limits

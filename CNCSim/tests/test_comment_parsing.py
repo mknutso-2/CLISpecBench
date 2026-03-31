@@ -41,6 +41,14 @@ COMMENT_PARSING_CASES: list[CommentParsingCase] = [
         "G0 X7.0 Y8.0 Z9.0 (move) (final comment)\n",
         {"x": 7.0, "y": 8.0, "z": 9.0},
     ),
+    (
+        "message-comment-syntax-is-accepted",
+        "(MSG,coordinate system setup) G10 L2 P1 X0.0 Y0.0 Z0.0\n"
+        "(msg,activate) G54\n"
+        "( Msg,absolute mode ) G90\n"
+        "(mSg,move) G0 X10.0 Y11.0 Z12.0\n",
+        {"x": 10.0, "y": 11.0, "z": 12.0},
+    ),
 ]
 
 
@@ -50,7 +58,9 @@ COMMENT_PARSING_CASES: list[CommentParsingCase] = [
 # and ")". That makes empty comments legal. Section 3.3.5 says multiple
 # comments on a line are legal if each comment is well-formed, and section
 # 3.3.6 allows comments and words to be interleaved without changing the
-# meaning of the line.
+# meaning of the line. Section 3.3.4 also defines `(MSG,...)` as a distinct
+# message-comment form. The current payload does not expose emitted messages,
+# so these tests pin only the explicit acceptance/parsing behavior.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_machine_position"),
     [

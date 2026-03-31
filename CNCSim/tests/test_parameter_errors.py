@@ -106,6 +106,42 @@ PARAMETER_ERROR_CASES: list[ParameterErrorCase] = [
         "m-code-not-close-enough-to-integer",
         "M2.9998\n",
     ),
+    # RS274 section 3.3.2.3 "Expressions and Binary Operations":
+    # division by zero is not a valid expression result.
+    (
+        "expression-division-by-zero",
+        "G0 X[1/0]\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # ACOS is only defined for inputs in [-1, 1].
+    (
+        "acos-argument-out-of-range",
+        "G0 XACOS[2]\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # ASIN is only defined for inputs in [-1, 1].
+    (
+        "asin-argument-out-of-range",
+        "G0 XASIN[-2]\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # LN is only defined for positive inputs.
+    (
+        "ln-zero",
+        "G0 XLN[0]\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # LN is only defined for positive inputs.
+    (
+        "ln-negative",
+        "G0 XLN[-1]\n",
+    ),
+    # RS274 section 3.3.2.4 "Unary Operation Value":
+    # SQRT is only defined for non-negative inputs.
+    (
+        "sqrt-negative",
+        "G0 XSQRT[-1]\n",
+    ),
 ]
 
 
