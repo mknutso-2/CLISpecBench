@@ -56,42 +56,62 @@ class CodexCLIAdapter(AgentAdapter):
 
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Use `codex exec --json` and tee the event stream for token parsing.
-        # The shell pipeline captures events while letting codex write to the
-        # workspace normally.
-        model_flag = f' --model "{self._model}"' if self._model else ""
+        flags = (
+            f"--json --dangerously-bypass-approvals-and-sandbox"
+            f' --cd "{work_dir}"'
+        )
+        if self._model:
+            flags += f' --model "{self._model}"'
         return [
             "bash", "-c",
-            f'codex exec --json{model_flag} --cwd "{work_dir}" '
-            f'"$(cat {prompt_path})" '
-            f'2>/dev/null | tee {EVENT_LOG_PATH}',
+            f'cat {prompt_path} | codex exec {flags}'
+            f' 2>&1 | tee {EVENT_LOG_PATH}',
         ]
 
-    def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:
-        """Parse token usage from the JSONL event stream."""
+    def parse_token_usage(
+        self,
+        container_fs: Path,
+        container_logs: str = "",
+    ) -> TokenUsage | None:
+        """Parse token usage from the JSONL event stream.
+
+        Checks container logs first (the --json output is tee'd to stdout),
+        then falls back to the event log file.
+        """
+        sources: list[str] = []
+        if container_logs:
+            sources.append(container_logs)
         event_log = container_fs / "tmp" / "codex-events.jsonl"
-        if not event_log.is_file():
-            log.info("No Codex event log found at %s", event_log)
+        if event_log.is_file():
+            sources.append(event_log.read_text(encoding="utf-8"))
+
+        if not sources:
+            log.info("No Codex event data found")
             return None
 
         input_tokens = 0
         output_tokens = 0
         cached_input_tokens = 0
 
-        for line in event_log.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-
-            # Codex emits turn.completed events with usage data
-            if event.get("type") == "turn.completed":
-                usage = event.get("usage", {})
-                input_tokens += usage.get("input_tokens", 0)
-                output_tokens += usage.get("output_tokens", 0)
-                cached_input_tokens += usage.get("cached_input_tokens", 0)
+        for source in sources:
+            for line in source.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    event = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if event.get("type") == "turn.completed":
+                    usage = event.get("usage", {})
+                    input_tokens += usage.get("input_tokens", 0)
+                    output_tokens += usage.get("output_tokens", 0)
+                    cached_input_tokens += usage.get(
+                        "cached_input_tokens", 0,
+                    )
+                    break  # Only one turn in exec mode
+            if input_tokens > 0:
+                break  # Found usage, don't double-count from second source
 
         if input_tokens == 0 and output_tokens == 0:
             return None

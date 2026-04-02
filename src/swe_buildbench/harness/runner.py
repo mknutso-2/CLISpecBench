@@ -149,7 +149,7 @@ def run_evaluation(
 
         token_usage: TokenUsage | None = None
         try:
-            token_usage = adapter.parse_token_usage(extract_dir)
+            token_usage = adapter.parse_token_usage(extract_dir, container_logs)
         except Exception:
             log.warning("Failed to parse token usage", exc_info=True)
 
@@ -202,6 +202,7 @@ def run_evaluation(
 
         # --- 10. Save artifacts ---
         out_path = result_path(output_dir, task.task_id, adapter.name, run_number)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = RunArtifacts()
 
         # Save agent transcript (container stdout/stderr)

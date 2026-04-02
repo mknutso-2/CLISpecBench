@@ -40,7 +40,11 @@ class ModelAPIAdapter(AgentAdapter):
             "Model API adapter calls the API directly, not via a container command"
         )
 
-    def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:
+    def parse_token_usage(
+        self,
+        container_fs: Path,
+        container_logs: str = "",
+    ) -> TokenUsage | None:
         # Token usage is returned inline from the API response,
         # not parsed from container filesystem.
         return None

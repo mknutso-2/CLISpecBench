@@ -97,7 +97,11 @@ class GeminiCLIAdapter(AgentAdapter):
             f'| gemini{model_flag}',
         ]
 
-    def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:
+    def parse_token_usage(
+        self,
+        container_fs: Path,
+        container_logs: str = "",
+    ) -> TokenUsage | None:
         """Parse token usage from OpenTelemetry export."""
         otel_dir = container_fs / "tmp" / "gemini-otel"
         if not otel_dir.is_dir():

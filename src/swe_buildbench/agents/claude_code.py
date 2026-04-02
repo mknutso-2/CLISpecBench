@@ -77,8 +77,21 @@ class ClaudeCodeAdapter(AgentAdapter):
         )
         return ["bash", "-c", setup]
 
-    def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:
-        """Parse token usage from OpenTelemetry export files."""
+    def parse_token_usage(
+        self,
+        container_fs: Path,
+        container_logs: str = "",
+    ) -> TokenUsage | None:
+        """Parse token usage from the stream-json transcript.
+
+        The ``result`` event emitted at the end of the stream-json output
+        contains aggregated token counts.  Falls back to OTEL if the
+        transcript doesn't contain usage data.
+        """
+        usage = _parse_stream_json_usage(container_logs)
+        if usage is not None:
+            return usage
+
         otel_dir = container_fs / "tmp" / "otel"
         if not otel_dir.is_dir():
             log.info("No OpenTelemetry directory found at %s", otel_dir)
@@ -103,6 +116,36 @@ class ClaudeCodeAdapter(AgentAdapter):
     @property
     def allowed_hosts(self) -> list[str]:
         return ["api.anthropic.com"]
+
+
+def _parse_stream_json_usage(container_logs: str) -> TokenUsage | None:
+    """Parse token usage from the stream-json ``result`` event."""
+    for line in reversed(container_logs.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if event.get("type") != "result":
+            continue
+        raw_usage = event.get("usage") or event.get("token_usage")
+        if not isinstance(raw_usage, dict):
+            continue
+        usage = cast(dict[str, Any], raw_usage)
+        input_tokens = int(usage.get("input_tokens", 0))
+        output_tokens = int(usage.get("output_tokens", 0))
+        cache_read = int(usage.get("cache_read_input_tokens", 0))
+        cache_creation = int(usage.get("cache_creation_input_tokens", 0))
+        if input_tokens == 0 and output_tokens == 0:
+            return None
+        return TokenUsage(
+            input_tokens=input_tokens + cache_read + cache_creation,
+            output_tokens=output_tokens,
+            cached_input_tokens=cache_read or None,
+        )
+    return None
 
 
 def _parse_otel_attrs(raw_attrs: Any) -> dict[str, str]:

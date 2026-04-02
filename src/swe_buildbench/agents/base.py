@@ -72,10 +72,15 @@ class AgentAdapter(ABC):
         """
 
     @abstractmethod
-    def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:
+    def parse_token_usage(
+        self,
+        container_fs: Path,
+        container_logs: str = "",
+    ) -> TokenUsage | None:
         """Extract token usage from agent-specific logs or telemetry.
 
         *container_fs*: root of the extracted container filesystem on the host.
+        *container_logs*: stdout/stderr captured from the container.
         Returns normalized :class:`TokenUsage`, or ``None`` if unavailable.
         """
 
