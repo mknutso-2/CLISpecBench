@@ -131,13 +131,23 @@ class RunResult:
         path.write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
 
 
-def make_run_id(task: str, agent: str, run_number: int) -> str:
+def make_run_id(task: str, agent: str, run_number: int, model: str | None = None) -> str:
     ts = datetime.now(UTC).strftime("%Y-%m-%d")
-    return f"{task}_{agent}_{ts}_run-{run_number}"
+    model_part = f"_{model}" if model else ""
+    return f"{task}_{agent}{model_part}_{ts}_run-{run_number}"
 
 
-def result_path(output_dir: Path, task: str, agent: str, run_number: int) -> Path:
-    return output_dir / task / agent / f"run-{run_number}.json"
+def result_path(
+    output_dir: Path,
+    task: str,
+    agent: str,
+    run_number: int,
+    model: str | None = None,
+) -> Path:
+    base = output_dir / task / agent
+    if model:
+        base = base / model
+    return base / f"run-{run_number}.json"
 
 
 def save_transcript(result_json_path: Path, run_number: int, transcript_data: str) -> str:

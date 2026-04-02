@@ -79,7 +79,7 @@ def run_evaluation(
     if api_key_env is None:
         api_key_env = {}
 
-    run_id = make_run_id(task.task_id, adapter.name, run_number)
+    run_id = make_run_id(task.task_id, adapter.name, run_number, adapter.model)
     timestamp = datetime.now(UTC).isoformat()
     log.info("Starting run %s", run_id)
 
@@ -201,7 +201,7 @@ def run_evaluation(
         )
 
         # --- 10. Save artifacts ---
-        out_path = result_path(output_dir, task.task_id, adapter.name, run_number)
+        out_path = result_path(output_dir, task.task_id, adapter.name, run_number, adapter.model)
         out_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = RunArtifacts()
 
