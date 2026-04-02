@@ -7,6 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
+from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.harness.results import RunResult, load_result
 from swe_buildbench.harness.runner import run_evaluation
 from swe_buildbench.harness.task import list_tasks, resolve_task
@@ -22,15 +23,29 @@ def _find_repo_root() -> Path:
     return Path.cwd()
 
 
-def _get_adapter(agent_name: str, model: str | None = None):  # noqa: ANN202
+def _get_adapter(
+    agent_name: str,
+    model: str | None = None,
+    effort: str | None = None,
+) -> AgentAdapter:
     """Resolve an agent name to an adapter instance."""
+    from collections.abc import Callable
+
     from swe_buildbench.agents import claude_code, codex_cli, gemini_cli, model_api
 
-    adapters = {
-        "claude-code": claude_code.ClaudeCodeAdapter,
-        "codex-cli": codex_cli.CodexCLIAdapter,
-        "gemini-cli": gemini_cli.GeminiCLIAdapter,
-        "model-api": lambda: model_api.ModelAPIAdapter(model=model or "claude-opus-4-6"),
+    adapters: dict[str, Callable[[], AgentAdapter]] = {
+        "claude-code": lambda: claude_code.ClaudeCodeAdapter(
+            model=model, effort=effort,
+        ),
+        "codex-cli": lambda: codex_cli.CodexCLIAdapter(
+            model=model, effort=effort,
+        ),
+        "gemini-cli": lambda: gemini_cli.GeminiCLIAdapter(
+            model=model, effort=effort,
+        ),
+        "model-api": lambda: model_api.ModelAPIAdapter(
+            model=model or "claude-opus-4-6",
+        ),
     }
     factory = adapters.get(agent_name)
     if factory is None:
@@ -48,7 +63,11 @@ def _get_adapter(agent_name: str, model: str | None = None):  # noqa: ANN202
 def _cmd_run(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
     task = resolve_task(repo_root, args.task)
-    adapter = _get_adapter(args.agent, getattr(args, "model", None))
+    adapter = _get_adapter(
+        args.agent,
+        model=getattr(args, "model", None),
+        effort=getattr(args, "effort", None),
+    )
 
     api_key_env: dict[str, str] = {}
     raw_keys: list[str] = args.api_key_env or []
@@ -178,7 +197,11 @@ def main(argv: list[str] | None = None) -> None:
     run_parser.add_argument("--prompt-variant", default=None)
     run_parser.add_argument("--timeout", type=float, default=30 * 60)
     run_parser.add_argument("--output-dir", default="results")
-    run_parser.add_argument("--model", default=None, help="Model ID for model-api mode")
+    run_parser.add_argument("--model", default=None, help="Model to use (e.g. opus, sonnet, o3)")
+    run_parser.add_argument(
+        "--effort", default=None,
+        help="Effort / reasoning level (e.g. low, medium, high, max)",
+    )
     run_parser.add_argument(
         "--api-key-env", action="append", help="VAR=value pairs for API keys"
     )

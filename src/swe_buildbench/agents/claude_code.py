@@ -7,7 +7,7 @@ import logging
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
-from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.agents.base import AgentAdapter, read_dockerfile_arg
 from swe_buildbench.harness.results import TokenUsage
 
 log = logging.getLogger(__name__)
@@ -24,9 +24,21 @@ OTEL_COLLECTOR_DIR = "/tmp/otel"
 class ClaudeCodeAdapter(AgentAdapter):
     """Adapter for Claude Code CLI (``claude``)."""
 
+    def __init__(
+        self,
+        model: str | None = None,
+        effort: str | None = None,
+    ) -> None:
+        self._model = model
+        self._effort = effort
+
     @property
     def name(self) -> str:
         return "claude-code"
+
+    @property
+    def version(self) -> str:
+        return read_dockerfile_arg(DOCKERFILE, "CLAUDE_CODE_VERSION")
 
     @property
     def dockerfile(self) -> Path:
@@ -41,14 +53,27 @@ class ClaudeCodeAdapter(AgentAdapter):
         env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"file://{OTEL_COLLECTOR_DIR}"
         return env
 
+    @property
+    def model(self) -> str | None:
+        return self._model
+
+    @property
+    def effort(self) -> str | None:
+        return self._effort
+
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Container starts as root (so copy_in can write files), then we fix
         # ownership and drop to the non-root 'agent' user before running claude.
         # Claude Code refuses --dangerously-skip-permissions as root.
+        flags = "--print --dangerously-skip-permissions --verbose --output-format stream-json"
+        if self._model:
+            flags += f" --model {self._model}"
+        if self._effort:
+            flags += f" --effort {self._effort}"
         setup = (
             f"chown -R agent:agent {work_dir}"
             f" && su agent -c 'cat {prompt_path}"
-            f" | claude --print --dangerously-skip-permissions'"
+            f" | claude {flags}'"
         )
         return ["bash", "-c", setup]
 
@@ -70,6 +95,10 @@ class ClaudeCodeAdapter(AgentAdapter):
                 "bind": f"{home}/.claude.json", "mode": "ro",
             },
         }
+
+    @property
+    def telemetry_paths(self) -> list[str]:
+        return [OTEL_COLLECTOR_DIR]
 
     @property
     def allowed_hosts(self) -> list[str]:

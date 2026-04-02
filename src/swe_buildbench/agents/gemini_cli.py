@@ -6,7 +6,7 @@ import json
 import logging
 from pathlib import Path, PurePosixPath
 
-from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.agents.base import AgentAdapter, read_dockerfile_arg
 from swe_buildbench.harness.results import TokenUsage
 
 log = logging.getLogger(__name__)
@@ -23,9 +23,21 @@ OTEL_EXPORT_DIR = "/tmp/gemini-otel"
 class GeminiCLIAdapter(AgentAdapter):
     """Adapter for Google Gemini CLI (``gemini``)."""
 
+    def __init__(
+        self,
+        model: str | None = None,
+        effort: str | None = None,
+    ) -> None:
+        self._model = model
+        self._effort = effort
+
     @property
     def name(self) -> str:
         return "gemini-cli"
+
+    @property
+    def version(self) -> str:
+        return read_dockerfile_arg(DOCKERFILE, "GEMINI_CLI_VERSION")
 
     @property
     def dockerfile(self) -> Path:
@@ -36,6 +48,10 @@ class GeminiCLIAdapter(AgentAdapter):
         # Configure OpenTelemetry file export for token tracking
         env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"file://{OTEL_EXPORT_DIR}"
         return env
+
+    @property
+    def telemetry_paths(self) -> list[str]:
+        return [OTEL_EXPORT_DIR]
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         # Gemini CLI needs a writable ~/.gemini/ (writes projects.json at
@@ -58,6 +74,14 @@ class GeminiCLIAdapter(AgentAdapter):
             },
         }
 
+    @property
+    def model(self) -> str | None:
+        return self._model
+
+    @property
+    def effort(self) -> str | None:
+        return self._effort
+
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Copy staged auth files into a writable ~/.gemini/ and seed
         # projects.json before running gemini.
@@ -66,9 +90,11 @@ class GeminiCLIAdapter(AgentAdapter):
             ' && cp /tmp/gemini-auth/* /root/.gemini/'
             ' && echo \'{"projects":{}}\' > /root/.gemini/projects.json'
         )
+        model_flag = f' --model "{self._model}"' if self._model else ""
         return [
             "bash", "-c",
-            f'{setup} && cd "{work_dir}" && cat "{prompt_path}" | gemini',
+            f'{setup} && cd "{work_dir}" && cat "{prompt_path}" '
+            f'| gemini{model_flag}',
         ]
 
     def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:

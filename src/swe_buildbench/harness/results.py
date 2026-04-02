@@ -91,6 +91,8 @@ class RunMetadata:
     docker_image_sha: str
     wall_clock_seconds: float
     exit_reason: str  # "completed" | "timeout" | "token_limit" | "error"
+    model: str | None = None
+    effort: str | None = None
 
 
 @dataclass

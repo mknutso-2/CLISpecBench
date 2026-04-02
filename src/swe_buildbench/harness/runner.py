@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import subprocess
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
@@ -19,11 +20,14 @@ from swe_buildbench.harness.docker import (
 from swe_buildbench.harness.platform import resolve_host_home
 from swe_buildbench.harness.results import (
     BuildResult,
+    RunArtifacts,
     RunMetadata,
     RunResult,
     TokenUsage,
     make_run_id,
     result_path,
+    save_source_dir,
+    save_transcript,
 )
 from swe_buildbench.harness.scoring import (
     compute_code_quality,
@@ -38,6 +42,18 @@ from swe_buildbench.harness.workspace import prepare_workspace
 log = logging.getLogger(__name__)
 
 DEFAULT_TIMEOUT = 30 * 60  # 30 minutes
+
+
+def _git_sha() -> str:
+    """Return the short git SHA of the current repo, or 'unknown'."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            capture_output=True, text=True, timeout=5,
+        )
+        return result.stdout.strip() if result.returncode == 0 else "unknown"
+    except Exception:
+        return "unknown"
 
 
 def run_evaluation(
@@ -70,6 +86,7 @@ def run_evaluation(
     sandbox = DockerSandbox()
     workspace: Path | None = None
     extract_dir: Path | None = None
+    container_logs: str = ""
 
     try:
         # --- 1. Prepare workspace ---
@@ -102,7 +119,7 @@ def run_evaluation(
             container_run.wall_clock_seconds,
         )
 
-        # Capture container logs for debugging
+        # Capture container logs (transcript + debugging)
         try:
             container_logs = sandbox.get_logs()
             if container_logs:
@@ -123,7 +140,13 @@ def run_evaluation(
         submission_dir = extract_dir / "output"
         submission_dir.mkdir(exist_ok=True)
 
-        # --- 5. Parse token usage ---
+        # --- 5. Extract telemetry and parse token usage ---
+        for tpath in adapter.telemetry_paths:
+            try:
+                sandbox.copy_out(PurePosixPath(tpath), extract_dir)
+            except Exception:
+                log.debug("Telemetry path %s not found in container", tpath)
+
         token_usage: TokenUsage | None = None
         try:
             token_usage = adapter.parse_token_usage(extract_dir)
@@ -165,15 +188,33 @@ def run_evaluation(
             run_id=run_id,
             task=task.task_id,
             agent=adapter.name,
-            agent_version="unknown",  # TODO: extract from container
+            agent_version=adapter.version,
             prompt_variant=prompt_variant or "base",
             run_number=run_number,
             timestamp=timestamp,
-            test_suite_version="unknown",  # TODO: git SHA of test repo
-            docker_image_sha="unknown",  # TODO: extract from image inspect
+            test_suite_version=_git_sha(),
+            docker_image_sha=sandbox.get_image_sha(adapter.image_tag),
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
+            model=adapter.model,
+            effort=adapter.effort,
         )
+
+        # --- 10. Save artifacts ---
+        out_path = result_path(output_dir, task.task_id, adapter.name, run_number)
+        artifacts = RunArtifacts()
+
+        # Save agent transcript (container stdout/stderr)
+        if container_logs:
+            artifacts.transcript = save_transcript(
+                out_path, run_number, container_logs,
+            )
+
+        # Save agent source code
+        if submission_dir.exists() and any(submission_dir.iterdir()):
+            artifacts.source_dir = save_source_dir(
+                out_path, run_number, submission_dir,
+            )
 
         result = RunResult(
             metadata=metadata,
@@ -182,10 +223,10 @@ def run_evaluation(
             tests=tests,
             test_summary=test_summary,
             scores=scores,
+            artifacts=artifacts,
         )
 
-        # --- 10. Write result ---
-        out_path = result_path(output_dir, task.task_id, adapter.name, run_number)
+        # --- 11. Write result ---
         result.write(out_path)
         log.info("Result written to %s", out_path)
 

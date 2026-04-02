@@ -6,7 +6,7 @@ import json
 import logging
 from pathlib import Path, PurePosixPath
 
-from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.agents.base import AgentAdapter, read_dockerfile_arg
 from swe_buildbench.harness.results import TokenUsage
 
 log = logging.getLogger(__name__)
@@ -23,9 +23,21 @@ EVENT_LOG_PATH = "/tmp/codex-events.jsonl"
 class CodexCLIAdapter(AgentAdapter):
     """Adapter for OpenAI Codex CLI (``codex``)."""
 
+    def __init__(
+        self,
+        model: str | None = None,
+        effort: str | None = None,
+    ) -> None:
+        self._model = model
+        self._effort = effort
+
     @property
     def name(self) -> str:
         return "codex-cli"
+
+    @property
+    def version(self) -> str:
+        return read_dockerfile_arg(DOCKERFILE, "CODEX_CLI_VERSION")
 
     @property
     def dockerfile(self) -> Path:
@@ -34,13 +46,22 @@ class CodexCLIAdapter(AgentAdapter):
     def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
         return {**api_key_env}
 
+    @property
+    def model(self) -> str | None:
+        return self._model
+
+    @property
+    def effort(self) -> str | None:
+        return self._effort
+
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Use `codex exec --json` and tee the event stream for token parsing.
         # The shell pipeline captures events while letting codex write to the
         # workspace normally.
+        model_flag = f' --model "{self._model}"' if self._model else ""
         return [
             "bash", "-c",
-            f'codex exec --json --cwd "{work_dir}" '
+            f'codex exec --json{model_flag} --cwd "{work_dir}" '
             f'"$(cat {prompt_path})" '
             f'2>/dev/null | tee {EVENT_LOG_PATH}',
         ]
@@ -80,6 +101,10 @@ class CodexCLIAdapter(AgentAdapter):
             output_tokens=output_tokens,
             cached_input_tokens=cached_input_tokens or None,
         )
+
+    @property
+    def telemetry_paths(self) -> list[str]:
+        return [EVENT_LOG_PATH]
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         # Mount only the auth file, not the whole .codex/ dir, to avoid

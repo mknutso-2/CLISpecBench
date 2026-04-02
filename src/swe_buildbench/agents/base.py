@@ -2,11 +2,19 @@
 
 from __future__ import annotations
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
 from swe_buildbench.harness.results import TokenUsage
+
+
+def read_dockerfile_arg(dockerfile: Path, arg_name: str) -> str:
+    """Read an ARG default value from a Dockerfile."""
+    pattern = re.compile(rf"^ARG\s+{re.escape(arg_name)}=(.+)$", re.MULTILINE)
+    match = pattern.search(dockerfile.read_text(encoding="utf-8"))
+    return match.group(1).strip() if match else "unknown"
 
 
 @dataclass
@@ -31,6 +39,11 @@ class AgentAdapter(ABC):
     @abstractmethod
     def name(self) -> str:
         """Agent identifier used in results and CLI (e.g. ``"claude-code"``)."""
+
+    @property
+    def version(self) -> str:
+        """Agent CLI version string (e.g. ``"2.1.90"``)."""
+        return "unknown"
 
     @property
     @abstractmethod
@@ -76,6 +89,16 @@ class AgentAdapter(ABC):
         return {}
 
     @property
+    def telemetry_paths(self) -> list[str]:
+        """Container paths to extract for token usage and telemetry parsing.
+
+        Each path is extracted into the host extract directory before
+        :meth:`parse_token_usage` is called.  Paths that don't exist in
+        the container are silently skipped.
+        """
+        return []
+
+    @property
     def allowed_hosts(self) -> list[str]:
         """Network hosts the container is allowed to reach.
 
@@ -83,6 +106,19 @@ class AgentAdapter(ABC):
         outbound traffic is blocked by the sandbox network policy.
         """
         return []
+
+    @property
+    def model(self) -> str | None:
+        """Model identifier for this run (e.g. ``"opus"``).
+
+        Override in subclass or set via adapter constructor.
+        """
+        return None
+
+    @property
+    def effort(self) -> str | None:
+        """Effort / reasoning level (e.g. ``"high"``, ``"max"``)."""
+        return None
 
     @property
     def image_tag(self) -> str:

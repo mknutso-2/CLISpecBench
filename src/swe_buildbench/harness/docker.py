@@ -119,6 +119,14 @@ class DockerSandbox:
         except docker.errors.ImageNotFound:
             return False
 
+    def get_image_sha(self, tag: str) -> str:
+        """Return the image ID (sha256 digest) for the given tag."""
+        try:
+            image = self._client.images.get(tag)
+            return str(image.id)
+        except docker.errors.ImageNotFound:
+            return "unknown"
+
     def create(self, config: ContainerConfig) -> str:
         """Create a stopped container and return its ID."""
         container: Container = self._client.containers.create(
