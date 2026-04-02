@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -68,6 +69,14 @@ class Scores:
 
 
 @dataclass
+class RunArtifacts:
+    """Paths to preserved artifacts from the run, relative to the result file."""
+
+    transcript: str | None = None  # e.g. "run-1-transcript.jsonl"
+    source_dir: str | None = None  # e.g. "run-1-source/"
+
+
+@dataclass
 class RunMetadata:
     """Identifying information for a single evaluation run."""
 
@@ -94,6 +103,7 @@ class RunResult:
     tests: list[TestOutcome]
     test_summary: TestSummary
     scores: Scores
+    artifacts: RunArtifacts = field(default_factory=RunArtifacts)
 
     @property
     def schema_version(self) -> str:
@@ -111,6 +121,7 @@ class RunResult:
         d["tests"] = [asdict(t) for t in self.tests]
         d["test_summary"] = {**asdict(self.test_summary), "total": self.test_summary.total}
         d["scores"] = asdict(self.scores)
+        d["artifacts"] = asdict(self.artifacts)
         return d
 
     def write(self, path: Path) -> None:
@@ -125,6 +136,24 @@ def make_run_id(task: str, agent: str, run_number: int) -> str:
 
 def result_path(output_dir: Path, task: str, agent: str, run_number: int) -> Path:
     return output_dir / task / agent / f"run-{run_number}.json"
+
+
+def save_transcript(result_json_path: Path, run_number: int, transcript_data: str) -> str:
+    """Save agent transcript alongside the result JSON. Returns the relative filename."""
+    filename = f"run-{run_number}-transcript.jsonl"
+    dest = result_json_path.parent / filename
+    dest.write_text(transcript_data, encoding="utf-8")
+    return filename
+
+
+def save_source_dir(result_json_path: Path, run_number: int, source_dir: Path) -> str:
+    """Copy agent source output alongside the result JSON. Returns the relative dir name."""
+    dirname = f"run-{run_number}-source"
+    dest = result_json_path.parent / dirname
+    if dest.exists():
+        shutil.rmtree(dest)
+    shutil.copytree(source_dir, dest)
+    return dirname
 
 
 def load_result(path: Path) -> RunResult:
@@ -149,6 +178,11 @@ def load_result(path: Path) -> RunResult:
         error=data["test_summary"]["error"],
     )
     scores = Scores(**data["scores"])
+    artifacts_data = data.get("artifacts", {})
+    artifacts = RunArtifacts(
+        transcript=artifacts_data.get("transcript"),
+        source_dir=artifacts_data.get("source_dir"),
+    )
     return RunResult(
         metadata=metadata,
         token_usage=token_usage,
@@ -156,4 +190,5 @@ def load_result(path: Path) -> RunResult:
         tests=tests,
         test_summary=summary,
         scores=scores,
+        artifacts=artifacts,
     )

@@ -456,23 +456,36 @@ inspection and programmatic aggregation.
 
 ### 8.1 Result Directory Structure
 
+Each run produces a result JSON file plus two preserved artifacts: the full
+agent transcript and the complete source code directory.
+
 ```
 results/
   cncsim-full/
     claude-code/
-      run-1.json
+      run-1.json                 # Structured result (scores, tests, metadata)
+      run-1-transcript.jsonl     # Full agent conversation/event log
+      run-1-source/              # Complete source tree the agent produced
       run-2.json
-      run-3.json
+      run-2-transcript.jsonl
+      run-2-source/
+      ...
     codex-cli/
       run-1.json
-      run-2.json
-      run-3.json
-    gemini-cli/
-      run-1.json
-  cncsim-lite/
-    claude-code/
-      run-1.json
+      run-1-transcript.jsonl
+      run-1-source/
       ...
+```
+
+The result JSON includes an `artifacts` field with relative paths:
+
+```json
+{
+  "artifacts": {
+    "transcript": "run-1-transcript.jsonl",
+    "source_dir": "run-1-source"
+  }
+}
 ```
 
 ### 8.2 Aggregation Queries
