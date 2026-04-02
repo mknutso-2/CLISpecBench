@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# Smoke-test Codex CLI authentication inside a Docker container.
+# Smoke-test Codex CLI authentication inside its Docker container.
+#
+# Prerequisites:
+#   - Docker images built (scripts/build-docker-images.sh)
+#   - Logged in to Codex CLI on the Windows host
 #
 # Auth files:
 #   ~/.codex/auth.json  — OAuth tokens (mount only this file, not the
 #                         whole dir, to avoid read-only filesystem errors)
 #
 # Notes:
-#   - Requires ca-certificates package (node:22-slim lacks root CAs that
-#     Codex's Rust TLS stack needs for chatgpt.com).
 #   - Requires git + an initialized repo in the workspace.
 #   - Connects to chatgpt.com (not api.openai.com).
 #
@@ -22,11 +24,6 @@ echo "--- Testing: Codex CLI ---"
 $DOCKER_CMD run --rm \
     -v "${WIN_HOME}/.codex/auth.json:/root/.codex/auth.json:ro" \
     -w /workspace \
-    node:22-slim \
-    bash -c "
-        apt-get update -qq && apt-get install -y -qq ca-certificates git > /dev/null 2>&1
-        npm install -g @openai/codex 2>/dev/null
-        git init /workspace > /dev/null 2>&1
-        codex exec 'respond with just the word hello'
-    "
+    swe-buildbench-codex-cli:latest \
+    bash -c "git init /workspace > /dev/null 2>&1 && codex exec 'respond with just the word hello'"
 echo "PASS: Codex CLI"

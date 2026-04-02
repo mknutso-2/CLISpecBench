@@ -18,13 +18,17 @@
 #   MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh claude-code
 set -euo pipefail
 
-# Resolve repo root relative to this script
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/smoke-test-common.sh"
 
+# Resolve repo root — use WSL-compatible path for docker commands
 if [ -d "/mnt/c/Users" ]; then
-    DOCKER_CMD="docker"
+    # Running inside WSL
+    REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 else
-    DOCKER_CMD="wsl -d Ubuntu -- docker"
+    # Running from Git Bash — convert /c/ to /mnt/c/ for WSL docker
+    REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+    REPO_ROOT="/mnt/c${REPO_ROOT#/c}"
 fi
 
 build_base() {
@@ -35,24 +39,26 @@ build_base() {
 build_agent() {
     local agent="$1"
     local dockerfile="$REPO_ROOT/docker/agents/${agent}.Dockerfile"
-    if [ ! -f "$dockerfile" ]; then
-        echo "ERROR: No Dockerfile found at $dockerfile"
-        return 1
-    fi
     echo "--- Building: swe-buildbench-${agent} ---"
     $DOCKER_CMD build -t "swe-buildbench-${agent}:latest" -f "$dockerfile" "$REPO_ROOT/docker"
 }
 
+# Check which Dockerfiles exist (use local path for file checks from Git Bash)
+LOCAL_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+
 if [ $# -eq 0 ]; then
-    # Build everything
     build_base
-    for df in "$REPO_ROOT"/docker/agents/*.Dockerfile; do
+    for df in "$LOCAL_ROOT"/docker/agents/*.Dockerfile; do
         agent="$(basename "$df" .Dockerfile)"
         build_agent "$agent"
     done
 elif [ "$1" = "base" ]; then
     build_base
 else
+    if [ ! -f "$LOCAL_ROOT/docker/agents/${1}.Dockerfile" ]; then
+        echo "ERROR: No Dockerfile found at docker/agents/${1}.Dockerfile"
+        exit 1
+    fi
     build_agent "$1"
 fi
 

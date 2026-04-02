@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-# Smoke-test Gemini CLI authentication inside a Docker container.
+# Smoke-test Gemini CLI authentication inside its Docker container.
+#
+# Prerequisites:
+#   - Docker images built (scripts/build-docker-images.sh)
+#   - Logged in to Gemini CLI on the Windows host
 #
 # Auth files (mounted read-only to a staging dir, then copied into a
 # writable ~/.gemini — Gemini CLI needs to write projects.json and other
@@ -11,7 +15,6 @@
 # Notes:
 #   - Cannot mount ~/.gemini/:ro because CLI writes projects.json at startup.
 #   - Must seed projects.json with {"projects":{}} or CLI crashes.
-#   - Harmless libsecret warning (no keychain in container, uses file fallback).
 #
 # Run from Git Bash:
 #   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
@@ -26,12 +29,11 @@ $DOCKER_CMD run --rm \
     -v "${WIN_HOME}/.gemini/google_accounts.json:/tmp/gemini-auth/google_accounts.json:ro" \
     -v "${WIN_HOME}/.gemini/settings.json:/tmp/gemini-auth/settings.json:ro" \
     -w /workspace \
-    node:22-slim \
+    swe-buildbench-gemini-cli:latest \
     bash -c '
         mkdir -p /root/.gemini
         cp /tmp/gemini-auth/* /root/.gemini/
         echo "{\"projects\":{}}" > /root/.gemini/projects.json
-        npm install -g @google/gemini-cli 2>/dev/null
         gemini -p "respond with just the word hello"
     '
 echo "PASS: Gemini CLI"
