@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path, PurePosixPath
+from typing import Any, cast
 
 from swe_buildbench.agents.base import AgentAdapter, read_dockerfile_arg
 from swe_buildbench.harness.results import TokenUsage
@@ -16,8 +17,6 @@ DOCKERFILE = (
     / "docker" / "agents" / "gemini-cli.Dockerfile"
 )
 
-# OpenTelemetry export directory inside the container
-OTEL_EXPORT_DIR = "/tmp/gemini-otel"
 
 
 class GeminiCLIAdapter(AgentAdapter):
@@ -44,14 +43,7 @@ class GeminiCLIAdapter(AgentAdapter):
         return DOCKERFILE
 
     def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
-        env = {**api_key_env}
-        # Configure OpenTelemetry file export for token tracking
-        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"file://{OTEL_EXPORT_DIR}"
-        return env
-
-    @property
-    def telemetry_paths(self) -> list[str]:
-        return [OTEL_EXPORT_DIR]
+        return {**api_key_env}
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         # Gemini CLI needs a writable ~/.gemini/ (writes projects.json at
@@ -90,11 +82,13 @@ class GeminiCLIAdapter(AgentAdapter):
             ' && cp /tmp/gemini-auth/* /root/.gemini/'
             ' && echo \'{"projects":{}}\' > /root/.gemini/projects.json'
         )
-        model_flag = f' --model "{self._model}"' if self._model else ""
+        flags = "--yolo --output-format stream-json"
+        if self._model:
+            flags += f' --model "{self._model}"'
         return [
             "bash", "-c",
             f'{setup} && cd "{work_dir}" && cat "{prompt_path}" '
-            f'| gemini{model_flag}',
+            f"| gemini {flags}",
         ]
 
     def parse_token_usage(
@@ -102,42 +96,40 @@ class GeminiCLIAdapter(AgentAdapter):
         container_fs: Path,
         container_logs: str = "",
     ) -> TokenUsage | None:
-        """Parse token usage from OpenTelemetry export."""
-        otel_dir = container_fs / "tmp" / "gemini-otel"
-        if not otel_dir.is_dir():
-            log.info("No Gemini OTEL directory found at %s", otel_dir)
-            return None
-
-        input_tokens = 0
-        output_tokens = 0
-
-        for metrics_file in otel_dir.rglob("*.json"):
-            try:
-                data = json.loads(metrics_file.read_text(encoding="utf-8"))
-                # Gemini CLI OTLP export structure — extract token metrics
-                for resource_metric in data.get("resourceMetrics", []):
-                    for scope_metric in resource_metric.get("scopeMetrics", []):
-                        for metric in scope_metric.get("metrics", []):
-                            name = metric.get("name", "")
-                            if "token" not in name.lower():
-                                continue
-                            for dp in metric.get("dataPoints", []):
-                                value = dp.get("asInt", dp.get("asDouble", 0))
-                                if "input" in name.lower() or "prompt" in name.lower():
-                                    input_tokens += int(value)
-                                elif "output" in name.lower() or "candidate" in name.lower():
-                                    output_tokens += int(value)
-            except (json.JSONDecodeError, KeyError):
-                log.warning("Failed to parse metrics file %s", metrics_file, exc_info=True)
-
-        if input_tokens == 0 and output_tokens == 0:
-            return None
-
-        return TokenUsage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-        )
+        """Parse token usage from stream-json ``result`` event."""
+        usage = _parse_stream_json_stats(container_logs)
+        if usage is not None:
+            return usage
+        log.info("No token usage found in Gemini stream-json output")
+        return None
 
     @property
     def allowed_hosts(self) -> list[str]:
         return ["generativelanguage.googleapis.com", "oauth2.googleapis.com"]
+
+
+def _parse_stream_json_stats(container_logs: str) -> TokenUsage | None:
+    """Parse token usage from the Gemini stream-json ``result`` event."""
+    for line in reversed(container_logs.splitlines()):
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if event.get("type") != "result":
+            continue
+        raw_stats = event.get("stats")
+        if not isinstance(raw_stats, dict):
+            continue
+        stats = cast(dict[str, Any], raw_stats)
+        input_tokens = int(stats.get("input_tokens", 0))
+        output_tokens = int(stats.get("output_tokens", 0))
+        if input_tokens == 0 and output_tokens == 0:
+            return None
+        return TokenUsage(
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        )
+    return None

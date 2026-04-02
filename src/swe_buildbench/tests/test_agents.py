@@ -53,6 +53,8 @@ class TestGeminiCLICredentialMounts:
         bash_script = cmd[2]
         assert "cp /tmp/gemini-auth/*" in bash_script
         assert "projects.json" in bash_script
+        assert "--yolo" in bash_script
+        assert "--output-format stream-json" in bash_script
 
 
 class TestAgentVersions:
@@ -111,6 +113,7 @@ class TestModelAndEffort:
         )
         bash_script = cmd[2]
         assert '--model "gemini-2.5-pro"' in bash_script
+        assert "--yolo" in bash_script
 
     def test_adapter_model_property(self) -> None:
         adapter = ClaudeCodeAdapter(model="opus")
@@ -132,6 +135,6 @@ class TestTelemetryPaths:
         adapter = CodexCLIAdapter()
         assert any("codex-events" in p for p in adapter.telemetry_paths)
 
-    def test_gemini_has_otel_path(self) -> None:
+    def test_gemini_has_no_telemetry_paths(self) -> None:
         adapter = GeminiCLIAdapter()
-        assert any("gemini-otel" in p for p in adapter.telemetry_paths)
+        assert adapter.telemetry_paths == []
