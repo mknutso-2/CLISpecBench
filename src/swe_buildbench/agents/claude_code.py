@@ -72,6 +72,11 @@ class ClaudeCodeAdapter(AgentAdapter):
             flags += f" --effort {self._effort}"
         setup = (
             f"chown -R agent:agent {work_dir}"
+            # Docker creates ~/.claude/ as root when bind-mounting credential
+            # files into it.  Fix ownership of the directory (not -R, since
+            # the bind-mounted files inside are ro) so Claude Code can create
+            # session-env/ (needed by its Bash tool).
+            f" && mkdir -p /home/agent/.claude && chown agent:agent /home/agent/.claude"
             f" && su agent -c 'cat {prompt_path}"
             f" | claude {flags}'"
         )
