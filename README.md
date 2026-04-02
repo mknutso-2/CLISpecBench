@@ -36,9 +36,10 @@ Design docs:
 uv sync          # or: pip install -e ".[dev]"
 ```
 
-### 2. Install Docker (Windows)
+### 2. Install Docker (Windows, one-time)
 
-Run the install script from a WSL terminal (requires sudo password):
+Run the install script from a WSL terminal (requires sudo password).
+This only needs to be done once per machine -- Docker persists across reboots.
 
 ```bash
 wsl -d Ubuntu

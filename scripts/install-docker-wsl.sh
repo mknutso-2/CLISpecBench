@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Install Docker Engine inside WSL2 Ubuntu (Windows 11 Home).
+# This only needs to be run once per machine. Docker persists across reboots.
 #
 # Run from a WSL terminal (not Git Bash — sudo needs a TTY for the password):
 #   wsl -d Ubuntu
