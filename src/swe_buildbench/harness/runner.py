@@ -61,6 +61,7 @@ def run_evaluation(
     adapter: AgentAdapter,
     *,
     run_number: int = 1,
+    eval_number: int = 1,
     prompt_variant: str | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT,
     output_dir: Path = Path("results"),
@@ -223,7 +224,7 @@ def run_evaluation(
         # --- 10. Save artifacts ---
         out_path = result_path(
             output_dir, task.task_id, adapter.name, run_number,
-            adapter.model, adapter.effort,
+            adapter.model, adapter.effort, eval_number,
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = RunArtifacts()

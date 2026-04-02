@@ -165,6 +165,21 @@ def _model_effort_slug(model: str | None, effort: str | None) -> str | None:
     return model
 
 
+def _model_base_dir(
+    output_dir: Path,
+    task: str,
+    agent: str,
+    model: str | None = None,
+    effort: str | None = None,
+) -> Path:
+    """Return the base directory for a task/agent/model combination."""
+    base = output_dir / task / agent
+    slug = _model_effort_slug(model, effort)
+    if slug:
+        base = base / slug
+    return base
+
+
 def result_path(
     output_dir: Path,
     task: str,
@@ -172,35 +187,30 @@ def result_path(
     run_number: int,
     model: str | None = None,
     effort: str | None = None,
+    eval_number: int = 1,
 ) -> Path:
-    base = output_dir / task / agent
-    slug = _model_effort_slug(model, effort)
-    if slug:
-        base = base / slug
-    return base / f"run{run_number}" / "result.json"
+    base = _model_base_dir(output_dir, task, agent, model, effort)
+    return base / f"eval{eval_number}" / f"run{run_number}" / "result.json"
 
 
-def next_run_number(
+def next_eval_number(
     output_dir: Path,
     task: str,
     agent: str,
     model: str | None = None,
     effort: str | None = None,
 ) -> int:
-    """Return the next available run number (1-based).
+    """Return the next available eval number (1-based).
 
-    Scans for existing ``runN/`` directories and returns max(N) + 1.
+    Scans for existing ``evalN/`` directories and returns max(N) + 1.
     """
-    base = output_dir / task / agent
-    slug = _model_effort_slug(model, effort)
-    if slug:
-        base = base / slug
+    base = _model_base_dir(output_dir, task, agent, model, effort)
     if not base.is_dir():
         return 1
     existing = [
-        int(d.name[3:])
+        int(d.name[4:])
         for d in base.iterdir()
-        if d.is_dir() and d.name.startswith("run") and d.name[3:].isdigit()
+        if d.is_dir() and d.name.startswith("eval") and d.name[4:].isdigit()
     ]
     return max(existing, default=0) + 1
 
