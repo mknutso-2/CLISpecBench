@@ -97,13 +97,14 @@ class TestModelAndEffort:
         assert "--effort" not in bash_script
 
     def test_codex_model_in_command(self) -> None:
-        adapter = CodexCLIAdapter(model="o3")
+        adapter = CodexCLIAdapter(model="o3", effort="high")
         cmd = adapter.invoke_command(
             PurePosixPath("/workspace/prompt.md"),
             PurePosixPath("/workspace"),
         )
         bash_script = cmd[2]
         assert '--model "o3"' in bash_script
+        assert 'model_reasoning_effort="high"' in bash_script
 
     def test_gemini_model_in_command(self) -> None:
         adapter = GeminiCLIAdapter(model="gemini-2.5-pro")

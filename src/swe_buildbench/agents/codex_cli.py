@@ -62,6 +62,8 @@ class CodexCLIAdapter(AgentAdapter):
         )
         if self._model:
             flags += f' --model "{self._model}"'
+        if self._effort:
+            flags += f' -c model_reasoning_effort="{self._effort}"'
         return [
             "bash", "-c",
             f'cat {prompt_path} | codex exec {flags}'
