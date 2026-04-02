@@ -128,8 +128,10 @@ def _parse_stream_json_stats(container_logs: str) -> TokenUsage | None:
         output_tokens = int(stats.get("output_tokens", 0))
         if input_tokens == 0 and output_tokens == 0:
             return None
+        tool_calls = int(stats.get("tool_calls", 0))
         return TokenUsage(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
+            tool_calls=tool_calls or None,
         )
     return None

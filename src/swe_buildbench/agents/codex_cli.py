@@ -122,6 +122,7 @@ class CodexCLIAdapter(AgentAdapter):
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             cached_input_tokens=cached_input_tokens or None,
+            tool_calls=_count_tool_calls(container_logs),
         )
 
     @property
@@ -141,3 +142,21 @@ class CodexCLIAdapter(AgentAdapter):
     @property
     def allowed_hosts(self) -> list[str]:
         return ["chatgpt.com"]
+
+
+def _count_tool_calls(container_logs: str) -> int:
+    """Count command_execution items in Codex JSONL event stream."""
+    count = 0
+    for line in container_logs.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if event.get("type") == "item.completed":
+            item = event.get("item", {})
+            if item.get("type") == "command_execution":
+                count += 1
+    return count

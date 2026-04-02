@@ -72,8 +72,15 @@ def main() -> None:
             "total_tokens": (
                 r.token_usage.total_tokens if r.token_usage else ""
             ),
+            "tool_calls": (
+                r.token_usage.tool_calls
+                if r.token_usage and r.token_usage.tool_calls
+                else ""
+            ),
             "wall_clock_s": f"{r.metadata.wall_clock_seconds:.1f}",
             "build_ok": r.build.success,
+            "surgery": r.surgery or "",
+            "notes": r.metadata.notes or "",
         })
 
     if not rows:

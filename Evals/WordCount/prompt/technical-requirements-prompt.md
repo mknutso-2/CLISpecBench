@@ -1,4 +1,4 @@
-For technical compatibility, please implement this in C++20, buildable with cmake. The tool should accept these command-line flags:
+For technical compatibility, please implement this in C++20, buildable with cmake. Use only the C++ standard library — do not use any external or third-party dependencies. The tool should accept these command-line flags:
 
 ```
 <executable> --input <input_file> --output <output_file>

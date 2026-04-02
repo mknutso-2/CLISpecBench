@@ -18,6 +18,7 @@ class TokenUsage:
     input_tokens: int
     output_tokens: int
     cached_input_tokens: int | None = None
+    tool_calls: int | None = None
 
     @property
     def total_tokens(self) -> int:
@@ -93,6 +94,7 @@ class RunMetadata:
     exit_reason: str  # "completed" | "timeout" | "token_limit" | "error"
     model: str | None = None
     effort: str | None = None
+    notes: str | None = None
 
 
 @dataclass
@@ -106,6 +108,7 @@ class RunResult:
     test_summary: TestSummary
     scores: Scores
     artifacts: RunArtifacts = field(default_factory=RunArtifacts)
+    surgery: str | None = None  # Description of post-hoc fix applied to get code to compile
 
     @property
     def schema_version(self) -> str:
@@ -124,6 +127,8 @@ class RunResult:
         d["test_summary"] = {**asdict(self.test_summary), "total": self.test_summary.total}
         d["scores"] = asdict(self.scores)
         d["artifacts"] = asdict(self.artifacts)
+        if self.surgery:
+            d["surgery"] = self.surgery
         return d
 
     def write(self, path: Path) -> None:
@@ -177,6 +182,7 @@ def load_result(path: Path) -> RunResult:
             input_tokens=data["token_usage"]["input_tokens"],
             output_tokens=data["token_usage"]["output_tokens"],
             cached_input_tokens=data["token_usage"].get("cached_input_tokens"),
+            tool_calls=data["token_usage"].get("tool_calls"),
         )
         if data.get("token_usage")
         else None
@@ -203,4 +209,5 @@ def load_result(path: Path) -> RunResult:
         test_summary=summary,
         scores=scores,
         artifacts=artifacts,
+        surgery=data.get("surgery"),
     )

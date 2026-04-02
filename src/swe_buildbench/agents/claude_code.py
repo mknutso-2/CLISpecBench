@@ -144,8 +144,28 @@ def _parse_stream_json_usage(container_logs: str) -> TokenUsage | None:
             input_tokens=input_tokens + cache_read + cache_creation,
             output_tokens=output_tokens,
             cached_input_tokens=cache_read or None,
+            tool_calls=_count_tool_calls(container_logs),
         )
     return None
+
+
+def _count_tool_calls(container_logs: str) -> int:
+    """Count tool_use blocks in Claude Code stream-json assistant events."""
+    count = 0
+    for line in container_logs.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if event.get("type") != "assistant":
+            continue
+        for block in event.get("message", {}).get("content", []):
+            if block.get("type") == "tool_use":
+                count += 1
+    return count
 
 
 def _parse_otel_attrs(raw_attrs: Any) -> dict[str, str]:
