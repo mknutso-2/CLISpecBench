@@ -19,6 +19,7 @@ class TokenUsage:
     output_tokens: int
     cached_input_tokens: int | None = None
     tool_calls: int | None = None
+    cost_usd: float | None = None  # Native or estimated API cost
 
     @property
     def total_tokens(self) -> int:
@@ -192,6 +193,7 @@ def load_result(path: Path) -> RunResult:
             output_tokens=data["token_usage"]["output_tokens"],
             cached_input_tokens=data["token_usage"].get("cached_input_tokens"),
             tool_calls=data["token_usage"].get("tool_calls"),
+            cost_usd=data["token_usage"].get("cost_usd"),
         )
         if data.get("token_usage")
         else None

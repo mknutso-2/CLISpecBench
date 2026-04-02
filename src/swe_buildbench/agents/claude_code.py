@@ -145,11 +145,13 @@ def _parse_stream_json_usage(container_logs: str) -> TokenUsage | None:
         cache_creation = int(usage.get("cache_creation_input_tokens", 0))
         if input_tokens == 0 and output_tokens == 0:
             return None
+        cost_usd = event.get("total_cost_usd")
         return TokenUsage(
             input_tokens=input_tokens + cache_read + cache_creation,
             output_tokens=output_tokens,
             cached_input_tokens=cache_read or None,
             tool_calls=_count_tool_calls(container_logs),
+            cost_usd=round(float(cost_usd), 6) if cost_usd is not None else None,
         )
     return None
 
