@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.rs274_parameters import SELECTED_COORDINATE_SYSTEM_PARAMETER
-from swe_buildbench.cncsim.test_support import get_parameter_value, run_cncsim
+from cncsim_support import get_parameter_value, run_cncsim
+from rs274_parameters import SELECTED_COORDINATE_SYSTEM_PARAMETER
 
 
 # See CNCSim/prompt/docs/RS274NGC.md sections 3.2.1 "Parameters",

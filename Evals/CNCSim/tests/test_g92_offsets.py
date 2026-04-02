@@ -2,16 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.rs274_parameters import (
+from cncsim_support import (
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
+from rs274_parameters import (
     G92_A_OFFSET_PARAMETER,
     G92_B_OFFSET_PARAMETER,
     G92_C_OFFSET_PARAMETER,
     G92_X_OFFSET_PARAMETER,
-)
-from swe_buildbench.cncsim.test_support import (
-    get_parameter_value,
-    run_cncsim,
-    with_default_rotary_axes,
 )
 
 

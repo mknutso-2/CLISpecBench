@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
+from cncsim_support import run_cncsim, with_default_rotary_axes
 
 
 # See CNCSim/prompt/docs/RS274NGC.md section 3.5.4 "Dwell -- G4": G4 P...

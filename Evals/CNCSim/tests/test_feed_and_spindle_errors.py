@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.test_support import run_cncsim_invalid_input
+from cncsim_support import run_cncsim_invalid_input
 
 
 # RS274 section 3.7.2 explicitly says the S number may not be negative.

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
+from cncsim_support import run_cncsim, with_default_rotary_axes
 
 CommentParsingCase = tuple[str, str, dict[str, float]]
 

@@ -7,13 +7,15 @@ from typing import cast
 
 import pytest
 
-from swe_buildbench.cncsim import (
+from cncsim_target import (
     DEFAULT_IMPLEMENTATION_ENV_VAR,
+    resolve_implementation_target,
+)
+from swe_buildbench.build import (
     CMakeBuildResult,
     ImplementationTarget,
     build_cmake_project,
     find_repo_root,
-    resolve_implementation_target,
 )
 
 

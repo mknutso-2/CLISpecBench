@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.modal_groups import MCODE_MODAL_GROUP_COOLANT
-from swe_buildbench.cncsim.test_support import run_cncsim
+from cncsim_support import run_cncsim
+from modal_groups import MCODE_MODAL_GROUP_COOLANT
 
 ToolingStateCase = tuple[
     str,

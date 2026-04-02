@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from cncsim_support import run_cncsim
 
 StateCase = tuple[str, str, float, float, str]
 

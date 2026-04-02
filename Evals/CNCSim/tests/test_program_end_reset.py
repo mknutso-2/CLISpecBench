@@ -4,7 +4,12 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.modal_groups import (
+from cncsim_support import (
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
+from modal_groups import (
     GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION,
     GCODE_MODAL_GROUP_DISTANCE_MODE,
     GCODE_MODAL_GROUP_FEED_RATE_MODE,
@@ -14,15 +19,10 @@ from swe_buildbench.cncsim.modal_groups import (
     MCODE_MODAL_GROUP_OVERRIDE_SWITCHES,
     MCODE_MODAL_GROUP_SPINDLE_TURNING,
 )
-from swe_buildbench.cncsim.rs274_parameters import (
+from rs274_parameters import (
     G92_X_OFFSET_PARAMETER,
     G92_Y_OFFSET_PARAMETER,
     G92_Z_OFFSET_PARAMETER,
-)
-from swe_buildbench.cncsim.test_support import (
-    get_parameter_value,
-    run_cncsim,
-    with_default_rotary_axes,
 )
 
 PROGRAM_END_CODES = ("M2", "M30")

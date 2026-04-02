@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from swe_buildbench.cncsim import CMakeBuildResult
+from swe_buildbench.build import CMakeBuildResult
 
 
 def test_payload_builds_successfully(build_result: CMakeBuildResult) -> None:

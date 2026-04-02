@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import ProbeBox, run_cncsim_invalid_input
+from cncsim_support import ProbeBox, run_cncsim_invalid_input
 
 PROBE_TOOL = 2
 PROBE_BOX: ProbeBox = (0.0, 10.0, 0.0, 10.0, 2.0, 4.0)

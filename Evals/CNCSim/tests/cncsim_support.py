@@ -6,7 +6,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
-from swe_buildbench.cncsim.rs274_parameters import (
+from rs274_parameters import (
     REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
 )

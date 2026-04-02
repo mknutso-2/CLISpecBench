@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.test_support import run_cncsim_invalid_input
+from cncsim_support import run_cncsim_invalid_input
 
 
 # See CNCSim/prompt/docs/RS274NGC.md section 3.5.4 "Dwell -- G4": it is an

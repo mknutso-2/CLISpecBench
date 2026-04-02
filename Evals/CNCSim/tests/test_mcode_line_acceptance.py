@@ -4,13 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.modal_groups import (
+from cncsim_support import run_cncsim
+from modal_groups import (
     MCODE_MODAL_GROUP_COOLANT,
     MCODE_MODAL_GROUP_SPINDLE_TURNING,
     MCODE_MODAL_GROUP_STOPPING,
     MCODE_MODAL_GROUP_TOOL_CHANGE,
 )
-from swe_buildbench.cncsim.test_support import run_cncsim
 
 McodeLineAcceptanceCase = tuple[str, str, dict[str, str]]
 

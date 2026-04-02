@@ -4,7 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.rs274_parameters import (
+from cncsim_support import (
+    build_parameter_file,
+    get_parameter_value,
+    run_cncsim,
+    run_cncsim_invalid_input,
+    with_default_rotary_axes,
+)
+from rs274_parameters import (
     G92_A_OFFSET_PARAMETER,
     G92_B_OFFSET_PARAMETER,
     G92_C_OFFSET_PARAMETER,
@@ -14,13 +21,6 @@ from swe_buildbench.cncsim.rs274_parameters import (
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
     coordinate_system_xyz_parameter_indices,
     coordinate_system_xyzabc_parameter_indices,
-)
-from swe_buildbench.cncsim.test_support import (
-    build_parameter_file,
-    get_parameter_value,
-    run_cncsim,
-    run_cncsim_invalid_input,
-    with_default_rotary_axes,
 )
 
 CLI_CASES: list[tuple[str, str | None, bool]] = [

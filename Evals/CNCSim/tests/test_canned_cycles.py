@@ -4,16 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.modal_groups import (
-    GCODE_MODAL_GROUP_MOTION,
-    GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
-)
-from swe_buildbench.cncsim.rs274_parameters import G92_X_OFFSET_PARAMETER
-from swe_buildbench.cncsim.test_support import (
+from cncsim_support import (
     get_parameter_value,
     run_cncsim,
     with_default_rotary_axes,
 )
+from modal_groups import (
+    GCODE_MODAL_GROUP_MOTION,
+    GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
+)
+from rs274_parameters import G92_X_OFFSET_PARAMETER
 
 CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
 RepeatedCannedCycleCase = tuple[str, str, str, dict[str, float], str]

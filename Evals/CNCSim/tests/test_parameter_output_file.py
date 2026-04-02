@@ -2,7 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.rs274_parameters import (
+from cncsim_support import (
+    build_parameter_file,
+    run_cncsim_with_parameter_output,
+)
+from rs274_parameters import (
     G92_A_OFFSET_PARAMETER,
     G92_B_OFFSET_PARAMETER,
     G92_C_OFFSET_PARAMETER,
@@ -13,10 +17,6 @@ from swe_buildbench.cncsim.rs274_parameters import (
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
     coordinate_system_xyz_parameter_indices,
     coordinate_system_xyzabc_parameter_indices,
-)
-from swe_buildbench.cncsim.test_support import (
-    build_parameter_file,
-    run_cncsim_with_parameter_output,
 )
 
 

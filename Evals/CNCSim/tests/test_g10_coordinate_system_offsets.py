@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.rs274_parameters import (
-    coordinate_system_xyz_parameter_indices,
-    coordinate_system_xyzabc_parameter_indices,
-)
-from swe_buildbench.cncsim.test_support import (
+from cncsim_support import (
     get_parameter_value,
     run_cncsim,
     with_default_rotary_axes,
+)
+from rs274_parameters import (
+    coordinate_system_xyz_parameter_indices,
+    coordinate_system_xyzabc_parameter_indices,
 )
 
 CoordinateSystemOffsetCase = tuple[str, str, dict[str, dict[str, float]]]

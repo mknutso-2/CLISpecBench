@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.modal_groups import (
+from cncsim_support import run_cncsim, with_default_rotary_axes
+from modal_groups import (
     GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
     GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION,
     GCODE_MODAL_GROUP_DISTANCE_MODE,
@@ -16,7 +17,6 @@ from swe_buildbench.cncsim.modal_groups import (
     GCODE_MODAL_GROUP_TOOL_LENGTH_OFFSET,
     GCODE_MODAL_GROUP_UNITS,
 )
-from swe_buildbench.cncsim.test_support import run_cncsim, with_default_rotary_axes
 
 ActiveGcodeGroupCase = tuple[str, str, str]
 CoordinateSystemSelectionCase = tuple[str, str, dict[str, float]]

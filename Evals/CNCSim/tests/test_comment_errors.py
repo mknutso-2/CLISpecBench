@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim_invalid_input
+from cncsim_support import run_cncsim_invalid_input
 
 CommentErrorCase = tuple[str, str]
 

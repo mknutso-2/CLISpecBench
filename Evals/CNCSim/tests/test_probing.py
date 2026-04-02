@@ -4,7 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.rs274_parameters import (
+from cncsim_support import ProbeBox, get_parameter_value, run_cncsim
+from rs274_parameters import (
     PROBE_TRIP_A_PARAMETER,
     PROBE_TRIP_B_PARAMETER,
     PROBE_TRIP_C_PARAMETER,
@@ -12,7 +13,6 @@ from swe_buildbench.cncsim.rs274_parameters import (
     PROBE_TRIP_Y_PARAMETER,
     PROBE_TRIP_Z_PARAMETER,
 )
-from swe_buildbench.cncsim.test_support import ProbeBox, get_parameter_value, run_cncsim
 
 PROBE_TOOL = 2
 PROBE_TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT

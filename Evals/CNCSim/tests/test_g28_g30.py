@@ -2,7 +2,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from swe_buildbench.cncsim.rs274_parameters import (
+from cncsim_support import (
+    build_parameter_file,
+    get_parameter_value,
+    run_cncsim,
+    with_default_rotary_axes,
+)
+from rs274_parameters import (
     G28_HOME_A_PARAMETER,
     G28_HOME_B_PARAMETER,
     G28_HOME_C_PARAMETER,
@@ -15,12 +21,6 @@ from swe_buildbench.cncsim.rs274_parameters import (
     G30_HOME_X_PARAMETER,
     G30_HOME_Y_PARAMETER,
     G30_HOME_Z_PARAMETER,
-)
-from swe_buildbench.cncsim.test_support import (
-    build_parameter_file,
-    get_parameter_value,
-    run_cncsim,
-    with_default_rotary_axes,
 )
 
 

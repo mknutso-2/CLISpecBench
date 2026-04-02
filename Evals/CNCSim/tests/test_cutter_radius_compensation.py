@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import run_cncsim
+from cncsim_support import run_cncsim
 
 TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 

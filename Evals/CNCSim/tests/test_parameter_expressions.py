@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from swe_buildbench.cncsim.test_support import (
+from cncsim_support import (
     get_parameter_value,
     run_cncsim,
     with_default_rotary_axes,
