@@ -37,6 +37,7 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
+                use_docker=False,
             )
 
         cmd = mock_run.call_args[0][0]
@@ -61,6 +62,7 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
+                use_docker=False,
             )
 
         cmd = mock_run.call_args[0][0]

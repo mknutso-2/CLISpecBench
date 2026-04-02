@@ -5,11 +5,21 @@ from __future__ import annotations
 import json
 import logging
 import subprocess
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from swe_buildbench.harness.results import Scores, TestOutcome, TestSummary
 
 log = logging.getLogger(__name__)
+
+# Base Docker image tag — same image used to build agent containers,
+# has cmake, g++, python3, pytest, and pytest-json-report.
+TEST_RUNNER_IMAGE = "swe-buildbench-base"
+
+# Paths inside the test-runner container (directly under /tmp which always exists)
+_CONTAINER_TESTS = PurePosixPath("/tmp/tests")
+_CONTAINER_SUBMISSION = PurePosixPath("/tmp/submission")
+_CONTAINER_SRC = PurePosixPath("/tmp/src")
+_CONTAINER_REPORT = PurePosixPath("/tmp/report.json")
 
 
 # ---------------------------------------------------------------------------
@@ -22,6 +32,7 @@ def run_hidden_tests(
     submission_dir: Path,
     report_path: Path,
     timeout_seconds: float = 600,
+    use_docker: bool = True,
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run the hidden test suite against an agent's submission.
 
@@ -29,9 +40,28 @@ def run_hidden_tests(
     discovering the executable.  We pass ``--implementation-root`` pointing
     at the agent's source directory.
 
+    When *use_docker* is True (the default), tests run inside a Linux
+    container so the build environment matches what the agent targeted.
+
     Uses ``pytest --json-report`` to capture per-test results.
     Returns the test outcomes and summary.
     """
+    if use_docker:
+        return _run_hidden_tests_docker(
+            test_dir, submission_dir, report_path, timeout_seconds,
+        )
+    return _run_hidden_tests_local(
+        test_dir, submission_dir, report_path, timeout_seconds,
+    )
+
+
+def _run_hidden_tests_local(
+    test_dir: Path,
+    submission_dir: Path,
+    report_path: Path,
+    timeout_seconds: float,
+) -> tuple[list[TestOutcome], TestSummary]:
+    """Run tests on the host (fallback for when Docker is unavailable)."""
     cmd = [
         "python",
         "-m",
@@ -42,7 +72,7 @@ def run_hidden_tests(
         f"--json-report-file={report_path}",
         "-q",
     ]
-    log.info("Running hidden tests: %s", " ".join(cmd))
+    log.info("Running hidden tests (local): %s", " ".join(cmd))
 
     result = subprocess.run(
         cmd,
@@ -51,6 +81,82 @@ def run_hidden_tests(
         timeout=timeout_seconds,
     )
     log.info("pytest exited with code %d", result.returncode)
+
+    return parse_json_report(report_path)
+
+
+def _run_hidden_tests_docker(
+    test_dir: Path,
+    submission_dir: Path,
+    report_path: Path,
+    timeout_seconds: float,
+) -> tuple[list[TestOutcome], TestSummary]:
+    """Run tests inside a Docker container for cross-platform compatibility."""
+    from swe_buildbench.harness.docker import (
+        ContainerConfig,
+        DockerSandbox,
+    )
+
+    # The test dir may reference helpers from the src/ package via conftest
+    # imports (e.g. swe_buildbench.build). Find the repo src/ directory.
+    src_dir = Path(__file__).resolve().parent.parent.parent  # -> src/
+
+    # Create a .git marker so find_repo_root() succeeds in conftest fixtures
+    cmd_str = (
+        f"mkdir -p /tmp/.git"
+        f" && python3 -m pytest {_CONTAINER_TESTS}"
+        f" --implementation-root={_CONTAINER_SUBMISSION}"
+        f" --json-report --json-report-file={_CONTAINER_REPORT}"
+        " -q"
+    )
+    config = ContainerConfig(
+        image=TEST_RUNNER_IMAGE,
+        environment={"PYTHONPATH": str(_CONTAINER_SRC)},
+        command=["bash", "-c", cmd_str],
+        network_mode="none",
+    )
+
+    sandbox = DockerSandbox()
+    try:
+        # Build the base image if needed
+        if not sandbox.image_exists(TEST_RUNNER_IMAGE):
+            base_dockerfile = (
+                Path(__file__).resolve().parent.parent.parent.parent
+                / "docker" / "base.Dockerfile"
+            )
+            sandbox.build_image(base_dockerfile, TEST_RUNNER_IMAGE)
+
+        sandbox.create(config)
+        sandbox.copy_in(test_dir, _CONTAINER_TESTS)
+        sandbox.copy_in(submission_dir, _CONTAINER_SUBMISSION)
+        sandbox.copy_in(src_dir, _CONTAINER_SRC)
+
+        run = sandbox.start_and_wait(timeout_seconds)
+        log.info(
+            "Test container finished: exit_code=%s wall=%.1fs",
+            run.exit_code, run.wall_clock_seconds,
+        )
+
+        try:
+            logs = sandbox.get_logs()
+            if logs:
+                log.debug("Test runner output:\n%s", logs[:3000])
+        except Exception:
+            pass
+
+        # Extract the JSON report
+        try:
+            extract_dir = report_path.parent
+            sandbox.copy_out(_CONTAINER_REPORT, extract_dir)
+            # copy_out extracts into extract_dir with the archive name
+            extracted = extract_dir / "report.json"
+            if extracted.exists() and extracted != report_path:
+                extracted.rename(report_path)
+        except Exception:
+            log.warning("Failed to extract test report from container", exc_info=True)
+
+    finally:
+        sandbox.cleanup()
 
     return parse_json_report(report_path)
 

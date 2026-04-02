@@ -226,3 +226,23 @@ class DockerSandbox:
             raise RuntimeError("No container created")
         raw: bytes = self._container.logs()
         return raw.decode("utf-8", errors="replace")
+
+    def run_oneshot(
+        self,
+        config: ContainerConfig,
+        timeout_seconds: float,
+    ) -> tuple[int | None, str]:
+        """Create, start, wait, and return (exit_code, logs) for a one-shot container.
+
+        The container is removed after use regardless of outcome.
+        """
+        prev = self._container
+        try:
+            self.create(config)
+            run = self.start_and_wait(timeout_seconds)
+            logs = self.get_logs()
+            return run.exit_code, logs
+        finally:
+            if self._container is not None:
+                self.cleanup()
+            self._container = prev
