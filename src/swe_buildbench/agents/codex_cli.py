@@ -83,4 +83,4 @@ class CodexCLIAdapter(AgentAdapter):
 
     @property
     def allowed_hosts(self) -> list[str]:
-        return ["api.openai.com"]
+        return ["chatgpt.com"]

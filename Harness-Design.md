@@ -2,7 +2,7 @@
 
 **Author:** Matthew G. Knutson
 **Status:** Draft
-**Last Updated:** March 2026
+**Last Updated:** April 2026
 
 ---
 
@@ -93,7 +93,7 @@ src/swe_buildbench/
     __init__.py
     runner.py                   # Orchestrates a single eval run end-to-end
     docker.py                   # Container lifecycle management
-    task.py                     # Task registry: loads TASK.md, prompts, tests
+    task.py                     # Task registry: loads prompts, tests
     workspace.py                # Prepares the clean working directory for the agent
     scoring.py                  # Correctness, coverage, quality scoring
     results.py                  # Result schema, serialization, aggregation
@@ -106,12 +106,21 @@ src/swe_buildbench/
     gemini_cli.py               # Gemini CLI adapter
     model_api.py                # Model API mode adapter (direct API calls)
 
-  cncsim/                       # (already exists)
-    build.py                    # CMake build support
-    target.py                   # Implementation target resolution
+  build/                        # Shared CMake build utilities
+    build.py                    # build_cmake_project, CMakeBuildResult
+    target.py                   # ImplementationTarget, find_repo_root
+
+  cncsim/                       # CNCSim-specific test infrastructure
+    target.py                   # CNCSim default implementation target resolution
     rs274_parameters.py         # RS274 parameter constants
     modal_groups.py             # Modal group constants
-    test_support.py             # Test helpers for CNCSim tests
+    test_support.py             # Test helpers (run_cncsim, parameter files, etc.)
+
+Evals/
+  CNCSim/                       # CNC G-code interpreter eval
+    prompt/ docs/ tests/ reference-implementation/
+  WordCount/                    # Word frequency counter (toy eval)
+    prompt/ docs/ tests/ reference-implementation/
 
 docker/
   base.Dockerfile               # Common: C++20 toolchain, cmake, python, pytest
@@ -119,6 +128,10 @@ docker/
     claude-code.Dockerfile      # Extends base, installs Claude Code CLI
     codex-cli.Dockerfile        # Extends base, installs Codex CLI
     gemini-cli.Dockerfile       # Extends base, installs Gemini CLI
+
+scripts/
+  install-docker-wsl.sh         # Docker Engine install in WSL2 Ubuntu
+  smoke-test-docker-auth.sh     # Verify CLI auth works inside containers
 ```
 
 ---
@@ -251,20 +264,40 @@ RUN npm install -g @anthropic-ai/claude-code@<pinned-version>
 COPY otel-collector-config.yaml /etc/otel/
 ```
 
-### 6.2 Network Policy
+### 6.2 Authentication
 
-Containers are created with `--network=none` to block all outbound traffic
-except the agent's own API endpoint. This is implemented via a Docker network
-with a firewall rule that allows only traffic to the agent's API host:
+Agent CLIs authenticate via OAuth tokens stored on the host machine. The
+harness mounts host credential files into the container at runtime. Each
+agent has different requirements (verified via smoke testing):
+
+| Agent | Host files | Mount strategy |
+|-------|-----------|----------------|
+| Claude Code | `~/.claude/` (read-only), `~/.claude.json` (read-only) | Direct `:ro` bind mounts |
+| Codex CLI | `~/.codex/auth.json` (read-only, file only) | Mount single file `:ro`; rest of `.codex/` stays writable |
+| Gemini CLI | `~/.gemini/oauth_creds.json`, `google_accounts.json`, `settings.json` | Copy to writable dir at startup; seed `projects.json` |
+
+Notes:
+- Claude Code needs `~/.claude.json` (config file) mounted or its warning
+  messages corrupt stdout.
+- Codex requires `ca-certificates` and `git` installed in the container.
+- Gemini CLI needs a writable `~/.gemini/` directory (writes `projects.json`
+  at startup), so auth files are copied in rather than mounted read-only.
+
+See `scripts/smoke-test-docker-auth.sh` for the tested mounting commands.
+
+### 6.3 Network Policy
+
+Containers are created with restricted network access, allowing only traffic
+to the agent's API host:
 
 - Claude Code: `api.anthropic.com`
-- Codex CLI: `api.openai.com`
-- Gemini CLI: `generativelanguage.googleapis.com`
+- Codex CLI: `chatgpt.com` (not `api.openai.com` — Codex uses WebSocket)
+- Gemini CLI: `generativelanguage.googleapis.com`, `oauth2.googleapis.com`
 
 All other outbound traffic is dropped. The agent cannot fetch packages, clone
 repositories, or contact any other external service.
 
-### 6.3 Resource Limits
+### 6.4 Resource Limits
 
 | Resource | Limit | Rationale |
 |----------|-------|-----------|
@@ -273,7 +306,7 @@ repositories, or contact any other external service.
 | CPU | 4 cores | Consistent across runs; enough for parallel cmake |
 | Disk | 10 GB | Ample for source + build artifacts |
 
-### 6.4 Container Lifecycle
+### 6.5 Container Lifecycle
 
 ```
 1. docker create  (image, env vars, resource limits, network)

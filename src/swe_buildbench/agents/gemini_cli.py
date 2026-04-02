@@ -83,4 +83,4 @@ class GeminiCLIAdapter(AgentAdapter):
 
     @property
     def allowed_hosts(self) -> list[str]:
-        return ["generativelanguage.googleapis.com"]
+        return ["generativelanguage.googleapis.com", "oauth2.googleapis.com"]
