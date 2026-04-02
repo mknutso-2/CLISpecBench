@@ -28,6 +28,26 @@ sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plug
 # "wsl -d Ubuntu -- docker ..." without interactive sudo.
 sudo usermod -aG docker "$USER"
 
+# Configure Docker to also listen on TCP so the Python harness (running on
+# Windows) can connect via tcp://localhost:2375. The Unix socket is kept for
+# local WSL usage (e.g. smoke test scripts).
+sudo mkdir -p /etc/docker
+if [ ! -f /etc/docker/daemon.json ] || ! grep -q '"hosts"' /etc/docker/daemon.json; then
+    echo '{"hosts": ["unix:///var/run/docker.sock", "tcp://127.0.0.1:2375"]}' | sudo tee /etc/docker/daemon.json > /dev/null
+    echo "Configured Docker to listen on TCP 127.0.0.1:2375"
+fi
+
+# Docker's systemd unit file passes -H fd:// by default, which conflicts with
+# the "hosts" key in daemon.json. Create a systemd override that clears the
+# default ExecStart so daemon.json controls the listen addresses.
+OVERRIDE_DIR="/etc/systemd/system/docker.service.d"
+if [ ! -f "$OVERRIDE_DIR/override.conf" ]; then
+    sudo mkdir -p "$OVERRIDE_DIR"
+    printf '[Service]\nExecStart=\nExecStart=/usr/bin/dockerd\n' | sudo tee "$OVERRIDE_DIR/override.conf" > /dev/null
+    sudo systemctl daemon-reload
+    echo "Created systemd override to let daemon.json control Docker hosts"
+fi
+
 sudo service docker start
 
 echo "=== Verifying (with sudo, group change takes effect after restart) ==="

@@ -15,10 +15,10 @@ class TestClaudeCodeCredentialMounts:
         adapter = ClaudeCodeAdapter()
         mounts = adapter.credential_mounts(Path("/home/user"))
         assert "/home/user/.claude" in mounts
-        assert mounts["/home/user/.claude"]["bind"] == "/root/.claude"
+        assert mounts["/home/user/.claude"]["bind"] == "/home/agent/.claude"
         assert mounts["/home/user/.claude"]["mode"] == "ro"
         assert "/home/user/.claude.json" in mounts
-        assert mounts["/home/user/.claude.json"]["bind"] == "/root/.claude.json"
+        assert mounts["/home/user/.claude.json"]["bind"] == "/home/agent/.claude.json"
 
 
 class TestCodexCLICredentialMounts:

@@ -42,13 +42,15 @@ class ClaudeCodeAdapter(AgentAdapter):
         return env
 
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
-        return [
-            "claude",
-            "--print",
-            "--output-format", "stream-json",
-            "--prompt-file", str(prompt_path),
-            "--cwd", str(work_dir),
-        ]
+        # Container starts as root (so copy_in can write files), then we fix
+        # ownership and drop to the non-root 'agent' user before running claude.
+        # Claude Code refuses --dangerously-skip-permissions as root.
+        setup = (
+            f"chown -R agent:agent {work_dir}"
+            f" && su agent -c 'cat {prompt_path}"
+            f" | claude --print --dangerously-skip-permissions'"
+        )
+        return ["bash", "-c", setup]
 
     def parse_token_usage(self, container_fs: Path) -> TokenUsage | None:
         """Parse token usage from OpenTelemetry export files."""
@@ -59,9 +61,14 @@ class ClaudeCodeAdapter(AgentAdapter):
         return _parse_otel_token_usage(otel_dir)
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
+        home = "/home/agent"
         return {
-            (host_home / ".claude").as_posix(): {"bind": "/root/.claude", "mode": "ro"},
-            (host_home / ".claude.json").as_posix(): {"bind": "/root/.claude.json", "mode": "ro"},
+            (host_home / ".claude").as_posix(): {
+                "bind": f"{home}/.claude", "mode": "ro",
+            },
+            (host_home / ".claude.json").as_posix(): {
+                "bind": f"{home}/.claude.json", "mode": "ro",
+            },
         }
 
     @property

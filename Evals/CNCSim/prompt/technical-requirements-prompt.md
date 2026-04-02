@@ -75,3 +75,5 @@
 - Exit 0 on success. If the input program triggers any error condition documented in the
   specification document, treat that as invalid input and exit 1. Use exit 2 only for internal
   errors in the simulator itself rather than spec-defined program errors.
+- Place all source files (including `CMakeLists.txt`) in the `output/` directory relative to your
+  current working directory.

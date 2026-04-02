@@ -102,10 +102,26 @@ def run_evaluation(
             container_run.wall_clock_seconds,
         )
 
+        # Capture container logs for debugging
+        try:
+            container_logs = sandbox.get_logs()
+            if container_logs:
+                log.debug("Container logs:\n%s", container_logs[:5000])
+        except Exception:
+            log.debug("Could not retrieve container logs", exc_info=True)
+
         # --- 4. Extract agent output ---
         extract_dir = Path(tempfile.mkdtemp(prefix="swe-bb-extract-"))
-        sandbox.copy_out(CONTAINER_OUTPUT, extract_dir)
+        try:
+            sandbox.copy_out(CONTAINER_OUTPUT, extract_dir)
+        except Exception:
+            log.warning(
+                "Failed to extract %s from container (agent may not have created it)",
+                CONTAINER_OUTPUT,
+                exc_info=True,
+            )
         submission_dir = extract_dir / "output"
+        submission_dir.mkdir(exist_ok=True)
 
         # --- 5. Parse token usage ---
         token_usage: TokenUsage | None = None
