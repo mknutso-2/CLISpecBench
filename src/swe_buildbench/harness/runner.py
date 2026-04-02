@@ -16,6 +16,7 @@ from swe_buildbench.harness.docker import (
     ContainerConfig,
     DockerSandbox,
 )
+from swe_buildbench.harness.platform import resolve_host_home
 from swe_buildbench.harness.results import (
     BuildResult,
     RunMetadata,
@@ -80,6 +81,7 @@ def run_evaluation(
             sandbox.build_image(adapter.dockerfile, adapter.image_tag)
 
         # --- 3. Create and run container ---
+        host_home = resolve_host_home()
         config = ContainerConfig(
             image=adapter.image_tag,
             environment=adapter.environment(api_key_env),
@@ -87,6 +89,7 @@ def run_evaluation(
                 prompt_path=PurePosixPath(CONTAINER_PROMPT),
                 work_dir=PurePosixPath(CONTAINER_WORKSPACE),
             ),
+            volumes=adapter.credential_mounts(host_home),
         )
         sandbox.create(config)
         sandbox.copy_in(workspace, CONTAINER_WORKSPACE)

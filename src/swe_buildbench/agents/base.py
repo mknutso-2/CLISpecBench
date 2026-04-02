@@ -66,6 +66,15 @@ class AgentAdapter(ABC):
         Returns normalized :class:`TokenUsage`, or ``None`` if unavailable.
         """
 
+    def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
+        """Return Docker volume mounts for agent credentials.
+
+        *host_home*: user's home directory (WSL-mapped on Windows).
+        Returns dict in Docker SDK format:
+        ``{host_path: {"bind": container_path, "mode": "ro"}}``
+        """
+        return {}
+
     @property
     def allowed_hosts(self) -> list[str]:
         """Network hosts the container is allowed to reach.

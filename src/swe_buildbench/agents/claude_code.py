@@ -58,6 +58,12 @@ class ClaudeCodeAdapter(AgentAdapter):
             return None
         return _parse_otel_token_usage(otel_dir)
 
+    def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
+        return {
+            (host_home / ".claude").as_posix(): {"bind": "/root/.claude", "mode": "ro"},
+            (host_home / ".claude.json").as_posix(): {"bind": "/root/.claude.json", "mode": "ro"},
+        }
+
     @property
     def allowed_hosts(self) -> list[str]:
         return ["api.anthropic.com"]

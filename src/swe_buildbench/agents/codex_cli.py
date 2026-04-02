@@ -81,6 +81,16 @@ class CodexCLIAdapter(AgentAdapter):
             cached_input_tokens=cached_input_tokens or None,
         )
 
+    def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
+        # Mount only the auth file, not the whole .codex/ dir, to avoid
+        # read-only filesystem errors from Codex writing state files.
+        return {
+            (host_home / ".codex" / "auth.json").as_posix(): {
+                "bind": "/root/.codex/auth.json",
+                "mode": "ro",
+            },
+        }
+
     @property
     def allowed_hosts(self) -> list[str]:
         return ["chatgpt.com"]

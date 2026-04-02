@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import logging
+import sys
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
 import docker
 import docker.errors
+from docker import DockerClient
 from docker.models.containers import Container
 
 log = logging.getLogger(__name__)
@@ -24,6 +26,46 @@ DEFAULT_CPU_COUNT = 4
 DEFAULT_DISK_LIMIT = "10g"
 
 
+def _resolve_docker_client() -> DockerClient:
+    """Create a Docker client, handling Windows-WSL and native Linux.
+
+    Resolution order:
+    1. ``docker.from_env()`` — works on native Linux (Unix socket) and when
+       ``DOCKER_HOST`` is already set.
+    2. On Windows, try ``tcp://localhost:2375`` — works when the WSL2 Docker
+       daemon is configured to listen on TCP (see ``scripts/install-docker-wsl.sh``).
+    3. Raise with a helpful error message.
+    """
+    # Attempt 1: standard detection (env vars, default socket)
+    try:
+        client = docker.from_env()
+        client.ping()  # pyright: ignore[reportUnknownMemberType]
+        log.debug("Docker connected via default environment")
+        return client
+    except docker.errors.DockerException:
+        if sys.platform != "win32":
+            raise
+
+    # Attempt 2: Windows — try TCP to WSL2 Docker daemon
+    tcp_url = "tcp://localhost:2375"
+    try:
+        client = DockerClient(base_url=tcp_url)
+        client.ping()  # pyright: ignore[reportUnknownMemberType]
+        log.info("Docker connected via %s (WSL2)", tcp_url)
+        return client
+    except docker.errors.DockerException:
+        pass
+
+    msg = (
+        "Cannot connect to Docker daemon.\n"
+        "  - On Linux: ensure Docker is running (sudo service docker start).\n"
+        "  - On Windows (WSL2): either set DOCKER_HOST=tcp://localhost:2375\n"
+        "    or configure the WSL2 Docker daemon to listen on TCP.\n"
+        "    See scripts/install-docker-wsl.sh for setup instructions."
+    )
+    raise docker.errors.DockerException(msg)
+
+
 @dataclass
 class ContainerConfig:
     """Configuration for creating an agent container."""
@@ -31,9 +73,10 @@ class ContainerConfig:
     image: str
     environment: dict[str, str]
     command: list[str]
+    volumes: dict[str, dict[str, str]] = field(default_factory=dict[str, dict[str, str]])
     mem_limit: str = DEFAULT_MEM_LIMIT
     cpu_count: int = DEFAULT_CPU_COUNT
-    network_mode: str = "none"
+    network_mode: str = "bridge"
 
 
 @dataclass
@@ -50,7 +93,7 @@ class DockerSandbox:
     """Manages the lifecycle of a sandboxed Docker container for one agent run."""
 
     def __init__(self) -> None:
-        self._client = docker.from_env()
+        self._client = _resolve_docker_client()
         self._container: Container | None = None
 
     def build_image(self, dockerfile: Path, tag: str) -> str:
@@ -82,6 +125,7 @@ class DockerSandbox:
             image=config.image,
             command=config.command,
             environment=config.environment,
+            volumes=config.volumes or None,
             mem_limit=config.mem_limit,
             nano_cpus=config.cpu_count * 10**9,
             network_mode=config.network_mode,
