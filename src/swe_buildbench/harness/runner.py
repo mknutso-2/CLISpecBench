@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import logging
 import shutil
-import subprocess
 import tempfile
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
@@ -21,8 +20,6 @@ from swe_buildbench.harness.results import (
     BuildResult,
     RunMetadata,
     RunResult,
-    Scores,
-    TestSummary,
     TokenUsage,
     make_run_id,
     result_path,
@@ -114,31 +111,31 @@ def run_evaluation(
         except Exception:
             log.warning("Failed to parse token usage", exc_info=True)
 
-        # --- 6. Build submission ---
-        build_result = _build_submission(submission_dir, task)
+        # --- 6. Run hidden tests ---
+        # The eval's conftest.py handles cmake build + executable discovery
+        # via the --implementation-root pytest option.
+        report_path = extract_dir / "test-report.json"
+        tests, test_summary = run_hidden_tests(
+            test_dir=task.test_dir,
+            submission_dir=submission_dir,
+            report_path=report_path,
+        )
 
-        # --- 7. Run hidden tests ---
-        tests = []
-        test_summary = TestSummary()
-        scores = Scores()
+        # --- 7. Derive build result from test outcomes ---
+        build_test = next(
+            (t for t in tests if "test_build" in t.node_id or "builds_successfully" in t.node_id),
+            None,
+        )
+        build_result = BuildResult(
+            success=build_test.outcome == "passed" if build_test else test_summary.total > 0,
+            duration_seconds=build_test.duration_seconds if build_test else 0.0,
+        )
 
-        if build_result.success:
-            executable = _find_executable(submission_dir)
-            if executable:
-                report_path = extract_dir / "test-report.json"
-                tests, test_summary = run_hidden_tests(
-                    test_dir=task.test_dir,
-                    executable=executable,
-                    report_path=report_path,
-                )
-
-                # --- 8. Score ---
-                correctness = compute_correctness(test_summary)
-                coverage = compute_self_test_coverage(submission_dir, executable)
-                quality = compute_code_quality(submission_dir)
-                scores = compute_task_score(correctness, coverage, quality)
-            else:
-                log.error("No executable found after build")
+        # --- 8. Score ---
+        correctness = compute_correctness(test_summary)
+        coverage = compute_self_test_coverage(submission_dir)
+        quality = compute_code_quality(submission_dir)
+        scores = compute_task_score(correctness, coverage, quality)
 
         # --- 9. Assemble result ---
         exit_reason = "timeout" if container_run.timed_out else "completed"
@@ -183,74 +180,3 @@ def run_evaluation(
             shutil.rmtree(extract_dir, ignore_errors=True)
 
 
-def _build_submission(submission_dir: Path, task: TaskDefinition) -> BuildResult:
-    """Build the agent's submission using cmake."""
-    import time
-
-    build_dir = submission_dir / "build"
-    build_dir.mkdir(exist_ok=True)
-
-    t0 = time.monotonic()
-
-    # Configure
-    configure_result = subprocess.run(
-        ["cmake", "-S", str(submission_dir), "-B", str(build_dir)],
-        capture_output=True,
-        text=True,
-    )
-    if configure_result.returncode != 0:
-        return BuildResult(
-            success=False,
-            duration_seconds=time.monotonic() - t0,
-            diagnostics=configure_result.stderr,
-        )
-
-    # Build
-    build_result = subprocess.run(
-        ["cmake", "--build", str(build_dir)],
-        capture_output=True,
-        text=True,
-    )
-    elapsed = time.monotonic() - t0
-
-    return BuildResult(
-        success=build_result.returncode == 0,
-        duration_seconds=elapsed,
-        diagnostics=build_result.stderr if build_result.returncode != 0 else "",
-    )
-
-
-def _find_executable(submission_dir: Path) -> Path | None:
-    """Find the built executable in the submission directory.
-
-    Looks for executables in build/, preferring ones with "cncsim" in the name.
-    """
-    build_dir = submission_dir / "build"
-    if not build_dir.is_dir():
-        return None
-
-    candidates: list[Path] = []
-    for p in build_dir.rglob("*"):
-        if p.is_file() and _is_executable(p):
-            candidates.append(p)
-
-    if not candidates:
-        return None
-
-    # Prefer executables with "cncsim" in the name
-    cncsim_candidates = [c for c in candidates if "cncsim" in c.name.lower()]
-    if cncsim_candidates:
-        return min(cncsim_candidates, key=lambda p: len(str(p)))
-
-    return min(candidates, key=lambda p: len(str(p)))
-
-
-def _is_executable(path: Path) -> bool:
-    """Check if a file looks like a compiled executable."""
-    # On Linux: check executable permission
-    # On all platforms: skip known non-executable extensions
-    skip_suffixes = {".o", ".a", ".so", ".dylib", ".cmake", ".txt", ".json", ".log"}
-    if path.suffix.lower() in skip_suffixes:
-        return False
-    # Heuristic: no extension or known executable extensions
-    return path.suffix == "" or path.suffix.lower() in {".exe", ".out"}

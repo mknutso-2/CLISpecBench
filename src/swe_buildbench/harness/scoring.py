@@ -19,11 +19,15 @@ log = logging.getLogger(__name__)
 
 def run_hidden_tests(
     test_dir: Path,
-    executable: Path,
+    submission_dir: Path,
     report_path: Path,
     timeout_seconds: float = 600,
 ) -> tuple[list[TestOutcome], TestSummary]:
-    """Run the hidden test suite against a built executable.
+    """Run the hidden test suite against an agent's submission.
+
+    The eval's conftest.py handles building the submission via cmake and
+    discovering the executable.  We pass ``--implementation-root`` pointing
+    at the agent's source directory.
 
     Uses ``pytest --json-report`` to capture per-test results.
     Returns the test outcomes and summary.
@@ -33,7 +37,7 @@ def run_hidden_tests(
         "-m",
         "pytest",
         str(test_dir),
-        f"--executable={executable}",
+        f"--implementation-root={submission_dir}",
         "--json-report",
         f"--json-report-file={report_path}",
         "-q",
@@ -48,10 +52,10 @@ def run_hidden_tests(
     )
     log.info("pytest exited with code %d", result.returncode)
 
-    return _parse_json_report(report_path)
+    return parse_json_report(report_path)
 
 
-def _parse_json_report(report_path: Path) -> tuple[list[TestOutcome], TestSummary]:
+def parse_json_report(report_path: Path) -> tuple[list[TestOutcome], TestSummary]:
     """Parse a pytest-json-report file into our result types."""
     if not report_path.is_file():
         log.error("JSON report not found at %s", report_path)
@@ -110,7 +114,6 @@ def compute_correctness(summary: TestSummary) -> float:
 
 def compute_self_test_coverage(
     submission_dir: Path,
-    executable: Path,
 ) -> float | None:
     """Compute line coverage of the agent's own tests against its code.
 
