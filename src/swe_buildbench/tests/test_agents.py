@@ -11,12 +11,21 @@ from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
 
 
 class TestClaudeCodeCredentialMounts:
-    def test_mounts_claude_dir_and_config(self) -> None:
+    def test_mounts_individual_credential_files(self) -> None:
         adapter = ClaudeCodeAdapter()
         mounts = adapter.credential_mounts(Path("/home/user"))
-        assert "/home/user/.claude" in mounts
-        assert mounts["/home/user/.claude"]["bind"] == "/home/agent/.claude"
-        assert mounts["/home/user/.claude"]["mode"] == "ro"
+        # Should mount individual files, not the whole ~/.claude/ dir
+        assert "/home/user/.claude" not in mounts, (
+            "Must not mount ~/.claude as a directory — breaks session-env creation"
+        )
+        # Credential files
+        assert "/home/user/.claude/.credentials.json" in mounts
+        assert mounts["/home/user/.claude/.credentials.json"]["bind"] == "/home/agent/.claude/.credentials.json"
+        assert mounts["/home/user/.claude/.credentials.json"]["mode"] == "ro"
+        # Settings
+        assert "/home/user/.claude/settings.json" in mounts
+        assert mounts["/home/user/.claude/settings.json"]["mode"] == "ro"
+        # Legacy config
         assert "/home/user/.claude.json" in mounts
         assert mounts["/home/user/.claude.json"]["bind"] == "/home/agent/.claude.json"
 

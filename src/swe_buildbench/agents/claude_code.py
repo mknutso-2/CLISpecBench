@@ -100,14 +100,19 @@ class ClaudeCodeAdapter(AgentAdapter):
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         home = "/home/agent"
-        return {
-            (host_home / ".claude").as_posix(): {
-                "bind": f"{home}/.claude", "mode": "ro",
-            },
-            (host_home / ".claude.json").as_posix(): {
-                "bind": f"{home}/.claude.json", "mode": "ro",
-            },
+        # Mount individual credential files — NOT the whole ~/.claude/ dir.
+        # Claude Code needs to create ~/.claude/session-env/ at runtime, so
+        # the directory itself must be writable.  Mounting the dir as ro
+        # causes every Bash tool invocation to fail with ENOENT.
+        mounts: dict[str, dict[str, str]] = {}
+        for filename in (".credentials.json", "settings.json"):
+            mounts[(host_home / ".claude" / filename).as_posix()] = {
+                "bind": f"{home}/.claude/{filename}", "mode": "ro",
+            }
+        mounts[(host_home / ".claude.json").as_posix()] = {
+            "bind": f"{home}/.claude.json", "mode": "ro",
         }
+        return mounts
 
     @property
     def telemetry_paths(self) -> list[str]:
