@@ -51,7 +51,7 @@ MCODE_GROUP_ERROR_CASES: list[McodeGroupErrorCase] = [
     "input_gcode",
     [
         input_gcode
-        for _, group_number, input_gcode in MCODE_GROUP_ERROR_CASES
+        for _, _group_number, input_gcode in MCODE_GROUP_ERROR_CASES
     ],
     ids=[
         f"group-{group_number}-{case_id}"
