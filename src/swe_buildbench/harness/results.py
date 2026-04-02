@@ -142,35 +142,44 @@ def make_run_id(task: str, agent: str, run_number: int, model: str | None = None
     return f"{task}_{agent}{model_part}_{ts}_run-{run_number}"
 
 
+def _model_effort_slug(model: str | None, effort: str | None) -> str | None:
+    """Build a folder name like 'opus_max' or 'gpt-5.4' from model + effort."""
+    if not model:
+        return None
+    if effort:
+        return f"{model}_{effort}"
+    return model
+
+
 def result_path(
     output_dir: Path,
     task: str,
     agent: str,
     run_number: int,
     model: str | None = None,
+    effort: str | None = None,
 ) -> Path:
     base = output_dir / task / agent
-    if model:
-        base = base / model
-    return base / f"run-{run_number}.json"
+    slug = _model_effort_slug(model, effort)
+    if slug:
+        base = base / slug
+    return base / f"run{run_number}" / "result.json"
 
 
-def save_transcript(result_json_path: Path, run_number: int, transcript_data: str) -> str:
+def save_transcript(result_json_path: Path, transcript_data: str) -> str:
     """Save agent transcript alongside the result JSON. Returns the relative filename."""
-    filename = f"run-{run_number}-transcript.jsonl"
-    dest = result_json_path.parent / filename
+    dest = result_json_path.parent / "transcript.jsonl"
     dest.write_text(transcript_data, encoding="utf-8")
-    return filename
+    return "transcript.jsonl"
 
 
-def save_source_dir(result_json_path: Path, run_number: int, source_dir: Path) -> str:
+def save_source_dir(result_json_path: Path, source_dir: Path) -> str:
     """Copy agent source output alongside the result JSON. Returns the relative dir name."""
-    dirname = f"run-{run_number}-source"
-    dest = result_json_path.parent / dirname
+    dest = result_json_path.parent / "source"
     if dest.exists():
         shutil.rmtree(dest)
     shutil.copytree(source_dir, dest)
-    return dirname
+    return "source"
 
 
 def load_result(path: Path) -> RunResult:

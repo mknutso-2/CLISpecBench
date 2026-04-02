@@ -32,7 +32,7 @@ def main() -> None:
         sys.exit(1)
 
     rows: list[dict[str, str | int | float]] = []
-    for json_file in sorted(results_dir.rglob("run-*.json")):
+    for json_file in sorted(results_dir.rglob("result.json")):
         try:
             r = load_result(json_file)
         except Exception as exc:

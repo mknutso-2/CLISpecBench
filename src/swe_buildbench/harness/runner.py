@@ -210,21 +210,20 @@ def run_evaluation(
         )
 
         # --- 10. Save artifacts ---
-        out_path = result_path(output_dir, task.task_id, adapter.name, run_number, adapter.model)
+        out_path = result_path(
+            output_dir, task.task_id, adapter.name, run_number,
+            adapter.model, adapter.effort,
+        )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = RunArtifacts()
 
         # Save agent transcript (container stdout/stderr)
         if container_logs:
-            artifacts.transcript = save_transcript(
-                out_path, run_number, container_logs,
-            )
+            artifacts.transcript = save_transcript(out_path, container_logs)
 
         # Save agent source code
         if submission_dir.exists() and any(submission_dir.iterdir()):
-            artifacts.source_dir = save_source_dir(
-                out_path, run_number, submission_dir,
-            )
+            artifacts.source_dir = save_source_dir(out_path, submission_dir)
 
         result = RunResult(
             metadata=metadata,
