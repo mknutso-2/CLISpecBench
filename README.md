@@ -19,7 +19,7 @@ Design docs:
 
 - `SWE-BuildBench-Design.md` -- benchmark-level design (scoring, task anatomy, eval modes)
 - `Harness-Design.md` -- evaluation harness architecture and implementation
-- `Evals/CNCSim/CNCSim-Design.md` -- CNCSim-specific task design
+- `Evals/CNCSim/README.md` -- CNCSim task design and test categories
 
 ## Requirements
 
