@@ -12,7 +12,7 @@ DEFAULT_IMPLEMENTATION_ENV_VAR: Final[str] = "SWEBUILDBENCH_IMPLEMENTATION_ROOT"
 def default_reference_implementation_root(repo_root: Path) -> Path:
     """Return the default CNCSim reference implementation directory."""
 
-    return repo_root / "CNCSim" / "reference-implementation"
+    return repo_root / "Evals" / "CNCSim" / "reference-implementation"
 
 
 def resolve_implementation_target(

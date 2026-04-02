@@ -90,9 +90,9 @@ def load_task(task_root: Path, task_id: str) -> TaskDefinition:
 # ---------------------------------------------------------------------------
 
 _KNOWN_TASKS: dict[str, str] = {
-    "cncsim-full": "CNCSim",
-    "cncsim-lite": "CNCSim",
-    "wordcount": "WordCount",
+    "cncsim-full": "Evals/CNCSim",
+    "cncsim-lite": "Evals/CNCSim",
+    "wordcount": "Evals/WordCount",
 }
 
 

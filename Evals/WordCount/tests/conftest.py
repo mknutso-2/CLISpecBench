@@ -62,7 +62,7 @@ def implementation_target(request: pytest.FixtureRequest, repo_root: Path) -> Im
         )
     else:
         target = ImplementationTarget(
-            root=repo_root / "WordCount" / "reference-implementation",
+            root=repo_root / "Evals" / "WordCount" / "reference-implementation",
             origin="default WordCount reference implementation path",
             explicit=False,
         )

@@ -2,7 +2,7 @@
 
 These tests use `pytest` and are intended to target either:
 
-- `CNCSim/reference-implementation/`
+- `Evals/CNCSim/reference-implementation/`
 - an AI agent output directory supplied at runtime
 
 ## Usage
@@ -10,20 +10,20 @@ These tests use `pytest` and are intended to target either:
 Run against the default reference implementation path:
 
 ```powershell
-uv run pytest CNCSim/tests
+uv run pytest Evals/CNCSim/tests
 ```
 
 Run against an agent output directory:
 
 ```powershell
-uv run pytest CNCSim/tests --implementation-root C:\path\to\agent-output
+uv run pytest Evals/CNCSim/tests --implementation-root C:\path\to\agent-output
 ```
 
 Or point to a target with an environment variable:
 
 ```powershell
 $env:SWEBUILDBENCH_IMPLEMENTATION_ROOT = "C:\path\to\agent-output"
-uv run pytest CNCSim/tests
+uv run pytest Evals/CNCSim/tests
 ```
 
 If no buildable implementation exists at the default location, the build test is skipped with a clear message.
@@ -31,12 +31,12 @@ If no buildable implementation exists at the default location, the build test is
 When adding or changing tests, keep the agent-facing prompt sources aligned with what the tests
 assert:
 
-- Put harness compatibility changes in `CNCSim/prompt/technical-requirements-prompt.md`.
-- Put CNC/domain behavior requirements in `CNCSim/prompt/base-prompt.md` or
-  `CNCSim/prompt/docs/`, not in `technical-requirements-prompt.md`.
+- Put harness compatibility changes in `Evals/CNCSim/prompt/technical-requirements-prompt.md`.
+- Put CNC/domain behavior requirements in `Evals/CNCSim/prompt/base-prompt.md` or
+  `Evals/CNCSim/prompt/docs/`, not in `technical-requirements-prompt.md`.
 
 When documenting why a test is valid:
 
 - Cite the exact RS274 clause for each spec-invalid failure case.
 - Require that each requirement-bearing test be grounded in behavior that is explicit and unambiguous in the RS274 text.
-- If a proposed test depends on a nontrivial inference across multiple RS274 clauses, do not treat it as a requirement-bearing test unless the requirement is first clarified in non-RS274 eval docs such as `CNCSim/CNCSim-Design.md` or `CNCSim/prompt/base-prompt.md`. Do not rely on changing `CNCSim/prompt/docs/RS274NGC.md` for this.
+- If a proposed test depends on a nontrivial inference across multiple RS274 clauses, do not treat it as a requirement-bearing test unless the requirement is first clarified in non-RS274 eval docs such as `Evals/CNCSim/CNCSim-Design.md` or `Evals/CNCSim/prompt/base-prompt.md`. Do not rely on changing `Evals/CNCSim/prompt/docs/RS274NGC.md` for this.
