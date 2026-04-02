@@ -2,6 +2,36 @@
 
 Prices are per million tokens (MTok).  Update this file when providers
 change their pricing or new models are added.
+
+Known discrepancy (Claude Code)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Claude Code's ``total_cost_usd`` (captured as ``reported_cost_usd``) is
+typically ~10% higher than what we calculate from token counts and
+published per-MTok rates (``estimated_cost_usd``).  For example, a
+Haiku 4.5 run reported $0.9803 vs our estimate of $0.8919.
+
+We have not been able to fully account for this gap.  Possible causes
+investigated:
+
+- **Data residency / regional routing premium (most likely).**
+  Anthropic applies a 1.1x multiplier for region-locked inference.
+  $0.8919 × 1.1 = $0.9811, which matches the reported cost within
+  $0.001.  The transcript shows ``inference_geo: ""`` (empty, meaning
+  no explicit preference), but default routing may still incur the
+  premium.  See https://docs.anthropic.com/en/docs/about-claude/pricing.
+- **5-min vs 1-hr cache write tiers.**  Anthropic charges 1.25x for
+  5-min and 2x for 1-hr ephemeral cache writes.  We assume 1-hr
+  (the ``cache_creation.ephemeral_1h_input_tokens`` sub-field confirms
+  this for the run we checked), but a mix of tiers in other runs
+  could widen or narrow the gap.
+- **Extended thinking tokens** are billed but only a summary is
+  surfaced in the usage object.  Not applicable to Haiku 4.5 (no
+  thinking support), but will affect Opus/Sonnet estimates.
+- **Tool-use system prompt overhead** (~346 tokens injected per API
+  call) is billed but may not appear in the session-level token
+  summary.
+
+See also: https://github.com/anthropics/claude-code/issues/26762
 """
 
 from __future__ import annotations
