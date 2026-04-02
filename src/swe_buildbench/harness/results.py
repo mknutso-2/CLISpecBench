@@ -19,7 +19,8 @@ class TokenUsage:
     output_tokens: int
     cached_input_tokens: int | None = None
     tool_calls: int | None = None
-    cost_usd: float | None = None  # Native or estimated API cost
+    reported_cost_usd: float | None = None   # Native cost from agent CLI (e.g. Claude Code)
+    estimated_cost_usd: float | None = None  # Calculated from token counts + published pricing
 
     @property
     def total_tokens(self) -> int:
@@ -193,7 +194,8 @@ def load_result(path: Path) -> RunResult:
             output_tokens=data["token_usage"]["output_tokens"],
             cached_input_tokens=data["token_usage"].get("cached_input_tokens"),
             tool_calls=data["token_usage"].get("tool_calls"),
-            cost_usd=data["token_usage"].get("cost_usd"),
+            reported_cost_usd=data["token_usage"].get("reported_cost_usd"),
+            estimated_cost_usd=data["token_usage"].get("estimated_cost_usd"),
         )
         if data.get("token_usage")
         else None

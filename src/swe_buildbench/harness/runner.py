@@ -153,10 +153,10 @@ def run_evaluation(
         except Exception:
             log.warning("Failed to parse token usage", exc_info=True)
 
-        # Estimate cost from token counts if the agent didn't report it
-        if token_usage is not None and token_usage.cost_usd is None and adapter.model:
+        # Always estimate cost from token counts + published pricing
+        if token_usage is not None and adapter.model:
             from swe_buildbench.harness.pricing import estimate_cost
-            token_usage.cost_usd = estimate_cost(
+            token_usage.estimated_cost_usd = estimate_cost(
                 adapter.model,
                 token_usage.input_tokens,
                 token_usage.output_tokens,

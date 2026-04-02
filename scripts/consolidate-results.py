@@ -77,9 +77,14 @@ def main() -> None:
                 if r.token_usage and r.token_usage.tool_calls
                 else ""
             ),
-            "cost_usd": (
-                f"{r.token_usage.cost_usd:.4f}"
-                if r.token_usage and r.token_usage.cost_usd
+            "reported_cost": (
+                f"{r.token_usage.reported_cost_usd:.4f}"
+                if r.token_usage and r.token_usage.reported_cost_usd
+                else ""
+            ),
+            "estimated_cost": (
+                f"{r.token_usage.estimated_cost_usd:.4f}"
+                if r.token_usage and r.token_usage.estimated_cost_usd
                 else ""
             ),
             "wall_clock_s": f"{r.metadata.wall_clock_seconds:.1f}",
