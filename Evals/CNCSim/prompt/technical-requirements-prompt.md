@@ -1,4 +1,5 @@
 - Please implement this in C++20, buildable with: cmake -B build && cmake --build build
+- Use only the C++ standard library — do not use any external or third-party dependencies.
 - The program must accept: --input <gcode_file> --output <result_file>
 - The harness may also pass: --tool-table <tool_file>
   If provided, this file uses the RS274 tool-file format from section 2.3 of the specification.

@@ -184,14 +184,14 @@ def run_evaluation(
         if container_run.exit_code and container_run.exit_code != 0:
             exit_reason = "error"
 
-        # Detect rate limiting: agent finished but produced no tokens
+        # Detect runs where the agent produced nothing useful
         if (
             exit_reason == "completed"
             and token_usage is None
             and not any(submission_dir.iterdir())
         ):
-            exit_reason = "rate_limited"
-            log.warning("Run appears rate-limited: no tokens and no output")
+            exit_reason = "no_output"
+            log.warning("Agent produced no tokens and no output files")
 
         metadata = RunMetadata(
             run_id=run_id,
