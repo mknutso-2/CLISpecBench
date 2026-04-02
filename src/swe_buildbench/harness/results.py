@@ -13,11 +13,23 @@ SCHEMA_VERSION = "1.0"
 
 @dataclass
 class TokenUsage:
-    """Normalized token usage from any agent."""
+    """Normalized token usage from any agent.
+
+    Token fields are the union of what all supported CLIs report:
+
+    - ``input_tokens``: total input tokens including any cached portion
+    - ``output_tokens``: generated / completion tokens
+    - ``cache_read_input_tokens``: input tokens served from cache
+      (Claude: ``cache_read_input_tokens``, Codex: ``cached_input_tokens``,
+      Gemini: ``cached``)
+    - ``cache_creation_input_tokens``: input tokens written to cache
+      (Claude only — Codex and Gemini don't report this)
+    """
 
     input_tokens: int
     output_tokens: int
-    cached_input_tokens: int | None = None
+    cache_read_input_tokens: int | None = None
+    cache_creation_input_tokens: int | None = None
     tool_calls: int | None = None
     reported_cost_usd: float | None = None   # Native cost from agent CLI (e.g. Claude Code)
     estimated_cost_usd: float | None = None  # Calculated from token counts + published pricing
@@ -192,7 +204,12 @@ def load_result(path: Path) -> RunResult:
         TokenUsage(
             input_tokens=data["token_usage"]["input_tokens"],
             output_tokens=data["token_usage"]["output_tokens"],
-            cached_input_tokens=data["token_usage"].get("cached_input_tokens"),
+            # Support old field name "cached_input_tokens" for backward compat
+            cache_read_input_tokens=(
+                data["token_usage"].get("cache_read_input_tokens")
+                or data["token_usage"].get("cached_input_tokens")
+            ),
+            cache_creation_input_tokens=data["token_usage"].get("cache_creation_input_tokens"),
             tool_calls=data["token_usage"].get("tool_calls"),
             reported_cost_usd=data["token_usage"].get("reported_cost_usd"),
             estimated_cost_usd=data["token_usage"].get("estimated_cost_usd"),

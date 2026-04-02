@@ -160,7 +160,8 @@ def run_evaluation(
                 adapter.model,
                 token_usage.input_tokens,
                 token_usage.output_tokens,
-                token_usage.cached_input_tokens or 0,
+                token_usage.cache_read_input_tokens or 0,
+                token_usage.cache_creation_input_tokens or 0,
             )
 
         # --- 6. Run hidden tests ---

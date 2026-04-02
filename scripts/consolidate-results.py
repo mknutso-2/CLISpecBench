@@ -64,9 +64,14 @@ def main() -> None:
             ),
             "input_tokens": r.token_usage.input_tokens if r.token_usage else "",
             "output_tokens": r.token_usage.output_tokens if r.token_usage else "",
-            "cached_tokens": (
-                r.token_usage.cached_input_tokens
-                if r.token_usage and r.token_usage.cached_input_tokens
+            "cache_read_tokens": (
+                r.token_usage.cache_read_input_tokens
+                if r.token_usage and r.token_usage.cache_read_input_tokens
+                else ""
+            ),
+            "cache_write_tokens": (
+                r.token_usage.cache_creation_input_tokens
+                if r.token_usage and r.token_usage.cache_creation_input_tokens
                 else ""
             ),
             "total_tokens": (

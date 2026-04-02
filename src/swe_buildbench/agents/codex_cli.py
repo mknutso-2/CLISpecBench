@@ -121,7 +121,7 @@ class CodexCLIAdapter(AgentAdapter):
         return TokenUsage(
             input_tokens=input_tokens,
             output_tokens=output_tokens,
-            cached_input_tokens=cached_input_tokens or None,
+            cache_read_input_tokens=cached_input_tokens or None,
             tool_calls=_count_tool_calls(container_logs),
         )
 

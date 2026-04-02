@@ -139,17 +139,18 @@ def _parse_stream_json_usage(container_logs: str) -> TokenUsage | None:
         if not isinstance(raw_usage, dict):
             continue
         usage = cast(dict[str, Any], raw_usage)
-        input_tokens = int(usage.get("input_tokens", 0))
+        uncached_input = int(usage.get("input_tokens", 0))
         output_tokens = int(usage.get("output_tokens", 0))
         cache_read = int(usage.get("cache_read_input_tokens", 0))
         cache_creation = int(usage.get("cache_creation_input_tokens", 0))
-        if input_tokens == 0 and output_tokens == 0:
+        if uncached_input == 0 and output_tokens == 0 and cache_read == 0:
             return None
         raw_cost = event.get("total_cost_usd")
         return TokenUsage(
-            input_tokens=input_tokens + cache_read + cache_creation,
+            input_tokens=uncached_input + cache_read + cache_creation,
             output_tokens=output_tokens,
-            cached_input_tokens=cache_read or None,
+            cache_read_input_tokens=cache_read or None,
+            cache_creation_input_tokens=cache_creation or None,
             tool_calls=_count_tool_calls(container_logs),
             reported_cost_usd=round(float(raw_cost), 6) if raw_cost is not None else None,
         )
