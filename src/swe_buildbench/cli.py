@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from swe_buildbench.agents.base import AgentAdapter
-from swe_buildbench.harness.results import RunResult, load_result
+from swe_buildbench.harness.results import RunResult, load_result, next_run_number
 from swe_buildbench.harness.runner import run_evaluation
 from swe_buildbench.harness.task import list_tasks, resolve_task
 
@@ -79,9 +79,19 @@ def _cmd_run(args: argparse.Namespace) -> None:
         api_key_env[key] = value
 
     num_runs: int = args.runs
-    for run_number in range(1, num_runs + 1):
+    output_dir = Path(args.output_dir)
+    start_run = next_run_number(
+        output_dir, task.task_id, adapter.name,
+        adapter.model, adapter.effort,
+    )
+    if start_run > 1:
+        logging.getLogger(__name__).info(
+            "Found existing runs; starting at run%d", start_run,
+        )
+    for i in range(num_runs):
+        run_number = start_run + i
         print(f"\n{'='*60}")
-        print(f"Run {run_number}/{num_runs}: {args.task} / {adapter.name}")
+        print(f"Run {run_number} ({i+1}/{num_runs}): {args.task} / {adapter.name}")
         print(f"{'='*60}\n")
 
         result = run_evaluation(

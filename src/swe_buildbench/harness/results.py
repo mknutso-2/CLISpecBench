@@ -180,6 +180,31 @@ def result_path(
     return base / f"run{run_number}" / "result.json"
 
 
+def next_run_number(
+    output_dir: Path,
+    task: str,
+    agent: str,
+    model: str | None = None,
+    effort: str | None = None,
+) -> int:
+    """Return the next available run number (1-based).
+
+    Scans for existing ``runN/`` directories and returns max(N) + 1.
+    """
+    base = output_dir / task / agent
+    slug = _model_effort_slug(model, effort)
+    if slug:
+        base = base / slug
+    if not base.is_dir():
+        return 1
+    existing = [
+        int(d.name[3:])
+        for d in base.iterdir()
+        if d.is_dir() and d.name.startswith("run") and d.name[3:].isdigit()
+    ]
+    return max(existing, default=0) + 1
+
+
 def save_transcript(result_json_path: Path, transcript_data: str) -> str:
     """Save agent transcript alongside the result JSON. Returns the relative filename."""
     dest = result_json_path.parent / "transcript.jsonl"
