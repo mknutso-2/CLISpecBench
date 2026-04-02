@@ -53,7 +53,19 @@ exit
 wsl --shutdown
 ```
 
-### 3. Authenticate CLI agents
+### 3. Build Docker images
+
+Build the base image and per-agent images:
+
+```bash
+MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
+```
+
+This creates `swe-buildbench-base:latest` (Ubuntu 24.04, CMake, g++-14, pytest)
+and agent images (`swe-buildbench-claude-code`, `swe-buildbench-codex-cli`,
+`swe-buildbench-gemini-cli`) that extend it.
+
+### 4. Authenticate CLI agents
 
 Log in to each agent CLI on your host machine:
 
