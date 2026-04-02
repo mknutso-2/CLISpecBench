@@ -9,7 +9,7 @@ from typing import Any, cast
 
 import pytest
 
-from swe_buildbench.cncsim import (
+from swe_buildbench.build import (
     CMakeBuildResult,
     ImplementationTarget,
     build_cmake_project,

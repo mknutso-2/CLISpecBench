@@ -1,11 +1,17 @@
 """CNCSim-specific test harness utilities."""
 
-from .build import CMakeBuildResult, CommandExecutionError, CommandResult, build_cmake_project
+from swe_buildbench.build import (
+    CMakeBuildResult,
+    CommandExecutionError,
+    CommandResult,
+    ImplementationTarget,
+    build_cmake_project,
+    find_repo_root,
+)
+
 from .target import (
     DEFAULT_IMPLEMENTATION_ENV_VAR,
-    ImplementationTarget,
     default_reference_implementation_root,
-    find_repo_root,
     resolve_implementation_target,
 )
 
