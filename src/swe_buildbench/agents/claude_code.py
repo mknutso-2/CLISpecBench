@@ -234,5 +234,5 @@ def _parse_otel_token_usage(otel_dir: Path) -> TokenUsage | None:
     return TokenUsage(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
-        cached_input_tokens=cache_read_tokens or None,
+        cache_read_input_tokens=cache_read_tokens or None,
     )
