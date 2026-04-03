@@ -103,6 +103,8 @@ class RunMetadata:
     run_number: int
     timestamp: str
     test_suite_version: str
+    eval_version: str
+    harness_version: str
     docker_image_sha: str
     wall_clock_seconds: float
     exit_reason: str  # "completed" | "timeout" | "token_limit" | "error"
@@ -234,7 +236,10 @@ def save_source_dir(result_json_path: Path, source_dir: Path) -> str:
 def load_result(path: Path) -> RunResult:
     """Load a RunResult from a JSON file."""
     data = json.loads(path.read_text(encoding="utf-8"))
-    metadata = RunMetadata(**data["metadata"])
+    meta = data["metadata"]
+    meta.setdefault("eval_version", "unknown")
+    meta.setdefault("harness_version", "unknown")
+    metadata = RunMetadata(**meta)
     token_usage = (
         TokenUsage(
             input_tokens=data["token_usage"]["input_tokens"],

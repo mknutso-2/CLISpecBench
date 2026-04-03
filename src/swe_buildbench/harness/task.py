@@ -26,6 +26,7 @@ class TaskDefinition:
     technical_prompt_path: Path
     docs_dir: Path
     test_dir: Path
+    version: str = "0.0.0"
     build_script: Path | None = None
     sample_test_dir: Path | None = None
     prompt_variants: dict[str, Path] = field(default_factory=dict[str, Path])
@@ -72,6 +73,9 @@ def load_task(task_root: Path, task_id: str) -> TaskDefinition:
     build_script = task_root / "harness" / "build.sh"
     sample_test_dir = task_root / "sample-tests"
 
+    version_file = task_root / "VERSION"
+    version = version_file.read_text().strip() if version_file.is_file() else "0.0.0"
+
     return TaskDefinition(
         task_id=task_id,
         root=task_root,
@@ -79,6 +83,7 @@ def load_task(task_root: Path, task_id: str) -> TaskDefinition:
         technical_prompt_path=tech_prompt,
         docs_dir=docs_dir,
         test_dir=test_dir,
+        version=version,
         build_script=build_script if build_script.is_file() else None,
         sample_test_dir=sample_test_dir if sample_test_dir.is_dir() else None,
         prompt_variants=_discover_prompt_variants(prompt_dir),

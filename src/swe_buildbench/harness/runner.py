@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.metadata
 import logging
 import shutil
 import subprocess
@@ -53,6 +54,14 @@ def _git_sha() -> str:
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
     except Exception:
+        return "unknown"
+
+
+def _harness_version() -> str:
+    """Return the installed swe-buildbench package version."""
+    try:
+        return importlib.metadata.version("swe-buildbench")
+    except importlib.metadata.PackageNotFoundError:
         return "unknown"
 
 
@@ -214,6 +223,8 @@ def run_evaluation(
             run_number=run_number,
             timestamp=timestamp,
             test_suite_version=_git_sha(),
+            eval_version=task.version,
+            harness_version=_harness_version(),
             docker_image_sha=sandbox.get_image_sha(adapter.image_tag),
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
