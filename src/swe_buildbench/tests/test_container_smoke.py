@@ -180,7 +180,6 @@ class TestClaudeCodeBashTool:
     def test_agent_can_compile_and_run_cpp(self) -> None:
         """The agent user can compile and execute a C++ program."""
         import tempfile
-
         from pathlib import PurePosixPath
 
         with tempfile.TemporaryDirectory(prefix="cpp-test-") as td:
