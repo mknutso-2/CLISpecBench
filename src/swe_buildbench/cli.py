@@ -89,7 +89,10 @@ def _cmd_run(args: argparse.Namespace) -> None:
 
     for run_number in range(1, num_runs + 1):
         print(f"\n{'='*60}")
-        print(f"eval{eval_num}/run{run_number} ({run_number}/{num_runs}): {args.task} / {adapter.name}")
+        print(
+            f"eval{eval_num}/run{run_number} ({run_number}/{num_runs}): "
+            f"{args.task} / {adapter.name}"
+        )
         print(f"{'='*60}\n")
 
         result = run_evaluation(

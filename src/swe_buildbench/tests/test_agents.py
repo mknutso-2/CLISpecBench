@@ -20,7 +20,10 @@ class TestClaudeCodeCredentialMounts:
         )
         # Credential files
         assert "/home/user/.claude/.credentials.json" in mounts
-        assert mounts["/home/user/.claude/.credentials.json"]["bind"] == "/home/agent/.claude/.credentials.json"
+        assert (
+            mounts["/home/user/.claude/.credentials.json"]["bind"]
+            == "/home/agent/.claude/.credentials.json"
+        )
         assert mounts["/home/user/.claude/.credentials.json"]["mode"] == "ro"
         # Settings
         assert "/home/user/.claude/settings.json" in mounts
