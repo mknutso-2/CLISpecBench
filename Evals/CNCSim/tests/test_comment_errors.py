@@ -9,10 +9,18 @@ from cncsim_support import run_cncsim_invalid_input
 CommentErrorCase = tuple[str, str]
 
 COMMENT_ERROR_CASES: list[CommentErrorCase] = [
-    (
-        "non-printable-comment-character",
-        "G0 X1.0 (\x07)\n",
-    ),
+    # Removed in CNCSim v1.0.1: non-printable comment character test. Appendix E
+    # defines comment_character as "any printable character plus space and tab",
+    # but neither section 3.3.4 nor the grammar explicitly says that
+    # non-comment_characters inside parentheses are an error. A strict grammar
+    # parser would reject it; a lenient one that scans for ')' would not. Since
+    # the spec does not unambiguously require this as an error condition, the
+    # test is removed.
+    #
+    # (
+    #     "non-printable-comment-character",
+    #     "G0 X1.0 (\x07)\n",
+    # ),
     (
         "nested-parenthetical-comment",
         "G0 X1.0 (outer (inner))\n",

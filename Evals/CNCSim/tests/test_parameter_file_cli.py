@@ -178,9 +178,13 @@ PARAMETER_FILE_ERROR_CASES: list[tuple[str, str]] = [
         "parameter-file-rejects-non-ascending-indices",
         "RS274 parameter file\n\n5162 0.0\n5161 0.0\n",
     ),
+    # In preliminary testing, no model passes this test.
+    # Section 3.2.1: "A parameter file may include any other parameter, as
+    # long as its number is in the range 1 to 5400." Changed in v1.0.1 from
+    # 5400 to 5401 because 5400 is the inclusive upper bound per the spec.
     (
         "parameter-file-rejects-out-of-range-index",
-        "RS274 parameter file\n\n5400 1.0\n",
+        "RS274 parameter file\n\n5401 1.0\n",
     ),
     (
         "parameter-file-rejects-invalid-5220",

@@ -53,25 +53,21 @@ COORDINATE_SYSTEM_OFFSET_CASES: list[CoordinateSystemOffsetCase] = [
     ),
     (
         "offsets-serialize-in-the-currently-active-length-units",
-        "G21\n"
-        "G10 L2 P1 X25.4 Y50.8 Z76.2\n"
-        "G20\n",
+        "G21\nG10 L2 P1 X25.4 Y50.8 Z76.2\nG20\n",
         {
             "1": {"x": 1.0, "y": 2.0, "z": 3.0},
         },
     ),
     (
         "g10-updates-only-programmed-axes",
-        "G10 L2 P2 X1.0 Y2.0 Z3.0\n"
-        "G10 L2 P2 X4.5 Z-1.0\n",
+        "G10 L2 P2 X1.0 Y2.0 Z3.0\nG10 L2 P2 X4.5 Z-1.0\n",
         {
             "2": {"x": 4.5, "y": 2.0, "z": -1.0},
         },
     ),
     (
         "g10-keeps-coordinate-systems-independent",
-        "G10 L2 P1 X1.0 Y2.0 Z3.0\n"
-        "G10 L2 P3 X7.0 Y8.0 Z9.0\n",
+        "G10 L2 P1 X1.0 Y2.0 Z3.0\nG10 L2 P3 X7.0 Y8.0 Z9.0\n",
         {
             "1": {"x": 1.0, "y": 2.0, "z": 3.0},
             "3": {"x": 7.0, "y": 8.0, "z": 9.0},
@@ -123,16 +119,22 @@ def test_application_tracks_g10_coordinate_system_offsets(
     ("input_gcode", "expected_offset", "expected_parameter_values"),
     [
         (
-            "G20\n"
-            "G10 L2 P1 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\n"
-            "G21\n",
+            # In preliminary testing, no model passes this test.
+            # Section 4.3.3.3: "All other stored values which involve length
+            # units are not changed, including: coordinate system offsets."
+            # Section 4.3.3.2: "The effective location of the program origin
+            # should not change when units change."
+            # The serialization expectation (25.4/50.8/76.2 after G21) comes
+            # from the harness contract ("Serialize coordinate_system_offsets
+            # in the currently active RS274 length units"), not RS274 alone.
+            # This is intentional: the benchmark tests the full prompt, not
+            # just the spec in isolation.
+            "G20\nG10 L2 P1 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\nG21\n",
             {"x": 25.4, "y": 50.8, "z": 76.2, "a": 10.0, "b": 20.0, "c": 30.0},
             {"x": 1.0, "y": 2.0, "z": 3.0, "a": 10.0, "b": 20.0, "c": 30.0},
         ),
         (
-            "G21\n"
-            "G10 L2 P1 X25.4 Y50.8 Z76.2 A10.0 B20.0 C30.0\n"
-            "G20\n",
+            "G21\nG10 L2 P1 X25.4 Y50.8 Z76.2 A10.0 B20.0 C30.0\nG20\n",
             {"x": 1.0, "y": 2.0, "z": 3.0, "a": 10.0, "b": 20.0, "c": 30.0},
             {"x": 25.4, "y": 50.8, "z": 76.2, "a": 10.0, "b": 20.0, "c": 30.0},
         ),

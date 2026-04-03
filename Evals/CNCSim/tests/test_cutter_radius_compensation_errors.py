@@ -69,12 +69,36 @@ GCODE_BODIES_INVALID_WHILE_CRC_IS_ACTIVE = [
     # does not state that explicitly and unambiguously, so it is intentionally
     # excluded from this matrix.
     ("g92", "G92 X1.0\n"),
-    ("g92-1", "G92.1\n"),
-    ("g92-2", "G92.2\n"),
-    ("g92-3", "G92.3\n"),
+    # Removed in CNCSim v1.0.1: replaced by CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES
+    # below, which establish nonzero G92 offsets before enabling CRC to make
+    # the test intent unambiguous.
+    # ("g92-1", "G92.1\n"),
+    # ("g92-2", "G92.2\n"),
+    # ("g92-3", "G92.3\n"),
     # RS274 section 3.5.13: coordinate-system selection codes may not be used
     # while cutter radius compensation is on.
     *COORDINATE_SYSTEM_SELECTION_CODES,
+]
+
+
+# Added in CNCSim v1.0.1: replaces the g92-1/g92-2/g92-3 entries above.
+# Appendix B.5 error 1: "Cannot change axis offsets with cutter radius comp."
+# Section 3.5.18 defines G92.1/G92.2/G92.3 as axis-offset commands. Each case
+# establishes a nonzero G92 offset before enabling CRC so that the G92.x
+# command unambiguously changes active axis offsets.
+CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES: list[tuple[str, str]] = [
+    (
+        "g92-1-with-cutter-radius-compensation-active",
+        "G17 G90 G94\nG92 X5.0\nG41 D1\nG92.1\n",
+    ),
+    (
+        "g92-2-with-cutter-radius-compensation-active",
+        "G17 G90 G94\nG92 X5.0\nG41 D1\nG92.2\n",
+    ),
+    (
+        "g92-3-with-cutter-radius-compensation-active",
+        "G17 G90 G94\nG92 X5.0\nG92.1\nG41 D1\nG92.3\n",
+    ),
 ]
 
 
@@ -83,15 +107,13 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
     # carousel slots.
     (
         "g41-rejects-d-larger-than-carousel-slots",
-        "G17 G90 G94\n"
-        "G41 D7\n",
+        "G17 G90 G94\nG41 D7\n",
         6,
     ),
     # RS274 Appendix B.5.4: the D number may not be negative.
     (
         "g41-rejects-negative-d-number",
-        "G17 G90 G94\n"
-        "G41 D-1\n",
+        "G17 G90 G94\nG41 D-1\n",
         None,
     ),
     # RS274 Appendix B.5 error 12: a D word may not appear without G41 or G42.
@@ -104,33 +126,25 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
     # turned on when it is already on.
     (
         "g42-when-compensation-is-already-on",
-        "G17\n"
-        "G41 D1\n"
-        "G42 D1\n",
+        "G17\nG41 D1\nG42 D1\n",
         None,
     ),
     # Same-direction re-enable is the same Appendix B.5 error 5.
     (
         "g41-when-g41-is-already-on",
-        "G17\n"
-        "G41 D1\n"
-        "G41 D1\n",
+        "G17\nG41 D1\nG41 D1\n",
         None,
     ),
     (
         "g42-when-g42-is-already-on",
-        "G17\n"
-        "G42 D1\n"
-        "G42 D1\n",
+        "G17\nG42 D1\nG42 D1\n",
         None,
     ),
     # RS274 Appendix B.5.3: the first move is an error if the programmed point
     # is inside the initial cross section of the tool.
     (
         "first-move-gouging-error",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X2.0 Y0.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X2.0 Y0.0\n",
         None,
     ),
     # RS274 Appendix B.5.1 and Figure 6: a concave corner into which the tool
@@ -140,11 +154,7 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
     # it as a concave-corner error.
     (
         "concave-corner-after-entry-with-g42",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G42 D1 G1 X5.0 Y0.0\n"
-        "G1 X10.0 Y0.0\n"
-        "G1 X14.0 Y-3.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X14.0 Y-3.0\n",
         None,
     ),
     # Mirror-image oblique concave corner for G41. After the compensated
@@ -152,33 +162,21 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
     # the tool on the inside of the acute corner, so it must also be rejected.
     (
         "concave-corner-after-entry-with-g41",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X5.0 Y0.0\n"
-        "G1 X10.0 Y0.0\n"
-        "G1 X14.0 Y3.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X14.0 Y3.0\n",
         None,
     ),
     # Simpler 90-degree concave corner for G41: from +X to +Y while keeping
     # the tool on the left side of the contour.
     (
         "concave-90-degree-corner-with-g41",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X5.0 Y0.0\n"
-        "G1 X10.0 Y0.0\n"
-        "G1 X10.0 Y4.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X10.0 Y4.0\n",
         None,
     ),
     # Simpler 90-degree concave corner for G42: from +X to -Y while keeping
     # the tool on the right side of the contour.
     (
         "concave-90-degree-corner-with-g42",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G42 D1 G1 X5.0 Y0.0\n"
-        "G1 X10.0 Y0.0\n"
-        "G1 X10.0 Y-4.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X10.0 Y-4.0\n",
         None,
     ),
     # RS274 Appendix B.5.1 error 16: if the tool radius is not less than the
@@ -187,74 +185,50 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
     # of the arc, so a radius-3 tool on a radius-3 arc must be rejected.
     (
         "g41-tool-radius-not-less-than-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X5.0 Y0.0\n"
-        "G3 X2.0 Y3.0 I-3.0 J0.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG3 X2.0 Y3.0 I-3.0 J0.0\n",
         None,
     ),
     # Mirror-image inward arc for G42 on a CW move.
     (
         "g42-tool-radius-not-less-than-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G42 D1 G1 X5.0 Y0.0\n"
-        "G2 X2.0 Y-3.0 I-3.0 J0.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X2.0 Y-3.0 I-3.0 J0.0\n",
         None,
     ),
     # The same Appendix B.5.1 error also applies when the programmed arc
     # radius is strictly smaller than the tool radius.
     (
         "g41-tool-radius-greater-than-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X5.0 Y0.0\n"
-        "G3 X3.0 Y2.0 I-2.0 J0.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG3 X3.0 Y2.0 I-2.0 J0.0\n",
         None,
     ),
     # Mirror-image inward arc for G42 with programmed radius 2.0.
     (
         "g42-tool-radius-greater-than-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G42 D1 G1 X5.0 Y0.0\n"
-        "G2 X3.0 Y-2.0 I-2.0 J0.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X3.0 Y-2.0 I-2.0 J0.0\n",
         None,
     ),
     # The same inward-arc condition should be rejected in radius format.
     (
         "g41-tool-radius-not-less-than-radius-format-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X5.0 Y0.0\n"
-        "G3 X2.0 Y3.0 R3.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG3 X2.0 Y3.0 R3.0\n",
         None,
     ),
     # Mirror-image radius-format inward arc for G42.
     (
         "g42-tool-radius-not-less-than-radius-format-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G42 D1 G1 X5.0 Y0.0\n"
-        "G2 X2.0 Y-3.0 R3.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X2.0 Y-3.0 R3.0\n",
         None,
     ),
     # Smaller-than-tool radius variant in radius format.
     (
         "g41-tool-radius-greater-than-radius-format-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G41 D1 G1 X5.0 Y0.0\n"
-        "G3 X3.0 Y2.0 R2.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG3 X3.0 Y2.0 R2.0\n",
         None,
     ),
     # Mirror-image radius-format inward arc with programmed radius 2.0.
     (
         "g42-tool-radius-greater-than-radius-format-arc-radius-with-comp",
-        "G17 G90 G94\n"
-        "G0 X0.0 Y0.0\n"
-        "G42 D1 G1 X5.0 Y0.0\n"
-        "G2 X3.0 Y-2.0 R2.0\n",
+        "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X3.0 Y-2.0 R2.0\n",
         None,
     ),
 ]
@@ -357,6 +331,28 @@ def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_i
     run_cncsim_invalid_input(
         built_executable_path,
         input_gcode=CRC_ACTIVE_PREFIX + invalid_gcode_body,
+        tool_table_content=TOOL_TABLE,
+        tmp_path=tmp_path,
+    )
+
+
+@pytest.mark.parametrize(
+    "input_gcode",
+    [input_gcode for _, input_gcode in CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES],
+    ids=[case_id for case_id, _ in CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES],
+)
+def test_application_rejects_axis_offset_changes_while_cutter_compensation_is_active(
+    built_executable_path: Path,
+    input_gcode: str,
+    tmp_path: Path,
+) -> None:
+    """Check that G92.1/G92.2/G92.3 are rejected while CRC is active.
+
+    Governing section: RS274 Appendix B.5, error 1.
+    """
+    run_cncsim_invalid_input(
+        built_executable_path,
+        input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
     )

@@ -82,6 +82,10 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         "G81 X2.8 Y4.0 Z5.0 R1.5 F7.0\n",
     ),
     (
+        # In preliminary testing, Opus 4.6 and GPT-5.4 both fail this test.
+        # From Section 3.5.16:
+        # "It is an error if: X, Y, and Z words are all missing during a canned cycle"
+        # On the last line G81 is active, but none of X, Y, or Z is programmed.
         "active-g81-rejects-a-following-line-without-x-y-or-z",
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
@@ -116,10 +120,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
     ),
     (
         "canned-cycles-reject-inverse-time-mode",
-        ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G93\n"
-        + "G81 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\n" + "G93\n" + "G81 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
     ),
     (
         "canned-cycles-reject-cutter-radius-compensation",
@@ -204,33 +205,42 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G86 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
     ),
-    (
-        "g87-requires-i",
-        ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G98\n"
-        + "M3\n"
-        + "G0 X1.0 Y2.0 Z3.0\n"
-        + "G87 X4.0 Y5.0 Z1.5 R2.8 J-0.5 K2.25 F7.0\n",
-    ),
-    (
-        "g87-requires-j",
-        ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G98\n"
-        + "M3\n"
-        + "G0 X1.0 Y2.0 Z3.0\n"
-        + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 K2.25 F7.0\n",
-    ),
-    (
-        "g87-requires-k",
-        ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G98\n"
-        + "M3\n"
-        + "G0 X1.0 Y2.0 Z3.0\n"
-        + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 F7.0\n",
-    ),
+    # Removed in CNCSim v1.0.1: G87 I/J/K requirement tests. Section 3.5.16.8
+    # lists I, J, K in the G87 prototype but never explicitly says omitting them
+    # is an error. The general rule in section 3.5 ("items not described as
+    # optional are required") is not consistently applied across canned cycles.
+    # I and J are incremental offsets where 0 is a valid (if physically
+    # nonsensical) default; K in absolute mode specifies a Z-axis target that
+    # could also default to 0. Since the spec does not unambiguously require
+    # these as error conditions, these tests are removed.
+    #
+    # (
+    #     "g87-requires-i",
+    #     ZERO_OFFSET_P1_SETUP
+    #     + "G90\n"
+    #     + "G98\n"
+    #     + "M3\n"
+    #     + "G0 X1.0 Y2.0 Z3.0\n"
+    #     + "G87 X4.0 Y5.0 Z1.5 R2.8 J-0.5 K2.25 F7.0\n",
+    # ),
+    # (
+    #     "g87-requires-j",
+    #     ZERO_OFFSET_P1_SETUP
+    #     + "G90\n"
+    #     + "G98\n"
+    #     + "M3\n"
+    #     + "G0 X1.0 Y2.0 Z3.0\n"
+    #     + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 K2.25 F7.0\n",
+    # ),
+    # (
+    #     "g87-requires-k",
+    #     ZERO_OFFSET_P1_SETUP
+    #     + "G90\n"
+    #     + "G98\n"
+    #     + "M3\n"
+    #     + "G0 X1.0 Y2.0 Z3.0\n"
+    #     + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 F7.0\n",
+    # ),
     (
         "g88-requires-p",
         ZERO_OFFSET_P1_SETUP

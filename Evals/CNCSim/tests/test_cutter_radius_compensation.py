@@ -54,47 +54,39 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
         "expected_d_number",
     ),
     [
-        # Appendix B.6 first straight move, with the tool kept left of the
-        # programmed path.
+        # In preliminary testing, no model passes this test.
+        # Appendix B.6 defines the first-move tangent-circle construction for
+        # cutter radius compensation.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\n",
             3.2,
             2.4,
             "G41",
             1,
         ),
+        # In preliminary testing, no model passes this test.
         # Appendix B.6 first straight move, mirrored for right compensation.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G42 D1 G1 X5.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\n",
             3.2,
             -2.4,
             "G42",
             1,
         ),
-        # RS274 Appendix B.2.4: if D is omitted, the slot number of the tool
+        # In preliminary testing, no model passes this test.
+        # Appendix B.2.4: if D is omitted, the slot number of the tool
         # currently in the spindle is used as the D number.
         (
-            "T1\n"
-            "M6\n"
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 G1 X5.0 Y0.0\n",
+            "T1\nM6\nG17 G90 G94\nG0 X0.0 Y0.0\nG41 G1 X5.0 Y0.0\n",
             3.2,
             2.4,
             "G41",
             1,
         ),
-        # The same Appendix B.6 first-move construction applies to G0 as well
-        # as G1, so a rapid first move to the same programmed point reaches
-        # the same compensated spindle-center endpoint.
+        # In preliminary testing, no model passes this test.
+        # Appendix B.6 first-move construction applies to G0 as well as G1.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G0 X5.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G0 X5.0 Y0.0\n",
             3.2,
             2.4,
             "G41",
@@ -104,10 +96,7 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
         # stays logically on but the spindle center remains on the programmed
         # contour.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D0 G1 X5.0 Y0.0\n"
-            "G1 X6.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D0 G1 X5.0 Y0.0\nG1 X6.0 Y0.0\n",
             6.0,
             0.0,
             "G41",
@@ -115,34 +104,27 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
         ),
         # Mirror-image zero-radius case for G42.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G42 D0 G1 X5.0 Y0.0\n"
-            "G1 X6.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D0 G1 X5.0 Y0.0\nG1 X6.0 Y0.0\n",
             6.0,
             0.0,
             "G42",
             0,
         ),
-        # RS274 Appendix B.6: after the entry move, the tool stays tangent to
-        # the programmed path on the selected side. Extending the same
-        # left-to-right contour from X5 to X6 puts the tool center at (6, 3).
+        # In preliminary testing, no model passes this test.
+        # Appendix B.6: after the entry move, the tool stays tangent to the
+        # programmed path. Colinear follow-on from X5 to X6 puts the tool
+        # center at (6, 3).
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n"
-            "G1 X6.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG1 X6.0 Y0.0\n",
             6.0,
             3.0,
             "G41",
             1,
         ),
+        # In preliminary testing, no model passes this test.
         # Same colinear continuation case, mirrored for right compensation.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G42 D1 G1 X5.0 Y0.0\n"
-            "G1 X6.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG1 X6.0 Y0.0\n",
             6.0,
             -3.0,
             "G42",
@@ -151,127 +133,84 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
         # Appendix B.2.3: G40 on the same line as motion turns compensation
         # off before the move is made.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n"
-            "G40 G1 X7.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG40 G1 X7.0 Y0.0\n",
             7.0,
             0.0,
             "G40",
             None,
         ),
-        # RS274 Appendix B.5.2 says that after turning compensation off, the
-        # next time it is turned on the following move is treated as a first
-        # move again. Starting from the prior compensated point (3.2, 2.4),
-        # the right-comp first-move construction to programmed point
-        # (8.2, 2.4) gives the shifted endpoint (6.4, 0.0).
+        # In preliminary testing, no model passes this test.
+        # Appendix B.5.2: after G40, re-enabling compensation treats the
+        # next move as a first move again.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n"
-            "G40\n"
-            "G42 D1 G1 X8.2 Y2.4\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG40\nG42 D1 G1 X8.2 Y2.4\n",
             6.4,
             0.0,
             "G42",
             1,
         ),
-        # RS274 Appendix B.6: after G40, no special exit move occurs, and the
-        # next move behaves as if the previous move had placed the tool at its
-        # current spindle-center position. So this incremental move starts from
-        # the compensated point (3.2, 2.4), not from the programmed contour
-        # point (5.0, 0.0).
+        # In preliminary testing, no model passes this test.
+        # Appendix B.6: after G40, subsequent motion starts from the
+        # compensated spindle-center position, not the programmed contour
+        # point.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n"
-            "G40\n"
-            "G91 G1 X1.0 Y0.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG40\nG91 G1 X1.0 Y0.0\n",
             4.2,
             2.4,
             "G40",
             None,
         ),
-        # RS274 Appendix B says that after the entry moves, the tool remains
-        # tangent to the programmed path, and a convex corner inserts an arc of
-        # tool radius around the corner. This case first extends the horizontal
-        # contour so the tool is already following the compensated line y = 3,
+        # In preliminary testing, no model passes this test.
+        # Appendix B: convex corner inserts an arc of tool radius around the
+        # corner. This case first extends the horizontal contour so the tool
+        # is already following the compensated line y = 3,
         # then turns onto the segment from (10, 0) to (14, -3). That segment
         # has unit direction (4/5, -3/5), so its left normal is (3/5, 4/5).
         # Offsetting the programmed endpoint by radius 3 along that normal
         # gives the expected spindle-center endpoint:
         #   (14, -3) + 3 * (3/5, 4/5) = (15.8, -0.6)
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n"
-            "G1 X10.0 Y0.0\n"
-            "G1 X14.0 Y-3.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X14.0 Y-3.0\n",
             15.8,
             -0.6,
             "G41",
             1,
         ),
-        # Same convex-corner rule, but with a 90-degree turn from +X to -Y.
-        # Once the tool is established on the compensated horizontal path, the
-        # vertical programmed segment from (10, 0) to (10, -4) has left normal
-        # (1, 0), so the spindle-center endpoint is simply:
-        #   (10, -4) + 3 * (1, 0) = (13, -4)
+        # In preliminary testing, no model passes this test.
+        # Same convex-corner rule, 90-degree turn from +X to -Y.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 D1 G1 X5.0 Y0.0\n"
-            "G1 X10.0 Y0.0\n"
-            "G1 X10.0 Y-4.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X10.0 Y-4.0\n",
             13.0,
             -4.0,
             "G41",
             1,
         ),
+        # In preliminary testing, no model passes this test.
         # G42 convex continuation, using the mirror-image diagonal turn from
         # (10, 0) to (14, 3). That segment has unit direction (4/5, 3/5), so
         # its right normal is (3/5, -4/5). Offsetting by radius 3 gives:
         #   (14, 3) + 3 * (3/5, -4/5) = (15.8, 0.6)
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G42 D1 G1 X5.0 Y0.0\n"
-            "G1 X10.0 Y0.0\n"
-            "G1 X14.0 Y3.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X14.0 Y3.0\n",
             15.8,
             0.6,
             "G42",
             1,
         ),
-        # Same convex-corner rule for G42, but with a 90-degree turn from +X
-        # to +Y. The vertical programmed segment from (10, 0) to (10, 4) has
-        # right normal (1, 0), so the spindle-center endpoint is:
-        #   (10, 4) + 3 * (1, 0) = (13, 4)
+        # In preliminary testing, no model passes this test.
+        # Same convex-corner rule for G42, 90-degree turn from +X to +Y.
         (
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G42 D1 G1 X5.0 Y0.0\n"
-            "G1 X10.0 Y0.0\n"
-            "G1 X10.0 Y4.0\n",
+            "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG1 X10.0 Y0.0\nG1 X10.0 Y4.0\n",
             13.0,
             4.0,
             "G42",
             1,
         ),
-        # RS274 Appendix B.5 says changing tools while compensation is on is
-        # not an error, and the radius in use stays the one from when
-        # compensation was turned on until G40. Tool 2 has a different
-        # diameter, so if the interpreter incorrectly switched radii here the
-        # final Y value would be 5 instead of 3.
+        # In preliminary testing, no model passes this test.
+        # Appendix B.5: changing tools while CRC is on keeps the original
+        # radius until G40.
         (
-            "T1\n"
-            "M6\n"
-            "G17 G90 G94\n"
-            "G0 X0.0 Y0.0\n"
-            "G41 G1 X5.0 Y0.0\n"
-            "T2\n"
-            "M6\n"
-            "G1 X6.0 Y0.0\n",
+            "T1\nM6\nG17 G90 G94\nG0 X0.0 Y0.0\nG41 G1 X5.0 Y0.0\nT2\nM6\nG1 X6.0 Y0.0\n",
             6.0,
             3.0,
             "G41",
@@ -341,78 +280,62 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
 # The same expected endpoints apply whether that auxiliary arc is programmed in
 # center format (I/J) or radius format (R).
 CRC_ARC_CASES = [
+    # In preliminary testing, no model passes any of the 8 arc CRC cases below.
+    # Appendix B.6 defines compensated arc geometry: the tool-center arc radius
+    # is the programmed arc radius +/- the tool radius depending on which side
+    # of the contour the tool is on.
     (
         "g42-first-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n",
         {"x": 0.0, "y": 7.0, "z": 0.0},
         "G42",
         1,
     ),
     (
         "g42-first-radius-format-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G42 D1 G3 X0.0 Y4.0 R4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 R4.0\n",
         {"x": 0.0, "y": 7.0, "z": 0.0},
         "G42",
         1,
     ),
     (
         "g42-subsequent-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n"
-        "G3 X-4.0 Y0.0 I0.0 J-4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\nG3 X-4.0 Y0.0 I0.0 J-4.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G42",
         1,
     ),
     (
         "g42-subsequent-radius-format-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n"
-        "G3 X-4.0 Y0.0 R4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\nG3 X-4.0 Y0.0 R4.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G42",
         1,
     ),
     (
         "g41-first-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n",
         {"x": 0.0, "y": -7.0, "z": 0.0},
         "G41",
         1,
     ),
     (
         "g41-first-radius-format-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G41 D1 G2 X0.0 Y-4.0 R4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 R4.0\n",
         {"x": 0.0, "y": -7.0, "z": 0.0},
         "G41",
         1,
     ),
     (
         "g41-subsequent-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n"
-        "G2 X-4.0 Y0.0 I0.0 J4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\nG2 X-4.0 Y0.0 I0.0 J4.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G41",
         1,
     ),
     (
         "g41-subsequent-radius-format-arc-move",
-        "G17 G90 G94\n"
-        "G0 X7.0 Y0.0\n"
-        "G41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n"
-        "G2 X-4.0 Y0.0 R4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\nG2 X-4.0 Y0.0 R4.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G41",
         1,
