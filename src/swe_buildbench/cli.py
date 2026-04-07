@@ -35,13 +35,16 @@ def _get_adapter(
 
     adapters: dict[str, Callable[[], AgentAdapter]] = {
         "claude-code": lambda: claude_code.ClaudeCodeAdapter(
-            model=model, effort=effort,
+            model=model,
+            effort=effort,
         ),
         "codex-cli": lambda: codex_cli.CodexCLIAdapter(
-            model=model, effort=effort,
+            model=model,
+            effort=effort,
         ),
         "gemini-cli": lambda: gemini_cli.GeminiCLIAdapter(
-            model=model, effort=effort,
+            model=model,
+            effort=effort,
         ),
         "model-api": lambda: model_api.ModelAPIAdapter(
             model=model or "claude-opus-4-6",
@@ -81,19 +84,22 @@ def _cmd_run(args: argparse.Namespace) -> None:
     num_runs: int = args.runs
     output_dir = Path(args.output_dir)
     eval_num = next_eval_number(
-        output_dir, task.task_id, adapter.name,
-        adapter.model, adapter.effort,
+        output_dir,
+        task.task_id,
+        adapter.name,
+        adapter.model,
+        adapter.effort,
     )
     log = logging.getLogger(__name__)
     log.info("Writing results to eval%d (runs 1-%d)", eval_num, num_runs)
 
     for run_number in range(1, num_runs + 1):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(
             f"eval{eval_num}/run{run_number} ({run_number}/{num_runs}): "
             f"{args.task} / {adapter.name}"
         )
-        print(f"{'='*60}\n")
+        print(f"{'=' * 60}\n")
 
         result = run_evaluation(
             task=task,
@@ -145,8 +151,10 @@ def _cmd_results(args: argparse.Namespace) -> None:
         return
 
     # Print table
-    print(f"{'Task':<20} {'Agent':<15} {'Run':<5} {'Pass':<6} {'Total':<6} "
-          f"{'Score':<8} {'Tokens':<10} {'Exit':<10}")
+    print(
+        f"{'Task':<20} {'Agent':<15} {'Run':<5} {'Pass':<6} {'Total':<6} "
+        f"{'Score':<8} {'Tokens':<10} {'Exit':<10}"
+    )
     print("-" * 90)
     for r in results:
         tokens = f"{r.token_usage.total_tokens:,}" if r.token_usage else "n/a"
@@ -172,6 +180,7 @@ def _cmd_validate(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     print(f"Task: {task.task_id}")
+    print(f"Language: {task.language}")
     print(f"Root: {task.root}")
     print(f"Base prompt: {task.base_prompt_path}")
     print(f"Technical prompt: {task.technical_prompt_path}")
@@ -192,9 +201,7 @@ def main(argv: list[str] | None = None) -> None:
         prog="swe-buildbench",
         description="SWE-BuildBench evaluation harness",
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable debug logging"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     # --- run ---
@@ -211,12 +218,11 @@ def main(argv: list[str] | None = None) -> None:
     run_parser.add_argument("--output-dir", default="results")
     run_parser.add_argument("--model", default=None, help="Model to use (e.g. opus, sonnet, o3)")
     run_parser.add_argument(
-        "--effort", default=None,
+        "--effort",
+        default=None,
         help="Effort / reasoning level (e.g. low, medium, high, max)",
     )
-    run_parser.add_argument(
-        "--api-key-env", action="append", help="VAR=value pairs for API keys"
-    )
+    run_parser.add_argument("--api-key-env", action="append", help="VAR=value pairs for API keys")
     run_parser.add_argument("--skip-extensions", action="store_true")
 
     # --- results ---
@@ -224,9 +230,7 @@ def main(argv: list[str] | None = None) -> None:
     results_parser.add_argument("--task", default=None)
     results_parser.add_argument("--agent", default=None)
     results_parser.add_argument("--output-dir", default="results")
-    results_parser.add_argument(
-        "--format", choices=["table", "json", "csv"], default="table"
-    )
+    results_parser.add_argument("--format", choices=["table", "json", "csv"], default="table")
     results_parser.add_argument("--compare", action="store_true")
 
     # --- validate ---

@@ -50,7 +50,9 @@ def _git_sha() -> str:
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True,
+            text=True,
+            timeout=5,
         )
         return result.stdout.strip() if result.returncode == 0 else "unknown"
     except Exception:
@@ -166,6 +168,7 @@ def run_evaluation(
         # Always estimate cost from token counts + published pricing
         if token_usage is not None and adapter.model:
             from swe_buildbench.harness.pricing import estimate_cost
+
             token_usage.estimated_cost_usd = estimate_cost(
                 adapter.model,
                 token_usage.input_tokens,
@@ -175,13 +178,15 @@ def run_evaluation(
             )
 
         # --- 6. Run hidden tests ---
-        # The eval's conftest.py handles cmake build + executable discovery
-        # via the --implementation-root pytest option.
+        # The eval's conftest.py handles preparing the submission (build for
+        # compiled languages, no-op for interpreted) and discovering the
+        # runnable command via the shared pytest plugin.
         report_path = extract_dir / "test-report.json"
         tests, test_summary = run_hidden_tests(
             test_dir=task.test_dir,
             submission_dir=submission_dir,
             report_path=report_path,
+            language=task.language,
         )
 
         # --- 7. Derive build result from test outcomes ---
@@ -206,11 +211,7 @@ def run_evaluation(
             exit_reason = "error"
 
         # Detect runs where the agent produced nothing useful
-        if (
-            exit_reason == "completed"
-            and token_usage is None
-            and not any(submission_dir.iterdir())
-        ):
+        if exit_reason == "completed" and token_usage is None and not any(submission_dir.iterdir()):
             exit_reason = "no_output"
             log.warning("Agent produced no tokens and no output files")
 
@@ -234,8 +235,13 @@ def run_evaluation(
 
         # --- 10. Save artifacts ---
         out_path = result_path(
-            output_dir, task.task_id, adapter.name, run_number,
-            adapter.model, adapter.effort, eval_number,
+            output_dir,
+            task.task_id,
+            adapter.name,
+            run_number,
+            adapter.model,
+            adapter.effort,
+            eval_number,
         )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = RunArtifacts()
@@ -270,5 +276,3 @@ def run_evaluation(
             shutil.rmtree(workspace, ignore_errors=True)
         if extract_dir is not None:
             shutil.rmtree(extract_dir, ignore_errors=True)
-
-

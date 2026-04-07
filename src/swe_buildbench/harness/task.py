@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
+DEFAULT_LANGUAGE = "cpp"
+
 
 @dataclass
 class ExtensionTask:
@@ -26,6 +28,7 @@ class TaskDefinition:
     technical_prompt_path: Path
     docs_dir: Path
     test_dir: Path
+    language: str = DEFAULT_LANGUAGE
     version: str = "0.0.0"
     build_script: Path | None = None
     sample_test_dir: Path | None = None
@@ -40,16 +43,33 @@ def _discover_prompt_variants(prompts_dir: Path) -> dict[str, Path]:
     return {p.stem: p for p in sorted(variants_dir.glob("*.md"))}
 
 
-def load_task(task_root: Path, task_id: str) -> TaskDefinition:
+def _technical_prompt_path(prompt_dir: Path, language: str) -> Path:
+    """Locate the technical-requirements-prompt for the given language.
+
+    The C++ default uses ``technical-requirements-prompt.md`` (no suffix);
+    other languages use ``technical-requirements-prompt-<language>.md``.
+    """
+    if language == DEFAULT_LANGUAGE:
+        return prompt_dir / "technical-requirements-prompt.md"
+    return prompt_dir / f"technical-requirements-prompt-{language}.md"
+
+
+def load_task(
+    task_root: Path,
+    task_id: str,
+    *,
+    language: str = DEFAULT_LANGUAGE,
+) -> TaskDefinition:
     """Load a task definition from the conventional directory layout.
 
     Expected structure under *task_root*::
 
         prompt/
           base-prompt.md
-          technical-requirements-prompt.md
+          technical-requirements-prompt.md           # default (cpp)
+          technical-requirements-prompt-python.md    # optional, per language
           docs/
-          variants/          (optional)
+          variants/                                   (optional)
         tests/
         harness/
           build.sh           (optional)
@@ -57,14 +77,16 @@ def load_task(task_root: Path, task_id: str) -> TaskDefinition:
     """
     prompt_dir = task_root / "prompt"
     base_prompt = prompt_dir / "base-prompt.md"
-    tech_prompt = prompt_dir / "technical-requirements-prompt.md"
+    tech_prompt = _technical_prompt_path(prompt_dir, language)
     docs_dir = prompt_dir / "docs"
     test_dir = task_root / "tests"
 
     if not base_prompt.is_file():
         raise FileNotFoundError(f"Base prompt not found: {base_prompt}")
     if not tech_prompt.is_file():
-        raise FileNotFoundError(f"Technical prompt not found: {tech_prompt}")
+        raise FileNotFoundError(
+            f"Technical prompt for language {language!r} not found: {tech_prompt}"
+        )
     if not docs_dir.is_dir():
         raise FileNotFoundError(f"Docs directory not found: {docs_dir}")
     if not test_dir.is_dir():
@@ -83,6 +105,7 @@ def load_task(task_root: Path, task_id: str) -> TaskDefinition:
         technical_prompt_path=tech_prompt,
         docs_dir=docs_dir,
         test_dir=test_dir,
+        language=language,
         version=version,
         build_script=build_script if build_script.is_file() else None,
         sample_test_dir=sample_test_dir if sample_test_dir.is_dir() else None,
@@ -91,13 +114,21 @@ def load_task(task_root: Path, task_id: str) -> TaskDefinition:
 
 
 # ---------------------------------------------------------------------------
-# Task registry — maps task IDs to loader callables
+# Task registry — maps task IDs to (subdir, language) pairs
 # ---------------------------------------------------------------------------
 
-_KNOWN_TASKS: dict[str, str] = {
-    "cncsim-full": "Evals/CNCSim",
-    "cncsim-lite": "Evals/CNCSim",
-    "wordcount": "Evals/WordCount",
+
+@dataclass(frozen=True, slots=True)
+class _RegisteredTask:
+    subdir: str
+    language: str = DEFAULT_LANGUAGE
+
+
+_KNOWN_TASKS: dict[str, _RegisteredTask] = {
+    "cncsim-full": _RegisteredTask("Evals/CNCSim"),
+    "cncsim-lite": _RegisteredTask("Evals/CNCSim"),
+    "wordcount": _RegisteredTask("Evals/WordCount"),
+    "wordcount-python": _RegisteredTask("Evals/WordCount", language="python"),
 }
 
 
@@ -106,11 +137,15 @@ def resolve_task(repo_root: Path, task_id: str) -> TaskDefinition:
 
     Raises ``ValueError`` if the task ID is not recognised.
     """
-    subdir = _KNOWN_TASKS.get(task_id)
-    if subdir is None:
+    registered = _KNOWN_TASKS.get(task_id)
+    if registered is None:
         known = ", ".join(sorted(_KNOWN_TASKS))
         raise ValueError(f"Unknown task {task_id!r}. Known tasks: {known}")
-    return load_task(repo_root / subdir, task_id)
+    return load_task(
+        repo_root / registered.subdir,
+        task_id,
+        language=registered.language,
+    )
 
 
 def list_tasks() -> list[str]:

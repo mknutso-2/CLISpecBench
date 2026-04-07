@@ -41,12 +41,58 @@ class TestRunHiddenTests:
             )
 
         cmd = mock_run.call_args[0][0]
-        assert any(
-            arg.startswith("--implementation-root=") for arg in cmd
-        ), f"Expected --implementation-root in command: {cmd}"
-        assert not any(
-            arg.startswith("--executable=") for arg in cmd
-        ), f"Should not pass --executable: {cmd}"
+        assert any(arg.startswith("--implementation-root=") for arg in cmd), (
+            f"Expected --implementation-root in command: {cmd}"
+        )
+        assert not any(arg.startswith("--executable=") for arg in cmd), (
+            f"Should not pass --executable: {cmd}"
+        )
+
+    def test_passes_language_flag_when_specified(self, tmp_path: Path) -> None:
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        submission_dir = tmp_path / "submission"
+        submission_dir.mkdir()
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps({"tests": []}))
+
+        with patch("swe_buildbench.harness.scoring.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            run_hidden_tests(
+                test_dir=test_dir,
+                submission_dir=submission_dir,
+                report_path=report_path,
+                language="python",
+                use_docker=False,
+            )
+
+        cmd = mock_run.call_args[0][0]
+        assert "--language=python" in cmd, f"Expected --language=python in command: {cmd}"
+
+    def test_omits_language_flag_for_default_cpp(self, tmp_path: Path) -> None:
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        submission_dir = tmp_path / "submission"
+        submission_dir.mkdir()
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps({"tests": []}))
+
+        with patch("swe_buildbench.harness.scoring.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            run_hidden_tests(
+                test_dir=test_dir,
+                submission_dir=submission_dir,
+                report_path=report_path,
+                use_docker=False,
+            )
+
+        cmd = mock_run.call_args[0][0]
+        # Default language is cpp; the plugin's default is also cpp, so we
+        # don't need to pass anything explicitly. Either omitted entirely
+        # or explicitly --language=cpp is acceptable.
+        language_args = [arg for arg in cmd if arg.startswith("--language=")]
+        if language_args:
+            assert language_args == ["--language=cpp"]
 
     def test_does_not_pass_executable_flag(self, tmp_path: Path) -> None:
         test_dir = tmp_path / "tests"

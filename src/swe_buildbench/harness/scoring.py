@@ -33,12 +33,15 @@ def run_hidden_tests(
     report_path: Path,
     timeout_seconds: float = 600,
     use_docker: bool = True,
+    language: str = "cpp",
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run the hidden test suite against an agent's submission.
 
-    The eval's conftest.py handles building the submission via cmake and
-    discovering the executable.  We pass ``--implementation-root`` pointing
-    at the agent's source directory.
+    The eval's conftest.py handles preparing the submission (building it
+    when applicable) and discovering the runnable command via the shared
+    pytest plugin.  We pass ``--implementation-root`` pointing at the
+    agent's source directory and ``--language`` so the plugin selects the
+    right build backend.
 
     When *use_docker* is True (the default), tests run inside a Linux
     container so the build environment matches what the agent targeted.
@@ -48,10 +51,18 @@ def run_hidden_tests(
     """
     if use_docker:
         return _run_hidden_tests_docker(
-            test_dir, submission_dir, report_path, timeout_seconds,
+            test_dir,
+            submission_dir,
+            report_path,
+            timeout_seconds,
+            language,
         )
     return _run_hidden_tests_local(
-        test_dir, submission_dir, report_path, timeout_seconds,
+        test_dir,
+        submission_dir,
+        report_path,
+        timeout_seconds,
+        language,
     )
 
 
@@ -60,6 +71,7 @@ def _run_hidden_tests_local(
     submission_dir: Path,
     report_path: Path,
     timeout_seconds: float,
+    language: str,
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run tests on the host (fallback for when Docker is unavailable)."""
     cmd = [
@@ -68,6 +80,7 @@ def _run_hidden_tests_local(
         "pytest",
         str(test_dir),
         f"--implementation-root={submission_dir}",
+        f"--language={language}",
         "--json-report",
         f"--json-report-file={report_path}",
         "-q",
@@ -90,6 +103,7 @@ def _run_hidden_tests_docker(
     submission_dir: Path,
     report_path: Path,
     timeout_seconds: float,
+    language: str,
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run tests inside a Docker container for cross-platform compatibility."""
     from swe_buildbench.harness.docker import (
@@ -106,6 +120,7 @@ def _run_hidden_tests_docker(
         f"mkdir -p /tmp/.git"
         f" && python3 -m pytest {_CONTAINER_TESTS}"
         f" --implementation-root={_CONTAINER_SUBMISSION}"
+        f" --language={language}"
         f" --json-report --json-report-file={_CONTAINER_REPORT}"
         " -q"
     )
@@ -121,8 +136,7 @@ def _run_hidden_tests_docker(
         # Build the base image if needed
         if not sandbox.image_exists(TEST_RUNNER_IMAGE):
             base_dockerfile = (
-                Path(__file__).resolve().parent.parent.parent.parent
-                / "docker" / "base.Dockerfile"
+                Path(__file__).resolve().parent.parent.parent.parent / "docker" / "base.Dockerfile"
             )
             sandbox.build_image(base_dockerfile, TEST_RUNNER_IMAGE)
 
@@ -134,7 +148,8 @@ def _run_hidden_tests_docker(
         run = sandbox.start_and_wait(timeout_seconds)
         log.info(
             "Test container finished: exit_code=%s wall=%.1fs",
-            run.exit_code, run.wall_clock_seconds,
+            run.exit_code,
+            run.wall_clock_seconds,
         )
 
         try:
