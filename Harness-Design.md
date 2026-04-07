@@ -117,17 +117,19 @@ src/swe_buildbench/
     test_support.py             # Test helpers (run_cncsim, parameter files, etc.)
 
 Evals/
-  _shared/                      # Shared across evals
-    language-requirements-cpp.md     # C++ boilerplate (version, build cmd, layout)
-    language-requirements-python.md  # Python boilerplate (version, invoke cmd, layout)
-  CNCSim/                       # CNC G-code interpreter eval
+  _shared/                          # Shared across evals
+    language-requirements-cpp.md        # C++ boilerplate
+    language-requirements-python.md     # Python boilerplate
+    language-requirements-javascript.md # JavaScript boilerplate
+  CNCSim/                           # CNC G-code interpreter eval
     prompt/ docs/ tests/
-    reference-implementation-cpp/      # C++ reference (passes all tests)
-    reference-implementation-python/   # Python reference (passes all tests)
-  WordCount/                    # Word frequency counter (toy eval)
+    reference-implementation-cpp/       # C++ reference
+    reference-implementation-python/    # Python reference
+  WordCount/                        # Word frequency counter (toy eval)
     prompt/ docs/ tests/
     reference-implementation-cpp/
     reference-implementation-python/
+    reference-implementation-javascript/
 
 docker/
   base.Dockerfile               # Common: C++20 toolchain, cmake, python, pytest

@@ -12,6 +12,7 @@ import pytest
 from swe_buildbench.build import (
     BuildBackend,
     CMakeBackend,
+    JavaScriptBackend,
     LanguageTarget,
     PreparedSubmission,
     PythonBackend,
@@ -77,6 +78,67 @@ class TestPythonBackend:
         backend = PythonBackend()
 
         with pytest.raises(FileNotFoundError, match="main.py"):
+            backend.prepare(target, build_dir=tmp_path / "build")
+
+
+# ---------------------------------------------------------------------------
+# JavaScriptBackend
+# ---------------------------------------------------------------------------
+
+
+class TestJavaScriptBackend:
+    def test_prepare_returns_command_pointing_at_main_js(self, tmp_path: Path) -> None:
+        main_js = tmp_path / "main.js"
+        main_js.write_text("console.log('hi');\n", encoding="utf-8")
+
+        target = LanguageTarget(
+            root=tmp_path,
+            language="javascript",
+            origin="test",
+            explicit=True,
+        )
+        backend = JavaScriptBackend()
+
+        prepared = backend.prepare(target, build_dir=tmp_path / "build")
+
+        assert isinstance(prepared, PreparedSubmission)
+        assert prepared.language == "javascript"
+        assert Path(prepared.command[0]).stem.lower() == "node"
+        assert Path(prepared.command[-1]).resolve() == main_js.resolve()
+
+    def test_prepared_command_actually_runs(self, tmp_path: Path) -> None:
+        (tmp_path / "main.js").write_text(
+            "process.stdout.write('ok');\n", encoding="utf-8"
+        )
+        target = LanguageTarget(
+            root=tmp_path,
+            language="javascript",
+            origin="test",
+            explicit=True,
+        )
+        backend = JavaScriptBackend()
+
+        prepared = backend.prepare(target, build_dir=tmp_path / "build")
+        result = subprocess.run(
+            list(prepared.command),
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+
+        assert result.returncode == 0
+        assert result.stdout == "ok"
+
+    def test_prepare_raises_when_main_js_missing(self, tmp_path: Path) -> None:
+        target = LanguageTarget(
+            root=tmp_path,
+            language="javascript",
+            origin="test",
+            explicit=True,
+        )
+        backend = JavaScriptBackend()
+
+        with pytest.raises(FileNotFoundError, match="main.js"):
             backend.prepare(target, build_dir=tmp_path / "build")
 
 

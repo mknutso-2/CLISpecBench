@@ -52,6 +52,10 @@ class LanguageTarget:
             main_py = self.root / "main.py"
             if not main_py.is_file():
                 missing.append(f"missing main.py: {main_py}")
+        elif self.language == "javascript":
+            main_js = self.root / "main.js"
+            if not main_js.is_file():
+                missing.append(f"missing main.js: {main_js}")
         else:
             missing.append(f"unknown language: {self.language}")
 
@@ -125,6 +129,51 @@ class PythonBackend:
             build_dir=build_dir,
             language="python",
         )
+
+
+# ---------------------------------------------------------------------------
+# JavaScriptBackend
+# ---------------------------------------------------------------------------
+
+
+class JavaScriptBackend:
+    """Runs a JavaScript submission via ``node main.js`` with no build step."""
+
+    def __init__(self, entry_point: str = "main.js") -> None:
+        self._entry_point = entry_point
+
+    def prepare(
+        self,
+        target: LanguageTarget,
+        *,
+        build_dir: Path,
+        timeout_seconds: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
+    ) -> PreparedSubmission:
+        del timeout_seconds  # no build step, nothing to time out
+
+        entry = target.root / self._entry_point
+        if not entry.is_file():
+            raise FileNotFoundError(
+                f"JavaScript backend requires {self._entry_point} at {entry}"
+            )
+
+        build_dir.mkdir(parents=True, exist_ok=True)
+        node = _resolve_node_interpreter()
+        return PreparedSubmission(
+            command=(node, str(entry)),
+            build_dir=build_dir,
+            language="javascript",
+        )
+
+
+def _resolve_node_interpreter() -> str:
+    """Return a Node.js interpreter path. Errors clearly if missing."""
+    node = shutil.which("node")
+    if node is not None:
+        return node
+    raise FileNotFoundError(
+        "JavaScript backend requires Node.js: 'node' was not found on PATH"
+    )
 
 
 def _resolve_python_interpreter() -> str:

@@ -3,9 +3,9 @@
 A benchmark suite for evaluating AI coding agents on documentation-driven
 implementation tasks. Agents receive a specification and domain docs, then must
 produce a working implementation that passes a hidden test suite. Each eval
-can be run in multiple target languages (currently C++20 and Python 3.11+),
-with a shared test suite verifying the submission through a language-agnostic
-CLI contract.
+can be run in multiple target languages (currently C++20, Python 3.11+, and
+JavaScript on Node.js 22+), with a shared test suite verifying the submission
+through a language-agnostic CLI contract.
 
 ## Repository Layout
 
@@ -274,6 +274,7 @@ directory:
 Evals/_shared/
   language-requirements-cpp.md             # Shared across all C++ evals
   language-requirements-python.md          # Shared across all Python evals
+  language-requirements-javascript.md      # Shared across all JavaScript evals
 ```
 
 At prompt assembly time the harness concatenates

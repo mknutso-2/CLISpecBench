@@ -40,13 +40,14 @@ import pytest
 from swe_buildbench.build import (
     BuildBackend,
     CMakeBackend,
+    JavaScriptBackend,
     LanguageTarget,
     PreparedSubmission,
     PythonBackend,
     find_repo_root,
 )
 
-SUPPORTED_LANGUAGES: tuple[str, ...] = ("cpp", "python")
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("cpp", "python", "javascript")
 
 
 # ---------------------------------------------------------------------------
@@ -63,6 +64,7 @@ class EvalConfig:
     env_var: str
     preferred_executable_name: str
     python_reference_impl_subdir: str | None = None
+    javascript_reference_impl_subdir: str | None = None
 
 
 def _load_eval_config(request: pytest.FixtureRequest) -> EvalConfig:
@@ -198,6 +200,13 @@ def _default_reference_impl_subdir(config: EvalConfig, language: str) -> str:
                 "configured. Set python_reference_impl_subdir in EVAL_CONFIG."
             )
         return config.python_reference_impl_subdir
+    if language == "javascript":
+        if config.javascript_reference_impl_subdir is None:
+            raise pytest.UsageError(
+                f"Task {config.task_name!r} has no JavaScript reference implementation "
+                "configured. Set javascript_reference_impl_subdir in EVAL_CONFIG."
+            )
+        return config.javascript_reference_impl_subdir
     raise pytest.UsageError(f"Unsupported language: {language}")
 
 
@@ -206,6 +215,8 @@ def _build_backend_for(language: str, config: EvalConfig) -> BuildBackend:
         return CMakeBackend(preferred_executable_name=config.preferred_executable_name)
     if language == "python":
         return PythonBackend()
+    if language == "javascript":
+        return JavaScriptBackend()
     raise pytest.UsageError(f"Unsupported language: {language}")
 
 

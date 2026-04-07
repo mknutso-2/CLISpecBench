@@ -3,6 +3,7 @@
 from .backends import (
     BuildBackend,
     CMakeBackend,
+    JavaScriptBackend,
     LanguageTarget,
     PreparedSubmission,
     PythonBackend,
@@ -17,6 +18,7 @@ __all__ = [
     "CommandExecutionError",
     "CommandResult",
     "ImplementationTarget",
+    "JavaScriptBackend",
     "LanguageTarget",
     "PreparedSubmission",
     "PythonBackend",
