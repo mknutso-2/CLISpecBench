@@ -27,7 +27,7 @@ EVAL_CONFIG = EvalConfig(
 
 
 def run_wordcount(
-    submission_command: Sequence[str],
+    command: Sequence[str],
     input_text: str,
     tmp_path: Path,
     *,
@@ -39,14 +39,13 @@ def run_wordcount(
     input_file.write_bytes(input_text.encode("utf-8"))
 
     result = subprocess.run(
-        [*submission_command, "--input", str(input_file), "--output", str(output_file)],
+        [*command, "--input", str(input_file), "--output", str(output_file)],
         capture_output=True,
         text=True,
         timeout=timeout,
     )
     assert result.returncode == 0, (
-        f"wordcount exited with code {result.returncode}\n"
-        f"stderr: {result.stderr}"
+        f"wordcount exited with code {result.returncode}\nstderr: {result.stderr}"
     )
     assert output_file.exists(), "Output file was not created"
     raw = output_file.read_text(encoding="utf-8")

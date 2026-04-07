@@ -1,3 +1,4 @@
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 """Shared pytest fixtures for SWE-BuildBench eval test suites.
 
 Each eval's ``conftest.py`` uses this module to avoid duplicating the
@@ -77,6 +78,7 @@ def _load_eval_config(request: pytest.FixtureRequest) -> EvalConfig:
 
     # Fall back: scan all loaded conftests for one with EVAL_CONFIG.
     import sys
+
     for mod in sys.modules.values():
         config = getattr(mod, "EVAL_CONFIG", None)
         if isinstance(config, EvalConfig) and mod.__name__.endswith("conftest"):

@@ -47,9 +47,7 @@ class TestPythonBackend:
         assert Path(prepared.command[-1]).resolve() == main_py.resolve()
 
     def test_prepared_command_actually_runs(self, tmp_path: Path) -> None:
-        (tmp_path / "main.py").write_text(
-            "import sys; sys.stdout.write('ok')\n", encoding="utf-8"
-        )
+        (tmp_path / "main.py").write_text("import sys; sys.stdout.write('ok')\n", encoding="utf-8")
         target = LanguageTarget(
             root=tmp_path,
             language="python",

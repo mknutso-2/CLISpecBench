@@ -116,9 +116,7 @@ class PythonBackend:
 
         entry = target.root / self._entry_point
         if not entry.is_file():
-            raise FileNotFoundError(
-                f"Python backend requires {self._entry_point} at {entry}"
-            )
+            raise FileNotFoundError(f"Python backend requires {self._entry_point} at {entry}")
 
         build_dir.mkdir(parents=True, exist_ok=True)
         interpreter = _resolve_python_interpreter()
@@ -175,9 +173,7 @@ class CMakeBackend:
 
     def _discover_executable(self, build_dir: Path) -> Path:
         candidates = [
-            path
-            for path in build_dir.rglob("*")
-            if _is_executable_candidate(path, build_dir)
+            path for path in build_dir.rglob("*") if _is_executable_candidate(path, build_dir)
         ]
         if not candidates:
             raise AssertionError(f"Could not find a built executable under {build_dir}")
