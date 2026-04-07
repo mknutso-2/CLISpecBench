@@ -449,7 +449,7 @@ Each language requires a one-time setup cost:
 - A quality eval rubric in `quality-evals/<language>/`
 - A coverage measurement script in `coverage/<language>/`
 
-Once a language has these components, any new task in that language inherits them at no additional cost. The currently supported languages are C++20, Python 3.11+, and JavaScript (Node.js 22+).
+Once a language has these components, any new task in that language inherits them at no additional cost. The currently supported languages are C++20, Python 3.11+, JavaScript (Node.js 22+), and Rust (2021 edition).
 
 ---
 

@@ -121,6 +121,7 @@ Evals/
     language-requirements-cpp.md        # C++ boilerplate
     language-requirements-py.md         # Python boilerplate
     language-requirements-js.md         # JavaScript boilerplate
+    language-requirements-rs.md         # Rust boilerplate
   CNCSim/                           # CNC G-code interpreter eval
     prompt/ docs/ tests/
     reference-implementation-cpp/       # C++ reference

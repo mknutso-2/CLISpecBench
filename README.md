@@ -3,8 +3,8 @@
 A benchmark suite for evaluating AI coding agents on documentation-driven
 implementation tasks. Agents receive a specification and domain docs, then must
 produce a working implementation that passes a hidden test suite. Each eval
-can be run in multiple target languages (currently C++20, Python 3.11+, and
-JavaScript on Node.js 22+), with a shared test suite verifying the submission
+can be run in multiple target languages (currently C++20, Python 3.11+,
+JavaScript on Node.js 22+, and Rust 2021), with a shared test suite verifying the submission
 through a language-agnostic CLI contract.
 
 ## Repository Layout
@@ -30,6 +30,8 @@ Design docs:
 - **CMake** and a C++20 compiler (gcc-14, clang, or MSVC)
 - **Docker Engine** in WSL2 (Windows) or native Docker (Linux/macOS)
 - **Node.js 22+** (installed in Docker images for CLI agents)
+- **Rust** stable toolchain via [rustup](https://rustup.rs/) — only required for
+  running Rust eval variants on the host (not yet bundled in Docker base image)
 
 ## Environment Setup
 
@@ -264,6 +266,9 @@ Evals/MyTask/
     src/
   reference-implementation-py/             # Python reference (optional per-eval)
     main.py
+  reference-implementation-rs/             # Rust reference (optional per-eval)
+    Cargo.toml
+    src/main.rs
 ```
 
 Language-specific boilerplate (target version, stdlib constraint, build
@@ -275,6 +280,7 @@ Evals/_shared/
   language-requirements-cpp.md             # Shared across all C++ evals
   language-requirements-py.md              # Shared across all Python evals
   language-requirements-js.md              # Shared across all JavaScript evals
+  language-requirements-rs.md              # Shared across all Rust evals
 ```
 
 At prompt assembly time the harness concatenates
