@@ -1,7 +1,7 @@
 This repo stores the implementation for a new software engineering benchmark. To start, it contains code for only a single eval in the benchmark called CNCSim.
 
 Contents:
-- SWE-BuildBench-Design.md contains the proposed benchmark-level design.
+- Eval-Design.md contains the proposed benchmark-level design.
 - Evals/CNCSim/CNCSim-Design.md contains the CNCSim-specific eval design. This design doc mentions a full and lite version of the eval. We're currently working on just the full version.
 - Evals/CNCSim/tests/ contains the CNCSim tests run against the implementation written during the eval (or on the "reference" implementation)
 - Evals/CNCSim/prompt/base-prompt.md is the 'non-technical' prompt presented to the AI coding agent.

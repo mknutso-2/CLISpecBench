@@ -12,7 +12,7 @@ This document describes the evaluation harness: the software that invokes AI
 coding agents (or model APIs) against SWE-BuildBench tasks, captures their
 output, builds it, runs the hidden test suite, and records structured results.
 
-It is a companion to `SWE-BuildBench-Design.md`, which defines the benchmark's
+It is a companion to `Eval-Design.md`, which defines the benchmark's
 scoring model, task anatomy, and evaluation modes. This document covers the
 harness implementation: how those concepts become running code.
 
@@ -301,7 +301,7 @@ repositories, or contact any other external service.
 
 | Resource | Limit | Rationale |
 |----------|-------|-----------|
-| Wall-clock time | 30 minutes | Per SWE-BuildBench-Design.md Section 5.3 |
+| Wall-clock time | 30 minutes | Per Eval-Design.md Section 5.3 |
 | Memory | 8 GB | Generous for compilation; prevents runaway allocation |
 | CPU | 4 cores | Consistent across runs; enough for parallel cmake |
 | Disk | 10 GB | Ample for source + build artifacts |

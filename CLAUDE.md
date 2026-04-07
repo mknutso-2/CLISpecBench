@@ -70,7 +70,7 @@ Example invocation:
 
 ## Key docs
 
-- `SWE-BuildBench-Design.md` — benchmark-level design
+- `Eval-Design.md` — benchmark-level design
 - `Harness-Design.md` — harness architecture
 - `Evals/CNCSim/CNCSim-Design.md` — CNCSim task design
 - `AGENTS.md` — full agent workflow + cross-validation protocol

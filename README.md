@@ -17,7 +17,7 @@ scripts/                 # Setup and utility scripts
 
 Design docs:
 
-- `SWE-BuildBench-Design.md` -- benchmark-level design (scoring, task anatomy, eval modes)
+- `Eval-Design.md` -- benchmark-level design (scoring, task anatomy, eval modes)
 - `Harness-Design.md` -- evaluation harness architecture and implementation
 - `Evals/CNCSim/README.md` -- CNCSim task design and test categories
 
