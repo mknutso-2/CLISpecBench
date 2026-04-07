@@ -143,10 +143,18 @@ pytest Evals/CNCSim/tests
 pytest Evals/WordCount/tests
 ```
 
+Select a target language (when multiple reference implementations exist):
+
+```bash
+pytest Evals/WordCount/tests --language=python
+pytest Evals/WordCount/tests --language=cpp       # default
+```
+
 Point tests at a different implementation (e.g. an agent's output):
 
 ```bash
 pytest Evals/WordCount/tests --implementation-root /path/to/agent-output
+pytest Evals/WordCount/tests --language=python --implementation-root /path/to/py-output
 ```
 
 ### Harness tests
@@ -240,19 +248,29 @@ Each eval lives in its own directory under `Evals/`. Required structure:
 ```
 Evals/MyTask/
   prompt/
-    base-prompt.md                    # Non-technical domain expert persona
-    technical-requirements-prompt.md  # Harness contract (language, CLI, output format)
-    docs/                             # Domain documentation provided to the agent
+    base-prompt.md                         # Non-technical domain expert persona
+    technical-requirements-prompt.md       # Harness contract for the default language
+    docs/                                  # Domain documentation provided to the agent
   tests/
-    conftest.py                       # Build fixtures and test helpers
-    test_build.py                     # Verifies cmake build succeeds
-    test_*.py                         # Hidden test suite
-  reference-implementation/
-    CMakeLists.txt                    # CMake project
-    src/                              # Reference solution (must pass all tests)
+    conftest.py                            # Imports shared fixtures + defines EVAL_CONFIG
+    test_build.py                          # Verifies the submission is buildable/runnable
+    test_*.py                              # Hidden test suite
+  reference-implementation/                # C++ reference (default language)
+    CMakeLists.txt
+    src/
+  reference-implementation-python/         # Optional additional language references
+    main.py
 ```
 
-Then register the task in `src/swe_buildbench/harness/task.py`:
+Each eval's `conftest.py` re-exports fixtures from
+`swe_buildbench.pytest_plugin` and declares an `EVAL_CONFIG` object
+naming the task and its reference-implementation layout. Tests request
+the `submission_command` fixture (a command sequence ready to splat into
+`subprocess.run`) rather than a concrete executable path, which keeps
+them language-agnostic. See `Evals/WordCount/tests/conftest.py` for a
+minimal example.
+
+Register the task in `src/swe_buildbench/harness/task.py`:
 
 ```python
 _KNOWN_TASKS: dict[str, str] = {
@@ -265,6 +283,7 @@ The reference implementation should pass all tests before committing. Verify:
 
 ```bash
 pytest Evals/MyTask/tests -v
+pytest Evals/MyTask/tests --language=python -v   # if a Python reference exists
 ```
 
 ### Prompt authoring guidelines
