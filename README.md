@@ -68,7 +68,18 @@ and agent images (`swe-buildbench-claude-code`, `swe-buildbench-codex-cli`,
 
 ### 4. Authenticate CLI agents
 
-Log in to each agent CLI on your host machine:
+Log in to each agent CLI **on the host that runs the Python harness** --
+the harness mounts that host's home-directory credentials into the
+container at runtime.
+
+- **Windows + WSL2 Docker** (the typical Windows setup): run the CLIs on
+  Windows so credentials land in `C:\Users\<you>\.claude\`, `\.codex\`,
+  and `\.gemini\`. The harness translates these to `/mnt/c/Users/<you>/...`
+  for the WSL2 daemon. Authenticating inside WSL Ubuntu does **not** work
+  for this setup -- the harness never reads the WSL home.
+- **Native Linux / macOS**: run the CLIs on the same host where you'll
+  invoke `swe-buildbench`. Credentials in `~/.claude/`, `~/.codex/`,
+  `~/.gemini/` are mounted directly.
 
 ```bash
 claude login          # Claude Code
@@ -76,9 +87,8 @@ codex login           # Codex CLI
 gemini auth login     # Gemini CLI
 ```
 
-The harness mounts host credential files into Docker containers at runtime.
-See `scripts/smoke-test-docker-auth.sh` for the per-agent mounting strategy and
-to verify authentication works inside containers.
+To verify auth works end-to-end inside containers, see the **Auth smoke
+tests** sub-section under [Running Tests](#running-tests).
 
 ## How Evals Work
 
@@ -112,23 +122,116 @@ View results:
 swe-buildbench results
 ```
 
-## Running Tests Locally
+## Running Tests
 
-Run a task's test suite against its reference implementation:
+This project has four categories of tests. CI runs the first three on
+every PR; the fourth is a hand-run diagnostic for new-machine setup.
+
+| Category                                                  | Location                                       | Runner   | Cost                | Prereqs                              |
+|-----------------------------------------------------------|------------------------------------------------|----------|---------------------|--------------------------------------|
+| [**Eval reference tests**](#eval-reference-tests)         | `Evals/<task>/tests/`                          | `pytest` | No API cost         | C++ toolchain                        |
+| [**Harness unit tests**](#harness-tests)                  | `src/swe_buildbench/tests/` (unmarked)         | `pytest` | No API cost         | `uv sync`                            |
+| [**Container smoke tests**](#harness-tests)               | `src/swe_buildbench/tests/` (`docker` marker)  | `pytest` | No API cost         | Docker daemon + built images         |
+| [**Auth smoke tests**](#auth-smoke-tests)                 | `scripts/smoke-test-*.sh`                      | bash     | ~pennies of tokens  | Docker + agent creds + built images  |
+
+### Eval reference tests
+
+Each task's hidden test suite, run against its reference implementation:
 
 ```bash
-# CNCSim
 pytest Evals/CNCSim/tests
-
-# WordCount
 pytest Evals/WordCount/tests
 ```
 
-Point tests at a different implementation:
+Point tests at a different implementation (e.g. an agent's output):
 
 ```bash
 pytest Evals/WordCount/tests --implementation-root /path/to/agent-output
 ```
+
+### Harness tests
+
+The harness has its own pytest suite under `src/swe_buildbench/tests/`.
+Tests are tagged with markers so you can pick a subset:
+
+| Marker          | Meaning                                                      |
+|-----------------|--------------------------------------------------------------|
+| (unmarked)      | Pure-Python unit tests -- no Docker, no API calls            |
+| `docker`        | Spins up real containers; needs Docker daemon + built images |
+| `prompts_agent` | Sends a real prompt to an AI coding agent (consumes tokens)  |
+
+Typical filters (mirror what CI runs):
+
+```bash
+# Fast unit tests only -- CI's `unit-tests` job
+uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent"
+
+# Container smoke tests -- CI's `container-tests` job
+# (requires built images -- see "Build Docker images" in Environment Setup)
+uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent"
+
+# Everything that doesn't cost API tokens
+uv run pytest src/swe_buildbench/tests -m "not prompts_agent"
+```
+
+The container tests require the base image and all three agent images to
+be built first. From a clean checkout:
+
+```bash
+MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
+```
+
+(See [3. Build Docker images](#3-build-docker-images) for details.)
+
+#### Windows: pointing pytest at the WSL2 Docker daemon
+
+On Windows, the Python `docker` library's auto-detection doesn't always
+find the WSL2 daemon. If a `docker`-marked test fails with
+`Cannot connect to Docker daemon`, set `DOCKER_HOST` explicitly:
+
+```bash
+DOCKER_HOST=tcp://localhost:2375 uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent"
+```
+
+This points the harness at the TCP listener that
+`scripts/install-docker-wsl.sh` configures on the WSL daemon.
+
+### Auth smoke tests
+
+To verify each agent CLI authenticates correctly inside its container,
+run the per-agent smoke-test scripts. These send a one-word prompt
+(`"respond with just the word hello"`) to each agent via its real API,
+so they consume a small amount of tokens per run.
+
+These tests require the agent images to be built and the CLIs to be
+authenticated on the host. From a clean checkout you'll need to run
+both setup steps first if you haven't already:
+
+```bash
+# 1. Build base + agent images (see "3. Build Docker images" above)
+MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
+
+# 2. Log in to each CLI on the host (see "4. Authenticate CLI agents" above)
+claude login
+codex login
+gemini auth login
+```
+
+Then run the smoke tests:
+
+```bash
+# All three agents in one go
+MSYS_NO_PATHCONV=1 bash scripts/smoke-test-docker-auth.sh
+
+# Or individually, for debugging
+MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
+MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
+MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
+```
+
+These are standalone diagnostics -- not part of `pytest` and not run by
+CI. They are the right place to look for the per-agent credential
+mounting strategy that the harness uses.
 
 ## Adding a New Eval
 
