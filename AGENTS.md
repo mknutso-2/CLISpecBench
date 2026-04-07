@@ -27,15 +27,11 @@ Cross-validation requirement (applies to all agents):
 - If you and the reviewing agent do not agree, do not silently pick one opinion and move on. Create `ARGUMENT.md` at the repo root that records both positions, the relevant files or spec passages, and the unresolved disagreement.
 - If the reviewing agent is unavailable, rate-limited, or otherwise cannot complete the needed reconciliation round, create `ARGUMENT.md` before answering and say that the disagreement remains unresolved due to that limitation.
 
-### When GPT / Codex is the primary agent
+### Cross Validation
 
 Use the `claude-critique` skill to invoke Claude as the adversarial reviewer. Point Claude at the exact diff, commit, or files under review using the workflow and prompt templates documented in that skill. Use named sessions (`--conversation <label>`) so multi-round review exchanges are preserved as readable transcripts in `claude-conversations/`.
 
 **Important:** When Codex is running as a subagent invoked by Claude (e.g. via `/codex:rescue` or `/codex:adversarial-review`), it must **not** use the `claude-critique` skill. The Codex sandbox cannot spawn the Claude CLI (EPERM), and even if it could, the review would be redundant — Claude is already the orchestrating agent and will handle reconciliation directly. The `claude-critique` skill is only for use when Codex is the top-level primary agent driving the session.
-
-### When Claude is the primary agent
-
-Use `/codex:adversarial-review` to invoke Codex as the adversarial reviewer. Frame the review the same way the `claude-critique` skill frames reviews for Claude: point Codex at the exact review surface, name the source-of-truth docs, and ask it to be skeptical.
 
 Workflow:
 1. Before calling the review, prepare the review target (working-tree changes, a commit hash, or specific files).
