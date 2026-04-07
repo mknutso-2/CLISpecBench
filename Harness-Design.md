@@ -6,6 +6,13 @@
 
 ---
 
+> **Note on CNCSim task IDs.** The `cncsim-lite` and `cncsim-full` task IDs
+> currently both resolve to `Evals/CNCSim/` and run the same tests — they are
+> aliases pending a planned split. The current eval will become CNCSim-Lite
+> (final-state scoring of full RS274). A future CNCSim-Heavy will add
+> inter-line state semantics to the CLI contract as a strict superset. See
+> `Evals/CNCSim/README.md`.
+
 ## 1. Purpose
 
 This document describes the evaluation harness: the software that invokes AI

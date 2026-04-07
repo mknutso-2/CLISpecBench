@@ -6,6 +6,18 @@
 
 ---
 
+> **Note on CNCSim naming.** This document predates a planned rename. The
+> single CNCSim eval that exists today (`Evals/CNCSim/`, task IDs `cncsim-lite`
+> and `cncsim-full`) is what will become **CNCSim-Lite**: it tests the full
+> RS274 spec but scores only *final* machine state. **CNCSim-Heavy** is a
+> planned future eval that will extend the CLI contract with **inter-line
+> state semantics** (intermediate / trajectory state, not just endpoint), and
+> will be a strict superset of Lite. Until that work lands, references below
+> to "CNCSim-Lite" and "CNCSim-Full" both describe the current single eval;
+> the Lite/Full distinction in this doc reflects the older "scoped subset vs
+> full spec" framing and is being retired in favor of Lite-vs-Heavy. See
+> `Evals/CNCSim/README.md` for the current framing.
+
 ## 1. Overview
 
 SWE-BuildBench is a benchmark suite for evaluating **AI coding agents and models** on **documentation-driven system implementation** tasks. Each task gives the subject a curated documentation corpus — which may be a single specification document or a realistic collection of related documents — and asks it to produce a fully functional, compilable/runnable implementation, with no access to the hidden test suite used to score it.

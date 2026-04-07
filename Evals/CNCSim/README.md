@@ -1,8 +1,23 @@
 # CNCSim
 
 CNC G-code interpreter eval for SWE-BuildBench. Agents receive the RS274/NGC
-specification and must produce a working C++ simulator that parses G-code
-programs and outputs machine state.
+specification and must produce a working simulator that parses G-code programs
+and outputs machine state.
+
+> **Status note (planned rename).** What currently lives in this directory is
+> expected to be renamed to **CNCSim-Lite**. It evaluates RS274 interpretation
+> against *final* machine state — given a program, produce the correct end
+> state. A future second eval, tentatively **CNCSim-Heavy** (working name),
+> will extend the CLI contract with **inter-line state semantics**: the agent
+> must report machine state at intermediate points in the program, not just
+> the final state. CNCSim-Heavy will be a strict superset of CNCSim-Lite —
+> every Lite spec-correctness assertion will still apply, plus new
+> trajectory/interpolation tests against an extended CLI surface (e.g.
+> `--state-trace`, `--query-at-block`, or similar; not yet pinned down).
+>
+> Until that work happens, both `cncsim-lite` and `cncsim-full` task IDs in
+> `_KNOWN_TASKS` resolve to this directory and run the same tests. Treat the
+> two IDs as aliases for now; they will diverge once CNCSim-Heavy lands.
 
 ## Directory Structure
 
@@ -32,34 +47,37 @@ reference-implementation-js/
 
 ## Task Variants
 
-### CNCSim-Lite
+### CNCSim-Lite (current eval — what this directory implements)
 
-Uses a predefined subset of the RS274/NGC standard focused on core motion and
-modal control. The prompt provides only the relevant sections. This is the
-primary *comparison* eval -- designed to produce differentiating scores between
-current frontier models. The hidden test suite covers in-scope features
-exhaustively.
+Provides the complete RS274/NGC specification as context and asks for a full
+implementation. The hidden test suite asserts **final machine state only**:
+given a G-code program, the simulator's reported end state must match the
+expected end state. No intermediate state is queried and no time-based
+interpolation is required.
 
-In scope:
-- Linear motion: G0 (rapid), G1 (linear feed)
-- Arc motion: G2 (clockwise arc), G3 (counter-clockwise arc), both radius and IJ/K offset forms
-- Coordinate systems: G90 (absolute), G91 (incremental), with correct modal persistence
-- Feed rate: F word, interaction with G0 vs G1
-- Spindle: S word, M3/M4/M5
-- Modal group state: correct persistence, reset behavior, and interaction between groups
-- Basic program structure: N-words, end-of-program M2/M30
+This is the primary *comparison* eval — designed to produce differentiating
+scores between current frontier models on dense-spec comprehension and
+correct RS274 interpretation.
 
-Out of scope: tool radius compensation (G41/G42), canned cycles (G80-G89),
-coordinate system offsets (G54-G59), tool length compensation.
+> Earlier versions of this README described CNCSim-Lite as a *scoped subset*
+> of RS274. That framing is being retired: the eval as actually implemented
+> tests against the full spec, with the "Lite" qualifier instead reflecting
+> the fact that it scores only final state, not trajectory.
 
-### CNCSim-Full
+### CNCSim-Heavy (planned, not yet implemented)
 
-Provides the complete RS274/NGC specification as context. The prompt asks for a
-full implementation without predefined scope. This is the primary *longitudinal
-progress* eval -- designed to measure how much of the spec models can implement
-as capabilities improve. The primary metric is **feature coverage**: what
-percentage of the spec's distinct feature categories did the model attempt, and
-what was the correctness rate within attempted features.
+A future eval that adds **inter-line state semantics** to the CLI contract.
+The agent will need to report machine state at intermediate points during
+program execution — at minimum after each block, and possibly at fixed
+time intervals (requiring genuine kinematic simulation rather than just
+endpoint computation).
+
+CNCSim-Heavy will be a *strict superset* of CNCSim-Lite: every Lite
+spec-correctness test must still pass, plus new tests exercising the
+extended CLI surface. CLI shape, prompt structure, and reference
+implementation strategy are all TBD. See the rename discussion in the
+project history for the design tradeoffs (full duplication vs shared test
+module vs single-eval-with-markers).
 
 ## Running Tests
 
@@ -134,14 +152,14 @@ Hidden prompts injected after the base implementation is scored. The agent does
 not know they are coming. Extension prompts use the same non-developer persona
 as the base prompt, written as natural follow-up requests.
 
-**CNCSim-Lite extensions:**
+**CNCSim-Lite extensions (current eval):**
 
 - **ext-01: Arc plane selection (G17/G18/G19)** -- Tests whether arc math is
   parameterized by plane or hardcoded to XY.
 - **ext-02: Coordinate system offsets (G54-G59)** -- Tests whether position
   tracking was abstracted beyond a single coordinate frame.
 
-**CNCSim-Full extensions:**
+**CNCSim-Heavy extensions (planned, alongside the Heavy eval itself):**
 
 - **ext-01: Stock removal simulation** -- Adds volumetric material tracking.
   Tests architectural extensibility.
