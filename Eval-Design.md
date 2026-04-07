@@ -35,7 +35,7 @@ These tracks measure different things. The agentic track is the primary one: it 
 
 **Contamination resistance by design.** Test cases are never published. The full test suite lives in a private repository. Tasks are chosen from domains where ground-truth implementations do not saturate model training data.
 
-**Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. The implementation language is specified per task and held constant across all model evaluations of that task.
+**Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-full` vs `cncsim-full-python`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
 
 **The meta-score is an aggregate, not an average.** The SWE-BuildBench score is the geometric mean of task scores, not the arithmetic mean. This penalizes models that score well on one task but fail on others — generalization matters.
 
@@ -438,14 +438,18 @@ All evaluations are run in Docker containers with pinned language versions. A mo
 
 ## 8. Language Policy
 
-Implementation language is a task-level configuration, not a framework requirement. The harness is language-agnostic — it calls `build.sh`, then invokes the resulting executable with the standard CLI contract.
+Implementation language is a task-level configuration, not a framework requirement. The harness is language-agnostic — it builds the submission via a per-language build backend, then invokes the resulting command with the standard CLI contract.
+
+A single eval can be offered in multiple languages. The prompt, documentation corpus, and hidden test suite are shared across language variants; the only per-language assets are a short `language-requirements-<lang>.md` prompt (stored once in `Evals/_shared/`) and a per-eval `reference-implementation-<lang>/` directory that must pass the full hidden test suite. Each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-full`, `cncsim-full-python`).
 
 Each language requires a one-time setup cost:
 - A Docker image with pinned compiler/runtime versions
+- A build backend in `swe_buildbench.build` (e.g. `CMakeBackend`, `PythonBackend`)
+- A shared `Evals/_shared/language-requirements-<lang>.md` prompt
 - A quality eval rubric in `quality-evals/<language>/`
 - A coverage measurement script in `coverage/<language>/`
 
-Once a language has these three components, any new task in that language inherits them at no additional cost. The current supported language is C++20.
+Once a language has these components, any new task in that language inherits them at no additional cost. The currently supported languages are C++20 and Python 3.11+.
 
 ---
 

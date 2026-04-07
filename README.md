@@ -2,7 +2,10 @@
 
 A benchmark suite for evaluating AI coding agents on documentation-driven
 implementation tasks. Agents receive a specification and domain docs, then must
-produce a working C++ implementation that passes a hidden test suite.
+produce a working implementation that passes a hidden test suite. Each eval
+can be run in multiple target languages (currently C++20 and Python 3.11+),
+with a shared test suite verifying the submission through a language-agnostic
+CLI contract.
 
 ## Repository Layout
 
@@ -249,18 +252,33 @@ Each eval lives in its own directory under `Evals/`. Required structure:
 Evals/MyTask/
   prompt/
     base-prompt.md                         # Non-technical domain expert persona
-    technical-requirements-prompt.md       # Harness contract for the default language
+    technical-requirements-prompt.md       # Language-agnostic harness contract
+                                           #   (flags, JSON schema, exit codes)
     docs/                                  # Domain documentation provided to the agent
   tests/
     conftest.py                            # Imports shared fixtures + defines EVAL_CONFIG
     test_build.py                          # Verifies the submission is buildable/runnable
-    test_*.py                              # Hidden test suite
+    test_*.py                              # Hidden test suite (language-agnostic)
   reference-implementation-cpp/            # C++ reference (default language)
     CMakeLists.txt
     src/
-  reference-implementation-python/         # Optional additional language references
+  reference-implementation-python/         # Python reference (optional per-eval)
     main.py
 ```
+
+Language-specific boilerplate (target version, stdlib constraint, build
+command, entry-point layout) lives in a shared prompt file outside the eval
+directory:
+
+```
+Evals/_shared/
+  language-requirements-cpp.md             # Shared across all C++ evals
+  language-requirements-python.md          # Shared across all Python evals
+```
+
+At prompt assembly time the harness concatenates
+`base-prompt.md` + `language-requirements-<lang>.md` + `technical-requirements-prompt.md`,
+so each eval only needs to write the eval-specific parts.
 
 Each eval's `conftest.py` re-exports fixtures from
 `swe_buildbench.pytest_plugin` and declares an `EVAL_CONFIG` object
@@ -270,12 +288,15 @@ the `submission_command` fixture (a command sequence ready to splat into
 them language-agnostic. See `Evals/WordCount/tests/conftest.py` for a
 minimal example.
 
-Register the task in `src/swe_buildbench/harness/task.py`:
+Register the task in `src/swe_buildbench/harness/task.py`. Register one task
+ID per (eval, language) pair — the default language is `cpp`, and additional
+languages take an explicit `language=` kwarg:
 
 ```python
-_KNOWN_TASKS: dict[str, str] = {
+_KNOWN_TASKS: dict[str, _RegisteredTask] = {
     ...
-    "mytask": "Evals/MyTask",
+    "mytask": _RegisteredTask("Evals/MyTask"),
+    "mytask-python": _RegisteredTask("Evals/MyTask", language="python"),
 }
 ```
 
@@ -291,8 +312,14 @@ pytest Evals/MyTask/tests --language=python -v   # if a Python reference exists
 - `base-prompt.md` should describe the task from a domain expert perspective
   without engineering guidance. The agent should figure out the implementation.
 - `technical-requirements-prompt.md` defines only what the harness needs to
-  build and test: language/tooling constraints, CLI flags, exit codes, output
-  schema. Do not put domain behavior here.
+  build and test, and should be **language-agnostic**: CLI flags, exit codes,
+  output JSON schema. Do not put domain behavior or language-specific
+  instructions here.
+- `Evals/_shared/language-requirements-<lang>.md` holds the language-specific
+  bits (target version, stdlib constraint, build/invoke command, source layout
+  and entry point). These files are shared across all evals — only edit them
+  when adding a new supported language or changing the harness contract for
+  an existing one.
 - `docs/` contains reference material the agent can use (specs, standards, etc.).
 
 ## Linting and Formatting
