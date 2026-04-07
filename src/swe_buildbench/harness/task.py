@@ -25,6 +25,7 @@ class TaskDefinition:
     task_id: str
     root: Path
     base_prompt_path: Path
+    language_prompt_path: Path
     technical_prompt_path: Path
     docs_dir: Path
     test_dir: Path
@@ -43,15 +44,13 @@ def _discover_prompt_variants(prompts_dir: Path) -> dict[str, Path]:
     return {p.stem: p for p in sorted(variants_dir.glob("*.md"))}
 
 
-def _technical_prompt_path(prompt_dir: Path, language: str) -> Path:
-    """Locate the technical-requirements-prompt for the given language.
+def _language_prompt_path(task_root: Path, language: str) -> Path:
+    """Locate the shared language-requirements prompt for *language*.
 
-    The C++ default uses ``technical-requirements-prompt.md`` (no suffix);
-    other languages use ``technical-requirements-prompt-<language>.md``.
+    Shared prompts live at ``Evals/_shared/language-requirements-<lang>.md``
+    — i.e. a sibling of the task directory.
     """
-    if language == DEFAULT_LANGUAGE:
-        return prompt_dir / "technical-requirements-prompt.md"
-    return prompt_dir / f"technical-requirements-prompt-{language}.md"
+    return task_root.parent / "_shared" / f"language-requirements-{language}.md"
 
 
 def load_task(
@@ -77,15 +76,18 @@ def load_task(
     """
     prompt_dir = task_root / "prompt"
     base_prompt = prompt_dir / "base-prompt.md"
-    tech_prompt = _technical_prompt_path(prompt_dir, language)
+    tech_prompt = prompt_dir / "technical-requirements-prompt.md"
+    language_prompt = _language_prompt_path(task_root, language)
     docs_dir = prompt_dir / "docs"
     test_dir = task_root / "tests"
 
     if not base_prompt.is_file():
         raise FileNotFoundError(f"Base prompt not found: {base_prompt}")
     if not tech_prompt.is_file():
+        raise FileNotFoundError(f"Technical prompt not found: {tech_prompt}")
+    if not language_prompt.is_file():
         raise FileNotFoundError(
-            f"Technical prompt for language {language!r} not found: {tech_prompt}"
+            f"Language prompt for {language!r} not found: {language_prompt}"
         )
     if not docs_dir.is_dir():
         raise FileNotFoundError(f"Docs directory not found: {docs_dir}")
@@ -102,6 +104,7 @@ def load_task(
         task_id=task_id,
         root=task_root,
         base_prompt_path=base_prompt,
+        language_prompt_path=language_prompt,
         technical_prompt_path=tech_prompt,
         docs_dir=docs_dir,
         test_dir=test_dir,

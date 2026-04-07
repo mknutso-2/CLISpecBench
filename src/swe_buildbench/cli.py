@@ -183,6 +183,7 @@ def _cmd_validate(args: argparse.Namespace) -> None:
     print(f"Language: {task.language}")
     print(f"Root: {task.root}")
     print(f"Base prompt: {task.base_prompt_path}")
+    print(f"Language prompt: {task.language_prompt_path}")
     print(f"Technical prompt: {task.technical_prompt_path}")
     print(f"Docs dir: {task.docs_dir}")
     print(f"Test dir: {task.test_dir}")

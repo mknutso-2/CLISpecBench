@@ -23,8 +23,15 @@ def assemble_prompt(task: TaskDefinition, variant: str | None = None) -> str:
         prompt_path = task.base_prompt_path
 
     base_text = prompt_path.read_text(encoding="utf-8")
+    language_text = task.language_prompt_path.read_text(encoding="utf-8")
     tech_text = task.technical_prompt_path.read_text(encoding="utf-8")
-    return base_text.rstrip() + "\n\n" + tech_text.lstrip()
+    return (
+        base_text.rstrip()
+        + "\n\n"
+        + language_text.strip()
+        + "\n\n"
+        + tech_text.lstrip()
+    )
 
 
 def prepare_workspace(
