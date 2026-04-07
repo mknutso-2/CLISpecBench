@@ -252,6 +252,8 @@ Each eval lives in its own directory under `Evals/`. Required structure:
 
 ```
 Evals/MyTask/
+  VERSION                                  # Semver string (e.g. 1.0.1)
+  CHANGELOG.md                             # Human-readable change history
   prompt/
     base-prompt.md                         # Non-technical domain expert persona
     technical-requirements-prompt.md       # Language-agnostic harness contract
@@ -313,6 +315,34 @@ The reference implementation should pass all tests before committing. Verify:
 pytest Evals/MyTask/tests -v
 pytest Evals/MyTask/tests --language=py -v       # if a Python reference exists
 ```
+
+### Versioning
+
+Each eval has a `VERSION` file (semver) and a `CHANGELOG.md`. **Both must be
+bumped on any change an agent or scoring run can observe.** That includes:
+
+- Anything under `prompt/` — `base-prompt.md`, `technical-requirements-prompt.md`,
+  or any file under `docs/`
+- Anything under `tests/`
+- The harness contract for this eval (CLI flags, exit codes, output schema)
+- Reference implementations, when the change reflects a spec change rather
+  than an internal refactor
+
+Use semver:
+
+- **Patch** (`1.0.0` → `1.0.1`) — clarifications, bug fixes, ambiguity
+  resolutions that don't change what a correct submission looks like
+- **Minor** (`1.0.1` → `1.1.0`) — new tests, expanded contract, additional
+  requirements that previously passing submissions might still satisfy
+- **Major** (`1.1.0` → `2.0.0`) — breaking changes; previously passing
+  submissions may now fail
+
+Pure refactors (renaming an internal helper, reformatting, restructuring a
+reference impl without behavior change) do not need a bump. The harness
+records `test_suite_version` from the git SHA on every run, but the per-eval
+`VERSION` is what humans compare across results — keep them in sync, and
+keep the changelog entry concrete enough that you could regenerate the diff
+from the description.
 
 ### Prompt authoring guidelines
 
