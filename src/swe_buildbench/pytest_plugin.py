@@ -17,7 +17,7 @@ Usage inside an eval's ``conftest.py``::
 
     EVAL_CONFIG = EvalConfig(
         task_name="wordcount",
-        default_reference_impl_subdir="Evals/WordCount/reference-implementation",
+        default_reference_impl_subdir="Evals/WordCount/reference-implementation-cpp",
         python_reference_impl_subdir="Evals/WordCount/reference-implementation-python",
         env_var="SWEBUILDBENCH_WORDCOUNT_ROOT",
         preferred_executable_name="wordcount",

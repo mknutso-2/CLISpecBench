@@ -118,9 +118,9 @@ src/swe_buildbench/
 
 Evals/
   CNCSim/                       # CNC G-code interpreter eval
-    prompt/ docs/ tests/ reference-implementation/
+    prompt/ docs/ tests/ reference-implementation-cpp/
   WordCount/                    # Word frequency counter (toy eval)
-    prompt/ docs/ tests/ reference-implementation/
+    prompt/ docs/ tests/ reference-implementation-cpp/
 
 docker/
   base.Dockerfile               # Common: C++20 toolchain, cmake, python, pytest

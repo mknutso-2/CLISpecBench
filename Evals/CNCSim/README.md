@@ -21,9 +21,11 @@ tests/
   rs274_parameters.py               # RS274 parameter index constants
   test_build.py                     # Verifies cmake build succeeds
   test_*.py                         # Hidden test suite (~40 test modules)
-reference-implementation/
+reference-implementation-cpp/
   CMakeLists.txt                    # CMake project
-  src/                              # Reference solution (passes all tests)
+  src/                              # C++ reference solution (passes all tests)
+reference-implementation-python/
+  main.py                           # Python reference solution (passes all tests)
 ```
 
 ## Task Variants

@@ -88,7 +88,7 @@ class TestPythonBackend:
 class TestCMakeBackend:
     def test_prepare_returns_runnable_executable(self, tmp_path: Path) -> None:
         repo_root = Path(__file__).resolve().parents[3]
-        reference_impl = repo_root / "Evals" / "WordCount" / "reference-implementation"
+        reference_impl = repo_root / "Evals" / "WordCount" / "reference-implementation-cpp"
         if not (reference_impl / "CMakeLists.txt").is_file():
             pytest.skip("WordCount reference implementation not available")
 

@@ -255,7 +255,7 @@ Evals/MyTask/
     conftest.py                            # Imports shared fixtures + defines EVAL_CONFIG
     test_build.py                          # Verifies the submission is buildable/runnable
     test_*.py                              # Hidden test suite
-  reference-implementation/                # C++ reference (default language)
+  reference-implementation-cpp/            # C++ reference (default language)
     CMakeLists.txt
     src/
   reference-implementation-python/         # Optional additional language references
