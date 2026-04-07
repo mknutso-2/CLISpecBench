@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import sys
 import time
 from dataclasses import dataclass, field
@@ -20,9 +21,14 @@ CONTAINER_WORKSPACE = PurePosixPath("/workspace")
 CONTAINER_PROMPT = CONTAINER_WORKSPACE / "prompt.md"
 CONTAINER_OUTPUT = CONTAINER_WORKSPACE / "output"
 
-# Default resource limits
+# Default resource limits.  ``DEFAULT_CPU_COUNT`` is the per-container ``--cpus``
+# limit applied via ``nano_cpus`` at create-time, NOT a request for that many
+# CPUs.  Docker rejects values larger than the host's CPU count with a 400 Bad
+# Request, so we cap at whatever the host actually has — this lets the same
+# default work on bigger dev machines and on smaller CI runners (GHA
+# ubuntu-latest has 2 cores).
 DEFAULT_MEM_LIMIT = "8g"
-DEFAULT_CPU_COUNT = 4
+DEFAULT_CPU_COUNT = min(4, os.cpu_count() or 4)
 DEFAULT_DISK_LIMIT = "10g"
 
 
