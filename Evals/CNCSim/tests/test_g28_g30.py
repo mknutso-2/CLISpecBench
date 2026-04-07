@@ -32,11 +32,11 @@ from rs274_parameters import (
 # these tests assert the final home endpoint rather than the intermediate
 # traverse segment.
 def test_application_returns_to_g28_home_loaded_from_input_parameter_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
@@ -65,11 +65,11 @@ def test_application_returns_to_g28_home_loaded_from_input_parameter_file(
 
 
 def test_application_returns_to_g28_home_after_intermediate_programmed_position(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
@@ -98,11 +98,11 @@ def test_application_returns_to_g28_home_after_intermediate_programmed_position(
 
 
 def test_application_returns_to_g30_secondary_home_loaded_from_input_parameter_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
@@ -131,11 +131,11 @@ def test_application_returns_to_g30_secondary_home_loaded_from_input_parameter_f
 
 
 def test_application_returns_to_g30_secondary_home_without_axis_words(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
@@ -164,11 +164,11 @@ def test_application_returns_to_g30_secondary_home_without_axis_words(
 
 
 def test_application_returns_to_g28_rotary_home_loaded_from_input_parameter_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
@@ -195,11 +195,11 @@ def test_application_returns_to_g28_rotary_home_loaded_from_input_parameter_file
 
 
 def test_application_returns_to_g28_rotary_home_without_axis_words(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
@@ -226,11 +226,11 @@ def test_application_returns_to_g28_rotary_home_without_axis_words(
 
 
 def test_application_returns_to_g30_rotary_home_without_axis_words(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
@@ -257,11 +257,11 @@ def test_application_returns_to_g30_rotary_home_without_axis_words(
 
 
 def test_application_returns_to_g30_rotary_home_after_intermediate_programmed_position(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G90\n"
             "G0 A1.0 B2.0 C3.0\n"

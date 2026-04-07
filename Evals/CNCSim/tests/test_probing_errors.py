@@ -83,12 +83,12 @@ PROBE_ERROR_CASES: list[ProbeErrorCase] = [
     ids=[case_id for case_id, _ in PROBE_ERROR_CASES],
 )
 def test_application_rejects_explicit_invalid_g38_2_uses(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         probe_box=PROBE_BOX,
         probe_tool=PROBE_TOOL,
@@ -100,11 +100,11 @@ def test_application_rejects_explicit_invalid_g38_2_uses(
 # technical requirements prompt defines --probe-tool as the probe designation
 # used by the eval harness.
 def test_application_requires_the_probe_tool_in_the_spindle(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode="G20\nG90 G94\nT1 M6\nG0 X5.0 Y5.0 Z5.0\nF10.0\nG38.2 Z0.0\n",
         probe_box=PROBE_BOX,
         probe_tool=PROBE_TOOL,
@@ -116,11 +116,11 @@ def test_application_requires_the_probe_tool_in_the_spindle(
 # says the tool in the spindle changes only when M6 is programmed. So merely
 # selecting the designated probe tool is not enough for G38.2.
 def test_application_requires_the_probe_tool_to_be_loaded_not_just_selected(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode="G20\nG90 G94\nT2\nG0 X5.0 Y5.0 Z5.0\nF10.0\nG38.2 Z0.0\n",
         probe_box=PROBE_BOX,
         probe_tool=PROBE_TOOL,
@@ -131,11 +131,11 @@ def test_application_requires_the_probe_tool_to_be_loaded_not_just_selected(
 # RS274 section 4.3.6.6 explicitly says the spindle must not be turning when
 # STRAIGHT_PROBE starts.
 def test_application_rejects_probing_with_the_spindle_turning(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G20\n"
             "G90 G94\n"
@@ -156,11 +156,11 @@ def test_application_rejects_probing_with_the_spindle_turning(
 # controlled point is the compensated probe-tip position, so this case starts
 # with the controlled point already inside the probe box.
 def test_application_rejects_probing_when_the_probe_is_already_tripped(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G20\n"
             "G90 G94\n"
@@ -223,13 +223,13 @@ NO_HIT_PROBE_CASES: list[NoHitProbeCase] = [
     ids=[case_id for case_id, _, _ in NO_HIT_PROBE_CASES],
 )
 def test_application_rejects_probing_when_no_trip_occurs(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     probe_box: ProbeBox,
     input_gcode: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         probe_box=probe_box,
         probe_tool=PROBE_TOOL,

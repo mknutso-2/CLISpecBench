@@ -77,7 +77,7 @@ FEED_RATE_MODE_CASES: list[FeedRateModeCase] = [
     ids=[case_id for case_id, _, _, _, _ in FEED_RATE_MODE_CASES],
 )
 def test_application_tracks_feed_rate_mode_behavior(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_active_mode: str,
     expected_feed_rate: float,
@@ -85,7 +85,7 @@ def test_application_tracks_feed_rate_mode_behavior(
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

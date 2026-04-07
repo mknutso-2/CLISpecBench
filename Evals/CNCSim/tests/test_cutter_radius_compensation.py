@@ -237,7 +237,7 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
     ],
 )
 def test_application_tracks_cutter_radius_compensated_spindle_center(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_x: float,
     expected_y: float,
@@ -250,7 +250,7 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
     Governing sections: RS274 Appendix B.6, B.2.3, B.2.4, B.5, and B.5.2.
     """
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
@@ -363,7 +363,7 @@ CRC_ARC_CASES = [
     ids=[case_id for case_id, _, _, _, _ in CRC_ARC_CASES],
 )
 def test_application_tracks_cutter_radius_compensated_arc_endpoints(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_machine_position: dict[str, float],
     expected_crc_mode: str,
@@ -375,7 +375,7 @@ def test_application_tracks_cutter_radius_compensated_arc_endpoints(
     Governing section: RS274 Appendix B.6.
     """
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,

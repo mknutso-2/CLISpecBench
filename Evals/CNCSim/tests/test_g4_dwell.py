@@ -10,11 +10,11 @@ from cncsim_support import run_cncsim, with_default_rotary_axes
 # duration, so this test only verifies that a valid dwell line is accepted and
 # does not disturb the rest of program execution.
 def test_application_accepts_g4_dwell(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="G90\nG0 X1.0 Y2.0 Z3.0\nG4 P0.5\nG0 X4.0 Y5.0 Z6.0\n",
         tmp_path=tmp_path,
     )

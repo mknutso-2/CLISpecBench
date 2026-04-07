@@ -95,12 +95,12 @@ GCODE_GROUP_ERROR_CASES: list[GcodeGroupErrorCase] = [
     ],
 )
 def test_application_rejects_multiple_g_words_from_the_same_group(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

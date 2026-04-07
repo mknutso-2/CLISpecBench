@@ -45,12 +45,12 @@ PROGRAM_END_CODES = ("M2", "M30")
 # the spec text itself.
 @pytest.mark.parametrize("program_end_code", PROGRAM_END_CODES)
 def test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_invalid_trailing_lines(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     program_end_code: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P2 X0.0 Y0.0 Z0.0\n"
             "G55\n"
@@ -92,12 +92,12 @@ def test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_inval
 # RS274 section 3.6.1 explicitly says M2 and M30 turn cutter compensation off.
 @pytest.mark.parametrize("program_end_code", PROGRAM_END_CODES)
 def test_application_turns_cutter_compensation_off_on_m2_and_m30(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     program_end_code: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             f"G17 G90 G94\nG0 X0.0 Y0.0\nG41 D0 G1 X5.0 Y0.0\n{program_end_code}\nG42 D0\n"
         ),
@@ -117,12 +117,12 @@ def test_application_turns_cutter_compensation_off_on_m2_and_m30(
 # directly, even though it does not expose the canceled active offset layer.
 @pytest.mark.parametrize("program_end_code", PROGRAM_END_CODES)
 def test_application_preserves_g92_parameters_on_m2_and_m30_like_g92_2(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     program_end_code: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"

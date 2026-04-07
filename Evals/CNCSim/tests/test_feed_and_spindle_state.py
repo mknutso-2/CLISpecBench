@@ -97,7 +97,7 @@ STATE_CASES: list[StateCase] = [
     ids=[case_id for case_id, _, _, _, _ in STATE_CASES],
 )
 def test_application_tracks_feed_and_spindle_state(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_feed_rate: float,
     expected_spindle_speed: float,
@@ -105,7 +105,7 @@ def test_application_tracks_feed_and_spindle_state(
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

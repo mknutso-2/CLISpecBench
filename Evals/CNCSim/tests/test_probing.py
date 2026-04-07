@@ -229,7 +229,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
     ids=[case_id for case_id, _, _, _, _ in PROBE_SUCCESS_CASES],
 )
 def test_application_reports_probe_trip_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     probe_box: ProbeBox,
     input_gcode: str,
     expected_trip_parameters: dict[int, float],
@@ -237,7 +237,7 @@ def test_application_reports_probe_trip_parameters(
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         probe_box=probe_box,
         probe_tool=PROBE_TOOL,

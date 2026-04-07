@@ -59,12 +59,12 @@ MCODE_GROUP_ERROR_CASES: list[McodeGroupErrorCase] = [
     ],
 )
 def test_application_rejects_multiple_m_words_from_the_same_group(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -73,11 +73,11 @@ def test_application_rejects_multiple_m_words_from_the_same_group(
 # See CNCSim/prompt/docs/RS274NGC.md section 3.3.5 "Item Repeats": a line may
 # have at most four M words.
 def test_application_rejects_more_than_four_m_words_on_one_line(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode="M1 M6 M3 M7 M48\n",
         tmp_path=tmp_path,
     )

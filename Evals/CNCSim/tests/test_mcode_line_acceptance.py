@@ -64,13 +64,13 @@ MCODE_LINE_ACCEPTANCE_CASES: list[McodeLineAcceptanceCase] = [
     ids=[case_id for case_id, _, _ in MCODE_LINE_ACCEPTANCE_CASES],
 )
 def test_application_accepts_up_to_four_m_words_on_one_line(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_active_m_codes: dict[str, str],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

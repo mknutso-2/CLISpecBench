@@ -209,14 +209,14 @@ COORDINATE_SYSTEM_SELECTION_CASES: list[CoordinateSystemSelectionCase] = [
     ],
 )
 def test_application_tracks_active_gcode_groups(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     group_number: str,
     expected_active_gcode: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -237,7 +237,7 @@ def test_application_tracks_active_gcode_groups(
     ids=[selected_gcode.lower() for selected_gcode, _, _ in COORDINATE_SYSTEM_SELECTION_CASES],
 )
 def test_coordinate_system_selection_codes_activate_the_expected_system(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     selected_gcode: str,
     expected_system_number: str,
     expected_machine_position: dict[str, float],
@@ -248,7 +248,7 @@ def test_coordinate_system_selection_codes_activate_the_expected_system(
         for system_number in range(1, 10)
     )
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             coordinate_system_setup
             + f"{selected_gcode}\n"

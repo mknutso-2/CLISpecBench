@@ -49,11 +49,11 @@ def parse_parameter_output_file(parameter_output: str) -> dict[int, float]:
 # exits. The file must contain the required non-rotational Table 2 parameters
 # and parameter numbers must be arranged in ascending order.
 def test_application_writes_required_parameter_output_file_entries(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload, parameter_output = run_cncsim_with_parameter_output(
-        built_executable_path,
+        submission_command,
         input_gcode="",
         tmp_path=tmp_path,
     )
@@ -69,11 +69,11 @@ def test_application_writes_required_parameter_output_file_entries(
 # RS274 section 3.2.1 explicitly says any parameter included in the file read
 # by the interpreter will be included in the file it writes when it exits.
 def test_application_preserves_input_parameters_in_output_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload, parameter_output = run_cncsim_with_parameter_output(
-        built_executable_path,
+        submission_command,
         input_gcode="",
         parameter_input_content=build_parameter_file({1: 4.25, 150: 7.5}),
         tmp_path=tmp_path,
@@ -92,7 +92,7 @@ def test_application_preserves_input_parameters_in_output_file(
 # setting and parameter-backed state changes such as selected coordinate
 # system, coordinate-system offsets, and G92 offsets.
 def test_application_writes_execution_updates_to_output_parameter_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
@@ -100,7 +100,7 @@ def test_application_writes_execution_updates_to_output_parameter_file(
         coordinate_system_xyzabc_parameter_indices(2)
     )
     completed, payload, parameter_output = run_cncsim_with_parameter_output(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#1=5.5\n"
             "G55\n"

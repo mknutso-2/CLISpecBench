@@ -19,11 +19,11 @@ from rs274_parameters import (
 # G92.3". These tests cover the explicitly specified translational and rotary
 # axis-offset behavior that CNCSim exposes in the payload.
 def test_g92_sets_offsets_and_backing_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -43,11 +43,11 @@ def test_g92_sets_offsets_and_backing_parameters(
 
 
 def test_g92_ignores_incremental_distance_mode(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -68,11 +68,11 @@ def test_g92_ignores_incremental_distance_mode(
 
 
 def test_g92_accumulates_existing_offsets(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -93,11 +93,11 @@ def test_g92_accumulates_existing_offsets(
 
 
 def test_g92_affects_all_coordinate_systems(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G10 L2 P2 X10.0 Y0.0 Z0.0\n"
@@ -118,11 +118,11 @@ def test_g92_affects_all_coordinate_systems(
 
 
 def test_g92_1_cancels_offsets_and_zeros_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -143,11 +143,11 @@ def test_g92_1_cancels_offsets_and_zeros_parameters(
 
 
 def test_g92_2_cancels_offsets_without_zeroing_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -168,11 +168,11 @@ def test_g92_2_cancels_offsets_without_zeroing_parameters(
 
 
 def test_g92_3_restores_offsets_from_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             f"#{G92_X_OFFSET_PARAMETER}=-3.0\n"
             "G92.3\n"
@@ -191,11 +191,11 @@ def test_g92_3_restores_offsets_from_parameters(
 
 
 def test_g92_sets_rotary_offsets_and_backing_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\n"
             "G54\n"
@@ -221,11 +221,11 @@ def test_g92_sets_rotary_offsets_and_backing_parameters(
 
 
 def test_g92_1_cancels_rotary_offsets_and_zeros_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\n"
             "G54\n"
@@ -249,11 +249,11 @@ def test_g92_1_cancels_rotary_offsets_and_zeros_parameters(
 
 
 def test_g92_2_cancels_rotary_offsets_without_zeroing_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\n"
             "G54\n"
@@ -280,11 +280,11 @@ def test_g92_2_cancels_rotary_offsets_without_zeroing_parameters(
 
 
 def test_g92_3_restores_rotary_offsets_from_parameters(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             f"#{G92_A_OFFSET_PARAMETER}=9.0\n"
             f"#{G92_B_OFFSET_PARAMETER}=18.0\n"

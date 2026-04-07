@@ -12,11 +12,11 @@ from rs274_parameters import SELECTED_COORDINATE_SYSTEM_PARAMETER
 # semantics. Feature-specific behavior from passing parameters to words or
 # G-codes belongs in the corresponding feature test files.
 def test_application_serializes_parameter_settings_in_payload(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#1=1.5\n"
             "#2=2.5\n"
@@ -33,11 +33,11 @@ def test_application_serializes_parameter_settings_in_payload(
 
 
 def test_parameter_settings_are_buffered_until_after_line_execution(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#3=15\n"
             "#3=6 #4=#3\n"
@@ -52,11 +52,11 @@ def test_parameter_settings_are_buffered_until_after_line_execution(
 
 
 def test_repeated_parameter_setting_uses_the_last_value(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#3=15\n"
             "#3=6 #3=8\n"
@@ -70,11 +70,11 @@ def test_repeated_parameter_setting_uses_the_last_value(
 
 
 def test_startup_uses_the_default_selected_coordinate_system_parameter(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="",
         tmp_path=tmp_path,
     )
@@ -87,11 +87,11 @@ def test_startup_uses_the_default_selected_coordinate_system_parameter(
 
 
 def test_payload_reports_parameters_sparsely(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="",
         tmp_path=tmp_path,
     )

@@ -312,7 +312,7 @@ REPEATED_CANNED_CYCLE_CASES: list[RepeatedCannedCycleCase] = [
     ids=[case_id for case_id, _, _, _, _, _ in CANNED_CYCLE_CASES],
 )
 def test_application_tracks_initial_canned_cycle_behavior(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_active_motion: str,
     expected_return_mode: str,
@@ -321,7 +321,7 @@ def test_application_tracks_initial_canned_cycle_behavior(
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -369,7 +369,7 @@ def test_application_tracks_initial_canned_cycle_behavior(
     ids=[case_id for case_id, _, _, _, _ in REPEATED_CANNED_CYCLE_CASES],
 )
 def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_return_mode: str,
     expected_machine_position: dict[str, float],
@@ -377,7 +377,7 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -425,13 +425,13 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
     ],
 )
 def test_g88_restores_the_prior_spindle_direction_after_the_cycle(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_spindle_direction: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -447,11 +447,11 @@ def test_g88_restores_the_prior_spindle_direction_after_the_cycle(
 # supported group-0 axis-using commands, so they should still execute while
 # G80 is the current motion mode.
 def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G80\n"
             "G10 L2 P2 X4.0 Y5.0 Z6.0\n"
@@ -473,11 +473,11 @@ def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
 # later lines of the same active canned cycle should change the later line's
 # final retract level.
 def test_return_mode_change_affects_later_repeats_of_an_active_canned_cycle(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             ZERO_OFFSET_P1_SETUP
             + "G90\n"

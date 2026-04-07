@@ -70,13 +70,13 @@ COMMENT_PARSING_CASES: list[CommentParsingCase] = [
     ids=[case_id for case_id, _, _ in COMMENT_PARSING_CASES],
 )
 def test_application_accepts_well_formed_parenthetical_comments(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_machine_position: dict[str, float],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

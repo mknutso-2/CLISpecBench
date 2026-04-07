@@ -240,13 +240,13 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
     ids=[case_id for case_id, _, _ in CRC_ERROR_CASES],
 )
 def test_application_rejects_invalid_cutter_radius_compensation_usage(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     carousel_slots: int | None,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
@@ -268,13 +268,13 @@ def test_application_rejects_invalid_cutter_radius_compensation_usage(
     ],
 )
 def test_application_rejects_turning_on_cutter_compensation_out_of_xy_plane(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     active_plane_gcode: str,
     crc_enable_gcode: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=active_plane_gcode + crc_enable_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
@@ -293,13 +293,13 @@ def test_application_rejects_turning_on_cutter_compensation_out_of_xy_plane(
     ],
 )
 def test_application_accepts_non_xy_plane_selection_when_cutter_radius_compensation_is_off(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     plane_code: str,
     expected_active_plane: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=plane_code,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
@@ -319,7 +319,7 @@ def test_application_accepts_non_xy_plane_selection_when_cutter_radius_compensat
     ],
 )
 def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     invalid_gcode_body: str,
     tmp_path: Path,
 ) -> None:
@@ -329,7 +329,7 @@ def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_i
     3.5.13, and 3.5.16.
     """
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=CRC_ACTIVE_PREFIX + invalid_gcode_body,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
@@ -342,7 +342,7 @@ def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_i
     ids=[case_id for case_id, _ in CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES],
 )
 def test_application_rejects_axis_offset_changes_while_cutter_compensation_is_active(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     tmp_path: Path,
 ) -> None:
@@ -351,7 +351,7 @@ def test_application_rejects_axis_offset_changes_while_cutter_compensation_is_ac
     Governing section: RS274 Appendix B.5, error 1.
     """
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,

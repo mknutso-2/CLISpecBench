@@ -245,7 +245,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ids=[case_id for case_id, _, _, _, _, _, _, _ in TOOLING_STATE_CASES],
 )
 def test_application_tracks_tooling_state(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_cutter_radius_compensation_number: int | None,
     expected_tool_length_offset_index: int | None,
@@ -256,7 +256,7 @@ def test_application_tracks_tooling_state(
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         carousel_slots=carousel_slots,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
@@ -276,11 +276,11 @@ def test_application_tracks_tooling_state(
 
 
 def test_m6_stops_spindle_without_clearing_unrelated_observable_state(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "F12.5\n"
             "M8\n"

@@ -54,13 +54,13 @@ BLOCK_PREFIX_CASES: list[BlockPrefixCase] = [
     ids=[case_id for case_id, _, _ in BLOCK_PREFIX_CASES],
 )
 def test_application_supports_optional_block_prefixes(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_machine_position: dict[str, float],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -73,11 +73,11 @@ def test_application_supports_optional_block_prefixes(
 # RS274 section 2.2.2 and section 3.3 say that if the block-delete switch is
 # on, lines beginning with "/" are skipped entirely.
 def test_application_skips_slash_prefixed_blocks_when_block_delete_is_on(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         block_delete=True,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
@@ -97,11 +97,11 @@ def test_application_skips_slash_prefixed_blocks_when_block_delete_is_on(
 # RS274 section 3.3 says the block-delete character is an optional prefix
 # element at the beginning of a line, not a mid-line token.
 def test_application_rejects_block_delete_character_mid_line(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode="G0 X1.0 / Y2.0\n",
         tmp_path=tmp_path,
     )
@@ -109,11 +109,11 @@ def test_application_rejects_block_delete_character_mid_line(
 
 # RS274 section 3.3.1 says line numbers must be integers from 0 to 99999.
 def test_application_rejects_out_of_range_line_numbers(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode="N100000 G0 X1.0\n",
         tmp_path=tmp_path,
     )

@@ -86,14 +86,14 @@ TOOL_LENGTH_COMPENSATION_CASES: list[ToolLengthCompensationCase] = [
     ids=[case_id for case_id, _, _, _ in TOOL_LENGTH_COMPENSATION_CASES],
 )
 def test_application_applies_tool_length_compensation_to_current_position(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_machine_position: dict[str, float],
     expected_tool_length_offset_index: int | None,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,

@@ -64,13 +64,13 @@ UNARY_OPERATION_CASES: list[UnaryOperationCase] = [
     ids=[case_id for case_id, _, _ in BINARY_EXPRESSION_CASES],
 )
 def test_application_evaluates_binary_expressions_in_axis_words(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     expression: str,
     expected_x: float,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -95,13 +95,13 @@ def test_application_evaluates_binary_expressions_in_axis_words(
     ids=[case_id for case_id, _, _ in UNARY_OPERATION_CASES],
 )
 def test_application_evaluates_unary_operation_values(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     unary_value: str,
     expected_x: float,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"
@@ -121,13 +121,13 @@ def test_application_evaluates_unary_operation_values(
 
 
 def test_application_supports_expression_based_parameter_indices(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 sections 3.3.2.2 and 3.3.3 define parameter_index as a real value,
     # and Appendix E makes that grammar explicit.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#[1+2]=7\n"
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
@@ -144,13 +144,13 @@ def test_application_supports_expression_based_parameter_indices(
 
 
 def test_application_supports_expression_valued_parameter_settings(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 section 3.3.3 defines the right-hand side of a parameter setting as
     # a real value, and section 3.3.2.3 says a real value may be an expression.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#1=[2+3]\n"
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
@@ -167,12 +167,12 @@ def test_application_supports_expression_valued_parameter_settings(
 
 
 def test_application_supports_bracketed_parameter_reads(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 section 3.3.2.2 explicitly distinguishes #1+2 from #[1+2].
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#1=5\n"
             "#3=9\n"
@@ -190,12 +190,12 @@ def test_application_supports_bracketed_parameter_reads(
 
 
 def test_application_supports_repeated_parameter_indirection(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 section 3.3.2.2 explicitly says the # character may be repeated.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#1=2\n"
             "##1=0.375\n"
@@ -213,14 +213,14 @@ def test_application_supports_repeated_parameter_indirection(
 
 
 def test_application_evaluates_expressions_before_parameter_settings_take_effect(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 sections 3.3.2.3 and 3.3.3 say expressions on a line are evaluated
     # when the line is read, and parameter settings do not take effect until
     # after all parameter values on that line have been found.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#3=15\n"
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
@@ -239,13 +239,13 @@ def test_application_evaluates_expressions_before_parameter_settings_take_effect
 
 
 def test_application_accepts_close_to_integer_parameter_indices(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 section 3.3.2.1 says values that are supposed to be close to an
     # integer are acceptable if they are within 0.0001 of one.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "#1.00005=[2+3]\n"
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
@@ -262,13 +262,13 @@ def test_application_accepts_close_to_integer_parameter_indices(
 
 
 def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # RS274 section 3.3.2.1 says M codes and G codes multiplied by ten are
     # considered close enough if within 0.0001 of an integer.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P2 X3.0 Y0.0 Z0.0\n"
             "G[54.999995]\n"
@@ -286,13 +286,13 @@ def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
 
 
 def test_application_evaluates_unary_values_inside_expressions(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     # Appendix E makes unary_combo a real_value, and expressions are built from
     # real_value terms, so unary operations must be usable inside expressions.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
             "G54\n"

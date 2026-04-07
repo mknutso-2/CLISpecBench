@@ -96,13 +96,13 @@ COORDINATE_SYSTEM_OFFSET_CASES: list[CoordinateSystemOffsetCase] = [
     ids=[case_id for case_id, _, _ in COORDINATE_SYSTEM_OFFSET_CASES],
 )
 def test_application_tracks_g10_coordinate_system_offsets(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_offsets: dict[str, dict[str, float]],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
@@ -142,7 +142,7 @@ def test_application_tracks_g10_coordinate_system_offsets(
     ids=["g20-to-g21", "g21-to-g20"],
 )
 def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     expected_offset: dict[str, float],
     expected_parameter_values: dict[str, float],
@@ -155,7 +155,7 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
     # coordinate_system_offsets in the currently active length units, while the
     # backing parameters remain at their raw stored values from RS274.
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

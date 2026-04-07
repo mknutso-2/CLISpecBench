@@ -88,14 +88,14 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
     ],
 )
 def test_application_tracks_active_mcode_groups(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     group_number: str,
     expected_active_mcode: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )

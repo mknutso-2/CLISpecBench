@@ -41,13 +41,13 @@ CLI_CASES: list[tuple[str, str | None, bool]] = [
     ids=[case_id for case_id, _, _ in CLI_CASES],
 )
 def test_application_accepts_parameter_file_cli_arguments(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     parameter_input_content: str | None,
     pass_parameter_output: bool,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="G90\nG0 X1.0 Y2.0 Z3.0\n",
         parameter_input_content=parameter_input_content,
         pass_parameter_output=pass_parameter_output,
@@ -63,11 +63,11 @@ def test_application_accepts_parameter_file_cli_arguments(
 # starts up, and section 3.3.2.2 says parameter values are read from the
 # numbered parameter slots.
 def test_application_uses_parameter_values_loaded_from_input_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X#1\n",
         parameter_input_content=build_parameter_file({1: 4.25}),
         tmp_path=tmp_path,
@@ -82,11 +82,11 @@ def test_application_uses_parameter_values_loaded_from_input_file(
 # RS274 section 3.2.2 says startup selects the active coordinate system from
 # parameter 5220.
 def test_application_uses_selected_coordinate_system_loaded_from_input_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="",
         parameter_input_content=build_parameter_file({SELECTED_COORDINATE_SYSTEM_PARAMETER: 2.0}),
         tmp_path=tmp_path,
@@ -104,7 +104,7 @@ def test_application_uses_selected_coordinate_system_loaded_from_input_file(
 # are required startup state, and section 3.2.2 says the selected coordinate
 # system is defined by those stored parameters.
 def test_application_initializes_coordinate_system_offsets_from_input_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
@@ -112,7 +112,7 @@ def test_application_initializes_coordinate_system_offsets_from_input_file(
         coordinate_system_xyzabc_parameter_indices(2)
     )
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode="G55\nG90\nG0 X1.0 Y2.0 Z3.0 A4.0 B5.0 C6.0\n",
         parameter_input_content=build_parameter_file(
             {
@@ -141,11 +141,11 @@ def test_application_initializes_coordinate_system_offsets_from_input_file(
 # startup parameter state, and section 3.5.18 says those values define the
 # axis offsets used by G92.3.
 def test_application_initializes_g92_offsets_from_input_file(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_cncsim(
-        built_executable_path,
+        submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\n"
             "G54\n"
@@ -201,12 +201,12 @@ PARAMETER_FILE_ERROR_CASES: list[tuple[str, str]] = [
     ids=[case_id for case_id, _ in PARAMETER_FILE_ERROR_CASES],
 )
 def test_application_rejects_invalid_parameter_input_files(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     parameter_input_content: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode="",
         parameter_input_content=parameter_input_content,
         tmp_path=tmp_path,

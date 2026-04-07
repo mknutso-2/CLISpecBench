@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -32,7 +32,7 @@ def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
 
 
 def _build_cncsim_command(
-    executable_path: Path,
+    submission_command: Sequence[str],
     *,
     block_delete: bool,
     carousel_slots: int | None,
@@ -48,7 +48,7 @@ def _build_cncsim_command(
     output_path = tmp_path / "result.json"
     input_path.write_text(input_gcode, encoding="utf-8")
 
-    command = [str(executable_path), "--input", str(input_path), "--output", str(output_path)]
+    command = [*submission_command, "--input", str(input_path), "--output", str(output_path)]
 
     if block_delete:
         command.append("--block-delete")
@@ -82,7 +82,7 @@ def _build_cncsim_command(
 
 
 def _run_cncsim_and_read_outputs(
-    executable_path: Path,
+    submission_command: Sequence[str],
     *,
     block_delete: bool,
     carousel_slots: int | None,
@@ -95,7 +95,7 @@ def _run_cncsim_and_read_outputs(
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], str | None]:
     command, output_path, parameter_output_path = _build_cncsim_command(
-        executable_path,
+        submission_command,
         block_delete=block_delete,
         carousel_slots=carousel_slots,
         input_gcode=input_gcode,
@@ -127,7 +127,7 @@ def _run_cncsim_and_read_outputs(
 
 
 def run_cncsim(
-    executable_path: Path,
+    submission_command: Sequence[str],
     *,
     block_delete: bool = False,
     carousel_slots: int | None = None,
@@ -140,7 +140,7 @@ def run_cncsim(
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     completed, payload, _ = _run_cncsim_and_read_outputs(
-        executable_path,
+        submission_command,
         block_delete=block_delete,
         carousel_slots=carousel_slots,
         input_gcode=input_gcode,
@@ -155,7 +155,7 @@ def run_cncsim(
 
 
 def run_cncsim_invalid_input(
-    executable_path: Path,
+    submission_command: Sequence[str],
     *,
     block_delete: bool = False,
     carousel_slots: int | None = None,
@@ -168,7 +168,7 @@ def run_cncsim_invalid_input(
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     completed, payload = run_cncsim(
-        executable_path,
+        submission_command,
         block_delete=block_delete,
         carousel_slots=carousel_slots,
         input_gcode=input_gcode,
@@ -187,7 +187,7 @@ def run_cncsim_invalid_input(
 
 
 def run_cncsim_with_parameter_output(
-    executable_path: Path,
+    submission_command: Sequence[str],
     *,
     block_delete: bool = False,
     carousel_slots: int | None = None,
@@ -199,7 +199,7 @@ def run_cncsim_with_parameter_output(
     tmp_path: Path,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], str]:
     completed, payload, parameter_output = _run_cncsim_and_read_outputs(
-        executable_path,
+        submission_command,
         block_delete=block_delete,
         carousel_slots=carousel_slots,
         input_gcode=input_gcode,

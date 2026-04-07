@@ -23,12 +23,12 @@ G92_ERROR_CASES: list[G92ErrorCase] = [
     ids=[case_id for case_id, _ in G92_ERROR_CASES],
 )
 def test_application_rejects_invalid_g92_usage(
-    built_executable_path: Path,
+    submission_command: tuple[str, ...],
     input_gcode: str,
     tmp_path: Path,
 ) -> None:
     run_cncsim_invalid_input(
-        built_executable_path,
+        submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
     )
