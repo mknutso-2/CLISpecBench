@@ -20,5 +20,6 @@ The output file must be a JSON object in this format:
 
 Exit codes:
 - 0: completed successfully, output written
-- 1: input was malformed or could not be read
-- 2: internal error
+- 1: invocation was invalid — required arguments missing, unknown arguments,
+  or the input file was missing, unreadable, or malformed
+- 2: unexpected internal error (e.g. panic, out-of-memory)
