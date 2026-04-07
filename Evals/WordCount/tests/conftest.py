@@ -8,14 +8,26 @@ from typing import Any, cast
 
 from swe_buildbench.pytest_plugin import (
     EvalConfig,
-    build_timeout_seconds,  # noqa: F401 — pytest fixture re-export
-    eval_language,  # noqa: F401
-    language_target,  # noqa: F401
-    prepared_submission,  # noqa: F401
-    pytest_addoption,  # noqa: F401
-    repo_root,  # noqa: F401
-    submission_command,  # noqa: F401
+    build_timeout_seconds,
+    eval_language,
+    language_target,
+    prepared_submission,
+    pytest_addoption,
+    repo_root,
+    submission_command,
 )
+
+# Re-exported so pytest picks them up as fixtures/hooks in this conftest.
+__all__ = [
+    "EvalConfig",
+    "build_timeout_seconds",
+    "eval_language",
+    "language_target",
+    "prepared_submission",
+    "pytest_addoption",
+    "repo_root",
+    "submission_command",
+]
 
 EVAL_CONFIG = EvalConfig(
     task_name="wordcount",
