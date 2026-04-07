@@ -14,8 +14,10 @@ from conftest import run_wordcount
 WordCountCase = tuple[str, str, dict[str, Any]]
 
 
-def _run(executable: Path, text: str, tmp_path: Path) -> dict[str, Any]:
-    return run_wordcount(executable, text, tmp_path)
+def _run(
+    submission_command: tuple[str, ...], text: str, tmp_path: Path
+) -> dict[str, Any]:
+    return run_wordcount(submission_command, text, tmp_path)
 
 
 # ---------------------------------------------------------------------------
@@ -24,8 +26,8 @@ def _run(executable: Path, text: str, tmp_path: Path) -> dict[str, Any]:
 
 
 class TestEmptyFile:
-    def test_empty_file(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "", tmp_path)
+    def test_empty_file(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "", tmp_path)
         assert result["lines"] == 0
         assert result["words"] == 0
         assert result["characters"] == 0
@@ -34,21 +36,21 @@ class TestEmptyFile:
 
 
 class TestWhitespaceOnly:
-    def test_spaces_only(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "   ", tmp_path)
+    def test_spaces_only(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "   ", tmp_path)
         assert result["words"] == 0
         assert result["unique_words"] == 0
         assert result["top_words"] == []
         assert result["characters"] == 3
 
-    def test_newlines_only(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "\n\n\n", tmp_path)
+    def test_newlines_only(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "\n\n\n", tmp_path)
         assert result["lines"] == 3
         assert result["words"] == 0
         assert result["characters"] == 3
 
-    def test_mixed_whitespace(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, " \t\n\r\f\v", tmp_path)
+    def test_mixed_whitespace(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, " \t\n\r\f\v", tmp_path)
         assert result["words"] == 0
         assert result["characters"] == 6
 
@@ -60,34 +62,34 @@ class TestWhitespaceOnly:
 
 class TestLineCounting:
     def test_single_line_no_newline(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         """'hello' (5 bytes, no newline) = 1 line."""
-        result = _run(built_executable_path, "hello", tmp_path)
+        result = _run(submission_command, "hello", tmp_path)
         assert result["lines"] == 1
 
     def test_single_line_with_newline(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         """'hello\\n' (6 bytes) = 1 line."""
-        result = _run(built_executable_path, "hello\n", tmp_path)
+        result = _run(submission_command, "hello\n", tmp_path)
         assert result["lines"] == 1
 
-    def test_multiple_lines(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "a\nb\nc\n", tmp_path)
+    def test_multiple_lines(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "a\nb\nc\n", tmp_path)
         assert result["lines"] == 3
 
     def test_multiple_lines_no_trailing_newline(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "a\nb\nc", tmp_path)
+        result = _run(submission_command, "a\nb\nc", tmp_path)
         assert result["lines"] == 3
 
     def test_consecutive_newlines(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         """'\\n\\n\\n' = 3 lines (spec: each \\n terminates a line)."""
-        result = _run(built_executable_path, "\n\n\n", tmp_path)
+        result = _run(submission_command, "\n\n\n", tmp_path)
         assert result["lines"] == 3
 
 
@@ -97,19 +99,19 @@ class TestLineCounting:
 
 
 class TestCharacterCounting:
-    def test_simple(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "hello", tmp_path)
+    def test_simple(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "hello", tmp_path)
         assert result["characters"] == 5
 
-    def test_with_newline(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "hello\n", tmp_path)
+    def test_with_newline(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "hello\n", tmp_path)
         assert result["characters"] == 6
 
     def test_with_various_whitespace(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         text = "a b\tc\n"
-        result = _run(built_executable_path, text, tmp_path)
+        result = _run(submission_command, text, tmp_path)
         assert result["characters"] == len(text)
 
 
@@ -119,30 +121,30 @@ class TestCharacterCounting:
 
 
 class TestWordCounting:
-    def test_single_word(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "hello", tmp_path)
+    def test_single_word(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "hello", tmp_path)
         assert result["words"] == 1
 
-    def test_multiple_words(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "the cat sat on the mat", tmp_path)
+    def test_multiple_words(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "the cat sat on the mat", tmp_path)
         assert result["words"] == 6
 
     def test_words_separated_by_various_whitespace(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "a\tb\nc\rd\fe\vf", tmp_path)
+        result = _run(submission_command, "a\tb\nc\rd\fe\vf", tmp_path)
         assert result["words"] == 6
 
     def test_leading_and_trailing_whitespace(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "  hello world  ", tmp_path)
+        result = _run(submission_command, "  hello world  ", tmp_path)
         assert result["words"] == 2
 
     def test_multiple_spaces_between_words(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "a    b    c", tmp_path)
+        result = _run(submission_command, "a    b    c", tmp_path)
         assert result["words"] == 3
 
 
@@ -152,17 +154,17 @@ class TestWordCounting:
 
 
 class TestUniqueWords:
-    def test_all_unique(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "apple banana cherry", tmp_path)
+    def test_all_unique(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "apple banana cherry", tmp_path)
         assert result["unique_words"] == 3
 
-    def test_duplicates(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "the the the", tmp_path)
+    def test_duplicates(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "the the the", tmp_path)
         assert result["unique_words"] == 1
 
-    def test_case_insensitive(self, built_executable_path: Path, tmp_path: Path) -> None:
+    def test_case_insensitive(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         """'Hello', 'HELLO', and 'hello' are the same word."""
-        result = _run(built_executable_path, "Hello HELLO hello", tmp_path)
+        result = _run(submission_command, "Hello HELLO hello", tmp_path)
         assert result["unique_words"] == 1
         assert result["words"] == 3
 
@@ -174,16 +176,16 @@ class TestUniqueWords:
 
 class TestPunctuation:
     def test_punctuation_attached(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         """'hello,' and 'hello' are different words."""
-        result = _run(built_executable_path, "hello hello,", tmp_path)
+        result = _run(submission_command, "hello hello,", tmp_path)
         assert result["unique_words"] == 2
 
     def test_various_punctuation(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "end. end! end?", tmp_path)
+        result = _run(submission_command, "end. end! end?", tmp_path)
         assert result["unique_words"] == 3
 
 
@@ -194,10 +196,10 @@ class TestPunctuation:
 
 class TestTopWords:
     def test_descending_by_count(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         text = "a a a b b c"
-        result = _run(built_executable_path, text, tmp_path)
+        result = _run(submission_command, text, tmp_path)
         top = result["top_words"]
         assert len(top) == 3
         assert top[0] == {"word": "a", "count": 3}
@@ -205,10 +207,10 @@ class TestTopWords:
         assert top[2] == {"word": "c", "count": 1}
 
     def test_alphabetical_tiebreaker(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         text = "cherry apple banana"
-        result = _run(built_executable_path, text, tmp_path)
+        result = _run(submission_command, text, tmp_path)
         top = result["top_words"]
         assert len(top) == 3
         # All have count 1, so alphabetical order
@@ -217,7 +219,7 @@ class TestTopWords:
         assert top[2]["word"] == "cherry"
 
     def test_max_ten_entries(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         # 15 unique words, only top 10 should appear
         words = [f"word{i:02d}" for i in range(15)]
@@ -226,29 +228,29 @@ class TestTopWords:
         for i, w in enumerate(words):
             tokens.extend([w] * (15 - i))
         text = " ".join(tokens)
-        result = _run(built_executable_path, text, tmp_path)
+        result = _run(submission_command, text, tmp_path)
         assert len(result["top_words"]) == 10
         # First should be the most frequent
         assert result["top_words"][0]["word"] == "word00"
         assert result["top_words"][0]["count"] == 15
 
     def test_fewer_than_ten(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "one two three", tmp_path)
+        result = _run(submission_command, "one two three", tmp_path)
         assert len(result["top_words"]) == 3
 
     def test_empty_top_words(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "", tmp_path)
+        result = _run(submission_command, "", tmp_path)
         assert result["top_words"] == []
 
     def test_case_insensitive_in_top_words(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         """Words appear as lowercase in top_words."""
-        result = _run(built_executable_path, "Hello WORLD", tmp_path)
+        result = _run(submission_command, "Hello WORLD", tmp_path)
         words_in_top = [entry["word"] for entry in result["top_words"]]
         assert "hello" in words_in_top
         assert "world" in words_in_top
@@ -264,17 +266,17 @@ class TestTopWords:
 
 class TestJsonStructure:
     def test_required_keys_present(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "hello world", tmp_path)
+        result = _run(submission_command, "hello world", tmp_path)
         assert "lines" in result
         assert "words" in result
         assert "characters" in result
         assert "unique_words" in result
         assert "top_words" in result
 
-    def test_types(self, built_executable_path: Path, tmp_path: Path) -> None:
-        result = _run(built_executable_path, "hello world", tmp_path)
+    def test_types(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        result = _run(submission_command, "hello world", tmp_path)
         assert isinstance(result["lines"], int)
         assert isinstance(result["words"], int)
         assert isinstance(result["characters"], int)
@@ -282,9 +284,9 @@ class TestJsonStructure:
         assert isinstance(result["top_words"], list)
 
     def test_top_words_entry_structure(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
-        result = _run(built_executable_path, "hello", tmp_path)
+        result = _run(submission_command, "hello", tmp_path)
         for entry in result["top_words"]:
             assert "word" in entry
             assert "count" in entry
@@ -299,33 +301,33 @@ class TestJsonStructure:
 
 class TestExitCodes:
     def test_success_exit_code(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         input_file = tmp_path / "input.txt"
         output_file = tmp_path / "output.json"
         input_file.write_text("hello", encoding="utf-8")
         result = __import__("subprocess").run(
-            [str(built_executable_path), "--input", str(input_file), "--output", str(output_file)],
+            [*submission_command, "--input", str(input_file), "--output", str(output_file)],
             capture_output=True,
         )
         assert result.returncode == 0
 
     def test_missing_args_exit_code(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         result = __import__("subprocess").run(
-            [str(built_executable_path)],
+            list(submission_command),
             capture_output=True,
         )
         assert result.returncode == 1
 
     def test_missing_input_file_exit_code(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         output_file = tmp_path / "output.json"
         result = __import__("subprocess").run(
             [
-                str(built_executable_path),
+                *submission_command,
                 "--input", str(tmp_path / "nonexistent.txt"),
                 "--output", str(output_file),
             ],
@@ -341,14 +343,14 @@ class TestExitCodes:
 
 class TestIntegration:
     def test_multiline_document(
-        self, built_executable_path: Path, tmp_path: Path
+        self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         text = (
             "The quick brown fox jumps over the lazy dog.\n"
             "The dog barked at the fox.\n"
             "The fox ran away.\n"
         )
-        result = _run(built_executable_path, text, tmp_path)
+        result = _run(submission_command, text, tmp_path)
         assert result["lines"] == 3
         assert result["characters"] == len(text)
         assert result["words"] == 19
