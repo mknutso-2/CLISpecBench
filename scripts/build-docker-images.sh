@@ -21,13 +21,13 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/smoke-test-common.sh"
 
-# Resolve repo root — use WSL-compatible path for docker commands
-if [ -d "/mnt/c/Users" ]; then
-    # Running inside WSL
-    REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-else
-    # Running from Git Bash — convert /c/ to /mnt/c/ for WSL docker
-    REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# Resolve repo root — the path passed to docker must match however DOCKER_CMD
+# invokes the daemon.  On Git Bash we delegate to docker inside WSL, so the
+# path has to be converted to WSL form (/c/... → /mnt/c/...).  On native
+# Linux and inside WSL, the local path is already correct.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+if [ -n "${MSYSTEM:-}" ] && [ ! -d "/mnt/c/Users" ]; then
+    # Running from Git Bash / MSYS on Windows — convert /c/ to /mnt/c/
     REPO_ROOT="/mnt/c${REPO_ROOT#/c}"
 fi
 

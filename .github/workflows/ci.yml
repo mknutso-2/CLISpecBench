@@ -22,7 +22,27 @@ jobs:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v6
       - run: uv sync
-      - run: uv run pytest src/swe_buildbench/tests -m "not docker" -v
+      - run: uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent" -v
+
+  container-tests:
+    # Docker-backed smoke tests: builds the base image and each agent image,
+    # then runs environment / CLI-installation checks.  These do not prompt
+    # the coding agents, so no API credentials are required.
+    #
+    # Gated on unit-tests because the Docker image builds are the most
+    # expensive step in CI — no point paying for them if the pure-Python
+    # test suite is already failing.
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync
+
+      - name: Build all Docker images (base + agents)
+        run: bash scripts/build-docker-images.sh
+
+      - run: uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent" -v
 
   eval-tests:
     runs-on: ubuntu-latest

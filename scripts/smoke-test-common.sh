@@ -2,8 +2,12 @@
 # Shared setup for smoke-test scripts. Sourced, not executed directly.
 #
 # Exports: WIN_HOME, DOCKER_CMD
+#
+# Supports three environments:
+#   1. Plain Linux (e.g. CI runners)     — docker runs directly, no Windows home
+#   2. WSL on Windows                    — docker runs directly, Windows home under /mnt/c
+#   3. Git Bash / MSYS on Windows        — docker must be invoked via WSL
 
-# Resolve Windows home directory when running inside WSL
 if [ -d "/mnt/c/Users" ]; then
     # Running inside WSL — find the Windows user's home
     WIN_HOME="/mnt/c/Users/${SUDO_USER:-${USER}}"
@@ -17,10 +21,14 @@ if [ -d "/mnt/c/Users" ]; then
         done
     fi
     DOCKER_CMD="docker"
-else
-    # Running from Git Bash on Windows — call docker via WSL
+elif [ -n "${MSYSTEM:-}" ]; then
+    # Running from Git Bash / MSYS on Windows — call docker via WSL
     WIN_HOME="/mnt/c/Users/${USERNAME}"
     DOCKER_CMD="wsl -d Ubuntu -- docker"
+else
+    # Plain Linux (CI runner, native Linux dev machine, etc.)
+    WIN_HOME=""
+    DOCKER_CMD="docker"
 fi
 
 export WIN_HOME DOCKER_CMD

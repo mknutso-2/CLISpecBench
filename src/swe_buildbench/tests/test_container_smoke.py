@@ -1,13 +1,20 @@
 """Smoke tests that run inside real Docker containers.
 
 These tests verify that the agent container environments are functional —
-tools like Bash, cmake, and g++ work correctly.  They require Docker to be
-running and the base image to be built.
+tools like Bash, cmake, and g++ work correctly, and each agent CLI is
+installed and runnable.  They require Docker to be running and the base
+image (and, per test, the relevant agent image) to be built.
 
-Marked with ``pytest.mark.docker`` so they can be selected or skipped:
+None of the tests in this file prompt an AI coding agent, so none consume
+API credentials or tokens — they are all safe to run in CI.  A separate
+``prompts_agent`` marker is reserved for tests that actually invoke an
+agent with a real prompt.
 
-    pytest -m docker          # run only Docker smoke tests
-    pytest -m "not docker"    # skip them
+Markers used here:
+
+    pytest -m docker                # run only Docker smoke tests
+    pytest -m "not docker"          # skip Docker smoke tests entirely
+    pytest -m "not prompts_agent"   # skip only tests that prompt an agent
 """
 
 from __future__ import annotations
@@ -22,8 +29,10 @@ from swe_buildbench.harness.docker import ContainerConfig, DockerSandbox
 # Helpers
 # ---------------------------------------------------------------------------
 
-AGENT_IMAGE = "swe-buildbench-claude-code"
 BASE_IMAGE = "swe-buildbench-base"
+CLAUDE_IMAGE = "swe-buildbench-claude-code"
+CODEX_IMAGE = "swe-buildbench-codex-cli"
+GEMINI_IMAGE = "swe-buildbench-gemini-cli"
 
 
 def _image_available(tag: str) -> bool:
@@ -61,13 +70,21 @@ def _run_in_container(
 
 
 docker = pytest.mark.docker
-skip_no_agent_image = pytest.mark.skipif(
-    not _image_available(AGENT_IMAGE),
-    reason=f"Docker image {AGENT_IMAGE} not available",
-)
 skip_no_base_image = pytest.mark.skipif(
     not _image_available(BASE_IMAGE),
     reason=f"Docker image {BASE_IMAGE} not available",
+)
+skip_no_claude_image = pytest.mark.skipif(
+    not _image_available(CLAUDE_IMAGE),
+    reason=f"Docker image {CLAUDE_IMAGE} not available",
+)
+skip_no_codex_image = pytest.mark.skipif(
+    not _image_available(CODEX_IMAGE),
+    reason=f"Docker image {CODEX_IMAGE} not available",
+)
+skip_no_gemini_image = pytest.mark.skipif(
+    not _image_available(GEMINI_IMAGE),
+    reason=f"Docker image {GEMINI_IMAGE} not available",
 )
 
 
@@ -77,7 +94,7 @@ skip_no_base_image = pytest.mark.skipif(
 
 
 @docker
-@skip_no_agent_image
+@skip_no_claude_image
 class TestClaudeCodeBashTool:
     """Verify that the 'agent' user can run shell commands.
 
@@ -92,7 +109,7 @@ class TestClaudeCodeBashTool:
     def test_agent_can_run_basic_commands(self) -> None:
         """The agent user can execute simple shell commands."""
         exit_code, logs = _run_in_container(
-            AGENT_IMAGE, "echo hello && whoami", user="agent",
+            CLAUDE_IMAGE, "echo hello && whoami", user="agent",
         )
         assert exit_code == 0, f"Basic command failed: {logs}"
         assert "hello" in logs
@@ -103,7 +120,7 @@ class TestClaudeCodeBashTool:
         Claude Code's Bash tool needs to create ~/.claude/session-env/.
         """
         exit_code, logs = _run_in_container(
-            AGENT_IMAGE,
+            CLAUDE_IMAGE,
             "mkdir -p /home/agent/.claude/session-env/test-session && echo ok",
             user="agent",
         )
@@ -131,7 +148,7 @@ class TestClaudeCodeBashTool:
             mount_src = str(wsl_path(cred_file))
 
             config = ContainerConfig(
-                image=AGENT_IMAGE,
+                image=CLAUDE_IMAGE,
                 environment={},
                 command=[
                     "bash", "-c",
@@ -164,7 +181,7 @@ class TestClaudeCodeBashTool:
     def test_agent_can_run_cmake(self) -> None:
         """cmake is available to the agent user."""
         exit_code, logs = _run_in_container(
-            AGENT_IMAGE, "cmake --version", user="agent",
+            CLAUDE_IMAGE, "cmake --version", user="agent",
         )
         assert exit_code == 0, f"cmake not available: {logs}"
         assert "cmake version" in logs
@@ -172,7 +189,7 @@ class TestClaudeCodeBashTool:
     def test_agent_can_run_gpp(self) -> None:
         """g++ is available to the agent user."""
         exit_code, logs = _run_in_container(
-            AGENT_IMAGE, "g++-14 --version", user="agent",
+            CLAUDE_IMAGE, "g++-14 --version", user="agent",
         )
         assert exit_code == 0, f"g++ not available: {logs}"
         assert "g++" in logs.lower()
@@ -190,7 +207,7 @@ class TestClaudeCodeBashTool:
             )
 
             config = ContainerConfig(
-                image=AGENT_IMAGE,
+                image=CLAUDE_IMAGE,
                 environment={},
                 command=["bash", "-c", (
                     "chown agent:agent /tmp/test.cpp"
@@ -211,6 +228,38 @@ class TestClaudeCodeBashTool:
 
         assert run.exit_code == 0, f"C++ compile+run failed: {logs}"
         assert "compiled ok" in logs
+
+
+# ---------------------------------------------------------------------------
+# Agent CLI installation — verify each CLI is installed and runnable
+# ---------------------------------------------------------------------------
+
+
+@docker
+class TestAgentCliInstalled:
+    """Verify that each agent CLI is installed and runnable in its image.
+
+    These tests only invoke ``<cli> --version``, which does not prompt the
+    model or consume API credentials.  They are therefore NOT marked with
+    ``prompts_agent`` and are safe to run in CI — they confirm that each
+    agent image was built correctly and the CLI binary is on PATH.
+    """
+
+    @skip_no_claude_image
+    def test_claude_cli_version(self) -> None:
+        exit_code, logs = _run_in_container(CLAUDE_IMAGE, "claude --version")
+        assert exit_code == 0, f"claude --version failed: {logs}"
+        assert "claude" in logs.lower()
+
+    @skip_no_codex_image
+    def test_codex_cli_version(self) -> None:
+        exit_code, logs = _run_in_container(CODEX_IMAGE, "codex --version")
+        assert exit_code == 0, f"codex --version failed: {logs}"
+
+    @skip_no_gemini_image
+    def test_gemini_cli_version(self) -> None:
+        exit_code, logs = _run_in_container(GEMINI_IMAGE, "gemini --version")
+        assert exit_code == 0, f"gemini --version failed: {logs}"
 
 
 # ---------------------------------------------------------------------------
