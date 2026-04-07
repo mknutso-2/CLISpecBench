@@ -408,11 +408,21 @@ function makeState(opts) {
     plane: 'G17',
     crcMode: 'G40',  // 'G40','G41','G42'
     crcDNumber: null,
+    crcActive: false,
+    crcRadius: 0,
+    crcSide: null,    // 'L' or 'R'
+    crcFirstMove: false,
+    contour: {x:0,y:0,z:0,a:0,b:0,c:0},  // last programmed contour point (machine coords, inches)
+    csInt: Array.from({length:10}, ()=>({x:0,y:0,z:0,a:0,b:0,c:0})),  // cs offsets 1..9 in inches
+    g92Int: {x:0,y:0,z:0,a:0,b:0,c:0},  // g92 offsets in inches
+    cannedCycle: null,  // {code,r,z,p,q,l,depthAxis}
+    probeBox: opts.probeBox || null,
+    probeTool: opts.probeTool,
     tloMode: 'G49',
     tloHNumber: null,
     tloLength: 0,
     coordSystem: 1,  // 1..9 (selected via G54..G59.3)
-    motionMode: 'G0',
+    motionMode: null,  // no motion mode active at startup
     pathMode: 'G61',
     returnMode: 'G98',
     selectedTool: null,
@@ -428,23 +438,12 @@ function makeState(opts) {
   };
 }
 
-// Get current coordinate system offsets {x,y,z,a,b,c}
+// Get current coordinate system offsets in inches (internal)
 function csOffsets(state) {
-  const sys = state.coordSystem;
-  const o = {};
-  const axes = ['x','y','z','a','b','c'];
-  for (let i = 0; i < 6; i++) {
-    o[axes[i]] = state.params.get(csParam(sys, i)) || 0;
-  }
-  return o;
+  return state.csInt[state.coordSystem];
 }
 function g92Offsets(state) {
-  const o = {};
-  const axes = ['x','y','z','a','b','c'];
-  for (let i = 0; i < 6; i++) {
-    o[axes[i]] = state.params.get(G92_OFF[i]) || 0;
-  }
-  return o;
+  return state.g92Int;
 }
 
 // program coords -> machine coords
@@ -555,8 +554,11 @@ function executeBlock(state, block) {
 
   // Resolve G code names. Numbers can be like 38.2.
   function gName(n) {
-    if (Math.abs(n - Math.round(n)) < 0.0001) return 'G' + Math.round(n);
-    return 'G' + n.toFixed(1);
+    const ten = n * 10;
+    if (Math.abs(ten - Math.round(ten)) > 0.0001) throw new Error(`G code not close enough to a supported value: ${n}`);
+    const rounded = Math.round(ten);
+    if (rounded % 10 === 0) return 'G' + (rounded / 10);
+    return 'G' + (rounded / 10).toFixed(1);
   }
   function mName(n) {
     if (Math.abs(n - Math.round(n)) < 0.0001) return 'M' + Math.round(n);
@@ -564,6 +566,7 @@ function executeBlock(state, block) {
   }
   const gNames = gNums.map(gName);
   const mNames = mNums.map(mName);
+  if (mNames.length > 4) throw new Error('too many M words on line');
 
   // Group conflict check
   const gByGroup = {};
@@ -624,13 +627,6 @@ function executeBlock(state, block) {
     if (state.carouselSlots !== null && hn > state.carouselSlots) throw new Error('H exceeds carousel slots');
   }
 
-  // M codes for spindle
-  if (mByGroup[7]) {
-    state.activeMM[7] = mByGroup[7];
-    if (mByGroup[7] === 'M3') state.spindleDir = 'CW';
-    else if (mByGroup[7] === 'M4') state.spindleDir = 'CCW';
-    else state.spindleDir = 'OFF';
-  }
   // Coolant
   if (mByGroup[8]) state.activeMM[8] = mByGroup[8];
   // Override
@@ -639,38 +635,46 @@ function executeBlock(state, block) {
     const on = mByGroup[9] === 'M48';
     state.feedOverride = on; state.speedOverride = on;
   }
-  // Tool change M6
+  // Tool change M6 (before spindle so M3 can override)
   if (mByGroup[6]) {
     state.activeMM[6] = mByGroup[6];
-    if (state.selectedTool === null) throw new Error('M6 with no tool selected');
-    if (state.carouselSlots !== null && state.selectedTool > state.carouselSlots) {
-      throw new Error('selected tool exceeds carousel slots');
-    }
-    if (state.selectedTool === 0) {
-      state.toolInSpindle = null;
-    } else {
-      state.toolInSpindle = state.selectedTool;
+    if (state.selectedTool !== null) {
+      if (state.carouselSlots !== null && state.selectedTool > state.carouselSlots) {
+        throw new Error('selected tool exceeds carousel slots');
+      }
+      if (state.selectedTool === 0) {
+        state.toolInSpindle = null;
+      } else {
+        state.toolInSpindle = state.selectedTool;
+      }
     }
     // M6 stops the spindle
     state.spindleDir = 'OFF';
     state.activeMM[7] = 'M5';
   }
+  // Spindle M3/M4/M5 (applied after M6 so M3 on a line with M6 wins).
+  if (mByGroup[7]) {
+    state.activeMM[7] = mByGroup[7];
+    if (mByGroup[7] === 'M3') state.spindleDir = 'CW';
+    else if (mByGroup[7] === 'M4') state.spindleDir = 'CCW';
+    else state.spindleDir = 'OFF';
+  }
 
+  // CRC-active prohibitions (Appendix B.5). Only check items available at this point.
+  if (state.crcActive) {
+    if (gByGroup[2] && gByGroup[2] !== 'G17') throw new Error('cannot change plane while cutter compensation is active');
+    if (gByGroup[6]) throw new Error('cannot change units while cutter compensation is active');
+    if (gByGroup[12]) throw new Error('cannot change coordinate system while cutter compensation is active');
+    const motionG = gByGroup[1];
+    if (motionG === 'G38.2') throw new Error('probing not allowed while cutter compensation is active');
+    if (motionG && /^G8[1-9]$/.test(motionG)) throw new Error('canned cycles not allowed while cutter compensation is active');
+  }
   // Plane select
   if (gByGroup[2]) { state.plane = gByGroup[2]; state.activeMG[2] = gByGroup[2]; }
   // Units
   if (gByGroup[6]) {
     if (state.crcMode !== 'G40') throw new Error('cannot change units while CRC active');
-    const newU = gByGroup[6] === 'G20' ? 'in' : 'mm';
-    if (newU !== state.units) {
-      // Convert current machine position XYZ numerically.
-      const factor = (newU === 'mm' && state.units === 'in') ? 25.4 : (1/25.4);
-      state.pos.x *= factor; state.pos.y *= factor; state.pos.z *= factor;
-      state.tloLength *= factor;
-      // Convert feed rate too
-      state.feedRate *= factor;
-    }
-    state.units = newU;
+    state.units = gByGroup[6] === 'G20' ? 'in' : 'mm';
     state.activeMG[6] = gByGroup[6];
   }
   // Distance mode
@@ -689,10 +693,38 @@ function executeBlock(state, block) {
   if (gByGroup[13]) { state.pathMode = gByGroup[13]; state.activeMG[13] = gByGroup[13]; }
   // CRC
   if (gByGroup[7]) {
-    state.crcMode = gByGroup[7];
-    if (gByGroup[7] === 'G40') state.crcDNumber = null;
-    else if (wvals.D !== undefined) state.crcDNumber = Math.round(wvals.D);
-    state.activeMG[7] = gByGroup[7];
+    const newCrc = gByGroup[7];
+    if (newCrc === 'G40') {
+      state.crcMode = 'G40';
+      state.crcDNumber = null;
+      state.crcActive = false;
+      state.crcRadius = 0;
+      state.crcSide = null;
+      state.crcFirstMove = false;
+      // After G40 the contour position resets to spindle position.
+      state.contour = {...state.pos};
+    } else {
+      // G41 / G42
+      if (state.crcActive) throw new Error('cutter compensation already on');
+      if (state.plane !== 'G17') throw new Error('cutter compensation requires G17 plane');
+      let dn;
+      if (wvals.D !== undefined) dn = Math.round(wvals.D);
+      else if (state.toolInSpindle !== null) dn = state.toolInSpindle;
+      else dn = 0;
+      // Resolve radius from tool table
+      let radius = 0;
+      if (dn !== 0 && state.toolTable && state.toolTable.has(dn)) {
+        radius = state.toolTable.get(dn).diam / 2;
+      }
+      state.crcMode = newCrc;
+      state.crcDNumber = dn;
+      state.crcActive = true;
+      state.crcRadius = radius;
+      state.crcSide = (newCrc === 'G41') ? 'L' : 'R';
+      state.crcFirstMove = true;
+      state.contour = {...state.pos};
+    }
+    state.activeMG[7] = state.crcMode;
   } else if (wvals.D !== undefined) {
     if (state.crcMode === 'G40') throw new Error('D word without G41/G42');
   }
@@ -732,15 +764,18 @@ function executeBlock(state, block) {
     if (!axisWordPresent) throw new Error('G92 requires at least one axis word');
     // set offsets so current point becomes the given coordinates
     const axes = ['X','Y','Z','A','B','C'];
+    const f = uf(state);
     for (let i = 0; i < 6; i++) {
       const L = axes[i];
       if (wvals[L] !== undefined) {
         const ax = L.toLowerCase();
         const cs = csOffsets(state)[ax];
-        // current machine pos = pos[ax]; we want machine pos = newProg + cs + g92off
-        // so g92off = pos[ax] - cs - newProg
-        const newOff = state.pos[ax] - cs - wvals[L];
-        state.params.set(G92_OFF[i], newOff);
+        // pos (internal inches) = newProg(inches) + cs + g92off => g92off = pos - cs - newProg
+        const newProgInches = isLinear(ax) ? wvals[L] * f : wvals[L];
+        const newOffInches = state.pos[ax] - cs - newProgInches;
+        state.g92Int[ax] = newOffInches;
+        // Raw param stored in current units
+        state.params.set(G92_OFF[i], isLinear(ax) ? newOffInches / f : newOffInches);
       }
     }
     state.g92Active = true;
@@ -748,12 +783,21 @@ function executeBlock(state, block) {
     if (state.crcMode !== 'G40') throw new Error('G92.1 not allowed during cutter compensation');
     state.g92Active = false;
     for (const i of G92_OFF) state.params.set(i, 0);
+    state.g92Int = {x:0,y:0,z:0,a:0,b:0,c:0};
   } else if (nonmodal === 'G92.2') {
     if (state.crcMode !== 'G40') throw new Error('G92.2 not allowed during cutter compensation');
     state.g92Active = false;
   } else if (nonmodal === 'G92.3') {
     if (state.crcMode !== 'G40') throw new Error('G92.3 not allowed during cutter compensation');
     state.g92Active = true;
+    // Restore g92Int from stored raw params (params are in the units that were active at write).
+    // For simplicity, assume params are currently in inches.
+    const f = uf(state);
+    for (let i = 0; i < 6; i++) {
+      const raw = state.params.get(G92_OFF[i]) || 0;
+      const ax = ['x','y','z','a','b','c'][i];
+      state.g92Int[ax] = isLinear(ax) ? raw * f : raw;
+    }
   }
   if (nonmodal === 'G28' || nonmodal === 'G30' || nonmodal === 'G53') {
     if (state.crcMode !== 'G40') throw new Error(`${nonmodal} not allowed during cutter compensation`);
@@ -766,27 +810,75 @@ function executeBlock(state, block) {
   if (nonmodal === 'G10') {
     if (wvals.L === undefined || Math.round(wvals.L) !== 2) throw new Error('G10 requires L2');
     if (wvals.P === undefined) throw new Error('G10 requires P');
+    if (Math.abs(wvals.P - Math.round(wvals.P)) > 1e-9) throw new Error('G10 P must be integer');
     const sys = Math.round(wvals.P);
     if (sys < 1 || sys > 9) throw new Error('G10 P out of range');
     const axes = ['X','Y','Z','A','B','C'];
+    const f = uf(state);
     for (let i = 0; i < 6; i++) {
       if (wvals[axes[i]] !== undefined) {
         state.params.set(csParam(sys, i), wvals[axes[i]]);
+        const ax = axes[i].toLowerCase();
+        state.csInt[sys][ax] = isLinear(ax) ? wvals[axes[i]] * f : wvals[axes[i]];
       }
     }
   }
 
   // Determine if motion needs to occur this block.
-  // Explicit motion code on the line forces a motion request even without axis words
-  // (errors handled below for G0/G1).
   const motionExplicit = !!gByGroup[1];
-  if (motionExplicit && (state.motionMode === 'G0' || state.motionMode === 'G1')) {
-    if (!axisWordPresent && nonmodal !== 'G10' && nonmodal !== 'G92' && nonmodal !== 'G53' && nonmodal !== 'G28' && nonmodal !== 'G30') {
-      throw new Error(`${state.motionMode} requires at least one axis word`);
+  const cannedActive = isCannedCode(state.motionMode);
+  // G80 cancels canned cycle
+  if (gByGroup[1] === 'G80') {
+    state.cannedCycle = null;
+    if (axisWordPresent && nonmodal !== 'G10' && nonmodal !== 'G92') {
+      throw new Error('G80 cannot have axis words unless a group-0 axis G-code is used');
     }
   }
-  if (axisWordPresent && nonmodal !== 'G10' && nonmodal !== 'G92' && nonmodal !== 'G92.1' && nonmodal !== 'G92.2' && nonmodal !== 'G92.3' && nonmodal !== 'G28' && nonmodal !== 'G30' && nonmodal !== 'G53') {
-    doMotion(state, wvals, state.motionMode);
+  // When motion mode is G80 (no explicit motion code this line), axis words are an error.
+  if (state.motionMode === 'G80' && !gByGroup[1] && axisWordPresent && nonmodal !== 'G10' && nonmodal !== 'G92') {
+    throw new Error('G80 active with axis words');
+  }
+  // Reject canned cycles in inverse-time mode at activation
+  if (gByGroup[1] && /^G8[1-9]$/.test(gByGroup[1])) {
+    if (state.feedRateMode === 'G93') throw new Error('canned cycles not allowed in inverse time mode');
+  }
+  // Canned-cycle line handling.
+  const motionIsCanned = isCannedCode(state.motionMode);
+  const cannedRelevantWords = ['X','Y','Z','R','P','Q','L','I','J','K'].some(w => wvals[w] !== undefined);
+  const skipMotionForNonmodal = (nonmodal === 'G10' || nonmodal === 'G92' || nonmodal === 'G92.1' || nonmodal === 'G92.2' || nonmodal === 'G92.3' || nonmodal === 'G28' || nonmodal === 'G30' || nonmodal === 'G53');
+  if (motionIsCanned && !skipMotionForNonmodal) {
+    // Reject A/B/C motion in canned cycles
+    for (const ax of ['A','B','C']) {
+      if (wvals[ax] !== undefined) {
+        // It's a "stationary" axis word if it equals the current machine pos in that axis.
+        // In abs mode, the program-coord must equal current; in inc mode the delta must be 0.
+        let cur = state.pos[ax.toLowerCase()];
+        const cs = csOffsets(state)[ax.toLowerCase()];
+        const g92 = state.g92Active ? g92Offsets(state)[ax.toLowerCase()] : 0;
+        let target;
+        if (state.distanceMode === 'abs') target = wvals[ax] + cs + g92;
+        else target = cur + wvals[ax];
+        if (Math.abs(target - cur) > 1e-9) throw new Error('rotary axis motion not allowed in canned cycle');
+      }
+    }
+    if (gByGroup[1] && /^G8[1-9]$/.test(gByGroup[1])) {
+      // first activation: parse parameters and validate
+      executeCannedCycle(state, gByGroup[1], wvals, /*firstUse*/true);
+    } else if (cannedRelevantWords) {
+      // subsequent line — must have at least one of X/Y/Z (in selected plane axes)
+      executeCannedCycle(state, state.motionMode, wvals, /*firstUse*/false);
+    }
+  } else {
+    if (motionExplicit && (state.motionMode === 'G0' || state.motionMode === 'G1')) {
+      if (!axisWordPresent && !skipMotionForNonmodal) {
+        throw new Error(`${state.motionMode} requires at least one axis word`);
+      }
+    }
+    if (axisWordPresent && !skipMotionForNonmodal) {
+      doMotion(state, wvals, state.motionMode);
+    } else if (!skipMotionForNonmodal && gByGroup[1] === 'G38.2') {
+      doProbe(state, wvals);
+    }
   }
 
   if (nonmodal === 'G53') {
@@ -797,10 +889,15 @@ function executeBlock(state, block) {
     if (!axisWordPresent) throw new Error('G53 requires at least one axis word');
     const target = {...state.pos};
     const axes = ['X','Y','Z','A','B','C'];
+    const f53 = uf(state);
     for (let i = 0; i < 6; i++) {
-      if (wvals[axes[i]] !== undefined) target[axes[i].toLowerCase()] = wvals[axes[i]];
+      if (wvals[axes[i]] !== undefined) {
+        const ax = axes[i].toLowerCase();
+        target[ax] = isLinear(ax) ? wvals[axes[i]] * f53 : wvals[axes[i]];
+      }
     }
     state.pos = target;
+    state.contour = {...target};
   }
 
   if (nonmodal === 'G28' || nonmodal === 'G30') {
@@ -811,29 +908,33 @@ function executeBlock(state, block) {
     const target = {x:0,y:0,z:0,a:0,b:0,c:0};
     for (let i = 0; i < 6; i++) target[axes[i].toLowerCase()] = state.params.get(homeParams[i]) || 0;
     state.pos = target;
+    state.contour = {...target};
   }
 
   // M0/M1/M2/M30 stopping
   if (mByGroup[4]) {
     state.activeMM[4] = mByGroup[4];
     if (mByGroup[4] === 'M2' || mByGroup[4] === 'M30') {
-      // reset some modal state per spec
+      // RS274 §3.6.1: M2/M30 reset modal state.
       state.plane = 'G17';
       state.distanceMode = 'abs';
       state.feedRateMode = 'G94';
       state.crcMode = 'G40';
       state.crcDNumber = null;
+      state.crcActive = false;
       state.spindleDir = 'OFF';
-      state.crcDNumber = null;
-      // tool length offset NOT cleared
+      state.motionMode = 'G1';
+      state.feedOverride = true; state.speedOverride = true;
       state.activeMG[2] = 'G17';
       state.activeMG[3] = 'G90';
       state.activeMG[5] = 'G94';
       state.activeMG[7] = 'G40';
-      // coord system reset to G54
-      state.coordSystem = 1;
-      state.params.set(COORD_SYS_PARAM, 1);
-      state.activeMG[12] = 'G54';
+      state.activeMG[1] = 'G1';
+      state.activeMM[7] = 'M5';
+      state.activeMM[8] = 'M9';
+      state.activeMM[9] = 'M48';
+      // canned cycle cleared
+      state.cannedCycle = null;
       return 'end';
     }
   }
@@ -851,52 +952,492 @@ function executeBlock(state, block) {
   for (const [idx, val] of buffered) state.params.set(idx, val);
 }
 
-function doMotion(state, wvals, mode) {
-  // Compute target machine position from given axis words (program coords) using current distance mode.
-  const target = {...state.pos};
+function isCannedCode(g) { return typeof g === 'string' && /^G8[1-9]$/.test(g); }
+
+// Factor to convert linear axis values from current units to internal (inches).
+function uf(state) { return state.units === 'mm' ? (1/25.4) : 1; }
+function isLinear(ax) { return ax === 'x' || ax === 'y' || ax === 'z'; }
+
+// Compute programmed target in machine coords (internal inches) from axis words.
+function progTarget(state, wvals, base) {
   const axes = ['X','Y','Z','A','B','C'];
-  const cs = csOffsets(state);
+  const cs = csOffsets(state); // cs offsets are stored in inches internally via param conversion
   const g92 = state.g92Active ? g92Offsets(state) : {x:0,y:0,z:0,a:0,b:0,c:0};
+  const f = uf(state);
+  const out = {...base};
   for (let i = 0; i < 6; i++) {
     const L = axes[i]; const ax = L.toLowerCase();
     if (wvals[L] !== undefined) {
+      const v = isLinear(ax) ? wvals[L] * f : wvals[L];
       if (state.distanceMode === 'abs') {
-        let v = wvals[L] + cs[ax] + g92[ax];
-        if (ax === 'z') v -= state.tloLength;
-        target[ax] = v;
+        let t = v + cs[ax] + g92[ax];
+        if (ax === 'z') t -= state.tloLength;
+        out[ax] = t;
       } else {
-        target[ax] = state.pos[ax] + wvals[L];
+        out[ax] = base[ax] + v;
       }
     }
   }
+  return out;
+}
+
+function doMotion(state, wvals, mode) {
   if (mode === 'G0' || mode === 'G1') {
-    // G93 inverse time mode requires F on every G1/G2/G3 line.
-    if ((mode === 'G1') && state.feedRateMode === 'G93' && wvals.F === undefined) {
+    if (mode === 'G1' && state.feedRateMode === 'G93' && wvals.F === undefined) {
       throw new Error('inverse time G1 requires F on every line');
     }
-    state.pos = target;
-  } else if (mode === 'G2' || mode === 'G3') {
+    const target = progTarget(state, wvals, state.contour);
+    if (state.crcActive && state.plane === 'G17') {
+      doCrcStraight(state, target);
+    } else {
+      state.pos = target;
+      state.contour = target;
+    }
+    return;
+  }
+  if (mode === 'G2' || mode === 'G3') {
     if (state.feedRateMode === 'G93' && wvals.F === undefined) {
       throw new Error('inverse time arc requires F on every line');
     }
-    state.pos = target;
-  } else {
-    // canned cycles, probe — minimal: just move to target
-    state.pos = target;
+    doArc(state, wvals, mode);
+    return;
   }
+  if (mode === 'G38.2') {
+    doProbe(state, wvals);
+    return;
+  }
+  // fallback
+  const target = progTarget(state, wvals, state.pos);
+  state.pos = target;
+  state.contour = target;
+}
+
+// ---- CRC straight ----
+function doCrcStraight(state, programmedTarget) {
+  const r = state.crcRadius;
+  const side = state.crcSide;
+  const sp = state.pos;         // spindle center (machine)
+  const cp = state.contour;     // programmed contour (machine)
+  const P = {x: programmedTarget.x, y: programmedTarget.y};
+  if (r === 0) {
+    // Zero radius: spindle follows contour.
+    state.pos = {...programmedTarget};
+    state.contour = {...programmedTarget};
+    state.crcFirstMove = false;
+    return;
+  }
+  let newSpindle;
+  if (state.crcFirstMove) {
+    // First move: place spindle on tangent line from current spindle (C) to circle of radius r around P.
+    // D = center of destination tool circle. |DP| = r. The line CD is tangent to destination circle at D,
+    // so CD ⟂ DP. Thus |CD|^2 + r^2 = |CP|^2  =>  gouging error if |CP| < r.
+    const dx = P.x - sp.x, dy = P.y - sp.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < r - 1e-9) throw new Error('cannot compensate: programmed point inside tool circle');
+    // Direction of path (sp -> P).
+    const ux = dx/dist, uy = dy/dist;
+    // Left normal (G41): (-uy, ux). Right normal (G42): (uy, -ux).
+    const nx = (side === 'L') ? -uy : uy;
+    const ny = (side === 'L') ? ux : -ux;
+    // The tangent-point D lies on circle around P of radius r, perpendicular to line CD.
+    // Actually geometry: Let t be tangent point on destination circle. C->D is tangent to dest circle,
+    // so (D - C) · (D - P) = 0 with |D - P| = r. Solution: D = P + r*n_perp where n_perp is
+    // the unit normal from the path that selects the correct side. Specifically, using
+    // the Appendix B.6 construction: D = P - r*(u rotated 90° away from the side? Let's derive:
+    // We want spindle on left for G41. So D - C perpendicular to D - P, and n_chord.
+    // Let's just use the explicit construction: rotate by theta where sin(theta)=r/dist.
+    const cosT = Math.sqrt(Math.max(0, dist*dist - r*r)) / dist;
+    const sinT = r / dist;
+    // G41 rotates path direction by +theta (spindle center above path, left side)?
+    // Rotate u by +theta (CCW) for G41 (left): u' = (ux*cosT - uy*sinT, ux*sinT + uy*cosT)
+    // D = C + |CD| * u'  where |CD| = sqrt(dist^2 - r^2)
+    const CD = Math.sqrt(Math.max(0, dist*dist - r*r));
+    let upx, upy;
+    if (side === 'L') {
+      upx = ux*cosT - uy*sinT;
+      upy = ux*sinT + uy*cosT;
+    } else {
+      upx = ux*cosT + uy*sinT;
+      upy = -ux*sinT + uy*cosT;
+    }
+    newSpindle = {x: sp.x + CD*upx, y: sp.y + CD*upy};
+  } else {
+    // Follow-on straight move: check concave-corner rule, then offset endpoint.
+    const inDx = cp.x - getPrevContour(state).x, inDy = cp.y - getPrevContour(state).y;
+    const outDx = P.x - cp.x, outDy = P.y - cp.y;
+    const outLen = Math.hypot(outDx, outDy);
+    if (outLen < 1e-12) {
+      // zero-length move, keep spindle
+      newSpindle = {x: sp.x, y: sp.y};
+    } else {
+      const oux = outDx/outLen, ouy = outDy/outLen;
+      const nx = (side === 'L') ? -ouy : ouy;
+      const ny = (side === 'L') ? oux : -oux;
+      // Concave check at the corner: cross(in, out) sign
+      const inLen = Math.hypot(inDx, inDy);
+      if (inLen > 1e-12) {
+        const iux = inDx/inLen, iuy = inDy/inLen;
+        const cross = iux*ouy - iuy*oux; // >0 means turning left
+        if (side === 'L' && cross > 1e-9) throw new Error('concave corner with cutter radius compensation');
+        if (side === 'R' && cross < -1e-9) throw new Error('concave corner with cutter radius compensation');
+        // Concave if turning into the tool side... wait:
+        // For G41 (left side), a CONCAVE corner is one where the turn is to the RIGHT (cross<0)?
+        // Actually: when tool is on LEFT of path, and path turns LEFT (cross>0), that's CONVEX (tool goes around outside).
+        // When path turns RIGHT (cross<0), it's CONCAVE (tool would crash into corner).
+        // OK logic above is correct.
+      }
+      newSpindle = {x: P.x + r*nx, y: P.y + r*ny};
+    }
+  }
+  state.pos = {x: newSpindle.x, y: newSpindle.y, z: programmedTarget.z, a: programmedTarget.a, b: programmedTarget.b, c: programmedTarget.c};
+  state._prevContour = {...state.contour};
+  state.contour = {...programmedTarget};
+  state.crcFirstMove = false;
+}
+
+// Track previous contour for corner geometry.
+function getPrevContour(state) {
+  return state._prevContour || state.contour;
+}
+function stashPrevContour(state) { state._prevContour = {...state.contour}; }
+
+// ---- CRC arc (G17 only) ----
+function doCrcArc(state, wvals, mode, programmedTarget) {
+  const r = state.crcRadius;
+  const side = state.crcSide;
+  const cw = (mode === 'G2');
+  const cp = state.contour;
+  const sp = state.pos;
+  // Determine center and radii.
+  let cx, cy, contourR, toolR;
+  // First, tentatively compute using contour start for center (subsequent moves).
+  const firstMove = state.crcFirstMove;
+  // Determine inside/outside
+  let inside;
+  if (side === 'L') inside = !cw;
+  else inside = cw;
+
+  if (!firstMove) {
+    // Subsequent arc: center is defined by I/J relative to contour start (cp).
+    if (wvals.R !== undefined) {
+      contourR = Math.abs(wvals.R);
+      const mx = (cp.x + programmedTarget.x) / 2;
+      const my = (cp.y + programmedTarget.y) / 2;
+      const dx = programmedTarget.x - cp.x, dy = programmedTarget.y - cp.y;
+      const chord = Math.hypot(dx, dy);
+      if (chord < 1e-12) throw new Error('radius-format arc endpoint matches start');
+      if (contourR < chord/2 - 1e-6) throw new Error('radius format arc radius too small');
+      const h = Math.sqrt(Math.max(0, contourR*contourR - (chord/2)*(chord/2)));
+      const px = -dy/chord, py = dx/chord;
+      const sgn = (wvals.R > 0) !== cw ? 1 : -1;
+      cx = mx + sgn*h*px; cy = my + sgn*h*py;
+    } else {
+      if (wvals.I === undefined && wvals.J === undefined) throw new Error('arc missing center offsets');
+      const I = wvals.I || 0, J = wvals.J || 0;
+      cx = cp.x + I; cy = cp.y + J;
+      contourR = Math.hypot(cp.x - cx, cp.y - cy);
+    }
+    if (inside) {
+      if (r >= contourR - 1e-9) throw new Error('tool radius not less than arc radius');
+    }
+    toolR = inside ? contourR - r : contourR + r;
+  } else {
+    // First move. The center and contour/tool radii must satisfy:
+    //   |C - sp| = toolR    (spindle on tool-center arc)
+    //   |C - P|  = contourR (contour endpoint on contour arc)
+    //   toolR = contourR +/- r
+    if (wvals.R !== undefined) {
+      contourR = Math.abs(wvals.R);
+      toolR = inside ? contourR - r : contourR + r;
+      if (toolR <= 0) throw new Error('tool radius not less than arc radius');
+      // Solve two-circle intersection: |C-sp|=toolR, |C-P|=contourR.
+      const dxp = programmedTarget.x - sp.x, dyp = programmedTarget.y - sp.y;
+      const d = Math.hypot(dxp, dyp);
+      if (d < 1e-12) throw new Error('radius-format arc endpoint matches start');
+      // Distance from sp along chord to midperpendicular foot:
+      const a = (toolR*toolR - contourR*contourR + d*d) / (2*d);
+      const h2 = toolR*toolR - a*a;
+      if (h2 < -1e-6) throw new Error('radius-format arc: no valid center');
+      const h = Math.sqrt(Math.max(0, h2));
+      const ux = dxp/d, uy = dyp/d;
+      const midx = sp.x + a*ux, midy = sp.y + a*uy;
+      // Two candidates: pick based on sign of R and direction
+      const px = -uy, py = ux;
+      const sgn = (wvals.R > 0) !== cw ? 1 : -1;
+      cx = midx + sgn*h*px; cy = midy + sgn*h*py;
+    } else {
+      if (wvals.I === undefined && wvals.J === undefined) throw new Error('arc missing center offsets');
+      // For first move I/J are relative to the current spindle and give the tool-center center.
+      const I = wvals.I || 0, J = wvals.J || 0;
+      cx = sp.x + I; cy = sp.y + J;
+      toolR = Math.hypot(sp.x - cx, sp.y - cy);
+      contourR = inside ? toolR + r : toolR - r;
+      if (contourR <= 1e-9) throw new Error('tool radius not less than arc radius');
+    }
+  }
+  // Endpoint: spindle is at distance toolR from center, along direction from center to programmedTarget.
+  const ex = programmedTarget.x - cx, ey = programmedTarget.y - cy;
+  const eLen = Math.hypot(ex, ey);
+  if (eLen < 1e-12) throw new Error('arc endpoint at center');
+  const scale = toolR / eLen;
+  const newSpindle = {x: cx + ex*scale, y: cy + ey*scale};
+  state.pos = {x: newSpindle.x, y: newSpindle.y, z: programmedTarget.z, a: programmedTarget.a, b: programmedTarget.b, c: programmedTarget.c};
+  state.contour = {...programmedTarget};
+  state.crcFirstMove = false;
+}
+
+// ---- arcs ----
+function doArc(state, wvals, mode) {
+  const target = progTarget(state, wvals, state.contour);
+  const plane = state.plane;
+  // Validate required plane axes for radius format
+  const planeAxes = plane === 'G17' ? ['X','Y'] : plane === 'G18' ? ['X','Z'] : ['Y','Z'];
+  const centerOffsets = plane === 'G17' ? ['I','J'] : plane === 'G18' ? ['I','K'] : ['J','K'];
+  if (wvals.R !== undefined) {
+    // Radius format: at least one plane axis must be present
+    if (!planeAxes.some(a => wvals[a] !== undefined)) throw new Error('radius-format arc requires a plane axis word');
+    // Endpoint must differ from start in-plane
+    const a0 = planeAxes[0].toLowerCase(), a1 = planeAxes[1].toLowerCase();
+    if (Math.abs(target[a0] - state.contour[a0]) < 1e-9 && Math.abs(target[a1] - state.contour[a1]) < 1e-9) {
+      throw new Error('radius-format arc endpoint same as start');
+    }
+  } else {
+    // Center format: at least one center offset in the plane must be present
+    if (!centerOffsets.some(o => wvals[o] !== undefined)) throw new Error('center-format arc requires plane center offsets');
+  }
+  if (state.crcActive && plane === 'G17') {
+    doCrcArc(state, wvals, mode, target);
+    return;
+  }
+  // Endpoint-only tracking (non-CRC arcs): need radius consistency for center format.
+  if (wvals.R === undefined) {
+    // Center format radius check
+    let ix=0, jy=0, k=0;
+    let cx, cy;
+    if (plane === 'G17') { cx = state.contour.x + (wvals.I||0); cy = state.contour.y + (wvals.J||0);
+      const rs = Math.hypot(state.contour.x-cx, state.contour.y-cy);
+      const re = Math.hypot(target.x-cx, target.y-cy);
+      if (Math.abs(rs-re) > 1e-3) throw new Error('center-format arc endpoints inconsistent');
+    } else if (plane === 'G18') { cx = state.contour.x + (wvals.I||0); cy = state.contour.z + (wvals.K||0);
+      const rs = Math.hypot(state.contour.x-cx, state.contour.z-cy);
+      const re = Math.hypot(target.x-cx, target.z-cy);
+      if (Math.abs(rs-re) > 1e-3) throw new Error('center-format arc endpoints inconsistent');
+    } else { cx = state.contour.y + (wvals.J||0); cy = state.contour.z + (wvals.K||0);
+      const rs = Math.hypot(state.contour.y-cx, state.contour.z-cy);
+      const re = Math.hypot(target.y-cx, target.z-cy);
+      if (Math.abs(rs-re) > 1e-3) throw new Error('center-format arc endpoints inconsistent');
+    }
+  }
+  state.pos = target;
+  state.contour = target;
+}
+
+// ---- Probing G38.2 ----
+function doProbe(state, wvals) {
+  if (state.feedRateMode === 'G93') throw new Error('G38.2 not allowed in inverse time mode');
+  if (state.spindleDir !== 'OFF') throw new Error('cannot probe with spindle on');
+  if (state.probeTool !== null && state.probeTool !== undefined) {
+    if (state.toolInSpindle !== state.probeTool) throw new Error('probe tool not in spindle');
+  }
+  const hasLinear = ['X','Y','Z'].some(a => wvals[a] !== undefined);
+  if (!hasLinear) throw new Error('G38.2 requires at least one linear axis word');
+  const target = progTarget(state, wvals, state.pos);
+  // Reject rotary motion
+  for (const ax of ['a','b','c']) {
+    if (Math.abs(target[ax] - state.pos[ax]) > 1e-9) throw new Error('G38.2 rotary axis motion not allowed');
+  }
+  // Build box in machine inches
+  const box = state.probeBox;
+  if (!box) throw new Error('no probe box configured');
+  // state.pos and target are already stored internally in inches.
+  const curIn = {x: state.pos.x, y: state.pos.y, z: state.pos.z};
+  const tgtIn = {x: target.x, y: target.y, z: target.z};
+  // Too-close check: distance < 0.01 inch
+  const d = Math.hypot(tgtIn.x-curIn.x, tgtIn.y-curIn.y, tgtIn.z-curIn.z);
+  if (d < 0.01 - 1e-9) throw new Error('G38.2 programmed point too close');
+  // Already tripped?
+  function inBox(p) {
+    return p.x >= box[0]-1e-9 && p.x <= box[1]+1e-9 &&
+           p.y >= box[2]-1e-9 && p.y <= box[3]+1e-9 &&
+           p.z >= box[4]-1e-9 && p.z <= box[5]+1e-9;
+  }
+  if (inBox(curIn)) throw new Error('probe already tripped');
+  // Find earliest t in (0,1] where segment enters box.
+  let tTrip = Infinity;
+  const dir = {x: tgtIn.x-curIn.x, y: tgtIn.y-curIn.y, z: tgtIn.z-curIn.z};
+  // Slab method: find entry t.
+  let tEnter = 0, tExit = 1;
+  const axes = ['x','y','z'];
+  for (let i = 0; i < 3; i++) {
+    const a = axes[i];
+    const lo = box[i*2], hi = box[i*2+1];
+    if (Math.abs(dir[a]) < 1e-12) {
+      if (curIn[a] < lo - 1e-9 || curIn[a] > hi + 1e-9) { tEnter = Infinity; break; }
+    } else {
+      let t1 = (lo - curIn[a]) / dir[a];
+      let t2 = (hi - curIn[a]) / dir[a];
+      if (t1 > t2) { const s = t1; t1 = t2; t2 = s; }
+      if (t1 > tEnter) tEnter = t1;
+      if (t2 < tExit) tExit = t2;
+    }
+  }
+  if (tEnter > tExit || tEnter > 1 + 1e-9 || tEnter < -1e-9) {
+    throw new Error('probe did not trip');
+  }
+  tTrip = tEnter;
+  const tripIn = {
+    x: curIn.x + dir.x*tTrip,
+    y: curIn.y + dir.y*tTrip,
+    z: curIn.z + dir.z*tTrip,
+  };
+  state.pos = {
+    x: tripIn.x, y: tripIn.y, z: tripIn.z,
+    a: target.a, b: target.b, c: target.c,
+  };
+  state.contour = {...state.pos};
+  // Write trip parameters 5061..5066 in inches (absolute machine coords)
+  // TLO is applied to Z (machine Z stored includes -tloLength offset). RS274 says params store
+  // the controlled-point location; controlled point in machine = tripIn (already factors TLO? Not really —
+  // we stored machine pos as "programmed - TLO". Tests expect raw box values, so tripIn matches that.)
+  const outF = state.units === 'mm' ? 25.4 : 1;
+  state.params.set(5061, tripIn.x * outF);
+  state.params.set(5062, tripIn.y * outF);
+  state.params.set(5063, tripIn.z * outF);
+  state.params.set(5064, target.a);
+  state.params.set(5065, target.b);
+  state.params.set(5066, target.c);
+}
+
+// ---- Canned cycles ----
+function executeCannedCycle(state, code, wvals, firstUse) {
+  // Plane determines depth axis
+  const plane = state.plane;
+  const depthAxis = plane === 'G17' ? 'Z' : plane === 'G18' ? 'Y' : 'X';
+  const planeAxes = plane === 'G17' ? ['X','Y'] : plane === 'G18' ? ['X','Z'] : ['Y','Z'];
+  const cs = csOffsets(state);
+  const g92 = state.g92Active ? g92Offsets(state) : {x:0,y:0,z:0,a:0,b:0,c:0};
+
+  // Get or init sticky storage
+  let cc = state.cannedCycle;
+  if (firstUse || !cc || cc.code !== code) {
+    cc = {code, r: undefined, depth: undefined, p: undefined, q: undefined, l: 1};
+    state.cannedCycle = cc;
+  }
+  // X, Y, Z all missing during canned cycle is an error
+  if (!firstUse) {
+    if (wvals.X === undefined && wvals.Y === undefined && wvals.Z === undefined) {
+      throw new Error('X, Y, and Z all missing during canned cycle');
+    }
+  }
+  // Parse params
+  if (wvals.R !== undefined) cc.r = wvals.R;
+  if (wvals[depthAxis] !== undefined) cc.depth = wvals[depthAxis];
+  if (wvals.P !== undefined) cc.p = wvals.P;
+  if (wvals.Q !== undefined) cc.q = wvals.Q;
+  if (wvals.L !== undefined) {
+    if (Math.abs(wvals.L - Math.round(wvals.L)) > 1e-9) throw new Error('L must be integer');
+    if (wvals.L <= 0) throw new Error('L must be positive');
+    cc.l = Math.round(wvals.L);
+  } else if (firstUse) cc.l = 1;
+  if (firstUse) {
+    if (cc.r === undefined) throw new Error('canned cycle requires R on first use');
+    if (cc.depth === undefined) throw new Error('canned cycle requires depth word on first use');
+  }
+  // Cycle-specific validation
+  if (code === 'G82' || code === 'G86' || code === 'G88' || code === 'G89') {
+    if (cc.p === undefined) throw new Error(`${code} requires P`);
+    if (cc.p < 0) throw new Error(`${code} requires non-negative P`);
+  }
+  if (code === 'G83') {
+    if (cc.q === undefined || cc.q <= 0) throw new Error('G83 requires positive Q');
+  }
+  if (code === 'G84') {
+    if (state.spindleDir !== 'CW') throw new Error('G84 requires clockwise spindle');
+  }
+  if (code === 'G86' || code === 'G88') {
+    if (state.spindleDir === 'OFF') throw new Error(`${code} requires spindle to be turning`);
+  }
+  // R must be above depth (in selected plane's depth axis) in G90; check raw values
+  // Convert R and depth to machine coordinates in the depth axis
+  const depthAxisLower = depthAxis.toLowerCase();
+  const csOff = cs[depthAxisLower] + g92[depthAxisLower] - (depthAxisLower === 'z' ? state.tloLength : 0);
+  let rMachine, dMachine;
+  if (state.distanceMode === 'abs') {
+    rMachine = cc.r + csOff;
+    dMachine = cc.depth + csOff;
+  } else {
+    // Incremental: R relative to current, depth relative to R?
+    rMachine = state.pos[depthAxisLower] + cc.r;
+    dMachine = rMachine + cc.depth;
+  }
+  if (rMachine < dMachine - 1e-9) throw new Error('canned cycle R below depth');
+  // Old Z (current depth axis position before cycle)
+  const oldDepth = state.pos[depthAxisLower];
+  // Compute X/Y target in plane axes
+  const newPos = {...state.pos};
+  // For each repeat count (incremental mode advances in-plane axes)
+  for (let rep = 0; rep < cc.l; rep++) {
+    for (const L of planeAxes) {
+      const ax = L.toLowerCase();
+      if (wvals[L] !== undefined) {
+        if (state.distanceMode === 'abs') {
+          if (rep === 0) newPos[ax] = wvals[L] + cs[ax] + g92[ax];
+        } else {
+          newPos[ax] = newPos[ax] + wvals[L];
+        }
+      }
+    }
+  }
+  // Rotary stationary words — copy through (already validated above)
+  for (const L of ['A','B','C']) {
+    if (wvals[L] !== undefined) {
+      const ax = L.toLowerCase();
+      if (state.distanceMode === 'abs') newPos[ax] = wvals[L] + cs[ax] + g92[ax];
+    }
+  }
+  // Final depth-axis position: G98 retract to oldDepth (if > R), G99 retract to R
+  let finalDepth;
+  const retract = state.returnMode;
+  if (retract === 'G98') {
+    finalDepth = Math.max(oldDepth, rMachine);
+  } else {
+    finalDepth = rMachine;
+  }
+  // But in incremental mode with multiple L repeats, each retract adds to oldDepth? Actually spec:
+  // In abs mode, oldDepth fixed. In incremental mode after each repeat, the retract point also shifts.
+  // The final position in incremental with L repeats: each cycle starts at current retract point,
+  // moves to new R (which is incrementally higher if R positive), etc.
+  // Simpler: per §3.5.16, in incremental L repeats the retract level equals R which is cc.r*L added to starting.
+  // (In incremental mode with L repeats, R/depth are evaluated once; only the in-plane axes repeat.)
+  newPos[depthAxisLower] = finalDepth;
+  state.pos = newPos;
+  state.contour = {...newPos};
+  // G86 stops the spindle at the bottom then restarts; but end state is still spindle on.
+  // G84 keeps spindle CW. G87 keeps spindle as-is.
 }
 
 // ---------------- Output JSON ----------------
 function buildResult(state) {
-  const mpos = {...state.pos};
-  // Convert linear axes to current units? They're already stored in current units? We store machine coords in inches; convert to mm if needed.
-  // For now we keep everything in current units (we don't convert internally on G20/G21). Tests that don't change units pass through fine.
+  const toDisplay = state.units === 'mm' ? 25.4 : 1;
+  // Round off float error introduced by unit conversion (cnc precision ~1e-6 inch = 2.5e-5 mm)
+  const rnd = (v) => {
+    // Round to 6 decimals (mm) or 7 decimals (in) to eliminate float conversion artifacts.
+    const p = state.units === 'mm' ? 1e6 : 1e7;
+    return Math.round(v * p) / p;
+  };
+  const mpos = {
+    x: rnd(state.pos.x * toDisplay),
+    y: rnd(state.pos.y * toDisplay),
+    z: rnd(state.pos.z * toDisplay),
+    a: state.pos.a, b: state.pos.b, c: state.pos.c,
+  };
   const coordSystems = {};
   for (let s = 1; s <= 9; s++) {
-    const axes = ['x','y','z','a','b','c'];
-    const o = {};
-    for (let i = 0; i < 6; i++) o[axes[i]] = state.params.get(csParam(s,i)) || 0;
-    coordSystems[String(s)] = o;
+    const src = state.csInt[s];
+    coordSystems[String(s)] = {
+      x: rnd(src.x * toDisplay), y: rnd(src.y * toDisplay), z: rnd(src.z * toDisplay),
+      a: src.a, b: src.b, c: src.c,
+    };
   }
   const params = {};
   for (const [k,v] of state.params) params[String(k)] = v;
@@ -977,6 +1518,18 @@ function main() {
       const text = fs.readFileSync(opts.parameterInput, 'utf-8');
       const params = parseParameterFile(text);
       for (const [k,v] of params) state.params.set(k, v);
+      // Populate internal cs/g92 from params (assume inches since input params have no unit).
+      for (let s = 1; s <= 9; s++) {
+        for (let i = 0; i < 6; i++) {
+          const v = state.params.get(csParam(s, i)) || 0;
+          const ax = ['x','y','z','a','b','c'][i];
+          state.csInt[s][ax] = v;
+        }
+      }
+      for (let i = 0; i < 6; i++) {
+        const v = state.params.get(G92_OFF[i]) || 0;
+        state.g92Int[['x','y','z','a','b','c'][i]] = v;
+      }
       const sys = Math.round(state.params.get(COORD_SYS_PARAM));
       if (!Number.isFinite(sys) || sys < 1 || sys > 9) {
         throw new Error('parameter 5220 must be 1..9');

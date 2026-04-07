@@ -132,6 +132,8 @@ _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     "cncsim-lite": _RegisteredTask("Evals/CNCSim"),
     "cncsim-full-python": _RegisteredTask("Evals/CNCSim", language="python"),
     "cncsim-lite-python": _RegisteredTask("Evals/CNCSim", language="python"),
+    "cncsim-full-js": _RegisteredTask("Evals/CNCSim", language="javascript"),
+    "cncsim-lite-js": _RegisteredTask("Evals/CNCSim", language="javascript"),
     "wordcount": _RegisteredTask("Evals/WordCount"),
     "wordcount-python": _RegisteredTask("Evals/WordCount", language="python"),
     "wordcount-js": _RegisteredTask("Evals/WordCount", language="javascript"),
