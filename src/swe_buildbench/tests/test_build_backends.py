@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -16,7 +17,10 @@ from swe_buildbench.build import (
     LanguageTarget,
     PreparedSubmission,
     PythonBackend,
+    RustBackend,
 )
+
+_HAS_CARGO = shutil.which("cargo") is not None
 
 if TYPE_CHECKING:
     pass
@@ -107,9 +111,7 @@ class TestJavaScriptBackend:
         assert Path(prepared.command[-1]).resolve() == main_js.resolve()
 
     def test_prepared_command_actually_runs(self, tmp_path: Path) -> None:
-        (tmp_path / "main.js").write_text(
-            "process.stdout.write('ok');\n", encoding="utf-8"
-        )
+        (tmp_path / "main.js").write_text("process.stdout.write('ok');\n", encoding="utf-8")
         target = LanguageTarget(
             root=tmp_path,
             language="js",
@@ -139,6 +141,80 @@ class TestJavaScriptBackend:
         backend = JavaScriptBackend()
 
         with pytest.raises(FileNotFoundError, match="main.js"):
+            backend.prepare(target, build_dir=tmp_path / "build")
+
+
+# ---------------------------------------------------------------------------
+# RustBackend
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.skipif(not _HAS_CARGO, reason="cargo not installed on this host")
+class TestRustBackend:
+    def test_prepare_returns_cargo_run_command(self, tmp_path: Path) -> None:
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.rs").write_text('fn main() { print!("ok"); }\n', encoding="utf-8")
+        (tmp_path / "Cargo.toml").write_text(
+            '[package]\nname = "smoke"\nversion = "0.1.0"\nedition = "2021"\n'
+            '[[bin]]\nname = "smoke"\npath = "src/main.rs"\n[dependencies]\n',
+            encoding="utf-8",
+        )
+        target = LanguageTarget(
+            root=tmp_path,
+            language="rs",
+            origin="test",
+            explicit=True,
+        )
+        backend = RustBackend()
+
+        prepared = backend.prepare(target, build_dir=tmp_path / "build")
+
+        assert isinstance(prepared, PreparedSubmission)
+        assert prepared.language == "rs"
+        assert "cargo" in Path(prepared.command[0]).stem.lower()
+        assert "run" in prepared.command
+        assert prepared.command[-1] == "--"
+
+    def test_prepared_command_actually_runs(self, tmp_path: Path) -> None:
+        (tmp_path / "src").mkdir()
+        (tmp_path / "src" / "main.rs").write_text(
+            'use std::io::Write; fn main() { std::io::stdout().write_all(b"ok").unwrap(); }\n',
+            encoding="utf-8",
+        )
+        (tmp_path / "Cargo.toml").write_text(
+            '[package]\nname = "smoke"\nversion = "0.1.0"\nedition = "2021"\n'
+            '[[bin]]\nname = "smoke"\npath = "src/main.rs"\n[dependencies]\n',
+            encoding="utf-8",
+        )
+        target = LanguageTarget(
+            root=tmp_path,
+            language="rs",
+            origin="test",
+            explicit=True,
+        )
+        backend = RustBackend()
+
+        prepared = backend.prepare(target, build_dir=tmp_path / "build")
+        result = subprocess.run(
+            list(prepared.command),
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+
+        assert result.returncode == 0
+        assert result.stdout == "ok"
+
+    def test_prepare_raises_when_cargo_toml_missing(self, tmp_path: Path) -> None:
+        target = LanguageTarget(
+            root=tmp_path,
+            language="rs",
+            origin="test",
+            explicit=True,
+        )
+        backend = RustBackend()
+
+        with pytest.raises(FileNotFoundError, match="Cargo.toml"):
             backend.prepare(target, build_dir=tmp_path / "build")
 
 
@@ -187,3 +263,6 @@ class TestBuildBackendProtocol:
 
     def test_cmake_backend_satisfies_protocol(self) -> None:
         assert isinstance(CMakeBackend(), BuildBackend)
+
+    def test_rust_backend_satisfies_protocol(self) -> None:
+        assert isinstance(RustBackend(), BuildBackend)

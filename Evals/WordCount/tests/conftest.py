@@ -34,6 +34,7 @@ EVAL_CONFIG = EvalConfig(
     default_reference_impl_subdir="Evals/WordCount/reference-implementation-cpp",
     py_reference_impl_subdir="Evals/WordCount/reference-implementation-py",
     js_reference_impl_subdir="Evals/WordCount/reference-implementation-js",
+    rs_reference_impl_subdir="Evals/WordCount/reference-implementation-rs",
     env_var="SWEBUILDBENCH_WORDCOUNT_ROOT",
     preferred_executable_name="wordcount",
 )

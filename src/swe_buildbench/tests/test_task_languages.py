@@ -53,4 +53,20 @@ class TestPythonTaskRegistration:
     def test_unknown_task_raises(self) -> None:
         repo_root = _repo_root()
         with pytest.raises(ValueError, match="Unknown task"):
-            resolve_task(repo_root, "wordcount-rust")
+            resolve_task(repo_root, "wordcount-go")
+
+
+class TestRustTaskRegistration:
+    def test_wordcount_rust_is_registered(self) -> None:
+        assert "wordcount-rs" in list_tasks()
+
+    def test_wordcount_rust_resolves_to_rust_language_prompt(self) -> None:
+        repo_root = _repo_root()
+        task = resolve_task(repo_root, "wordcount-rs")
+
+        assert task.language == "rs"
+        assert task.language_prompt_path.name == "language-requirements-rs.md"
+        assert task.language_prompt_path.is_file()
+        # The technical prompt is shared across languages.
+        assert task.technical_prompt_path.name == "technical-requirements-prompt.md"
+        assert task.technical_prompt_path.is_file()

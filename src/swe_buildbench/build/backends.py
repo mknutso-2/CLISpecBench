@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -56,6 +57,12 @@ class LanguageTarget:
             main_js = self.root / "main.js"
             if not main_js.is_file():
                 missing.append(f"missing main.js: {main_js}")
+        elif self.language == "rs":
+            cargo_toml = self.root / "Cargo.toml"
+            if not cargo_toml.is_file():
+                missing.append(f"missing Cargo.toml: {cargo_toml}")
+            if shutil.which("cargo") is None:
+                missing.append("'cargo' not found on PATH (install Rust toolchain)")
         else:
             missing.append(f"unknown language: {self.language}")
 
@@ -153,9 +160,7 @@ class JavaScriptBackend:
 
         entry = target.root / self._entry_point
         if not entry.is_file():
-            raise FileNotFoundError(
-                f"JavaScript backend requires {self._entry_point} at {entry}"
-            )
+            raise FileNotFoundError(f"JavaScript backend requires {self._entry_point} at {entry}")
 
         build_dir.mkdir(parents=True, exist_ok=True)
         node = _resolve_node_interpreter()
@@ -166,14 +171,84 @@ class JavaScriptBackend:
         )
 
 
+# ---------------------------------------------------------------------------
+# RustBackend
+# ---------------------------------------------------------------------------
+
+
+class RustBackend:
+    """Builds a Rust submission via ``cargo build --release`` and runs it via ``cargo run``.
+
+    The prepared command uses ``cargo run --release --quiet`` with an explicit
+    ``--target-dir`` so build artifacts land in the harness-managed ``build_dir``.
+    Pre-building during ``prepare`` surfaces compile errors as build failures
+    instead of first-test failures, mirroring :class:`CMakeBackend`.
+    """
+
+    def prepare(
+        self,
+        target: LanguageTarget,
+        *,
+        build_dir: Path,
+        timeout_seconds: int = DEFAULT_BUILD_TIMEOUT_SECONDS,
+    ) -> PreparedSubmission:
+        manifest = target.root / "Cargo.toml"
+        if not manifest.is_file():
+            raise FileNotFoundError(f"Rust backend requires Cargo.toml at {manifest}")
+
+        build_dir.mkdir(parents=True, exist_ok=True)
+        cargo = _resolve_cargo()
+
+        build_cmd = (
+            cargo,
+            "build",
+            "--release",
+            "--quiet",
+            "--manifest-path",
+            str(manifest),
+            "--target-dir",
+            str(build_dir),
+        )
+        result = subprocess.run(
+            build_cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+        if result.returncode != 0:
+            raise AssertionError(f"cargo build failed (exit {result.returncode}):\n{result.stderr}")
+
+        run_cmd = (
+            cargo,
+            "run",
+            "--release",
+            "--quiet",
+            "--manifest-path",
+            str(manifest),
+            "--target-dir",
+            str(build_dir),
+            "--",
+        )
+        return PreparedSubmission(
+            command=run_cmd,
+            build_dir=build_dir,
+            language="rs",
+        )
+
+
+def _resolve_cargo() -> str:
+    cargo = shutil.which("cargo")
+    if cargo is not None:
+        return cargo
+    raise FileNotFoundError("Rust backend requires Cargo: 'cargo' was not found on PATH")
+
+
 def _resolve_node_interpreter() -> str:
     """Return a Node.js interpreter path. Errors clearly if missing."""
     node = shutil.which("node")
     if node is not None:
         return node
-    raise FileNotFoundError(
-        "JavaScript backend requires Node.js: 'node' was not found on PATH"
-    )
+    raise FileNotFoundError("JavaScript backend requires Node.js: 'node' was not found on PATH")
 
 
 def _resolve_python_interpreter() -> str:

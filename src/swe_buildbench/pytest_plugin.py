@@ -44,10 +44,11 @@ from swe_buildbench.build import (
     LanguageTarget,
     PreparedSubmission,
     PythonBackend,
+    RustBackend,
     find_repo_root,
 )
 
-SUPPORTED_LANGUAGES: tuple[str, ...] = ("cpp", "py", "js")
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("cpp", "py", "js", "rs")
 
 
 # ---------------------------------------------------------------------------
@@ -65,6 +66,7 @@ class EvalConfig:
     preferred_executable_name: str
     py_reference_impl_subdir: str | None = None
     js_reference_impl_subdir: str | None = None
+    rs_reference_impl_subdir: str | None = None
 
 
 def _load_eval_config(request: pytest.FixtureRequest) -> EvalConfig:
@@ -207,6 +209,13 @@ def _default_reference_impl_subdir(config: EvalConfig, language: str) -> str:
                 "configured. Set js_reference_impl_subdir in EVAL_CONFIG."
             )
         return config.js_reference_impl_subdir
+    if language == "rs":
+        if config.rs_reference_impl_subdir is None:
+            raise pytest.UsageError(
+                f"Task {config.task_name!r} has no Rust reference implementation "
+                "configured. Set rs_reference_impl_subdir in EVAL_CONFIG."
+            )
+        return config.rs_reference_impl_subdir
     raise pytest.UsageError(f"Unsupported language: {language}")
 
 
@@ -217,6 +226,8 @@ def _build_backend_for(language: str, config: EvalConfig) -> BuildBackend:
         return PythonBackend()
     if language == "js":
         return JavaScriptBackend()
+    if language == "rs":
+        return RustBackend()
     raise pytest.UsageError(f"Unsupported language: {language}")
 
 

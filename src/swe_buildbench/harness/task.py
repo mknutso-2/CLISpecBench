@@ -86,9 +86,7 @@ def load_task(
     if not tech_prompt.is_file():
         raise FileNotFoundError(f"Technical prompt not found: {tech_prompt}")
     if not language_prompt.is_file():
-        raise FileNotFoundError(
-            f"Language prompt for {language!r} not found: {language_prompt}"
-        )
+        raise FileNotFoundError(f"Language prompt for {language!r} not found: {language_prompt}")
     if not docs_dir.is_dir():
         raise FileNotFoundError(f"Docs directory not found: {docs_dir}")
     if not test_dir.is_dir():
@@ -137,6 +135,7 @@ _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     "wordcount": _RegisteredTask("Evals/WordCount"),
     "wordcount-py": _RegisteredTask("Evals/WordCount", language="py"),
     "wordcount-js": _RegisteredTask("Evals/WordCount", language="js"),
+    "wordcount-rs": _RegisteredTask("Evals/WordCount", language="rs"),
 }
 
 
