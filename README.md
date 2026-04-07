@@ -322,6 +322,55 @@ pytest Evals/MyTask/tests --language=python -v   # if a Python reference exists
   an existing one.
 - `docs/` contains reference material the agent can use (specs, standards, etc.).
 
+## Adding a Language Variant to an Existing Eval
+
+Once an eval has a working reference implementation in at least one language,
+adding a new language variant reuses the existing prompt, documentation corpus,
+and hidden test suite — only a new reference implementation and a task-registry
+entry are required.
+
+Prerequisites (one-time per language, across the whole repo):
+
+1. `Evals/_shared/language-requirements-<lang>.md` exists. If not, create it —
+   it should state the target language version, stdlib-only constraint,
+   build/invoke command template, and source layout / entry-point convention.
+2. `src/swe_buildbench/build/backends.py` has a `BuildBackend` implementation
+   for `<lang>` and `LanguageTarget.missing_requirements()` recognizes it.
+3. `docker/base.Dockerfile` installs the compiler/runtime.
+
+Per-eval steps to add a new language variant:
+
+1. **Write the reference implementation** at
+   `Evals/<Task>/reference-implementation-<lang>/`. It must satisfy the CLI
+   contract defined in that eval's `technical-requirements-prompt.md`.
+2. **Run the hidden test suite** against it until it passes cleanly:
+   ```bash
+   pytest Evals/<Task>/tests --language=<lang>
+   ```
+   The `--language=<lang>` flag tells the shared pytest plugin to build and
+   invoke the `reference-implementation-<lang>/` directory via the matching
+   `BuildBackend`. If any tests fail, the reference implementation is wrong
+   (or, rarely, the test is ambiguous — see AGENTS.md for the cross-validation
+   protocol).
+3. **Register a new task ID** in `src/swe_buildbench/harness/task.py` by
+   adding a `_RegisteredTask(..., language="<lang>")` entry alongside the
+   existing cpp one. By convention, suffix the task ID with `-<lang>` (e.g.
+   `cncsim-full` → `cncsim-full-python`).
+4. **Validate the registration**:
+   ```bash
+   swe-buildbench validate --task <task-id>-<lang>
+   ```
+   This prints the resolved base / language / technical prompt paths and
+   confirms the language prompt exists. The eval's `base-prompt.md`,
+   `technical-requirements-prompt.md`, `docs/`, and `tests/` are unchanged;
+   do not fork them per language.
+
+That's it — no test code, prompt edits, or CLI changes are needed. The
+hidden test suite is language-agnostic by construction (it calls the
+`submission_command` fixture rather than a concrete executable path), so the
+same tests that validated the cpp reference now validate the new language
+variant end-to-end.
+
 ## Linting and Formatting
 
 This repository uses [Ruff](https://docs.astral.sh/ruff/) for linting and
