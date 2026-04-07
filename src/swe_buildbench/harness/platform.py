@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sys
-from pathlib import Path, PurePosixPath
+from pathlib import Path, PurePosixPath, PureWindowsPath
 
 
 def resolve_host_home() -> Path:
@@ -20,8 +20,9 @@ def resolve_host_home() -> Path:
         return home
 
     # Convert C:\\Users\\Foo -> /mnt/c/Users/Foo
-    drive_letter = home.drive[0].lower()
-    posix_path = home.relative_to(home.anchor).as_posix()
+    win = PureWindowsPath(str(home))
+    drive_letter = win.drive[0].lower()
+    posix_path = win.relative_to(win.anchor).as_posix()
     return Path(f"/mnt/{drive_letter}/{posix_path}")
 
 
@@ -35,6 +36,7 @@ def wsl_path(win_path: Path) -> PurePosixPath:
     if sys.platform != "win32":
         return PurePosixPath(win_path.as_posix())
 
-    drive_letter = win_path.drive[0].lower()
-    posix_path = win_path.relative_to(win_path.anchor).as_posix()
+    win = PureWindowsPath(str(win_path))
+    drive_letter = win.drive[0].lower()
+    posix_path = win.relative_to(win.anchor).as_posix()
     return PurePosixPath(f"/mnt/{drive_letter}/{posix_path}")

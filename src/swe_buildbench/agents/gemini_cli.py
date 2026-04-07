@@ -18,7 +18,6 @@ DOCKERFILE = (
 )
 
 
-
 class GeminiCLIAdapter(AgentAdapter):
     """Adapter for Google Gemini CLI (``gemini``)."""
 

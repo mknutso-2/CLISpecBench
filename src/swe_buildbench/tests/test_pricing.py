@@ -18,7 +18,7 @@ class TestEstimateCost:
             input_tokens=1_000_000,
             output_tokens=1_000_000,
         )
-        assert cost == pytest.approx(6.0)
+        assert cost == pytest.approx(6.0)  # type: ignore[reportUnknownMemberType]
 
     def test_haiku_with_cache_read(self) -> None:
         # 500k uncached @ $1 + 500k cache read @ $0.10 + 100k output @ $5
@@ -30,7 +30,7 @@ class TestEstimateCost:
         )
         assert cost is not None
         expected = 500_000 * 1.0 / 1e6 + 500_000 * 0.10 / 1e6 + 100_000 * 5.0 / 1e6
-        assert cost == pytest.approx(expected)
+        assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
 
     def test_haiku_with_cache_write(self) -> None:
         # 100k uncached @ $1 + 200k cache write @ $2 + 700k cache read @ $0.10 + 50k output @ $5
@@ -48,7 +48,7 @@ class TestEstimateCost:
             + 200_000 * 2.0 / 1e6
             + 50_000 * 5.0 / 1e6
         )
-        assert cost == pytest.approx(expected)
+        assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
 
     def test_haiku_real_run(self) -> None:
         """Verify estimate against the actual haiku CNCSim run token breakdown."""
@@ -67,7 +67,7 @@ class TestEstimateCost:
             + 109733 * 2.0 / 1e6      # cache write (1h ephemeral)
             + 63559 * 5.0 / 1e6       # output
         )
-        assert cost == pytest.approx(expected)
+        assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
 
     def test_openai_model(self) -> None:
         cost = estimate_cost(
@@ -76,7 +76,7 @@ class TestEstimateCost:
             output_tokens=1_000_000,
         )
         assert cost is not None
-        assert cost == pytest.approx(2.50 + 15.00)
+        assert cost == pytest.approx(2.50 + 15.00)  # type: ignore[reportUnknownMemberType]
 
     def test_gemini_model(self) -> None:
         cost = estimate_cost(
@@ -85,11 +85,11 @@ class TestEstimateCost:
             output_tokens=1_000_000,
         )
         assert cost is not None
-        assert cost == pytest.approx(0.10 + 0.40)
+        assert cost == pytest.approx(0.10 + 0.40)  # type: ignore[reportUnknownMemberType]
 
     def test_zero_tokens(self) -> None:
         cost = estimate_cost("claude-haiku-4-5-20251001", 0, 0)
-        assert cost == pytest.approx(0.0)
+        assert cost == pytest.approx(0.0)  # type: ignore[reportUnknownMemberType]
 
 
 class TestPricingTableCompleteness:

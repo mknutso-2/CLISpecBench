@@ -121,6 +121,7 @@ class TestClaudeCodeBashTool:
         Bash tool invocation to fail with ENOENT / "Read-only file system".
         """
         import tempfile
+
         from swe_buildbench.harness.platform import wsl_path
 
         with tempfile.TemporaryDirectory(prefix="claude-cred-") as cred_dir:
@@ -178,8 +179,8 @@ class TestClaudeCodeBashTool:
 
     def test_agent_can_compile_and_run_cpp(self) -> None:
         """The agent user can compile and execute a C++ program."""
-        from pathlib import PurePosixPath
         import tempfile
+        from pathlib import PurePosixPath
 
         with tempfile.TemporaryDirectory(prefix="cpp-test-") as td:
             src = Path(td) / "test.cpp"
