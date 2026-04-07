@@ -295,13 +295,14 @@ pytest Evals/MyTask/tests --language=python -v   # if a Python reference exists
   schema. Do not put domain behavior here.
 - `docs/` contains reference material the agent can use (specs, standards, etc.).
 
-## Line Endings
+## Linting and Formatting
 
-This repository enforces LF line endings via `.gitattributes`.
+This repository uses [Ruff](https://docs.astral.sh/ruff/) for linting and
+formatting, and [Pyright](https://github.com/microsoft/pyright) for type
+checking. Both are enforced in CI.
 
-On Windows, keep Git configured for LF-friendly behavior:
-
-```powershell
-git config --global core.autocrlf false
-git config --global core.safecrlf true
+```bash
+uv run ruff check          # lint
+uv run ruff format         # format
+uv run pyright             # type-check
 ```
