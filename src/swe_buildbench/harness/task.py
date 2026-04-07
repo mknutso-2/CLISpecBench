@@ -130,13 +130,13 @@ class _RegisteredTask:
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     "cncsim-full": _RegisteredTask("Evals/CNCSim"),
     "cncsim-lite": _RegisteredTask("Evals/CNCSim"),
-    "cncsim-full-python": _RegisteredTask("Evals/CNCSim", language="python"),
-    "cncsim-lite-python": _RegisteredTask("Evals/CNCSim", language="python"),
-    "cncsim-full-javascript": _RegisteredTask("Evals/CNCSim", language="javascript"),
-    "cncsim-lite-javascript": _RegisteredTask("Evals/CNCSim", language="javascript"),
+    "cncsim-full-py": _RegisteredTask("Evals/CNCSim", language="py"),
+    "cncsim-lite-py": _RegisteredTask("Evals/CNCSim", language="py"),
+    "cncsim-full-js": _RegisteredTask("Evals/CNCSim", language="js"),
+    "cncsim-lite-js": _RegisteredTask("Evals/CNCSim", language="js"),
     "wordcount": _RegisteredTask("Evals/WordCount"),
-    "wordcount-python": _RegisteredTask("Evals/WordCount", language="python"),
-    "wordcount-javascript": _RegisteredTask("Evals/WordCount", language="javascript"),
+    "wordcount-py": _RegisteredTask("Evals/WordCount", language="py"),
+    "wordcount-js": _RegisteredTask("Evals/WordCount", language="js"),
 }
 
 

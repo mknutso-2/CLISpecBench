@@ -34,7 +34,7 @@ class TestPythonBackend:
 
         target = LanguageTarget(
             root=tmp_path,
-            language="python",
+            language="py",
             origin="test",
             explicit=True,
         )
@@ -51,7 +51,7 @@ class TestPythonBackend:
         (tmp_path / "main.py").write_text("import sys; sys.stdout.write('ok')\n", encoding="utf-8")
         target = LanguageTarget(
             root=tmp_path,
-            language="python",
+            language="py",
             origin="test",
             explicit=True,
         )
@@ -71,7 +71,7 @@ class TestPythonBackend:
     def test_prepare_raises_when_main_py_missing(self, tmp_path: Path) -> None:
         target = LanguageTarget(
             root=tmp_path,
-            language="python",
+            language="py",
             origin="test",
             explicit=True,
         )
@@ -93,7 +93,7 @@ class TestJavaScriptBackend:
 
         target = LanguageTarget(
             root=tmp_path,
-            language="javascript",
+            language="js",
             origin="test",
             explicit=True,
         )
@@ -102,7 +102,7 @@ class TestJavaScriptBackend:
         prepared = backend.prepare(target, build_dir=tmp_path / "build")
 
         assert isinstance(prepared, PreparedSubmission)
-        assert prepared.language == "javascript"
+        assert prepared.language == "js"
         assert Path(prepared.command[0]).stem.lower() == "node"
         assert Path(prepared.command[-1]).resolve() == main_js.resolve()
 
@@ -112,7 +112,7 @@ class TestJavaScriptBackend:
         )
         target = LanguageTarget(
             root=tmp_path,
-            language="javascript",
+            language="js",
             origin="test",
             explicit=True,
         )
@@ -132,7 +132,7 @@ class TestJavaScriptBackend:
     def test_prepare_raises_when_main_js_missing(self, tmp_path: Path) -> None:
         target = LanguageTarget(
             root=tmp_path,
-            language="javascript",
+            language="js",
             origin="test",
             explicit=True,
         )

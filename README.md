@@ -149,7 +149,7 @@ pytest Evals/WordCount/tests
 Select a target language (when multiple reference implementations exist):
 
 ```bash
-pytest Evals/WordCount/tests --language=python
+pytest Evals/WordCount/tests --language=py
 pytest Evals/WordCount/tests --language=cpp       # default
 ```
 
@@ -157,7 +157,7 @@ Point tests at a different implementation (e.g. an agent's output):
 
 ```bash
 pytest Evals/WordCount/tests --implementation-root /path/to/agent-output
-pytest Evals/WordCount/tests --language=python --implementation-root /path/to/py-output
+pytest Evals/WordCount/tests --language=py --implementation-root /path/to/py-output
 ```
 
 ### Harness tests
@@ -262,7 +262,7 @@ Evals/MyTask/
   reference-implementation-cpp/            # C++ reference (default language)
     CMakeLists.txt
     src/
-  reference-implementation-python/         # Python reference (optional per-eval)
+  reference-implementation-py/             # Python reference (optional per-eval)
     main.py
 ```
 
@@ -273,8 +273,8 @@ directory:
 ```
 Evals/_shared/
   language-requirements-cpp.md             # Shared across all C++ evals
-  language-requirements-python.md          # Shared across all Python evals
-  language-requirements-javascript.md      # Shared across all JavaScript evals
+  language-requirements-py.md              # Shared across all Python evals
+  language-requirements-js.md              # Shared across all JavaScript evals
 ```
 
 At prompt assembly time the harness concatenates
@@ -297,7 +297,7 @@ languages take an explicit `language=` kwarg:
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     ...
     "mytask": _RegisteredTask("Evals/MyTask"),
-    "mytask-python": _RegisteredTask("Evals/MyTask", language="python"),
+    "mytask-py": _RegisteredTask("Evals/MyTask", language="py"),
 }
 ```
 
@@ -305,7 +305,7 @@ The reference implementation should pass all tests before committing. Verify:
 
 ```bash
 pytest Evals/MyTask/tests -v
-pytest Evals/MyTask/tests --language=python -v   # if a Python reference exists
+pytest Evals/MyTask/tests --language=py -v       # if a Python reference exists
 ```
 
 ### Prompt authoring guidelines
@@ -356,7 +356,7 @@ Per-eval steps to add a new language variant:
 3. **Register a new task ID** in `src/swe_buildbench/harness/task.py` by
    adding a `_RegisteredTask(..., language="<lang>")` entry alongside the
    existing cpp one. By convention, suffix the task ID with `-<lang>` (e.g.
-   `cncsim-full` → `cncsim-full-python`).
+   `cncsim-full` → `cncsim-full-py`).
 4. **Validate the registration**:
    ```bash
    swe-buildbench validate --task <task-id>-<lang>

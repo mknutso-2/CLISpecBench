@@ -24,8 +24,10 @@ tests/
 reference-implementation-cpp/
   CMakeLists.txt                    # CMake project
   src/                              # C++ reference solution (passes all tests)
-reference-implementation-python/
+reference-implementation-py/
   main.py                           # Python reference solution (passes all tests)
+reference-implementation-js/
+  main.js                           # JavaScript reference solution (passes all tests)
 ```
 
 ## Task Variants

@@ -62,12 +62,12 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
-                language="python",
+                language="py",
                 use_docker=False,
             )
 
         cmd = mock_run.call_args[0][0]
-        assert "--language=python" in cmd, f"Expected --language=python in command: {cmd}"
+        assert "--language=py" in cmd, f"Expected --language=py in command: {cmd}"
 
     def test_omits_language_flag_for_default_cpp(self, tmp_path: Path) -> None:
         test_dir = tmp_path / "tests"

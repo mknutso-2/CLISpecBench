@@ -2,7 +2,7 @@
 
 These tests use `pytest` and are intended to target either:
 
-- `Evals/CNCSim/reference-implementation-cpp/` (or `reference-implementation-python/`)
+- `Evals/CNCSim/reference-implementation-cpp/` (or `reference-implementation-py/`)
 - an AI agent output directory supplied at runtime
 
 ## Usage

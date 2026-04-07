@@ -119,17 +119,18 @@ src/swe_buildbench/
 Evals/
   _shared/                          # Shared across evals
     language-requirements-cpp.md        # C++ boilerplate
-    language-requirements-python.md     # Python boilerplate
-    language-requirements-javascript.md # JavaScript boilerplate
+    language-requirements-py.md         # Python boilerplate
+    language-requirements-js.md         # JavaScript boilerplate
   CNCSim/                           # CNC G-code interpreter eval
     prompt/ docs/ tests/
     reference-implementation-cpp/       # C++ reference
-    reference-implementation-python/    # Python reference
+    reference-implementation-py/        # Python reference
+    reference-implementation-js/        # JavaScript reference
   WordCount/                        # Word frequency counter (toy eval)
     prompt/ docs/ tests/
     reference-implementation-cpp/
-    reference-implementation-python/
-    reference-implementation-javascript/
+    reference-implementation-py/
+    reference-implementation-js/
 
 docker/
   base.Dockerfile               # Common: C++20 toolchain, cmake, python, pytest

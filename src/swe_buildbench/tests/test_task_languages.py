@@ -23,14 +23,14 @@ class TestTaskDefinitionLanguage:
 
 class TestPythonTaskRegistration:
     def test_wordcount_python_is_registered(self) -> None:
-        assert "wordcount-python" in list_tasks()
+        assert "wordcount-py" in list_tasks()
 
     def test_wordcount_python_resolves_to_python_language_prompt(self) -> None:
         repo_root = _repo_root()
-        task = resolve_task(repo_root, "wordcount-python")
+        task = resolve_task(repo_root, "wordcount-py")
 
-        assert task.language == "python"
-        assert task.language_prompt_path.name == "language-requirements-python.md"
+        assert task.language == "py"
+        assert task.language_prompt_path.name == "language-requirements-py.md"
         assert task.language_prompt_path.is_file()
         # The technical prompt is shared across languages.
         assert task.technical_prompt_path.name == "technical-requirements-prompt.md"
@@ -39,7 +39,7 @@ class TestPythonTaskRegistration:
     def test_wordcount_python_shares_base_and_technical_with_cpp(self) -> None:
         repo_root = _repo_root()
         cpp = resolve_task(repo_root, "wordcount")
-        py = resolve_task(repo_root, "wordcount-python")
+        py = resolve_task(repo_root, "wordcount-py")
 
         # Both share the same base prompt, technical prompt, and docs corpus.
         assert cpp.base_prompt_path == py.base_prompt_path

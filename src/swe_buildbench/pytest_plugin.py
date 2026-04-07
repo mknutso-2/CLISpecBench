@@ -18,7 +18,7 @@ Usage inside an eval's ``conftest.py``::
     EVAL_CONFIG = EvalConfig(
         task_name="wordcount",
         default_reference_impl_subdir="Evals/WordCount/reference-implementation-cpp",
-        python_reference_impl_subdir="Evals/WordCount/reference-implementation-python",
+        py_reference_impl_subdir="Evals/WordCount/reference-implementation-py",
         env_var="SWEBUILDBENCH_WORDCOUNT_ROOT",
         preferred_executable_name="wordcount",
     )
@@ -47,7 +47,7 @@ from swe_buildbench.build import (
     find_repo_root,
 )
 
-SUPPORTED_LANGUAGES: tuple[str, ...] = ("cpp", "python", "javascript")
+SUPPORTED_LANGUAGES: tuple[str, ...] = ("cpp", "py", "js")
 
 
 # ---------------------------------------------------------------------------
@@ -63,8 +63,8 @@ class EvalConfig:
     default_reference_impl_subdir: str
     env_var: str
     preferred_executable_name: str
-    python_reference_impl_subdir: str | None = None
-    javascript_reference_impl_subdir: str | None = None
+    py_reference_impl_subdir: str | None = None
+    js_reference_impl_subdir: str | None = None
 
 
 def _load_eval_config(request: pytest.FixtureRequest) -> EvalConfig:
@@ -193,29 +193,29 @@ def language_target(
 def _default_reference_impl_subdir(config: EvalConfig, language: str) -> str:
     if language == "cpp":
         return config.default_reference_impl_subdir
-    if language == "python":
-        if config.python_reference_impl_subdir is None:
+    if language == "py":
+        if config.py_reference_impl_subdir is None:
             raise pytest.UsageError(
                 f"Task {config.task_name!r} has no Python reference implementation "
-                "configured. Set python_reference_impl_subdir in EVAL_CONFIG."
+                "configured. Set py_reference_impl_subdir in EVAL_CONFIG."
             )
-        return config.python_reference_impl_subdir
-    if language == "javascript":
-        if config.javascript_reference_impl_subdir is None:
+        return config.py_reference_impl_subdir
+    if language == "js":
+        if config.js_reference_impl_subdir is None:
             raise pytest.UsageError(
                 f"Task {config.task_name!r} has no JavaScript reference implementation "
-                "configured. Set javascript_reference_impl_subdir in EVAL_CONFIG."
+                "configured. Set js_reference_impl_subdir in EVAL_CONFIG."
             )
-        return config.javascript_reference_impl_subdir
+        return config.js_reference_impl_subdir
     raise pytest.UsageError(f"Unsupported language: {language}")
 
 
 def _build_backend_for(language: str, config: EvalConfig) -> BuildBackend:
     if language == "cpp":
         return CMakeBackend(preferred_executable_name=config.preferred_executable_name)
-    if language == "python":
+    if language == "py":
         return PythonBackend()
-    if language == "javascript":
+    if language == "js":
         return JavaScriptBackend()
     raise pytest.UsageError(f"Unsupported language: {language}")
 

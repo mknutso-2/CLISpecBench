@@ -26,8 +26,8 @@ __all__ = [
 EVAL_CONFIG = EvalConfig(
     task_name="cncsim",
     default_reference_impl_subdir="Evals/CNCSim/reference-implementation-cpp",
-    python_reference_impl_subdir="Evals/CNCSim/reference-implementation-python",
-    javascript_reference_impl_subdir="Evals/CNCSim/reference-implementation-javascript",
+    py_reference_impl_subdir="Evals/CNCSim/reference-implementation-py",
+    js_reference_impl_subdir="Evals/CNCSim/reference-implementation-js",
     env_var="SWEBUILDBENCH_IMPLEMENTATION_ROOT",
     preferred_executable_name="cncsim",
 )

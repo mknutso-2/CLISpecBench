@@ -48,11 +48,11 @@ class LanguageTarget:
             cmake_lists = self.root / "CMakeLists.txt"
             if not cmake_lists.is_file():
                 missing.append(f"missing CMakeLists.txt: {cmake_lists}")
-        elif self.language == "python":
+        elif self.language == "py":
             main_py = self.root / "main.py"
             if not main_py.is_file():
                 missing.append(f"missing main.py: {main_py}")
-        elif self.language == "javascript":
+        elif self.language == "js":
             main_js = self.root / "main.js"
             if not main_js.is_file():
                 missing.append(f"missing main.js: {main_js}")
@@ -127,7 +127,7 @@ class PythonBackend:
         return PreparedSubmission(
             command=(interpreter, str(entry)),
             build_dir=build_dir,
-            language="python",
+            language="py",
         )
 
 
@@ -162,7 +162,7 @@ class JavaScriptBackend:
         return PreparedSubmission(
             command=(node, str(entry)),
             build_dir=build_dir,
-            language="javascript",
+            language="js",
         )
 
 
