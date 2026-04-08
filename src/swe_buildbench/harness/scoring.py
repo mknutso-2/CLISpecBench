@@ -218,6 +218,70 @@ def parse_json_report(report_path: Path) -> tuple[list[TestOutcome], TestSummary
     return tests, summary
 
 
+# Test-file buckets whose pass-rate is already reported as a separate
+# dimension (BuildResult) and should not be double-counted as a capability.
+_SUBSCORE_EXCLUDED_BUCKETS = frozenset({"build"})
+
+
+def _bucket_for_node_id(node_id: str) -> str | None:
+    """Derive a capability bucket name from a pytest node id.
+
+    ``tests/test_canned_cycles.py::test_g81_basic`` -> ``"canned_cycles"``.
+    Returns ``None`` for node ids we can't classify or for excluded buckets
+    (e.g. the build smoke test).
+    """
+    file_part = node_id.split("::", 1)[0]
+    stem = PurePosixPath(file_part).stem  # e.g. "test_canned_cycles"
+    if not stem.startswith("test_"):
+        return None
+    bucket = stem[len("test_") :]
+    if not bucket or bucket in _SUBSCORE_EXCLUDED_BUCKETS:
+        return None
+    return bucket
+
+
+def compute_subscores(tests: list[TestOutcome]) -> dict[str, float]:
+    """Group test outcomes by source file and emit passed/total per bucket.
+
+    With ~450 tests already factored into ~40 capability-named files
+    (``test_canned_cycles.py``, ``test_cutter_radius_compensation.py``, ...),
+    we get a free per-capability breakdown by bucketing on the file name.
+    No manual tagging needed.
+
+    Returns a flat ``dict[str, float]`` shaped for ``Scores.extension_scores``::
+
+        {
+            "subscore.canned_cycles.passed": 37.0,
+            "subscore.canned_cycles.total": 45.0,
+            "subscore.cutter_radius_compensation.passed": 0.0,
+            "subscore.cutter_radius_compensation.total": 28.0,
+            ...
+        }
+
+    Storing passed + total (rather than just a ratio) lets consumers see
+    the numerator and denominator directly — e.g. ``0/28`` is much more
+    diagnostic than ``0.000``. Skipped/errored tests land in ``total`` but
+    not ``passed`` so partial failures are visible.
+
+    The ``build`` bucket is excluded (already surfaced as ``BuildResult``).
+    """
+    passed: dict[str, int] = {}
+    total: dict[str, int] = {}
+    for t in tests:
+        bucket = _bucket_for_node_id(t.node_id)
+        if bucket is None:
+            continue
+        total[bucket] = total.get(bucket, 0) + 1
+        if t.outcome == "passed":
+            passed[bucket] = passed.get(bucket, 0) + 1
+
+    result: dict[str, float] = {}
+    for bucket in sorted(total):
+        result[f"subscore.{bucket}.passed"] = float(passed.get(bucket, 0))
+        result[f"subscore.{bucket}.total"] = float(total[bucket])
+    return result
+
+
 def compute_correctness(summary: TestSummary) -> float:
     """Compute the correctness score as pass rate.
 

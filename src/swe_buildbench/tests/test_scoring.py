@@ -9,13 +9,100 @@ from unittest.mock import patch
 
 import pytest
 
-from swe_buildbench.harness.results import TestSummary
+from swe_buildbench.harness.results import TestOutcome, TestSummary
 from swe_buildbench.harness.scoring import (
     compute_correctness,
+    compute_subscores,
     compute_task_score,
     parse_json_report,
     run_hidden_tests,
 )
+
+
+def _outcome(node_id: str, outcome: str) -> TestOutcome:
+    return TestOutcome(node_id=node_id, outcome=outcome, duration_seconds=0.0)
+
+
+class TestComputeSubscores:
+    """Per-capability breakdown derived from test file names."""
+
+    def test_empty_test_list_yields_empty_dict(self) -> None:
+        assert compute_subscores([]) == {}
+
+    def test_groups_by_test_file_and_stores_passed_and_total(self) -> None:
+        tests = [
+            _outcome("tests/test_canned_cycles.py::test_g81", "passed"),
+            _outcome("tests/test_canned_cycles.py::test_g82", "passed"),
+            _outcome("tests/test_canned_cycles.py::test_g83", "failed"),
+            _outcome("tests/test_g92_offsets.py::test_basic", "passed"),
+            _outcome("tests/test_g92_offsets.py::test_reset", "failed"),
+        ]
+        scores = compute_subscores(tests)
+        assert scores["subscore.canned_cycles.passed"] == 2.0
+        assert scores["subscore.canned_cycles.total"] == 3.0
+        assert scores["subscore.g92_offsets.passed"] == 1.0
+        assert scores["subscore.g92_offsets.total"] == 2.0
+
+    def test_failed_ratio_is_visible_as_zero_over_total(self) -> None:
+        """The point of storing numerator+denominator: 0/28 is diagnostic,
+        0.000 is not."""
+        tests = [
+            _outcome(f"tests/test_cutter_radius_compensation.py::t{i}", "failed")
+            for i in range(28)
+        ]
+        scores = compute_subscores(tests)
+        assert scores["subscore.cutter_radius_compensation.passed"] == 0.0
+        assert scores["subscore.cutter_radius_compensation.total"] == 28.0
+
+    def test_skipped_and_errored_count_toward_total_not_passed(self) -> None:
+        tests = [
+            _outcome("tests/test_probing.py::t1", "passed"),
+            _outcome("tests/test_probing.py::t2", "skipped"),
+            _outcome("tests/test_probing.py::t3", "error"),
+            _outcome("tests/test_probing.py::t4", "failed"),
+        ]
+        scores = compute_subscores(tests)
+        assert scores["subscore.probing.passed"] == 1.0
+        assert scores["subscore.probing.total"] == 4.0
+
+    def test_build_bucket_is_excluded(self) -> None:
+        """test_build.py is already reported via BuildResult — don't double-count."""
+        tests = [
+            _outcome("tests/test_build.py::test_builds", "passed"),
+            _outcome("tests/test_canned_cycles.py::test_g81", "passed"),
+        ]
+        scores = compute_subscores(tests)
+        assert not any(k.startswith("subscore.build.") for k in scores)
+        assert "subscore.canned_cycles.passed" in scores
+
+    def test_nonstandard_node_ids_are_skipped_not_crashed_on(self) -> None:
+        """Node IDs that don't match ``test_<bucket>.py::...`` are silently
+        dropped, not errored on — scoring must never throw."""
+        tests = [
+            _outcome("weird_thing", "passed"),
+            _outcome("tests/notatest.py::t", "passed"),
+            _outcome("tests/test_canned_cycles.py::test_g81", "passed"),
+        ]
+        scores = compute_subscores(tests)
+        assert scores == {
+            "subscore.canned_cycles.passed": 1.0,
+            "subscore.canned_cycles.total": 1.0,
+        }
+
+    def test_bucket_keys_are_sorted(self) -> None:
+        """Deterministic key order makes extension_scores diffs across runs
+        readable in git / json."""
+        tests = [
+            _outcome("tests/test_zeta.py::t", "passed"),
+            _outcome("tests/test_alpha.py::t", "passed"),
+            _outcome("tests/test_mike.py::t", "passed"),
+        ]
+        keys = [k for k in compute_subscores(tests) if k.endswith(".passed")]
+        assert keys == [
+            "subscore.alpha.passed",
+            "subscore.mike.passed",
+            "subscore.zeta.passed",
+        ]
 
 
 class TestRunHiddenTests:

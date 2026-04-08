@@ -127,6 +127,59 @@ def _cmd_run(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _print_breakdown(results: list[RunResult]) -> None:
+    """Per-capability subscore table across the filtered runs.
+
+    Reads ``subscore.<bucket>.passed`` / ``subscore.<bucket>.total`` pairs
+    out of ``scores.extension_scores`` and pivots them into a
+    ``capability x run`` table.
+    """
+    # Collect (run_label, {bucket: (passed, total)}) for each result.
+    per_run: list[tuple[str, dict[str, tuple[int, int]]]] = []
+    all_buckets: set[str] = set()
+    for r in results:
+        buckets: dict[str, tuple[int, int]] = {}
+        ext = r.scores.extension_scores
+        for key, val in ext.items():
+            if not key.startswith("subscore.") or not key.endswith(".passed"):
+                continue
+            bucket = key[len("subscore.") : -len(".passed")]
+            total_key = f"subscore.{bucket}.total"
+            if total_key not in ext:
+                continue
+            buckets[bucket] = (int(val), int(ext[total_key]))
+        if not buckets:
+            continue
+        label = f"{r.metadata.agent}/run{r.metadata.run_number}"
+        per_run.append((label, buckets))
+        all_buckets.update(buckets)
+
+    if not per_run:
+        print("No subscore data found in matching results.")
+        print("(Subscores are populated for runs produced after the feature was added.)")
+        return
+
+    bucket_width = max(len(b) for b in all_buckets)
+    bucket_width = max(bucket_width, len("capability"))
+    col_width = 14
+
+    header = f"{'capability':<{bucket_width}}  " + "  ".join(
+        f"{label:<{col_width}}" for label, _ in per_run
+    )
+    print(header)
+    print("-" * len(header))
+    for bucket in sorted(all_buckets):
+        cells: list[str] = []
+        for _, buckets in per_run:
+            if bucket not in buckets:
+                cells.append(f"{'-':<{col_width}}")
+                continue
+            p, t = buckets[bucket]
+            pct = (p / t * 100) if t else 0.0
+            cells.append(f"{f'{p}/{t} ({pct:.0f}%)':<{col_width}}")
+        print(f"{bucket:<{bucket_width}}  " + "  ".join(cells))
+
+
 def _cmd_results(args: argparse.Namespace) -> None:
     output_dir = Path(args.output_dir)
     if not output_dir.is_dir():
@@ -149,6 +202,10 @@ def _cmd_results(args: argparse.Namespace) -> None:
 
     if not results:
         print("No matching results found.")
+        return
+
+    if args.breakdown:
+        _print_breakdown(results)
         return
 
     # Print table
@@ -257,6 +314,11 @@ def main(argv: list[str] | None = None) -> None:
     results_parser.add_argument("--output-dir", default="results")
     results_parser.add_argument("--format", choices=["table", "json", "csv"], default="table")
     results_parser.add_argument("--compare", action="store_true")
+    results_parser.add_argument(
+        "--breakdown",
+        action="store_true",
+        help="Show per-capability subscore table instead of the default run table",
+    )
 
     # --- hash ---
     hash_parser = subparsers.add_parser(
