@@ -111,6 +111,12 @@ class RunMetadata:
     model: str | None = None
     effort: str | None = None
     notes: str | None = None
+    # Content hashes — machine-checkable backstop for the manual
+    # `eval_version` bump. ``prompt_content_sha`` covers the assembled
+    # prompt + docs (what the agent sees); ``test_suite_sha`` covers the
+    # hidden tests (what scores it). See ``harness/hashing.py``.
+    prompt_content_sha: str = "unknown"
+    test_suite_sha: str = "unknown"
 
 
 @dataclass
@@ -239,6 +245,8 @@ def load_result(path: Path) -> RunResult:
     meta = data["metadata"]
     meta.setdefault("eval_version", "unknown")
     meta.setdefault("harness_version", "unknown")
+    meta.setdefault("prompt_content_sha", "unknown")
+    meta.setdefault("test_suite_sha", "unknown")
     metadata = RunMetadata(**meta)
     token_usage = (
         TokenUsage(

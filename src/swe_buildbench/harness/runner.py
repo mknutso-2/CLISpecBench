@@ -18,6 +18,7 @@ from swe_buildbench.harness.docker import (
     ContainerConfig,
     DockerSandbox,
 )
+from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
 from swe_buildbench.harness.platform import resolve_host_home
 from swe_buildbench.harness.results import (
     BuildResult,
@@ -94,6 +95,16 @@ def run_evaluation(
     run_id = make_run_id(task.task_id, adapter.name, run_number, adapter.model)
     timestamp = datetime.now(UTC).isoformat()
     log.info("Starting run %s", run_id)
+
+    # Compute content hashes up-front so they're logged even if the run dies
+    # later. These are cheap (sha256 over prompt + docs + tests).
+    prompt_hash = hash_prompt_content(task, prompt_variant)
+    test_hash = hash_test_suite(task)
+    log.info(
+        "Content hashes: prompt=%s test_suite=%s",
+        prompt_hash.sha256[:12],
+        test_hash.sha256[:12],
+    )
 
     sandbox = DockerSandbox()
     workspace: Path | None = None
@@ -231,6 +242,8 @@ def run_evaluation(
             exit_reason=exit_reason,
             model=adapter.model,
             effort=adapter.effort,
+            prompt_content_sha=prompt_hash.sha256,
+            test_suite_sha=test_hash.sha256,
         )
 
         # --- 10. Save artifacts ---

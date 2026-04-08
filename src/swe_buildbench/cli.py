@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
 from swe_buildbench.harness.results import RunResult, load_result, next_eval_number
 from swe_buildbench.harness.runner import run_evaluation
 from swe_buildbench.harness.task import list_tasks, resolve_task
@@ -171,6 +172,29 @@ def _cmd_results(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _cmd_hash(args: argparse.Namespace) -> None:
+    """Print content hashes for a task's prompt + test suite.
+
+    Useful for verifying that two runs were actually scored against the same
+    bytes, independent of the manual ``eval_version`` bump. With
+    ``--show-manifest`` the full per-file manifest is dumped so a human can
+    eyeball exactly which files feed the hash.
+    """
+    repo_root = _find_repo_root()
+    task = resolve_task(repo_root, args.task)
+    prompt = hash_prompt_content(task, args.prompt_variant)
+    tests = hash_test_suite(task)
+    print(f"task:               {task.task_id}")
+    print(f"eval_version:       {task.version}")
+    print(f"prompt_content_sha: {prompt.sha256}")
+    print(f"test_suite_sha:     {tests.sha256}")
+    if args.show_manifest:
+        print("\n--- prompt manifest ---")
+        print(prompt.manifest, end="")
+        print("\n--- test-suite manifest ---")
+        print(tests.manifest, end="")
+
+
 def _cmd_validate(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
     try:
@@ -234,6 +258,19 @@ def main(argv: list[str] | None = None) -> None:
     results_parser.add_argument("--format", choices=["table", "json", "csv"], default="table")
     results_parser.add_argument("--compare", action="store_true")
 
+    # --- hash ---
+    hash_parser = subparsers.add_parser(
+        "hash",
+        help="Print content hashes for a task's prompt + test suite",
+    )
+    hash_parser.add_argument("--task", required=True, choices=list_tasks())
+    hash_parser.add_argument("--prompt-variant", default=None)
+    hash_parser.add_argument(
+        "--show-manifest",
+        action="store_true",
+        help="Also print the full per-file manifest that feeds each hash",
+    )
+
     # --- validate ---
     validate_parser = subparsers.add_parser("validate", help="Validate a task definition")
     validate_parser.add_argument("--task", required=True, choices=list_tasks())
@@ -249,6 +286,8 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_run(args)
     elif args.command == "results":
         _cmd_results(args)
+    elif args.command == "hash":
+        _cmd_hash(args)
     elif args.command == "validate":
         _cmd_validate(args)
 
