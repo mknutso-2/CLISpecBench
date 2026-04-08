@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.harness.flakiness import compute_flakiness
 from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
 from swe_buildbench.harness.results import RunResult, load_result, next_eval_number
 from swe_buildbench.harness.runner import run_evaluation
@@ -204,6 +205,102 @@ def _print_breakdown_csv(results: list[tuple[RunResult, Path]]) -> None:
         writer.writerow(row)
 
 
+def _eval_seg_from_path(path: Path) -> str:
+    """Return the ``evalN`` path segment for a result, or ``eval?`` if absent."""
+    for p in path.parents:
+        if p.name.startswith("eval"):
+            return p.name
+    return "eval?"
+
+
+def _print_flakiness(results: list[tuple[RunResult, Path]]) -> None:
+    """Group runs by (task, agent, model, eval) and flag tests whose
+    outcomes aren't unanimous across the runs in each group.
+
+    Only groups with at least 2 runs are analyzed; groups with a single
+    run are listed as "not enough runs" so the user can see at a glance
+    which configurations are missing repeat data.
+    """
+    # Group key: (task, agent, model, eval_segment).
+    groups: dict[tuple[str, str, str, str], list[RunResult]] = {}
+    for r, path in results:
+        key = (
+            r.metadata.task,
+            r.metadata.agent,
+            r.metadata.model or "-",
+            _eval_seg_from_path(path),
+        )
+        groups.setdefault(key, []).append(r)
+
+    if not groups:
+        print("No matching results found.")
+        return
+
+    analyzed = 0
+    total_flaky = 0
+    total_tests = 0
+    for key in sorted(groups):
+        task, agent, model, eval_seg = key
+        runs = sorted(groups[key], key=lambda r: r.metadata.run_number)
+        header = f"{task} / {agent} / {model} / {eval_seg}"
+        if len(runs) < 2:
+            print(f"{header}  (1 run -- not enough for flakiness)")
+            continue
+        analyzed += 1
+        report = compute_flakiness(runs)
+        total_flaky += len(report.flaky)
+        total_tests += report.total_tests
+
+        n_runs = len(runs)
+        print(f"{header}  ({n_runs} runs)")
+        if not report.flaky:
+            print(f"  all {report.total_tests} tests stable")
+            print()
+            continue
+
+        # If every flaky test has the same pattern, it's almost certainly a
+        # structural issue (whole run crashed / container failure / network
+        # blip) rather than independent per-test flakes. Collapse into one
+        # line so 400 identical rows don't bury a real signal elsewhere.
+        unique_patterns = {f.pattern for f in report.flaky}
+        if len(unique_patterns) == 1 and len(report.flaky) >= 3:
+            (pattern,) = unique_patterns
+            note = ""
+            if "E" in pattern:
+                note = "  (likely a crashed run, not per-test flakiness)"
+            print(
+                f"  {len(report.flaky)} tests all flipped identically "
+                f"with pattern {pattern}{note}"
+            )
+            print(
+                f"  ({report.stable_count} stable, {len(report.flaky)} flaky "
+                f"of {report.total_tests} total)"
+            )
+            print()
+            continue
+
+        width = max(len(f.node_id) for f in report.flaky)
+        print(f"  {'pattern':<{n_runs + 2}}  {'test':<{width}}")
+        for f in report.flaky:
+            print(f"  {f.pattern:<{n_runs + 2}}  {f.node_id}")
+        print(
+            f"  ({report.stable_count} stable, {len(report.flaky)} flaky "
+            f"of {report.total_tests} total)"
+        )
+        print()
+
+    if analyzed:
+        print(
+            f"Analyzed {analyzed} group(s) with repeat runs: "
+            f"{total_flaky} flaky test(s) across {total_tests} total."
+        )
+    else:
+        print(
+            "No groups had multiple runs -- flakiness requires at least 2 "
+            "runs of the same (task, agent, model, eval)."
+        )
+
+
 def _print_breakdown(results: list[tuple[RunResult, Path]]) -> None:
     """Per-capability subscore table across the filtered runs.
 
@@ -287,6 +384,10 @@ def _cmd_results(args: argparse.Namespace) -> None:
                 file=sys.stderr,
             )
             sys.exit(2)
+        return
+
+    if args.flakiness:
+        _print_flakiness(results)
         return
 
     # Print table
@@ -497,6 +598,11 @@ def main(argv: list[str] | None = None) -> None:
         "--breakdown",
         action="store_true",
         help="Show per-capability subscore table instead of the default run table",
+    )
+    results_parser.add_argument(
+        "--flakiness",
+        action="store_true",
+        help="Show tests whose outcomes aren't unanimous across repeated runs",
     )
 
     # --- backfill-subscores ---
