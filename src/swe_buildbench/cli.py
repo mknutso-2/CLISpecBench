@@ -278,8 +278,15 @@ def _cmd_results(args: argparse.Namespace) -> None:
     if args.breakdown:
         if args.format == "csv":
             _print_breakdown_csv(results)
-        else:
+        elif args.format == "table":
             _print_breakdown(results)
+        else:
+            print(
+                f"--breakdown does not support --format {args.format} "
+                "(use 'table' or 'csv')",
+                file=sys.stderr,
+            )
+            sys.exit(2)
         return
 
     # Print table
