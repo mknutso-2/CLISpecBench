@@ -11,6 +11,7 @@ from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
 from swe_buildbench.harness.results import RunResult, load_result, next_eval_number
 from swe_buildbench.harness.runner import run_evaluation
+from swe_buildbench.harness.scoring import compute_subscores
 from swe_buildbench.harness.task import list_tasks, resolve_task
 
 
@@ -127,17 +128,36 @@ def _cmd_run(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _print_breakdown(results: list[RunResult]) -> None:
+def _run_label(r: RunResult, path: Path) -> str:
+    """Short, unique label for a run in the breakdown header.
+
+    Includes model (if set) and the eval dir name from the path so that
+    multiple runs of the same agent don't collide into identical columns.
+    Example: ``gemini-cli/gemini-3-flash-preview/eval1r1``.
+    """
+    parts = [r.metadata.agent]
+    if r.metadata.model:
+        parts.append(r.metadata.model)
+    # Find an eval<N> segment in the path, if present.
+    eval_seg = next(
+        (p.name for p in path.parents if p.name.startswith("eval")),
+        None,
+    )
+    tail = f"{eval_seg}r{r.metadata.run_number}" if eval_seg else f"r{r.metadata.run_number}"
+    parts.append(tail)
+    return "/".join(parts)
+
+
+def _print_breakdown(results: list[tuple[RunResult, Path]]) -> None:
     """Per-capability subscore table across the filtered runs.
 
     Reads ``subscore.<bucket>.passed`` / ``subscore.<bucket>.total`` pairs
     out of ``scores.extension_scores`` and pivots them into a
     ``capability x run`` table.
     """
-    # Collect (run_label, {bucket: (passed, total)}) for each result.
     per_run: list[tuple[str, dict[str, tuple[int, int]]]] = []
     all_buckets: set[str] = set()
-    for r in results:
+    for r, path in results:
         buckets: dict[str, tuple[int, int]] = {}
         ext = r.scores.extension_scores
         for key, val in ext.items():
@@ -150,8 +170,7 @@ def _print_breakdown(results: list[RunResult]) -> None:
             buckets[bucket] = (int(val), int(ext[total_key]))
         if not buckets:
             continue
-        label = f"{r.metadata.agent}/run{r.metadata.run_number}"
-        per_run.append((label, buckets))
+        per_run.append((_run_label(r, path), buckets))
         all_buckets.update(buckets)
 
     if not per_run:
@@ -159,24 +178,35 @@ def _print_breakdown(results: list[RunResult]) -> None:
         print("(Subscores are populated for runs produced after the feature was added.)")
         return
 
-    bucket_width = max(len(b) for b in all_buckets)
+    bucket_width = max((len(b) for b in all_buckets), default=0)
     bucket_width = max(bucket_width, len("capability"))
-    col_width = 14
+    # Each column's width = max(label, widest cell, minimum).
+    col_widths: list[int] = []
+    for label, buckets in per_run:
+        widest_cell = 0
+        for b in all_buckets:
+            if b not in buckets:
+                widest_cell = max(widest_cell, 1)
+                continue
+            p, t = buckets[b]
+            pct = (p / t * 100) if t else 0.0
+            widest_cell = max(widest_cell, len(f"{p}/{t} ({pct:.0f}%)"))
+        col_widths.append(max(len(label), widest_cell, 12))
 
     header = f"{'capability':<{bucket_width}}  " + "  ".join(
-        f"{label:<{col_width}}" for label, _ in per_run
+        f"{label:<{w}}" for (label, _), w in zip(per_run, col_widths, strict=True)
     )
     print(header)
     print("-" * len(header))
     for bucket in sorted(all_buckets):
         cells: list[str] = []
-        for _, buckets in per_run:
+        for (_, buckets), w in zip(per_run, col_widths, strict=True):
             if bucket not in buckets:
-                cells.append(f"{'-':<{col_width}}")
+                cells.append(f"{'-':<{w}}")
                 continue
             p, t = buckets[bucket]
             pct = (p / t * 100) if t else 0.0
-            cells.append(f"{f'{p}/{t} ({pct:.0f}%)':<{col_width}}")
+            cells.append(f"{f'{p}/{t} ({pct:.0f}%)':<{w}}")
         print(f"{bucket:<{bucket_width}}  " + "  ".join(cells))
 
 
@@ -187,7 +217,7 @@ def _cmd_results(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     # Collect all result files matching filters
-    results: list[RunResult] = []
+    results: list[tuple[RunResult, Path]] = []
     for json_file in sorted(output_dir.rglob("result.json")):
         try:
             r = load_result(json_file)
@@ -198,7 +228,7 @@ def _cmd_results(args: argparse.Namespace) -> None:
             continue
         if args.agent and r.metadata.agent != args.agent:
             continue
-        results.append(r)
+        results.append((r, json_file))
 
     if not results:
         print("No matching results found.")
@@ -214,7 +244,7 @@ def _cmd_results(args: argparse.Namespace) -> None:
         f"{'Score':<8} {'Tokens':<10} {'Exit':<10}"
     )
     print("-" * 90)
-    for r in results:
+    for r, _ in results:
         tokens = f"{r.token_usage.total_tokens:,}" if r.token_usage else "n/a"
         score = f"{r.scores.task_score:.3f}" if r.scores.task_score is not None else "n/a"
         print(
@@ -227,6 +257,104 @@ def _cmd_results(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 # Subcommand: validate
 # ---------------------------------------------------------------------------
+
+
+def _cmd_backfill_subscores(args: argparse.Namespace) -> None:
+    """Backfill per-capability subscores into existing result.json files.
+
+    Walks ``--output-dir`` for every ``result.json``, re-runs
+    :func:`compute_subscores` on the stored ``tests`` list, and merges the
+    resulting ``subscore.*`` keys into ``scores.extension_scores``. This is
+    a pure function of data already in the file, so a fresh run would
+    produce byte-identical subscore values.
+
+    Idempotent: files that already have ``subscore.*`` keys are skipped
+    unless ``--force`` is passed. Prints one line per file so the user can
+    audit what changed; ``--dry-run`` prints without writing.
+    """
+    import json
+
+    output_dir = Path(args.output_dir)
+    if not output_dir.is_dir():
+        print(f"No results directory found at {output_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    files = sorted(output_dir.rglob("result.json"))
+    if not files:
+        print(f"No result.json files under {output_dir}")
+        return
+
+    n_updated = 0
+    n_skipped_existing = 0
+    n_skipped_notests = 0
+    n_errors = 0
+
+    for f in files:
+        rel = f.relative_to(output_dir)
+        try:
+            data = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as exc:
+            print(f"  error  {rel}: could not parse ({exc})")
+            n_errors += 1
+            continue
+
+        raw_scores = data.get("scores")
+        scores_obj: dict[str, object] = {}
+        if isinstance(raw_scores, dict):
+            for k, v in raw_scores.items():  # pyright: ignore[reportUnknownVariableType]
+                if isinstance(k, str):
+                    scores_obj[k] = v
+        raw_ext = scores_obj.get("extension_scores")
+        ext: dict[str, float] = {}
+        if isinstance(raw_ext, dict):
+            for k, v in raw_ext.items():  # pyright: ignore[reportUnknownVariableType]
+                if isinstance(k, str) and isinstance(v, (int, float)):
+                    ext[k] = float(v)
+        has_subscores = any(k.startswith("subscore.") for k in ext)
+        if has_subscores and not args.force:
+            print(f"  skip   {rel}  (already has subscores)")
+            n_skipped_existing += 1
+            continue
+
+        # Rebuild TestOutcome list from the stored JSON directly rather than
+        # going through load_result → to_dict, which is lossier than just
+        # mutating the dict we already have.
+        try:
+            result = load_result(f)
+        except Exception as exc:
+            print(f"  error  {rel}: load_result failed ({exc})")
+            n_errors += 1
+            continue
+
+        if not result.tests:
+            print(f"  skip   {rel}  (no tests recorded)")
+            n_skipped_notests += 1
+            continue
+
+        subscores = compute_subscores(result.tests)
+        if not subscores:
+            print(f"  skip   {rel}  (no classifiable test buckets)")
+            n_skipped_notests += 1
+            continue
+
+        # Merge into the raw dict and write back — preserves any fields we
+        # don't know about (forward-compat with future schema additions).
+        ext.update(subscores)
+        scores_obj["extension_scores"] = ext
+        data["scores"] = scores_obj
+
+        n_buckets = sum(1 for k in subscores if k.endswith(".passed"))
+        if args.dry_run:
+            print(f"  DRY    {rel}  (+{n_buckets} buckets)")
+        else:
+            f.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+            print(f"  ok     {rel}  (+{n_buckets} buckets)")
+        n_updated += 1
+
+    print()
+    verb = "would update" if args.dry_run else "updated"
+    print(f"{verb}: {n_updated}   skipped-existing: {n_skipped_existing}   "
+          f"skipped-empty: {n_skipped_notests}   errors: {n_errors}")
 
 
 def _cmd_hash(args: argparse.Namespace) -> None:
@@ -320,6 +448,23 @@ def main(argv: list[str] | None = None) -> None:
         help="Show per-capability subscore table instead of the default run table",
     )
 
+    # --- backfill-subscores ---
+    bf_parser = subparsers.add_parser(
+        "backfill-subscores",
+        help="Recompute per-capability subscores for existing result.json files",
+    )
+    bf_parser.add_argument("--output-dir", default="results")
+    bf_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print what would change without writing files",
+    )
+    bf_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Recompute subscores even if the file already has them",
+    )
+
     # --- hash ---
     hash_parser = subparsers.add_parser(
         "hash",
@@ -348,6 +493,8 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_run(args)
     elif args.command == "results":
         _cmd_results(args)
+    elif args.command == "backfill-subscores":
+        _cmd_backfill_subscores(args)
     elif args.command == "hash":
         _cmd_hash(args)
     elif args.command == "validate":
