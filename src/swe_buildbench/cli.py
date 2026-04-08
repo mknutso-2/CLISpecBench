@@ -148,13 +148,10 @@ def _run_label(r: RunResult, path: Path) -> str:
     return "/".join(parts)
 
 
-def _print_breakdown(results: list[tuple[RunResult, Path]]) -> None:
-    """Per-capability subscore table across the filtered runs.
-
-    Reads ``subscore.<bucket>.passed`` / ``subscore.<bucket>.total`` pairs
-    out of ``scores.extension_scores`` and pivots them into a
-    ``capability x run`` table.
-    """
+def _collect_breakdown(
+    results: list[tuple[RunResult, Path]],
+) -> tuple[list[tuple[str, dict[str, tuple[int, int]]]], list[str]]:
+    """Extract per-run subscores + the sorted bucket list from filtered results."""
     per_run: list[tuple[str, dict[str, tuple[int, int]]]] = []
     all_buckets: set[str] = set()
     for r, path in results:
@@ -172,6 +169,50 @@ def _print_breakdown(results: list[tuple[RunResult, Path]]) -> None:
             continue
         per_run.append((_run_label(r, path), buckets))
         all_buckets.update(buckets)
+    return per_run, sorted(all_buckets)
+
+
+def _print_breakdown_csv(results: list[tuple[RunResult, Path]]) -> None:
+    """Emit the breakdown as CSV: one row per capability, two columns per run
+    (``<label> passed`` + ``<label> total``). Numeric so it sorts/filters/
+    color-scales cleanly in Excel and Google Sheets. Callers add ``=B2/C2``
+    for percentages if they want them."""
+    import csv
+
+    per_run, buckets = _collect_breakdown(results)
+    if not per_run:
+        print("No subscore data found in matching results.", file=sys.stderr)
+        return
+
+    writer = csv.writer(sys.stdout, lineterminator="\n")
+    header: list[str] = ["capability"]
+    for label, _ in per_run:
+        header.append(f"{label} passed")
+        header.append(f"{label} total")
+    writer.writerow(header)
+
+    for bucket in buckets:
+        row: list[str] = [bucket]
+        for _, run_buckets in per_run:
+            if bucket in run_buckets:
+                p, t = run_buckets[bucket]
+                row.append(str(p))
+                row.append(str(t))
+            else:
+                row.append("")
+                row.append("")
+        writer.writerow(row)
+
+
+def _print_breakdown(results: list[tuple[RunResult, Path]]) -> None:
+    """Per-capability subscore table across the filtered runs.
+
+    Reads ``subscore.<bucket>.passed`` / ``subscore.<bucket>.total`` pairs
+    out of ``scores.extension_scores`` and pivots them into a
+    ``capability x run`` table.
+    """
+    per_run, sorted_buckets = _collect_breakdown(results)
+    all_buckets = set(sorted_buckets)
 
     if not per_run:
         print("No subscore data found in matching results.")
@@ -198,7 +239,7 @@ def _print_breakdown(results: list[tuple[RunResult, Path]]) -> None:
     )
     print(header)
     print("-" * len(header))
-    for bucket in sorted(all_buckets):
+    for bucket in sorted_buckets:
         cells: list[str] = []
         for (_, buckets), w in zip(per_run, col_widths, strict=True):
             if bucket not in buckets:
@@ -235,7 +276,10 @@ def _cmd_results(args: argparse.Namespace) -> None:
         return
 
     if args.breakdown:
-        _print_breakdown(results)
+        if args.format == "csv":
+            _print_breakdown_csv(results)
+        else:
+            _print_breakdown(results)
         return
 
     # Print table
