@@ -51,24 +51,6 @@ Single test: `pytest path/to/test_file.py::test_name`. Pytest markers `docker` a
 - **Pyright is strict** for `src` and the eval test dirs. After editing Python, run Ruff *and* Pyright explicitly — VS Code save actions don't fire on agent edits.
 - **Keep `__init__.py` minimal.** Don't re-export from package roots unless it's an intentional public API; import from the defining module.
 - **Bump per-eval `VERSION` + `CHANGELOG.md` on any contract-affecting change.** Each `Evals/<Task>/` has a `VERSION` file (semver) and a `CHANGELOG.md`. Bump both whenever you change anything an agent or scoring run can observe (prompts, docs, tests, harness contract, reference impls reflecting a spec change). See README.md → "Versioning" for patch/minor/major guidance and the full rule.
-- **Cross-validation is required.** Use `/codex:adversarial-review` to invoke Codex as an adversarial reviewer.
-
-Workflow:
-
-1. Before calling the review, prepare the review target (working-tree changes, a commit hash, or specific files).
-2. Invoke `/codex:adversarial-review` with a focus prompt that includes:
-   - what code to inspect (e.g. "Review the working-tree changes" or "Review commit abc1234")
-   - which docs define correctness (e.g. AGENTS.md, CNCSim-Design.md, base-prompt.md, RS274NGC.md)
-   - the instruction to be skeptical and surface concrete findings with file references
-3. Codex's review output is returned verbatim into the Claude Code conversation, so the user can see the full exchange.
-4. Evaluate Codex's findings. For each finding, either accept it and fix the issue, or prepare a counterargument grounded in the spec/code.
-5. If findings remain disputed after one follow-up round, create `ARGUMENT.md` as described above.
-
-Example invocation:
-```
-/codex:adversarial-review Review the working-tree changes. Check alignment with AGENTS.md, Evals/CNCSim/CNCSim-Design.md, Evals/CNCSim/prompt/base-prompt.md, Evals/CNCSim/prompt/technical-requirements-prompt.md, and the RS274 docs. Be skeptical. Focus on concrete findings with file references, not style.
-```
-
 ## Key docs
 
 - `Eval-Design.md` — benchmark-level design
