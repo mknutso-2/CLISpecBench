@@ -1,5 +1,35 @@
 # CNCSim Changelog
 
+## v2.0.0 — 2026-04-09
+
+Added motion trace: a time-ordered record of inter-line machine state
+evolution during program execution, enabling GUI replay and per-line scoring.
+
+### Added
+
+- **`--trace-output <path>`** CLI flag writing a JSON trace file alongside the
+  existing `--output` end-of-program snapshot. Requires exactly one stepping
+  mode flag: `--trace-time-step`, `--trace-distance-step`, or
+  `--trace-position-tolerance`.
+- **Trace file schema**: `initial_state` header (full end-snapshot shape) plus
+  `entries` array of sparse deltas, each with `line_number`, per-line `time`,
+  and any state fields that changed since the prior entry. `motion_kind`
+  labels canned-cycle sub-motions; `nonmodal_g_codes` labels blocks executing
+  RS274 group-0 codes (G4/G10/G28/G30/G53/G92/G92.1/G92.2/G92.3).
+- **Baked time constants**: rapid feed rate 1000 in/min, state-only block
+  duration 0.0001 s. Not configurable (rationale in README).
+- **Two-axis trace test parameterization**: every trace test runs under both
+  `--trace-time-step` and `--trace-distance-step`, decoupling timing bugs from
+  geometry bugs for localized failure signal.
+- **`@pytest.mark.trace`** marker partitioning the test suite. `pytest -m
+  "not trace"` reproduces the 1.x-era scoring profile.
+
+### Preserved
+
+- The `--output` end-of-program snapshot contract from 1.x is unchanged. A
+  submission that implements only the end-snapshot still passes every 1.x
+  test. The git tag `cncsim-pre-trace` marks the last 1.x baseline commit.
+
 ## v1.0.1 — 2026-04-03
 
 Test review after first round of multi-model evaluation (Opus 4.6, GPT-5.4,
