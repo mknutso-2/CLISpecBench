@@ -233,3 +233,138 @@ def with_default_rotary_axes(values: Mapping[str, float]) -> dict[str, float]:
         "b": float(values.get("b", 0.0)),
         "c": float(values.get("c", 0.0)),
     }
+
+
+def _build_cncsim_trace_command(
+    submission_command: Sequence[str],
+    *,
+    block_delete: bool,
+    carousel_slots: int | None,
+    input_gcode: str,
+    parameter_input_content: str | None,
+    probe_box: ProbeBox | None,
+    probe_tool: int | None,
+    tool_table_content: str | None,
+    trace_time_step: float | None,
+    trace_distance_step: float | None,
+    trace_position_tolerance: float | None,
+    tmp_path: Path,
+) -> tuple[list[str], Path, Path, Path | None]:
+    """Build a command that includes --trace-output.
+
+    Returns (command, output_path, trace_path, parameter_output_path).
+    """
+    input_path = tmp_path / "program.nc"
+    output_path = tmp_path / "result.json"
+    trace_path = tmp_path / "trace.json"
+    input_path.write_text(input_gcode, encoding="utf-8")
+
+    command = [
+        *submission_command,
+        "--input", str(input_path),
+        "--output", str(output_path),
+        "--trace-output", str(trace_path),
+    ]
+
+    if trace_time_step is not None:
+        command.extend(["--trace-time-step", str(trace_time_step)])
+    if trace_distance_step is not None:
+        command.extend(["--trace-distance-step", str(trace_distance_step)])
+    if trace_position_tolerance is not None:
+        command.extend(["--trace-position-tolerance", str(trace_position_tolerance)])
+
+    if block_delete:
+        command.append("--block-delete")
+    if carousel_slots is not None:
+        command.extend(["--carousel-slots", str(carousel_slots)])
+    if parameter_input_content is not None:
+        parameter_input_path = tmp_path / "parameters-in.var"
+        parameter_input_path.write_text(parameter_input_content, encoding="utf-8")
+        command.extend(["--parameter-input", str(parameter_input_path)])
+    if probe_box is not None:
+        command.append("--probe-box")
+        command.extend(str(value) for value in probe_box)
+    if probe_tool is not None:
+        command.extend(["--probe-tool", str(probe_tool)])
+    if tool_table_content is not None:
+        tool_table_path = tmp_path / "tool.tbl"
+        tool_table_path.write_text(tool_table_content, encoding="utf-8")
+        command.extend(["--tool-table", str(tool_table_path)])
+
+    return command, output_path, trace_path, None
+
+
+def run_cncsim_trace(
+    submission_command: Sequence[str],
+    *,
+    block_delete: bool = False,
+    carousel_slots: int | None = None,
+    input_gcode: str,
+    parameter_input_content: str | None = None,
+    probe_box: ProbeBox | None = None,
+    probe_tool: int | None = None,
+    tool_table_content: str | None = None,
+    trace_time_step: float | None = None,
+    trace_distance_step: float | None = None,
+    trace_position_tolerance: float | None = None,
+    tmp_path: Path,
+) -> tuple[subprocess.CompletedProcess[str], dict[str, Any], dict[str, Any]]:
+    """Run cncsim with --trace-output and return (process, output_payload, trace_payload)."""
+    command, output_path, trace_path, _ = _build_cncsim_trace_command(
+        submission_command,
+        block_delete=block_delete,
+        carousel_slots=carousel_slots,
+        input_gcode=input_gcode,
+        parameter_input_content=parameter_input_content,
+        probe_box=probe_box,
+        probe_tool=probe_tool,
+        tool_table_content=tool_table_content,
+        trace_time_step=trace_time_step,
+        trace_distance_step=trace_distance_step,
+        trace_position_tolerance=trace_position_tolerance,
+        tmp_path=tmp_path,
+    )
+
+    completed = subprocess.run(
+        command,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
+    )
+
+    assert output_path.is_file(), f"--output not written. stderr: {completed.stderr}"
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+
+    assert trace_path.is_file(), f"--trace-output not written. stderr: {completed.stderr}"
+    trace = json.loads(trace_path.read_text(encoding="utf-8"))
+
+    return completed, payload, trace
+
+
+def reconstruct_state(trace: dict[str, Any], entry_index: int) -> dict[str, Any]:
+    """Fold initial_state + deltas[0..entry_index] to get full state at that entry.
+
+    Returns a dict with the same shape as the --output payload (minus "error").
+    Useful for verifying that delta encoding correctly represents machine state.
+    """
+    state: dict[str, Any] = json.loads(json.dumps(trace["initial_state"]))
+    for i in range(entry_index + 1):
+        entry = trace["entries"][i]
+        for key, value in entry.items():
+            if key in ("line_number", "time", "motion_kind", "nonmodal_g_codes"):
+                continue  # Trace-specific fields, not part of state.
+            if key in ("machine_position", "coordinate_system_offsets",
+                       "active_modal_g_codes", "active_modal_m_codes", "parameters"):
+                if key not in state:
+                    state[key] = {}
+                if key == "coordinate_system_offsets":
+                    for cs_key, cs_val in value.items():
+                        if cs_key not in state[key]:
+                            state[key][cs_key] = {}
+                        state[key][cs_key].update(cs_val)
+                else:
+                    state[key].update(value)
+            else:
+                state[key] = value
+    return state

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from swe_buildbench.pytest_plugin import (
     EvalConfig,
     build_timeout_seconds,
@@ -22,6 +24,10 @@ __all__ = [
     "repo_root",
     "submission_command",
 ]
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.addinivalue_line("markers", "trace: tests for the v2.0.0 motion trace feature")
 
 EVAL_CONFIG = EvalConfig(
     task_name="cncsim",

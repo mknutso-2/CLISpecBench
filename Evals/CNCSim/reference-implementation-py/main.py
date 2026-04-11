@@ -15,6 +15,7 @@ import argparse
 import json
 import math
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from decimal import Decimal
 
@@ -107,6 +108,21 @@ CS_GCODE_TO_NUMBER = {
     "G59.1": 7, "G59.2": 8, "G59.3": 9,
 }
 CS_NUMBER_TO_GCODE = {v: k for k, v in CS_GCODE_TO_NUMBER.items()}
+
+# Baked trace constants (not CLI-configurable — see README rationale).
+RAPID_RATE_IPM = 1000.0  # inches per minute
+STATE_ONLY_EPSILON = 0.0001  # seconds for state-only block entries
+
+# Non-modal G-codes that are state-only (produce no sub-motion themselves).
+NONMODAL_STATE_ONLY = {"G10", "G92", "G92.1", "G92.2", "G92.3"}
+
+# The four nullable scalar fields that may appear as explicit null in deltas.
+NULLABLE_SCALAR_FIELDS = frozenset({
+    "cutter_radius_compensation_number",
+    "tool_length_offset_index",
+    "selected_tool",
+    "tool_in_spindle",
+})
 
 
 # ---------------------------------------------------------------------------
@@ -568,6 +584,433 @@ class LineParser:
 
 
 # ---------------------------------------------------------------------------
+# Trace helpers — path length, duration, stepping, delta encoding
+# ---------------------------------------------------------------------------
+
+
+def _linear_path_length_inches(
+    start: "Position", end: "Position",
+) -> float:
+    """Euclidean distance across all 6 axes (linear in inches, rotary in degrees)."""
+    return math.sqrt(sum((end.get(a) - start.get(a)) ** 2 for a in AXIS_LETTERS))
+
+
+def _arc_sweep_and_length(
+    s1: float, s2: float, e1: float, e2: float,
+    c1: float, c2: float, direction: str,
+) -> tuple[float, float]:
+    """Compute arc sweep angle (radians) and in-plane arc length.
+
+    Works in whatever units the coordinates are in (should be inches internally).
+    ``direction`` is "G2" (CW) or "G3" (CCW).
+    Returns (sweep_radians, arc_length).
+    """
+    r = math.hypot(s1 - c1, s2 - c2)
+    if r < 1e-15:
+        return (0.0, 0.0)
+    start_angle = math.atan2(s2 - c2, s1 - c1)
+    end_angle = math.atan2(e2 - c2, e1 - c1)
+    sweep = end_angle - start_angle
+    if direction == "G2":  # CW: sweep must be negative
+        if sweep >= 0:
+            sweep -= 2.0 * math.pi
+    else:  # G3 CCW: sweep must be positive
+        if sweep <= 0:
+            sweep += 2.0 * math.pi
+    # Full circle: if start == end in center format, sweep is +/- 2*pi.
+    if abs(s1 - e1) < 1e-12 and abs(s2 - e2) < 1e-12:
+        sweep = -2.0 * math.pi if direction == "G2" else 2.0 * math.pi
+    arc_len = abs(sweep) * r
+    return (sweep, arc_len)
+
+
+def _arc_path_length_inches(
+    s1: float, s2: float, e1: float, e2: float,
+    c1: float, c2: float, direction: str,
+    axial_distance: float,
+) -> float:
+    """True arc length including axial (helical) component."""
+    _, in_plane = _arc_sweep_and_length(s1, s2, e1, e2, c1, c2, direction)
+    return math.sqrt(in_plane ** 2 + axial_distance ** 2)
+
+
+def _rapid_duration(path_length_inches: float) -> float:
+    return path_length_inches / (RAPID_RATE_IPM / 60.0)
+
+
+def _feed_duration(
+    path_length_inches: float,
+    feed_rate: float,
+    feed_mode: str,
+    units: str,
+) -> float:
+    """Compute feed-motion duration in seconds."""
+    if feed_mode == "G93":
+        # Inverse time: total duration is 1/F seconds.
+        return 1.0 / feed_rate if feed_rate > 0 else 0.0
+    # G94: units per minute. Convert feed rate to inches/min.
+    rate_ipm = feed_rate if units == "G20" else feed_rate / 25.4
+    if rate_ipm <= 0:
+        return 0.0
+    return path_length_inches / (rate_ipm / 60.0)
+
+
+def _interpolate_position(
+    start: "Position", end: "Position", frac: float,
+) -> "Position":
+    """Linearly interpolate between two positions at fraction frac in [0,1]."""
+    return Position(
+        **{a: start.get(a) + frac * (end.get(a) - start.get(a)) for a in AXIS_LETTERS}
+    )
+
+
+def _interpolate_arc_position(
+    start_ax1: float, start_ax2: float,
+    center_ax1: float, center_ax2: float,
+    sweep: float, radius: float,
+    axial_start: float, axial_end: float,
+    frac: float,
+    ax1_name: str, ax2_name: str, perp_name: str,
+    start_pos: "Position",
+    end_pos: "Position",
+) -> "Position":
+    """Interpolate a position along an arc at the given fraction of sweep."""
+    start_angle = math.atan2(start_ax2 - center_ax2, start_ax1 - center_ax1)
+    angle = start_angle + sweep * frac
+    # Linearly interpolate all axes, then overwrite the three plane axes
+    # with the true arc geometry. This ensures non-plane axes (e.g. rotary
+    # axes commanded on the same line) are interpolated correctly.
+    p = _interpolate_position(start_pos, end_pos, frac)
+    p.set(ax1_name, center_ax1 + radius * math.cos(angle))
+    p.set(ax2_name, center_ax2 + radius * math.sin(angle))
+    p.set(perp_name, axial_start + frac * (axial_end - axial_start))
+    return p
+
+
+def _step_sub_motion(
+    duration: float,
+    path_length: float,
+    stepping_mode: str,
+    step_value: float,
+) -> list[float]:
+    """Return list of sub-motion-local fractional sample points (0 < frac <= 1).
+
+    Always includes 1.0 (the final entry). Interior samples are at fractions
+    corresponding to the stepping mode. No sample at fraction 0.
+    """
+    if duration <= 0 or path_length <= 0:
+        return []  # Zero-duration sub-motion produces no entries.
+    fracs: list[float] = []
+    if stepping_mode == "time":
+        dt = step_value
+        t = dt
+        while t < duration - 1e-12:
+            fracs.append(t / duration)
+            t += dt
+    elif stepping_mode == "distance":
+        ds = step_value
+        d = ds
+        while d < path_length - 1e-12:
+            fracs.append(d / path_length)
+            d += ds
+    elif stepping_mode == "tolerance":
+        # For linear motion, no interior samples needed (linear interp is exact).
+        # For arcs, we compute based on chord deviation.
+        # The caller handles arc-specific tolerance stepping; for linear, this
+        # is a no-op (only the final entry).
+        pass
+    # Always add the final entry at fraction 1.0.
+    fracs.append(1.0)
+    return fracs
+
+
+def _step_arc_tolerance(
+    radius: float, sweep: float, eps: float,
+) -> list[float]:
+    """Compute fractional sample points for an arc under position-tolerance mode.
+
+    Returns fractions (0 < frac <= 1) such that chord deviation between
+    consecutive samples is at most eps inches.
+    """
+    if radius < 1e-15 or abs(sweep) < 1e-15:
+        return [1.0]
+    # Max chord deviation for angle step dtheta: r*(1 - cos(dtheta/2)).
+    # Solve for dtheta: dtheta = 2*acos(1 - eps/r).
+    ratio = eps / radius
+    if ratio >= 1.0:
+        return [1.0]
+    dtheta = 2.0 * math.acos(1.0 - ratio)
+    total_angle = abs(sweep)
+    fracs: list[float] = []
+    a = dtheta
+    while a < total_angle - 1e-12:
+        fracs.append(a / total_angle)
+        a += dtheta
+    fracs.append(1.0)
+    return fracs
+
+
+def _compute_delta(prev: dict, cur: dict) -> dict:
+    """Compute a sparse delta between two full state snapshots.
+
+    Only includes fields that changed. Handles nested dicts for
+    machine_position, coordinate_system_offsets, active_modal_g_codes,
+    active_modal_m_codes, and parameters.
+    """
+    delta: dict = {}
+    nested_fields = {
+        "machine_position", "coordinate_system_offsets",
+        "active_modal_g_codes", "active_modal_m_codes", "parameters",
+    }
+    for key in cur:
+        if key == "error":
+            continue
+        pv = prev.get(key)
+        cv = cur[key]
+        if key in nested_fields:
+            if key == "coordinate_system_offsets":
+                # Two-level: system -> axis -> value
+                cs_delta: dict = {}
+                for sys_key, sys_val in cv.items():
+                    prev_sys = pv.get(sys_key, {}) if isinstance(pv, dict) else {}
+                    ax_delta = {a: v for a, v in sys_val.items() if prev_sys.get(a) != v}
+                    if ax_delta:
+                        cs_delta[sys_key] = ax_delta
+                if cs_delta:
+                    delta[key] = cs_delta
+            else:
+                # One-level dict: key -> value
+                d = {k: v for k, v in cv.items() if pv is None or pv.get(k) != v}
+                if d:
+                    delta[key] = d
+        elif key in NULLABLE_SCALAR_FIELDS:
+            if cv != pv:
+                delta[key] = cv  # May be None — that's intentional.
+        else:
+            if cv != pv:
+                if cv is not None:
+                    delta[key] = cv
+    return delta
+
+
+class TraceRecorder:
+    """Records motion trace entries during interpreter execution."""
+
+    def __init__(
+        self, stepping_mode: str, step_value: float,
+        pos_converter: "Callable[[Position], dict[str, float]] | None" = None,
+    ) -> None:
+        self.stepping_mode = stepping_mode
+        self.step_value = step_value
+        self.pos_converter = pos_converter
+        self.initial_state: dict = {}
+        self.entries: list[dict] = []
+        self.prev_full_state: dict = {}
+        self.error_line_number: int | None = None
+        self.error_block_segment_index: int | None = None
+        # Per-line tracking
+        self._line_number: int = 0
+        self._line_cum_time: float = 0.0
+        self._line_has_entries: bool = False
+        self._line_pending_deltas: dict = {}  # State deltas to attach to first entry
+        self._line_nonmodal: list[str] | None = None  # nonmodal_g_codes for the line
+        self._line_motion_attempted: bool = False  # True if any SM was attempted this line
+
+    def capture_initial_state(self, payload: dict) -> None:
+        """Snapshot full state before first block executes."""
+        self.initial_state = _deep_copy_payload(payload)
+        self.initial_state.pop("error", None)  # Spec: initial_state omits "error".
+        self.prev_full_state = _deep_copy_payload(payload)
+        self.prev_full_state.pop("error", None)
+
+    def begin_line(self, line_number: int) -> None:
+        """Start tracking a new source line."""
+        self._line_number = line_number
+        self._line_cum_time = 0.0
+        self._line_has_entries = False
+        self._line_pending_deltas = {}
+        self._line_nonmodal = None
+        self._line_motion_attempted = False
+
+    def set_line_nonmodal(self, codes: list[str]) -> None:
+        """Set the nonmodal_g_codes for the current line (alphabetically sorted)."""
+        self._line_nonmodal = sorted(codes) if codes else None
+
+    def set_pending_deltas(self, state_snapshot: dict) -> None:
+        """Set state deltas that should ride the line's first emitted entry."""
+        self._line_pending_deltas = _compute_delta(self.prev_full_state, state_snapshot)
+
+    def emit_sub_motion(
+        self,
+        start_pos: "Position",
+        end_pos: "Position",
+        duration: float,
+        path_length: float,
+        is_canned_cycle: bool,
+        motion_kind: str | None,  # "rapid" or "feed", only for canned cycles
+        current_state: dict,
+        arc_params: dict | None = None,  # For arc stepping
+    ) -> None:
+        """Emit trace entries for a single sub-motion with stepping applied."""
+        self._line_motion_attempted = True
+        if duration <= 0 and path_length <= 0:
+            return  # Zero-duration sub-motion: no entries.
+
+        # Compute fractional sample points.
+        if arc_params and self.stepping_mode == "tolerance":
+            fracs = _step_arc_tolerance(
+                arc_params["radius"], arc_params["sweep"], self.step_value,
+            )
+        elif arc_params and self.stepping_mode == "distance":
+            fracs = _step_sub_motion(duration, path_length, "distance", self.step_value)
+        else:
+            fracs = _step_sub_motion(duration, path_length, self.stepping_mode, self.step_value)
+
+        for i, frac in enumerate(fracs):
+            is_first_entry_of_sm = (i == 0)
+            is_first_entry_of_line = not self._line_has_entries
+
+            # Compute interpolated position.
+            if arc_params:
+                pos = _interpolate_arc_position(
+                    arc_params["start_ax1"], arc_params["start_ax2"],
+                    arc_params["center_ax1"], arc_params["center_ax2"],
+                    arc_params["sweep"], arc_params["radius"],
+                    arc_params["axial_start"], arc_params["axial_end"],
+                    frac,
+                    arc_params["ax1_name"], arc_params["ax2_name"],
+                    arc_params["perp_name"],
+                    start_pos, end_pos,
+                )
+            else:
+                pos = _interpolate_position(start_pos, end_pos, frac)
+
+            # Compute cumulative time for this entry.
+            sample_time = self._line_cum_time + frac * duration
+
+            # Build the full state at this sample point.
+            full_state = _deep_copy_payload(current_state)
+            if self.pos_converter:
+                full_state["machine_position"] = self.pos_converter(pos)
+            else:
+                full_state["machine_position"] = pos.to_dict()
+
+            # Compute delta from previous full state.
+            delta = _compute_delta(self.prev_full_state, full_state)
+
+            # If this is the line's first emitted entry, merge pending deltas.
+            if is_first_entry_of_line and self._line_pending_deltas:
+                delta = _merge_deltas(self._line_pending_deltas, delta)
+                self._line_pending_deltas = {}
+
+            # Add trace-specific fields.
+            entry: dict = {"line_number": self._line_number, "time": sample_time}
+            if is_canned_cycle and is_first_entry_of_sm and motion_kind:
+                entry["motion_kind"] = motion_kind
+            if is_first_entry_of_line and self._line_nonmodal:
+                entry["nonmodal_g_codes"] = self._line_nonmodal
+                # For sub-motion-producing nonmodals (G28/G30/G53), the label
+                # goes on the first emitted entry of each sub-motion.
+            elif is_first_entry_of_sm and not is_first_entry_of_line and self._line_nonmodal:
+                # G28/G30 second sub-motion gets the label too.
+                if any(c in ("G28", "G30") for c in (self._line_nonmodal or [])):
+                    entry["nonmodal_g_codes"] = self._line_nonmodal
+
+            # Merge delta fields into the entry.
+            entry.update(delta)
+            self.entries.append(entry)
+            self.prev_full_state = full_state
+            self._line_has_entries = True
+
+        self._line_cum_time += duration
+
+    def emit_state_only(self, current_state: dict) -> None:
+        """Emit a single entry at time=0.0001 for a state-only block."""
+        full_state = _deep_copy_payload(current_state)
+        delta = _compute_delta(self.prev_full_state, full_state)
+        if not delta and not self._line_nonmodal:
+            return  # No observable change.
+        entry: dict = {"line_number": self._line_number, "time": STATE_ONLY_EPSILON}
+        if self._line_nonmodal:
+            entry["nonmodal_g_codes"] = self._line_nonmodal
+        entry.update(delta)
+        self.entries.append(entry)
+        self.prev_full_state = full_state
+        self._line_has_entries = True
+
+    def emit_dwell(self, p_seconds: float, current_state: dict) -> None:
+        """Emit a single entry at time=P for a G4 dwell."""
+        if p_seconds <= 0:
+            # G4 P0 is a no-change block per spec; suppress the G4 label.
+            # Only strip "G4" — preserve any other nonmodals on the same line
+            # (e.g. G10) so they can ride the end-of-line fallback entry.
+            if self._line_nonmodal:
+                self._line_nonmodal = [c for c in self._line_nonmodal if c != "G4"]
+                if not self._line_nonmodal:
+                    self._line_nonmodal = None
+            return
+        full_state = _deep_copy_payload(current_state)
+        delta = _compute_delta(self.prev_full_state, full_state)
+        # Merge pending deltas (modal changes before the dwell on this line).
+        if self._line_pending_deltas:
+            delta = _merge_deltas(self._line_pending_deltas, delta)
+            self._line_pending_deltas = {}
+        entry: dict = {
+            "line_number": self._line_number,
+            "time": self._line_cum_time + p_seconds,
+        }
+        if self._line_nonmodal:
+            entry["nonmodal_g_codes"] = self._line_nonmodal
+        entry.update(delta)
+        self.entries.append(entry)
+        self.prev_full_state = full_state
+        self._line_has_entries = True
+        self._line_cum_time += p_seconds
+
+    def set_error(self, line_number: int, segment_index: int | None) -> None:
+        self.error_line_number = line_number
+        self.error_block_segment_index = segment_index
+
+    def build_trace(self) -> dict:
+        return {
+            "initial_state": self.initial_state,
+            "entries": self.entries,
+            "error_line_number": self.error_line_number,
+            "error_block_segment_index": self.error_block_segment_index,
+        }
+
+
+def _deep_copy_payload(p: dict) -> dict:
+    """Deep copy a payload dict (JSON-safe structures only)."""
+    return json.loads(json.dumps(p))
+
+
+def _merge_deltas(pending: dict, new: dict) -> dict:
+    """Merge pending state deltas into new delta, with new taking precedence for
+    position fields (which are the 'real' sample) and pending providing the
+    modal/parameter/tool changes."""
+    merged = dict(pending)
+    for k, v in new.items():
+        if k in ("machine_position", "coordinate_system_offsets",
+                 "active_modal_g_codes", "active_modal_m_codes", "parameters"):
+            # Merge nested dicts.
+            if k in merged and isinstance(merged[k], dict) and isinstance(v, dict):
+                if k == "coordinate_system_offsets":
+                    for sk, sv in v.items():
+                        if sk in merged[k]:
+                            merged[k][sk].update(sv)
+                        else:
+                            merged[k][sk] = sv
+                else:
+                    merged[k].update(v)
+            else:
+                merged[k] = v
+        else:
+            merged[k] = v
+    return merged
+
+
+# ---------------------------------------------------------------------------
 # Machine state
 # ---------------------------------------------------------------------------
 
@@ -766,6 +1209,8 @@ class Interpreter:
         self.state.return_mode = "G98"
         self.state.path_mode = "G61"
         self.state.motion_mode = "G1"
+        self.trace: TraceRecorder | None = None
+        self._current_line_number: int = 0
         self.state.active_m_codes = {
             "4": "M2",  # not really; will get updated as program runs
             "7": "M5",
@@ -800,10 +1245,12 @@ class Interpreter:
             result.set(axis, abs_in.get(axis) - cs.get(axis) - g92.get(axis))
         return result
 
-    def controlled_point_in_active_units(self) -> Position:
+    def controlled_point_in_active_units(
+        self, prog: Position | None = None,
+    ) -> Position:
         """The reported ``machine_position``: absolute machine coordinates with
         the active tool length offset applied, serialized in current units."""
-        abs_in = self.absolute_inches_from_programmed()
+        abs_in = self.absolute_inches_from_programmed(prog)
         abs_in.z = abs_in.z - self.state.tool_length_offset_value_inches
         result = Position()
         units = self.state.units
@@ -935,9 +1382,13 @@ class Interpreter:
             start_index = first_pct + 1
             end_index = second_pct
 
+        if self.trace:
+            self.trace.capture_initial_state(self.build_payload())
+
         for i in range(start_index, end_index):
             if self.program_ended:
                 break
+            self._current_line_number = i + 1  # 1-based source line
             self._run_line(lines[i])
 
     def _run_line(self, raw_line: str) -> None:
@@ -990,6 +1441,12 @@ class Interpreter:
             word_dict[letter] = value
 
         # ---- ORDER OF EXECUTION (Table 8) ---------------------------------
+
+        # Trace: begin tracking this source line.
+        if self.trace:
+            self.trace.begin_line(self._current_line_number)
+            if group0_seen:
+                self.trace.set_line_nonmodal(group0_seen)
 
         # 1. Comment — already handled in parsing.
 
@@ -1066,6 +1523,8 @@ class Interpreter:
             p = word_dict.get("p")
             if p is None or p < 0:
                 raise NgcError("G4 requires non-negative P")
+            if self.trace:
+                self.trace.emit_dwell(p, self.build_payload())
 
         # 11. Set active plane
         if "2" in g_by_group:
@@ -1188,6 +1647,11 @@ class Interpreter:
         if "10" in g_by_group:
             self.state.return_mode = g_by_group["10"]
 
+        # Trace: capture modal state changes (steps 2-18) as pending deltas.
+        # These ride the line's first emitted entry.
+        if self.trace and not self.trace._line_has_entries:
+            self.trace.set_pending_deltas(self.build_payload())
+
         # 19. Group 0 (G10/G28/G30/G92/G92.x) and home
         # Validate not mixing group 1 axis-using with group 0 axis-using.
         axis_words_present = any(letter in word_dict for letter in AXIS_LETTERS)
@@ -1275,6 +1739,55 @@ class Interpreter:
             if mc in ("M2", "M30"):
                 self._do_program_end()
 
+        # Trace: end-of-line fallback — emit state-only if state changed but
+        # no entries were produced, or fold post-motion state changes into the
+        # last emitted entry (so the line's final entry keeps time == total
+        # duration per the spec).
+        if self.trace:
+            current = self.build_payload()
+            delta = _compute_delta(self.trace.prev_full_state, current)
+            if self.trace._line_motion_attempted and not self.trace._line_has_entries:
+                # All sub-motions were zero-length. The spec says the
+                # nonmodal label does not appear in the trace — suppress it.
+                # But still emit the state delta if there is one.
+                self.trace._line_nonmodal = None
+            if delta or (not self.trace._line_has_entries and self.trace._line_nonmodal):
+                if not self.trace._line_has_entries:
+                    self.trace.emit_state_only(current)
+                else:
+                    # Post-motion state change (e.g. M2/M30 after motion).
+                    # Fold into the last emitted entry — the spec requires
+                    # the final entry of a motion line to have time == total
+                    # duration of the line.
+                    #
+                    # Exception: if the fold would overwrite a scalar delta
+                    # field that the last entry already carries (e.g. G84
+                    # tapping: spindle_direction flips CW→CCW on the retract
+                    # SM, then restores CCW→CW after the cycle), emit a
+                    # trailing entry at the same time instead of overwriting,
+                    # so both transitions remain visible in the trace.
+                    _ENTRY_META = {"line_number", "time", "motion_kind", "nonmodal_g_codes"}
+                    _NESTED = {"machine_position", "coordinate_system_offsets",
+                               "active_modal_g_codes", "active_modal_m_codes", "parameters"}
+                    last_entry = self.trace.entries[-1]
+                    scalar_conflict = any(
+                        k in last_entry
+                        for k in delta
+                        if k not in _ENTRY_META and k not in _NESTED
+                    )
+                    if scalar_conflict:
+                        trail: dict = {
+                            "line_number": self.trace._line_number,
+                            "time": last_entry["time"],
+                        }
+                        trail.update(delta)
+                        self.trace.entries.append(trail)
+                    else:
+                        merged = _merge_deltas(last_entry, delta)
+                        last_entry.clear()
+                        last_entry.update(merged)
+                    self.trace.prev_full_state = _deep_copy_payload(current)
+
     # -- group-0 commands ----------------------------------------------------
 
     def _do_g10(self, word_dict: dict[str, float]) -> None:
@@ -1290,6 +1803,14 @@ class Interpreter:
         if p < 1 or p > 9:
             raise NgcError("G10 L2 P must be 1..9")
         cs = self._get_cs_offset(p)
+        # If we are changing the ACTIVE coordinate system, capture the
+        # physical (absolute) position first so we can re-derive the
+        # programmed position afterwards.  RS274 §3.5.5: G10 L2 on
+        # the active CS changes the work-coordinate interpretation
+        # without moving the machine.
+        changing_active = (p == self.state.selected_cs)
+        if changing_active:
+            abs_before = self.absolute_inches_from_programmed()
         for axis in AXIS_LETTERS:
             if axis in word_dict:
                 v_in = self._axis_word_inches(axis, word_dict[axis])
@@ -1298,6 +1819,8 @@ class Interpreter:
                 # when the offset was set. Tests check both representations.
                 xp = cs_xyzabc_param_indices(p)[AXIS_LETTERS.index(axis)]
                 self.state.parameters[xp] = word_dict[axis]
+        if changing_active:
+            self.state.programmed = self.programmed_from_absolute_inches(abs_before)
 
     def _do_g28_or_g30(
         self,
@@ -1305,14 +1828,11 @@ class Interpreter:
         *,
         PROBE_OR_HOME: tuple[int, int, int, int, int, int],
     ) -> None:
-        # Move first to programmed point (if axis words), then to home.
+        # SM1: Move first to programmed point (if axis words), then to home.
         if any(letter in word_dict for letter in AXIS_LETTERS):
             self._do_motion(word_dict, g53=False, force_g0=True)
-        # Then move to home position (which is in absolute machine coords,
-        # stored in unspecified length units → spec is ambiguous; tests treat
-        # them as inches when set via G28.1/G30.1, but our interpreter only
-        # supports G28/G30, not G28.1, so we just leave the home value alone
-        # and the home parameters default to 0).
+        # SM2: Move to home position (absolute machine coords, treated as inches).
+        _trace_start_sm2 = self.state.programmed.copy() if self.trace else None
         home = Position()
         names = PROBE_OR_HOME
         home.x = self.state.parameters.get(names[0], 0.0)
@@ -1321,9 +1841,20 @@ class Interpreter:
         home.a = self.state.parameters.get(names[3], 0.0)
         home.b = self.state.parameters.get(names[4], 0.0)
         home.c = self.state.parameters.get(names[5], 0.0)
-        # Treat as absolute machine inches.
         prog = self.programmed_from_absolute_inches(home)
         self.state.programmed = prog
+
+        # Trace: emit SM2 (rapid to home).
+        if self.trace and _trace_start_sm2 is not None:
+            path_len = _linear_path_length_inches(
+                _trace_start_sm2, self.state.programmed,
+            )
+            dur = _rapid_duration(path_len)
+            self.trace.emit_sub_motion(
+                _trace_start_sm2, self.state.programmed, dur, path_len,
+                is_canned_cycle=False, motion_kind=None,
+                current_state=self.build_payload(),
+            )
 
     def _do_g92(self, word_dict: dict[str, float]) -> None:
         if not any(a in word_dict for a in AXIS_LETTERS):
@@ -1507,6 +2038,10 @@ class Interpreter:
             raise NgcError(f"motion mode {mode} not implemented for plain motion")
         if not any(a in word_dict for a in AXIS_LETTERS):
             raise NgcError(f"{mode} requires at least one axis word")
+
+        # Trace: capture start position before motion.
+        _trace_start = self.state.programmed.copy() if self.trace else None
+
         if g53:
             if self.state.cutter_comp in ("G41", "G42"):
                 raise NgcError("G53 not allowed while cutter radius compensation is on")
@@ -1557,6 +2092,24 @@ class Interpreter:
             and (self.state.feed_rate <= 0 or not getattr(self, "_f_on_this_line", False))
         ):
             raise NgcError("G1 in inverse time feed mode requires a positive F word")
+
+        # Trace: emit sub-motion for G0/G1.
+        if self.trace and _trace_start is not None:
+            end_prog = self.state.programmed
+            path_len = _linear_path_length_inches(_trace_start, end_prog)
+            if mode == "G0" or force_g0:
+                dur = _rapid_duration(path_len)
+            else:
+                dur = _feed_duration(
+                    path_len, self.state.feed_rate,
+                    self.state.feed_mode, self.state.units,
+                )
+            self.trace.emit_sub_motion(
+                _trace_start, end_prog, dur, path_len,
+                is_canned_cycle=False, motion_kind=None,
+                current_state=self.build_payload(),
+            )
+
         self.state.last_motion_was_cycle = False
 
     def _do_arc(self, word_dict: dict[str, float], mode: str) -> None:
@@ -1574,6 +2127,10 @@ class Interpreter:
         else:  # G19
             ax1, ax2, ax_perp = "y", "z", "x"
             offset_letters = ("j", "k")
+
+        # Trace: capture start position before motion.
+        _trace_start = self.state.programmed.copy() if self.trace else None
+        _trace_crc_center: tuple[float, float] | None = None
 
         new_prog = self.state.programmed.copy()
         # Apply axis words to programmed position.
@@ -1600,9 +2157,9 @@ class Interpreter:
             ):
                 raise NgcError("radius-format arc end point equals current point")
         else:
-            # Center format
-            if ax1 not in word_dict and ax2 not in word_dict:
-                raise NgcError("arc requires at least one in-plane axis word")
+            # Center format.  When neither in-plane axis word is given,
+            # new_prog already equals current programmed — this is the
+            # RS274 full-circle case (start == end, center-format).
             if not any(o in word_dict for o in offset_letters):
                 raise NgcError("center-format arc requires offset words")
             i_val = to_inches(word_dict.get(offset_letters[0], 0.0), self.state.units)
@@ -1694,11 +2251,56 @@ class Interpreter:
             self.state.crc_first_move = False
             new_prog.x = sx
             new_prog.y = sy
+            if self.trace:
+                _trace_crc_center = (cx, cy)
 
         self.state.programmed = new_prog
-        _ = ax_perp  # unused
+
+        # Trace: emit sub-motion for arc.
+        if self.trace and _trace_start is not None:
+            s1 = _trace_start.get(ax1)
+            s2 = _trace_start.get(ax2)
+            e1 = self.state.programmed.get(ax1)
+            e2 = self.state.programmed.get(ax2)
+            # Determine arc center in programmed-inches space.
+            if _trace_crc_center is not None:
+                c1, c2 = _trace_crc_center
+            elif "r" in word_dict:
+                r_in = to_inches(word_dict["r"], units)
+                c1, c2 = _arc_center_from_radius(s1, s2, e1, e2, r_in, mode)
+            else:
+                c1 = s1 + i_val
+                c2 = s2 + j_val
+            sweep, in_plane_len = _arc_sweep_and_length(
+                s1, s2, e1, e2, c1, c2, mode,
+            )
+            axial_dist = abs(
+                self.state.programmed.get(ax_perp) - _trace_start.get(ax_perp)
+            )
+            path_len = math.sqrt(in_plane_len ** 2 + axial_dist ** 2)
+            dur = _feed_duration(
+                path_len, self.state.feed_rate,
+                self.state.feed_mode, units,
+            )
+            radius = math.hypot(s1 - c1, s2 - c2)
+            self.trace.emit_sub_motion(
+                _trace_start, self.state.programmed, dur, path_len,
+                is_canned_cycle=False, motion_kind=None,
+                current_state=self.build_payload(),
+                arc_params={
+                    "start_ax1": s1, "start_ax2": s2,
+                    "center_ax1": c1, "center_ax2": c2,
+                    "sweep": sweep, "radius": radius,
+                    "axial_start": _trace_start.get(ax_perp),
+                    "axial_end": self.state.programmed.get(ax_perp),
+                    "ax1_name": ax1, "ax2_name": ax2, "perp_name": ax_perp,
+                },
+            )
 
     def _do_probe(self, word_dict: dict[str, float]) -> None:
+        # Trace: capture start position before probe.
+        _trace_start = self.state.programmed.copy() if self.trace else None
+
         # Validate
         if self.state.cutter_comp in ("G41", "G42"):
             raise NgcError("cannot probe while cutter radius compensation is on")
@@ -1791,6 +2393,7 @@ class Interpreter:
                     t_min = max(t_min, rng[0])
                     t_max = min(t_max, rng[1])
 
+                _probe_tripped = True
                 if t_min <= t_max and 0.0 <= t_min <= 1.0:
                     t = t_min
                     trip = Position(
@@ -1802,11 +2405,15 @@ class Interpreter:
                         start_cp.c + (end_cp.c - start_cp.c) * t,
                     )
                 else:
-                    raise NgcError("G38.2 probe did not trip")
+                    # Probe did not trip — the probe traveled the full distance.
+                    # Record the commanded endpoint in the trace (spec line 234),
+                    # update parameters, then raise the error below.
+                    _probe_tripped = False
+                    trip = end_cp
         else:
             raise NgcError("G38.2 used without --probe-box configured")
 
-        # Set the controlled point to trip.
+        # Set the controlled point to trip (or commanded endpoint on no-trip).
         # Convert trip (controlled point in inches) back to a programmed
         # position. Add TLO back to Z first.
         trip_abs = Position(
@@ -1825,7 +2432,47 @@ class Interpreter:
         self.state.parameters[5065] = trip.b
         self.state.parameters[5066] = trip.c
 
+        # Trace: emit probe as a feed sub-motion.
+        if self.trace and _trace_start is not None:
+            end_prog = self.state.programmed
+            path_len = _linear_path_length_inches(_trace_start, end_prog)
+            dur = _feed_duration(
+                path_len, self.state.feed_rate,
+                self.state.feed_mode, self.state.units,
+            )
+            self.trace.emit_sub_motion(
+                _trace_start, end_prog, dur, path_len,
+                is_canned_cycle=False, motion_kind=None,
+                current_state=self.build_payload(),
+            )
+
+        # Raise after trace recording so the commanded endpoint appears in the trace.
+        if not _probe_tripped:
+            raise NgcError("G38.2 probe did not trip")
+
     # -- canned cycles -------------------------------------------------------
+
+    def _cycle_sub_motion(
+        self, end: Position, kind: str,
+    ) -> None:
+        """Execute one canned-cycle sub-motion: update position, emit trace."""
+        start = self.state.programmed.copy()
+        self.state.programmed = end.copy()
+        if self.trace:
+            path_len = _linear_path_length_inches(start, self.state.programmed)
+            if path_len > 0:
+                if kind == "rapid":
+                    dur = _rapid_duration(path_len)
+                else:
+                    dur = _feed_duration(
+                        path_len, self.state.feed_rate,
+                        self.state.feed_mode, self.state.units,
+                    )
+                self.trace.emit_sub_motion(
+                    start, self.state.programmed, dur, path_len,
+                    is_canned_cycle=True, motion_kind=kind,
+                    current_state=self.build_payload(),
+                )
 
     def _do_canned_cycle(
         self,
@@ -1847,47 +2494,35 @@ class Interpreter:
             raise NgcError("cutter radius compensation must not be on during a canned cycle")
         if self.state.feed_mode == "G93":
             raise NgcError("inverse time feed mode is not allowed during a canned cycle")
-        # Rotary words must be stationary during canned cycles
         for axis in ROTARY_AXES:
             if axis in word_dict and word_dict[axis] != self.state.programmed.get(axis):
                 raise NgcError("rotational axis motion is not allowed during a canned cycle")
-
-        # X/Y/Z (or analogue) — at least one of these must be present per the
-        # error rule "X, Y, and Z words are all missing during a canned cycle".
         if not any(a in word_dict for a in ("x", "y", "z")):
             raise NgcError("canned cycle requires at least one of X, Y, Z")
 
-        # L word
         if "l" in word_dict:
             l_val = word_dict["l"]
             if not _is_close_int(l_val) or int(round(l_val)) <= 0:
                 raise NgcError("canned cycle L must be a positive integer")
-            l = int(round(l_val))
+            l_count = int(round(l_val))
         else:
-            l = 1
+            l_count = 1
 
-        # Compute the target X/Y in the active distance mode but without
-        # repeating yet. Then handle Z (depth, sticky) and R (sticky).
-        cur = self.state.programmed.copy()
-
-        # Save Z position before cycle starts (old_z) for retract decisions.
         if not self.state.last_motion_was_cycle:
-            self.state.cycle_old_z = cur.get(depth_axis)
+            self.state.cycle_old_z = self.state.programmed.get(depth_axis)
 
-        # Read R (always sticky)
         if "r" in word_dict:
             r_v = word_dict["r"]
             if self.state.distance_mode == "G91":
-                r_v = cur.get(depth_axis) + r_v
+                r_v = self.state.programmed.get(depth_axis) + r_v
             self.state.cycle_r = r_v
         if self.state.cycle_r is None:
             raise NgcError("canned cycle requires R")
 
-        # Read Z/depth (sticky)
         if depth_axis in word_dict:
             z_v = word_dict[depth_axis]
             if self.state.distance_mode == "G91":
-                z_v = cur.get(depth_axis) + z_v
+                z_v = self.state.programmed.get(depth_axis) + z_v
             self.state.cycle_z = z_v
         if self.state.cycle_z is None:
             raise NgcError("canned cycle requires depth axis word")
@@ -1895,46 +2530,144 @@ class Interpreter:
         if self.state.cycle_r < self.state.cycle_z:
             raise NgcError("canned cycle R must not be below Z")
 
-        # Process L repeats. We only need final position; the geometry of
-        # intermediate moves doesn't affect the reported state.
-        for repeat in range(l):
-            # Determine X,Y target for this repeat.
-            for axis in plane_axes:
-                if axis in word_dict:
-                    if self.state.distance_mode == "G91":
-                        cur.set(axis, cur.get(axis) + word_dict[axis])
-                    else:
-                        cur.set(axis, word_dict[axis])
-            # Depth axis ends up at clear Z (G98 = old_z if higher than R else R; G99 = R)
-            if self.state.return_mode == "G99":
-                clear = self.state.cycle_r
-            else:  # G98
-                clear = max(self.state.cycle_old_z, self.state.cycle_r)
-            cur.set(depth_axis, clear)
-
-        # G84 special-case: tap, restore CW after cycle. We just leave spindle CW.
         motion = self.state.motion_mode
+
+        # Validate cycle-specific requirements before the loop.
         if motion == "G84":
             if self.state.spindle_direction != "CW":
                 raise NgcError("G84 requires spindle CW before cycle")
-            self.state.spindle_direction = "CW"
         elif motion in ("G86", "G88"):
             if self.state.spindle_direction == "OFF":
                 raise NgcError(f"{motion} requires spindle on before cycle")
-            # Restored to prior direction => no change
-
         if motion == "G83":
-            q = word_dict.get("q")
-            if q is None or q <= 0:
+            q_val = word_dict.get("q")
+            if q_val is None or q_val <= 0:
                 raise NgcError("G83 requires a positive Q word")
-
         if motion in ("G86", "G88", "G89") and "p" not in word_dict:
             raise NgcError(f"{motion} requires a P word")
         if motion in ("G82", "G86", "G88", "G89") and "p" in word_dict:
             if word_dict["p"] < 0:
                 raise NgcError("canned cycle P must be non-negative")
 
-        self.state.programmed = cur
+        r_val = self.state.cycle_r
+        z_val = self.state.cycle_z
+        if self.state.return_mode == "G99":
+            clear = r_val
+        else:  # G98
+            clear = max(self.state.cycle_old_z, r_val)
+
+        for repeat in range(l_count):
+            # Compute XY target for this repeat.
+            target = self.state.programmed.copy()
+            for axis in plane_axes:
+                if axis in word_dict:
+                    if self.state.distance_mode == "G91":
+                        target.set(axis, target.get(axis) + word_dict[axis])
+                    else:
+                        target.set(axis, word_dict[axis])
+
+            # SM1: rapid to XY target (plane axes only).
+            sm1_end = self.state.programmed.copy()
+            for axis in plane_axes:
+                sm1_end.set(axis, target.get(axis))
+            self._cycle_sub_motion(sm1_end, "rapid")
+
+            # SM2: rapid depth axis to R.
+            sm2_end = self.state.programmed.copy()
+            sm2_end.set(depth_axis, r_val)
+            self._cycle_sub_motion(sm2_end, "rapid")
+
+            # SM3+: cycle-specific feed/retract pattern.
+            if motion in ("G81", "G82"):
+                # Feed to Z depth.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, z_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                # (G82: dwell at Z, non-motion — not a trace sub-motion.)
+                # Rapid retract to clear.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, clear)
+                self._cycle_sub_motion(sm_end, "rapid")
+            elif motion == "G83":
+                # Peck drill: incremental pecks of Q depth.
+                q_peck = word_dict["q"]
+                current_depth = r_val
+                while current_depth > z_val + 1e-12:
+                    next_depth = max(current_depth - q_peck, z_val)
+                    sm_end = self.state.programmed.copy()
+                    sm_end.set(depth_axis, next_depth)
+                    self._cycle_sub_motion(sm_end, "feed")
+                    current_depth = next_depth
+                    if current_depth > z_val + 1e-12:
+                        # Rapid retract to R.
+                        sm_end = self.state.programmed.copy()
+                        sm_end.set(depth_axis, r_val)
+                        self._cycle_sub_motion(sm_end, "rapid")
+                        # Rapid back to peck depth.
+                        sm_end = self.state.programmed.copy()
+                        sm_end.set(depth_axis, current_depth)
+                        self._cycle_sub_motion(sm_end, "rapid")
+                # Rapid retract to clear.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, clear)
+                self._cycle_sub_motion(sm_end, "rapid")
+            elif motion == "G84":
+                # Tap: feed to Z, then reverse spindle, feed retract to R.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, z_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                # Spindle reversal: CW → CCW for the retract.
+                self.state.spindle_direction = "CCW"
+                self.state.active_m_codes["7"] = "M4"
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, r_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                if abs(clear - r_val) > 1e-12:
+                    sm_end = self.state.programmed.copy()
+                    sm_end.set(depth_axis, clear)
+                    self._cycle_sub_motion(sm_end, "rapid")
+            elif motion == "G85":
+                # Boring: feed to Z, feed retract.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, z_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, clear)
+                self._cycle_sub_motion(sm_end, "feed")
+            elif motion in ("G86", "G88"):
+                # Boring: feed to Z, (spindle stop), rapid retract.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, z_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, clear)
+                self._cycle_sub_motion(sm_end, "rapid")
+            elif motion == "G87":
+                # Back boring: rapid to Z, feed to R, rapid retract.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, z_val)
+                self._cycle_sub_motion(sm_end, "rapid")
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, r_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                if abs(clear - r_val) > 1e-12:
+                    sm_end = self.state.programmed.copy()
+                    sm_end.set(depth_axis, clear)
+                    self._cycle_sub_motion(sm_end, "rapid")
+            elif motion == "G89":
+                # Boring: feed to Z, (dwell), feed retract.
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, z_val)
+                self._cycle_sub_motion(sm_end, "feed")
+                sm_end = self.state.programmed.copy()
+                sm_end.set(depth_axis, clear)
+                self._cycle_sub_motion(sm_end, "feed")
+
+        # G84: restore spindle CW after retract.
+        if motion == "G84":
+            self.state.spindle_direction = "CW"
+            self.state.active_m_codes["7"] = "M3"
+
         self.state.last_motion_was_cycle = True
 
     # -- program end / reset ------------------------------------------------
@@ -2078,6 +2811,10 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--parameter-output")
     p.add_argument("--probe-box", nargs=6, type=float)
     p.add_argument("--probe-tool", type=int)
+    p.add_argument("--trace-output")
+    p.add_argument("--trace-time-step", type=float)
+    p.add_argument("--trace-distance-step", type=float)
+    p.add_argument("--trace-position-tolerance", type=float)
     return p.parse_args(argv)
 
 
@@ -2101,8 +2838,47 @@ def write_error_payload(path: str, message: str) -> None:
         json.dump(payload, f)
 
 
+def _validate_trace_args(args: argparse.Namespace) -> tuple[str, float] | None:
+    """Validate trace CLI args. Returns (stepping_mode, step_value) or None."""
+    stepping_flags = [
+        ("time", args.trace_time_step),
+        ("distance", args.trace_distance_step),
+        ("tolerance", args.trace_position_tolerance),
+    ]
+    provided = [(mode, val) for mode, val in stepping_flags if val is not None]
+    if args.trace_output is None:
+        if provided:
+            raise NgcError(
+                "stepping flag provided without --trace-output"
+            )
+        return None
+    if len(provided) != 1:
+        raise NgcError(
+            "--trace-output requires exactly one of --trace-time-step, "
+            "--trace-distance-step, --trace-position-tolerance"
+        )
+    mode, val = provided[0]
+    if val <= 0:
+        raise NgcError(f"trace stepping value must be positive (got {val})")
+    return (mode, val)
+
+
+def _write_trace(path: str, trace: dict) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(trace, f)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv if argv is not None else sys.argv[1:])
+
+    # Validate trace args early (before any file I/O).
+    try:
+        trace_cfg = _validate_trace_args(args)
+    except NgcError:
+        write_error_payload(args.output, "invalid trace arguments")
+        return 1
+
+    recorder: TraceRecorder | None = None
 
     try:
         probe_box = None
@@ -2121,6 +2897,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.tool_table:
             interp.load_tool_table(args.tool_table)
 
+        # Set up trace recorder if requested.
+        if trace_cfg is not None:
+            stepping_mode, step_value = trace_cfg
+            recorder = TraceRecorder(
+                stepping_mode, step_value,
+                pos_converter=lambda pos: interp.controlled_point_in_active_units(pos).to_dict(),
+            )
+            interp.trace = recorder
+
         with open(args.input, encoding="utf-8") as f:
             program_text = f.read()
         interp.run(program_text)
@@ -2132,13 +2917,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.parameter_output:
             interp.write_parameter_file(args.parameter_output)
 
+        if recorder and args.trace_output:
+            _write_trace(args.trace_output, recorder.build_trace())
+
         return 0
     except NgcError as exc:
         write_error_payload(args.output, str(exc))
-        if args.parameter_output:
+        # --parameter-output is success-only per the spec; do not write on error.
+        # Write trace on error too.
+        if recorder and args.trace_output:
+            recorder.set_error(interp._current_line_number, None)
             try:
-                with open(args.parameter_output, "w", encoding="utf-8") as f:
-                    f.write("RS274 parameter file\n\n")
+                _write_trace(args.trace_output, recorder.build_trace())
             except OSError:
                 pass
         return 1
@@ -2147,6 +2937,11 @@ def main(argv: list[str] | None = None) -> int:
             write_error_payload(args.output, f"internal error: {exc}")
         except OSError:
             pass
+        if recorder and args.trace_output:
+            try:
+                _write_trace(args.trace_output, recorder.build_trace())
+            except OSError:
+                pass
         return 2
 
 

@@ -130,8 +130,12 @@
   - The scalar fields "feed_rate", "spindle_speed", "spindle_direction",
     "cutter_radius_compensation_number", "tool_length_offset_index", "selected_tool", and
     "tool_in_spindle" are included only if the value differs from the prior entry. There is no
-    per-source-line cap on how often these may change; the tapping cycles G84 and G74
+    per-source-line cap on how often these may change; the tapping cycle G84
     legitimately flip "spindle_direction" twice on a single source line.
+    When a post-motion state change (such as the G84 spindle restore) would overwrite a scalar
+    field that the line's last emitted entry already carries, a trailing entry is emitted at the
+    same "time" as the last entry rather than folding the new value into it, so that both
+    transitions are preserved in the trace.
   - Coordinates in entries ("machine_position" and "coordinate_system_offsets") are absolute
     machine coordinates (G53 space), after any active tool length compensation and any active
     G92 offset. Lengths use the currently active G20/G21 units at the moment the entry is
@@ -152,7 +156,7 @@
     has "time" equal to the line's total duration (the sum of all sub-motion durations on
     that line).
   - "motion_kind": optional string, one of "rapid" or "feed". Present only on the first
-    emitted entry of each sub-motion inside a canned cycle expansion (G81, G82, G83, G84, G74,
+    emitted entry of each sub-motion inside a canned cycle expansion (G81, G82, G83, G84,
     G85, G86, G87, G88, G89). The "first emitted entry of a sub-motion" is the earliest entry
     whose cumulative "time" falls within that sub-motion's extent -- the first interior
     stepped sample if any exist, otherwise the sub-motion's final entry. Omitted on subsequent
@@ -184,7 +188,7 @@
     linear motion and true arc length for G2/G3, including the axial component for helical
     arcs. A center-format arc whose programmed start and end points coincide is a full circle
     of path length 2*pi*radius (not zero). Effective feed rate follows the active feed-rate
-    mode (G93 inverse-time, G94 units/min, G95 units/rev). Under G93 inverse-time, the
+    mode (G93 inverse-time, G94 units/min). Under G93 inverse-time, the
     moving block's total duration is 1/F seconds regardless of geometry; on a block that
     expands into multiple feed sub-motions, each sub-motion's duration is 1/F apportioned in
     proportion to its path length so that the sub-motion durations sum to 1/F.
@@ -232,7 +236,9 @@
   modal, parameter, tool, coordinate-system, and label deltas that would otherwise have
   ridden a "time" == 0.0 entry ride the line's first emitted entry instead.
 - For G38.2 probing, the final entry for the line reflects the actual trip point if the probe
-  tripped, or the commanded endpoint if it did not.
+  tripped, or the commanded endpoint if it did not. A non-tripping probe is an error, but the
+  probe motion to the commanded endpoint completed — the entry for that motion is emitted
+  before the error is signaled, and the error fields are set on the trace.
 - On error, "entries" contains all motion and state changes that completed successfully,
   including any sub-motions of the failing block that finished before the failure. No entry
   is emitted for the operation that actually failed.

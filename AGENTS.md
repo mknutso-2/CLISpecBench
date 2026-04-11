@@ -9,8 +9,9 @@ Contents:
 - Evals/CNCSim/prompt/docs/RS274NGC.md contains the RS274 documentation converted to markdown. **Do not edit files in this folder unless explicitly asked to do so.**
 - Evals/CNCSim/reference-implementation-cpp/ (C++) and Evals/CNCSim/reference-implementation-py/ (Python) contain running reference implementations of the eval. At each commit, each should contain an implementation that passes all the tests in the eval for its language.
 
-Test-authoring rule for CNCSim:
+Test-authoring rules:
 - The RS274 spec is the source of truth, and tests should only enforce behavior that is explicit and unambiguous in that document. If a proposed test depends on a nontrivial inference across multiple clauses rather than a plainly stated requirement, do not add it as a requirement-bearing test. Instead, either leave it untested or first clarify the requirement in non-RS274 eval docs such as `Evals/CNCSim/CNCSim-Design.md` or `Evals/CNCSim/prompt/base-prompt.md`. Do not rely on changing `Evals/CNCSim/prompt/docs/RS274NGC.md` for this.
+- **Every bug found in a reference implementation must have a corresponding eval test.** Reference implementations exist to validate the test suite, not the other way around. When a bug is discovered in a ref impl — whether by code review, Codex/subagent critique, or manual testing — fix the ref impl AND add or update a test in the eval's `tests/` directory that would catch the incorrect behavior. The test enforces the correct behavior on agent submissions; without it, the bug fix is invisible to the benchmark.
 
 Agent workflow note:
 - `.vscode/settings.json` save actions are only applied by VS Code during editor saves. They are not automatically applied to files created or modified by AI agents via patches, shell commands, scripts, or other direct filesystem writes.

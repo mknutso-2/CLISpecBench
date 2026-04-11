@@ -104,6 +104,17 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G0 X1.5 Y2.5 Z3.5\n",
         {"x": 2.5, "y": 4.5, "z": 6.5},
     ),
+    # RS274 section 3.5.5: G10 L2 on the active coordinate system changes
+    # the work-coordinate interpretation but does not move the machine.
+    (
+        "g10-on-active-cs-does-not-move-machine",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G90\n"
+        "G0 X1.0 Y2.0 Z3.0\n"
+        "G10 L2 P1 X10.0 Y20.0 Z30.0\n",
+        {"x": 1.0, "y": 2.0, "z": 3.0},
+    ),
     # RS274 section 3.5.12: G53 moves to absolute machine coordinates.
     (
         "g53-uses-machine-coordinates",
@@ -285,6 +296,26 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         "G0 X5.0 Y1.0 Z0.0\n"
         "G3 X4.0 Y0.0 Z1.0 J#1 K#2\n",
         {"x": 4.0, "y": 0.0, "z": 1.0},
+    ),
+    (
+        "g2-center-format-full-circle-no-axis-words",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G2 I-1.0 J0.0 F60\n",
+        {"x": 1.0, "y": 0.0, "z": 5.0},
+    ),
+    (
+        "g3-center-format-full-circle-no-axis-words",
+        ZERO_OFFSET_P1_SETUP
+        +
+        "G17\n"
+        "G90\n"
+        "G0 X1.0 Y0.0 Z5.0\n"
+        "G3 I-1.0 J0.0 F60\n",
+        {"x": 1.0, "y": 0.0, "z": 5.0},
     ),
     (
         "g2-radius-format-updates-arc-endpoint",
