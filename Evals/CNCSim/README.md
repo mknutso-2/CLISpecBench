@@ -157,17 +157,29 @@ The trace closes all of these gaps.
 
 #### Scoring locality: why per-line time
 
-`time` in trace entries is scoped **per source line**: the first entry for
-each line resets to 0.0 and subsequent entries within that line report
-seconds elapsed since the start of that line's execution. A natural
-alternative would be to report global "seconds since program start," which
-is simpler for a GUI replay consumer but worse for scoring: a bug in the
-agent's computation of line 5's duration would cascade wrong `time` values
-into every subsequent entry on lines 6..N, and the test suite would report
-hundreds of failures for one bug. Per-line scoping contains that damage:
-each line is independently scorable, and a failing report localizes the
-actual bug. A GUI consumer that needs a global timeline can trivially
-accumulate per-line durations.
+`time` in trace entries is scoped **per source line**: each entry reports
+seconds elapsed since the start of its source line's execution, and the
+clock resets on every new line. A natural alternative would be to report
+global "seconds since program start," which is simpler for a GUI replay
+consumer but worse for scoring: a bug in the agent's computation of line
+5's duration would cascade wrong `time` values into every subsequent entry
+on lines 6..N, and the test suite would report hundreds of failures for
+one bug. Per-line scoping contains that damage: each line is independently
+scorable, and a failing report localizes the actual bug. A GUI consumer
+that needs a global timeline can trivially accumulate per-line durations.
+
+Within a line, no entry is ever emitted at `time == 0.0` for a motion
+block. The first emitted entry of a motion line lands at the first
+interior stepped sample of its first non-zero sub-motion, or at that
+sub-motion's final entry if no interior sample fits. Modal / parameter /
+tool / label deltas declared by the block ride that first emitted entry.
+An alternative would be to always emit a `time == 0.0` entry carrying the
+block's opening deltas, but that entry's `machine_position` is by
+definition identical to the prior entry's — it is redundant noise. Rolling
+the deltas forward onto the first real entry preserves every bit of
+information the `time == 0.0` entry would have carried, halves the entry
+count on short motion lines, and simplifies consumers (they never have to
+skip "empty-position" entries).
 
 #### Baked constants, not CLI flags
 
@@ -214,16 +226,26 @@ starting state in ways an implicit default cannot capture.
 #### `motion_kind`: why it exists only inside canned cycles
 
 The `motion_kind` field (`"rapid"` or `"feed"`) is present only on the
-first entry of each sub-motion inside a canned cycle expansion, and is
-omitted everywhere else. The reason: for ordinary G0/G1/G2/G3/G38.2 motion,
-a consumer can already recover the motion kind from `active_modal_g_codes`
-group 1. Inside a canned cycle, however, group 1 is the cycle code itself
-(e.g., `G81`), so the consumer cannot distinguish the cycle's rapid
-sub-motions (rapid-to-XY, rapid-to-R, retract) from its feed sub-motions
-(feed-to-Z, peck feeds) from modal state alone. `motion_kind` fills only
-that gap — it deliberately does not apply to cutter-comp lead-in/lead-out
-(which inherits the active G0/G1) or to G38.2 (which has its own modal
-group 1 value).
+first emitted entry of each sub-motion inside a canned cycle expansion,
+and is omitted everywhere else. The reason: for ordinary G0/G1/G2/G3/G38.2
+motion, a consumer can already recover the motion kind from
+`active_modal_g_codes` group 1. Inside a canned cycle, however, group 1 is
+the cycle code itself (e.g., `G81`), so the consumer cannot distinguish
+the cycle's rapid sub-motions (rapid-to-XY, rapid-to-R, retract) from its
+feed sub-motions (feed-to-Z, peck feeds) from modal state alone.
+`motion_kind` fills only that gap — it deliberately does not apply to
+cutter-comp lead-in/lead-out (which is modeled as a single tool-tip
+sub-motion that inherits the active G0/G1) or to G38.2 (which has its own
+modal group 1 value).
+
+The "first emitted entry of a sub-motion" is the earliest entry whose
+cumulative `time` lies within the sub-motion's extent — its first interior
+stepped sample when stepping produces any, otherwise its final entry. For
+a canned cycle where every sub-motion fits inside a single step, every
+sub-motion has only its final entry, so every emitted entry carries
+`motion_kind`. Conversely, a long feed sub-motion with many interior
+samples has `motion_kind` only on its first interior sample; subsequent
+samples within the same sub-motion inherit it.
 
 #### `nonmodal_g_codes`: exposing group-0 execution
 
@@ -237,12 +259,15 @@ cannot tell `G53 G1 X1 Y2` from a plain `G1 X1 Y2`, cannot see that
 all.
 
 The `nonmodal_g_codes` field (array of strings, alphabetical order) is
-present only on the first entry of each sub-motion induced by a non-modal.
-Subsequent stepped samples within a sub-motion inherit the label. G28 and
-G30 each expand into two sub-motions (move to intermediate point, then move
-to the parameterized destination), and the label appears on the first
-entry of **both** sub-motions. G92.1 / G92.2 / G92.3 must be emitted as
-their exact variant strings, not canonicalized to `"G92"`.
+present only on the first emitted entry of each sub-motion induced by a
+non-modal. Subsequent stepped samples within a sub-motion inherit the
+label. G28 and G30 each expand into two sub-motions (move to intermediate
+point, then move to the parameterized destination), and the label appears
+on the first emitted entry of **each sub-motion that produces any
+entries** — a G28 whose block specifies no intermediate axis words has a
+zero-duration SM1 that produces no entries, so the label appears only on
+SM2's first emitted entry in that case. G92.1 / G92.2 / G92.3 must be
+emitted as their exact variant strings, not canonicalized to `"G92"`.
 
 #### G92 offset handling: no new layer
 

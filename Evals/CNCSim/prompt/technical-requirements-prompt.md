@@ -110,7 +110,14 @@
   object using the same field names and serialization rules as the --output payload, with these
   differences:
   - "error" must not be included.
-  - Every field inherited from --output is optional; if a field is present, it must not be null.
+  - Every field inherited from --output is optional; if a field is present, it must not be
+    null, with one exception: the four nullable scalar fields
+    "cutter_radius_compensation_number", "tool_length_offset_index", "selected_tool", and
+    "tool_in_spindle" may appear with the explicit value null to encode a transition from a
+    non-null prior value to null (for example, the reset performed by M2 or M30, which turns
+    cutter radius compensation off). These four fields still follow the delta rule: include
+    the field if and only if its value differs from the prior entry, and if it does differ,
+    write its new value verbatim (including null when the new value is null).
   - "machine_position" includes only the axes whose values differ from the prior entry (or
     from "initial_state" for the first entry in "entries").
   - "coordinate_system_offsets" includes only the coordinate systems (top-level keys "1"
@@ -136,75 +143,104 @@
     cutter-comp lead-in/lead-out), every resulting entry carries the source line of the
     originating block.
   - "time": float, seconds elapsed since the start of execution of the source line identified
-    by "line_number". Always in seconds, independent of G93/G94/G95. For lines that emit more
-    than one entry, the first entry has "time" == 0.0 and the last entry has "time" equal to
-    the line's total duration. For lines that emit exactly one entry, that entry has "time"
-    equal to the line's total duration.
-  - "motion_kind": optional string, one of "rapid" or "feed". Present only on the first entry
-    of each sub-motion inside a canned cycle expansion (G81, G82, G83, G84, G74, G85, G86,
-    G87, G88, G89). Omitted on stepped samples within the same sub-motion. Omitted entirely
-    outside canned cycles.
+    by "line_number". Always in seconds, independent of G93/G94/G95. Cumulative within the
+    source line: it is the sub-motion's start time (measured from the start of the line) plus
+    the sub-motion-local sample time, and is not reset at sub-motion boundaries. No entry is
+    emitted at "time" == 0.0 on a motion line; modal, parameter, tool, coordinate-system, and
+    label deltas that would otherwise have ridden a "time" == 0.0 entry ride the line's first
+    emitted entry instead (see the stepping rules below). The final entry of a motion line
+    has "time" equal to the line's total duration (the sum of all sub-motion durations on
+    that line).
+  - "motion_kind": optional string, one of "rapid" or "feed". Present only on the first
+    emitted entry of each sub-motion inside a canned cycle expansion (G81, G82, G83, G84, G74,
+    G85, G86, G87, G88, G89). The "first emitted entry of a sub-motion" is the earliest entry
+    whose cumulative "time" falls within that sub-motion's extent -- the first interior
+    stepped sample if any exist, otherwise the sub-motion's final entry. Omitted on subsequent
+    stepped samples within the same sub-motion, on final entries that are not the sub-motion's
+    first emitted entry, and everywhere outside canned cycles.
   - "nonmodal_g_codes": optional array of strings. The RS274 group-0 non-modal G-codes
-    executed by the originating block. Present only on the first entry of each sub-motion
-    induced by a non-modal; stepped samples within a sub-motion do not re-emit it. Order within
-    the array is alphabetical. The field is omitted entirely -- not null, not [] -- when no
-    non-modal fired on the originating block. G92, G92.1, G92.2, and G92.3 must appear as the
-    exact strings "G92", "G92.1", "G92.2", "G92.3". G28 and G30 each expand into two sub-motions
-    (move to intermediate point, then move to the parameterized destination); the label
-    appears on the first entry of both sub-motions.
+    executed by the originating block. Order within the array is alphabetical. The field is
+    omitted entirely -- not null, not [] -- when no non-modal fired on the originating block.
+    G92, G92.1, G92.2, and G92.3 must appear as the exact strings "G92", "G92.1", "G92.2",
+    "G92.3". The field is attached as follows depending on the block kind:
+      - For a block that produces at least one sub-motion (e.g., G53 applied to a G1 move,
+        or G28/G30 which expand into two sub-motions), the label is attached to the first
+        emitted entry of each sub-motion induced by the non-modal. Stepped samples that are
+        not the sub-motion's first emitted entry do not re-emit it. G28 and G30 each expand
+        into two sub-motions (move to intermediate point, then move to the parameterized
+        destination); the label appears on the first emitted entry of each sub-motion that
+        produces any entries. A zero-duration sub-motion (e.g., a G28 whose block specifies
+        no intermediate axis words, so the intermediate point equals the current position)
+        produces no entries, and the label associated with such a sub-motion is not rolled
+        forward to a subsequent sub-motion.
+      - For a block that produces no sub-motion because the non-modal itself is state-only
+        (G10, G92, G92.1, G92.2, G92.3), the label is attached to the block's sole
+        "time" == 0.0001 state-only entry.
+      - For a G4 dwell block, the label is attached to the block's sole dwell entry at
+        "time" == P.
 - Time in trace entries is computed assuming instantaneous linear and angular acceleration.
   - Feed motion (G1, G2, G3, canned-cycle feed moves, threading, G38.2 probing): duration
     equals true path length divided by the effective feed rate. Path length is Euclidean for
     linear motion and true arc length for G2/G3, including the axial component for helical
-    arcs. Effective feed rate follows the active feed-rate mode (G93 inverse-time, G94
-    units/min, G95 units/rev).
+    arcs. A center-format arc whose programmed start and end points coincide is a full circle
+    of path length 2*pi*radius (not zero). Effective feed rate follows the active feed-rate
+    mode (G93 inverse-time, G94 units/min, G95 units/rev). Under G93 inverse-time, the
+    moving block's total duration is 1/F seconds regardless of geometry; on a block that
+    expands into multiple feed sub-motions, each sub-motion's duration is 1/F apportioned in
+    proportion to its path length so that the sub-motion durations sum to 1/F.
   - Rapid motion (G0 and canned-cycle rapid sub-motions): duration is computed at a fixed rate
     of 1000 inches/minute. Path length is converted to inches before division.
   - Dwell (G4 with P > 0): exactly one entry with "time" equal to the P value converted to
-    seconds per the active feed-rate mode's time convention.
-  - State-only blocks (modal changes, parameter assignments, tool selection without motion, and
-    similar blocks that change state without producing motion): exactly one entry with
-    "time" == 0.0001.
+    seconds per the active feed-rate mode's time convention. The entry carries
+    "nonmodal_g_codes": ["G4"] plus any other state deltas produced on the same block.
+  - State-only blocks (modal changes, parameter assignments, tool selection without motion,
+    and similar blocks that change state without producing motion, including M2/M30
+    program-end which resets cutter compensation, origin offsets, and spindle state):
+    exactly one entry with "time" == 0.0001 carrying the full delta of every state change
+    produced by the block. Any parameter writes performed as an implicit side effect of
+    the block (including M2/M30's implicit parameter resets) are reported in the
+    "parameters" delta on the same entry.
   - Blocks that produce no observable state change (comments, block-deleted lines when
     --block-delete is active, pure O-word control flow, G4 with P == 0): no entry is emitted,
     and the source line does not appear in "entries".
 - Stepping is applied independently per sub-motion. A line with no sub-motion structure
-  (ordinary G0/G1/G2/G3 motion) is treated as having exactly one sub-motion whose duration
-  and path length equal the line's total duration and path length. A line that expands into
-  multiple sub-motions (canned cycles, G28, G30, cutter-comp lead-in/lead-out) applies the
-  stepping rule to each sub-motion separately.
+  (ordinary G0/G1/G2/G3/G38.2 motion, including a cutter-compensated straight or arc move
+  whose lead-in or lead-out is geometrically part of the same single tool-tip path) is
+  treated as having exactly one sub-motion whose duration and path length equal the line's
+  total duration and path length. A line that expands into multiple sub-motions (canned
+  cycles, G28, G30) applies the stepping rule to each sub-motion separately.
 - Stepping mode semantics (applied within each sub-motion of duration L_time seconds and
   path length L_dist inches):
-  - --trace-time-step dt: emit samples at sub-motion-local times 0, dt, 2*dt, ... strictly
-    less than L_time, plus a sub-motion final entry at sub-motion-local time L_time.
-  - --trace-distance-step ds: emit samples at sub-motion-local cumulative path distances
-    0, ds, 2*ds, ... strictly less than L_dist, plus a sub-motion final entry at sub-motion-
-    local distance L_dist.
+  - --trace-time-step dt: emit interior samples at sub-motion-local times dt, 2*dt, ...
+    strictly less than L_time, plus a sub-motion final entry at sub-motion-local time
+    L_time. No entry is emitted at sub-motion-local time 0.
+  - --trace-distance-step ds: emit interior samples at sub-motion-local cumulative path
+    distances ds, 2*ds, ... strictly less than L_dist, plus a sub-motion final entry at
+    sub-motion-local distance L_dist. No entry is emitted at sub-motion-local distance 0.
   - --trace-position-tolerance eps: emit samples adaptively such that linear interpolation
     of "machine_position" between any two consecutive entries within the sub-motion deviates
     from the true (possibly curved) path by at most eps inches at all intermediate points.
-- The "time" value written in a trace entry is cumulative within the source line: it is the
-  sub-motion's start time (measured from the start of the line) plus the sub-motion-local
-  sample time. "time" is not reset at sub-motion boundaries.
-- Sub-motion boundary entries are always emitted, even when no stepping sample lands there,
-  so the number of sub-motions on a line is always recoverable from the trace.
-- When the final entry of sub-motion N and the start entry of sub-motion N+1 coincide at the
-  same cumulative "time" (which they do whenever consecutive sub-motions execute back-to-
-  back), they are merged into a single entry. The merged entry reports (a) the position and
-  field deltas produced by the end of sub-motion N relative to the prior distinct entry, and
-  (b) the "motion_kind" of sub-motion N+1 when sub-motion N+1 is inside a canned cycle
-  expansion.
-- Sub-motions of zero duration and zero path length (e.g., a canned cycle whose rapid-to-XY
-  target equals the current XY) contribute a boundary entry but no stepped samples.
-- The first entry of the first sub-motion of a line has "time" == 0.0 (matching the per-line
-  "first entry has time 0" rule). The final entry of the last sub-motion of a line has
-  "time" equal to the line's total duration (the sum of all sub-motion durations on that
-  line).
+    No entry is emitted at sub-motion-local time 0.
+- Every non-zero sub-motion has a final entry at its sub-motion-local time L_time, always
+  emitted.
+- Zero-duration, zero-path-length sub-motions (e.g., a canned cycle whose rapid-to-XY target
+  equals the current XY, or a G28 whose block specifies no intermediate axis words) produce
+  no entries. Any motion_kind or nonmodal_g_codes label associated with such a sub-motion is
+  not rolled forward to any other sub-motion; the label simply does not appear in the trace.
+- The line's first emitted entry is the first interior stepped sample of its first non-zero
+  sub-motion, or that sub-motion's final entry if no interior sample fits inside it. Any
+  modal, parameter, tool, coordinate-system, and label deltas that would otherwise have
+  ridden a "time" == 0.0 entry ride the line's first emitted entry instead.
 - For G38.2 probing, the final entry for the line reflects the actual trip point if the probe
   tripped, or the commanded endpoint if it did not.
 - On error, "entries" contains all motion and state changes that completed successfully,
-  including any sub-motions of the failing block that finished before the failure. No entry is
-  emitted for the operation that actually failed.
+  including any sub-motions of the failing block that finished before the failure. No entry
+  is emitted for the operation that actually failed.
+- The trace file is written on both success and error, independently of any other optional
+  output file. The relative order in which --output and --trace-output are written on a
+  single run is unspecified; both must appear at their configured paths whenever the
+  simulator exits, on success or on error. --parameter-output remains governed by its
+  success-only rule above and is not written on the error exit path.
 
 ## Trace file examples
 
@@ -227,8 +263,10 @@ Invocation:
     simulator --input program.ngc --output out.json --trace-output trace.json --trace-time-step 0.5
 
 At F60 (60 units/min = 1 unit/second) the 1-unit move takes 1.0 seconds. With
---trace-time-step 0.5, stepped samples fall at times 0.0 and 0.5 (strictly less than 1.0),
-plus the mandatory final entry at 1.0.
+--trace-time-step 0.5, the single interior stepped sample falls at sub-motion-local time 0.5
+(strictly less than 1.0), followed by the mandatory final entry at 1.0. No entry is emitted
+at time 0.0; the modal and feed_rate deltas declared by the block ride the first emitted
+entry (at time 0.5).
 
 `trace.json`:
 
@@ -252,8 +290,7 @@ plus the mandatory final entry at 1.0.
     "parameters": {}
   },
   "entries": [
-    {"line_number": 1, "time": 0.0, "feed_rate": 60.0, "active_modal_g_codes": {"1": "G1"}},
-    {"line_number": 1, "time": 0.5, "machine_position": {"x": 0.5}},
+    {"line_number": 1, "time": 0.5, "feed_rate": 60.0, "active_modal_g_codes": {"1": "G1"}, "machine_position": {"x": 0.5}},
     {"line_number": 1, "time": 1.0, "machine_position": {"x": 1.0}}
   ],
   "error_line_number": null,
@@ -262,8 +299,8 @@ plus the mandatory final entry at 1.0.
 ```
 
 Points illustrated:
-- The first entry for a moving line has "time" == 0.0 and carries start-of-block state
-  deltas; "machine_position" is omitted because position at t=0 equals the prior state.
+- No entry is emitted at time 0.0. The first emitted entry is the stepped sample at time
+  0.5, and it absorbs the line's modal and feed_rate deltas in addition to its position.
 - The final entry's "time" equals the line's total duration.
 
 ### Example 2 -- Canned cycle G81 with sub-motion expansion
@@ -274,7 +311,7 @@ feed_rate 60):
     G81 X5 Y0 Z-3 R0 F60
 
 Invocation uses --trace-distance-step 1000 (a step larger than any sub-motion's path length),
-so each sub-motion emits only its boundary entries with no interior samples. This keeps the
+so each sub-motion emits only its final entry with no interior samples. This keeps the
 example compact while illustrating the sub-motion structure of a canned cycle.
 
 Sub-motion breakdown (G98 retract to initial plane Z=2):
@@ -289,21 +326,21 @@ Sub-motion breakdown (G98 retract to initial plane Z=2):
 ```json
 {
   "entries": [
-    {"line_number": 7, "time": 0.0,  "motion_kind": "rapid", "active_modal_g_codes": {"1": "G81"}},
-    {"line_number": 7, "time": 0.3,  "motion_kind": "rapid", "machine_position": {"x": 5.0}},
-    {"line_number": 7, "time": 0.42, "motion_kind": "feed",  "machine_position": {"z": 0.0}},
-    {"line_number": 7, "time": 3.42, "motion_kind": "rapid", "machine_position": {"z": -3.0}},
-    {"line_number": 7, "time": 3.72,                         "machine_position": {"z": 2.0}}
+    {"line_number": 7, "time": 0.3,  "motion_kind": "rapid", "active_modal_g_codes": {"1": "G81"}, "machine_position": {"x": 5.0}},
+    {"line_number": 7, "time": 0.42, "motion_kind": "rapid", "machine_position": {"z": 0.0}},
+    {"line_number": 7, "time": 3.42, "motion_kind": "feed",  "machine_position": {"z": -3.0}},
+    {"line_number": 7, "time": 3.72, "motion_kind": "rapid", "machine_position": {"z": 2.0}}
   ]
 }
 ```
 
 Points illustrated:
-- On a merged boundary entry, "motion_kind" reflects the *starting* sub-motion while the
-  "machine_position" delta reflects the position reached by the *ending* sub-motion.
+- No entry is emitted at time 0.0. The line's modal delta (G81) rides the first emitted
+  entry, which is SM1's final entry at cum time 0.3.
+- Each sub-motion's first emitted entry carries "motion_kind". Here every sub-motion has
+  only its final entry (no interior samples), so every emitted entry carries motion_kind,
+  including SM4's final at t=3.72.
 - "time" is cumulative within the line (sub-motion durations recoverable by subtraction).
-- The final entry at t=3.72 omits "motion_kind" because it is not the first entry of any
-  sub-motion.
 
 ### Example 3 -- Error case
 
@@ -322,8 +359,7 @@ specification. The simulator exits 1 after writing both --output and --trace-out
 {
   "initial_state": {"...": "end-snapshot defaults"},
   "entries": [
-    {"line_number": 1, "time": 0.0, "feed_rate": 60.0, "active_modal_g_codes": {"1": "G1"}},
-    {"line_number": 1, "time": 0.5, "machine_position": {"x": 0.5}},
+    {"line_number": 1, "time": 0.5, "feed_rate": 60.0, "active_modal_g_codes": {"1": "G1"}, "machine_position": {"x": 0.5}},
     {"line_number": 1, "time": 1.0, "machine_position": {"x": 1.0}}
   ],
   "error_line_number": 2,
