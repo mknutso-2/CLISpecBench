@@ -1,5 +1,30 @@
 # CNCSim Changelog
 
+## v2.0.1 — 2026-04-11
+
+RS274 spec-compliance fixes found during adversarial subagent review of
+the trace implementation.
+
+### Fixed
+
+- **G93 inverse-time convention**: changed `1/F seconds` to `60/F seconds`
+  in `technical-requirements-prompt.md` and the Python ref to match
+  RS274 §3.5.19.1, where F is in inverse minutes.
+- **RS274 §2.1.2.5 Case A path length**: `_linear_path_length_inches`
+  now uses XYZ-only Euclidean distance (was incorrectly including rotary
+  axes, conflating inches and degrees).
+- **RS274 §2.1.2.5 Case B/C rotary-only feed rate**: `_feed_duration`
+  no longer applies mm→in conversion under G21 for rotary-only moves
+  (feed rate is in deg/min regardless of G20/G21).
+
+### Added
+
+- 8 new trace tests from review rounds (unit switch, G21 arc stepping,
+  linear+rotary duration, rotary-only G21, G88 boring, G28 per-SM
+  stepping, M2 parameter delta, CS offset units).
+- 4 test improvements (canned cycle modal delta, G84 trailing entry,
+  block-delete position, tool table M6).
+
 ## v2.0.0 — 2026-04-09
 
 Added motion trace: a time-ordered record of inter-line machine state
