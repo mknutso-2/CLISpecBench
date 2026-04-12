@@ -42,7 +42,7 @@ class TestCodexCLICredentialMounts:
         key = "/home/user/.codex/auth.json"
         assert key in mounts
         assert mounts[key]["bind"] == "/root/.codex/auth.json"
-        assert mounts[key]["mode"] == "ro"
+        assert mounts[key]["mode"] == "rw"
 
 
 class TestGeminiCLICredentialMounts:

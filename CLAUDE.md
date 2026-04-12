@@ -52,6 +52,45 @@ Single test: `pytest path/to/test_file.py::test_name`. Pytest markers `docker` a
 - **Pyright is strict** for `src` and the eval test dirs. After editing Python, run Ruff *and* Pyright explicitly — VS Code save actions don't fire on agent edits.
 - **Keep `__init__.py` minimal.** Don't re-export from package roots unless it's an intentional public API; import from the defining module.
 - **Bump per-eval `VERSION` + `CHANGELOG.md` on any contract-affecting change.** Each `Evals/<Task>/` has a `VERSION` file (semver) and a `CHANGELOG.md`. Bump both whenever you change anything an agent or scoring run can observe (prompts, docs, tests, harness contract, reference impls reflecting a spec change). See README.md → "Versioning" for patch/minor/major guidance and the full rule.
+## Running evals
+
+### Post-run log inspection (required)
+
+After every eval run completes, inspect the result and transcript before moving on. Do not batch up runs and check later.
+
+**For every run that scores 0/N:**
+
+Open `transcript.jsonl` in the run directory and classify the root cause:
+
+- **timeout**: Agent still actively working when killed. Note whether source files exist and if they build.
+- **auth_failure**: 401/403 errors or expired tokens in logs. Agent never started real work.
+- **rate_limit**: 429 errors or quota exhaustion from the model API.
+- **context_exhausted**: Agent hit context window limits. Note how far it got.
+- **no_code_written**: Agent completed voluntarily but never wrote source files (only planned/analyzed).
+- **build_failure**: Agent wrote source but it doesn't compile.
+- **agent_error**: Agent crashed or threw an unhandled exception.
+- **model_error**: Model API returned server errors or capacity issues.
+
+Record the classification in your report to the user. If possible, update the result JSON's `metadata.notes` field.
+
+**For every run that scores > 0:**
+
+Confirm from the transcript that the agent acknowledged it was done. Check whether:
+- Agent voluntarily exited (clean run)
+- Agent was still working when timeout killed it (score may be artificially low)
+- Agent asked for input but got no response (harness problem)
+- Agent hit a rate limit/error partway through (partial result)
+
+**Always include in results reports:**
+1. The language/task variant (e.g. `cncsim-full` = C++, `cncsim-full-py` = Python)
+2. Root cause for every zero-score run
+3. Whether non-zero timed-out runs might have scored higher
+4. Infrastructure issues requiring reruns
+
+## Environment notes
+
+- **Use `python`, not `python3`**, for all shell commands. On this Windows system, `python3` is not available; `python` resolves to the correct interpreter.
+
 ## Key docs
 
 - `Eval-Design.md` — benchmark-level design

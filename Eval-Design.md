@@ -305,7 +305,7 @@ Do not include any text outside the JSON object.
 
 **Sandboxing.** Agent runs must execute in Docker containers with no outbound network access, resource limits (CPU, memory), and filesystem isolation. An agent that can execute arbitrary shell commands must not be able to affect the host system or contact external services.
 
-**Timeouts.** Agent sessions are capped at 30 minutes wall-clock time. A session that exceeds this limit is terminated; the harness scores whatever files exist in the working directory at that point.
+**Timeouts.** Agent sessions are capped at 4 hours wall-clock time by default. A session that exceeds this limit is terminated; the harness scores whatever files exist in the working directory at that point. The timeout can be overridden with `--timeout <seconds>` but should never be set below 4 hours for CNCSim-Full evaluations, as many capable agents need 30-60+ minutes to produce a working implementation.
 
 **Token budgets.** Agent sessions are capped at 500,000 tokens. This is logged per run. Sessions approaching the cap are noted in results, as context exhaustion is a meaningful capability dimension.
 
@@ -551,7 +551,7 @@ Three complementary strategies are employed:
 
 - **Context window handling for CNCSim-Full.** The full RS274/NGC PDF is ~200 pages. Models with smaller context windows may need to truncate. Current position: provide the full document and let the model decide what to include; context window limitations are a valid dimension of model capability.
 
-- **Agent timeout fairness.** Faster agents complete more iterations within the 30-minute wall-clock cap, which may advantage them independent of code quality. Should the cap be token-based rather than time-based? Current position: wall-clock cap is simpler and more operationally meaningful; token cap is logged separately as a secondary dimension.
+- **Agent timeout fairness.** Faster agents complete more iterations within the 4-hour wall-clock cap, which may advantage them independent of code quality. Should the cap be token-based rather than time-based? Current position: wall-clock cap is simpler and more operationally meaningful; token cap is logged separately as a secondary dimension.
 
 - **Agent environment scope.** Should the Docker container include the compiler and standard libraries only, or also common third-party libraries (e.g., nlohmann/json for C++ JSON output)? Providing common libraries reduces friction but may mask dependency management capability. Current position: provide only the compiler and standard library; the agent must handle any other dependencies via its build system.
 

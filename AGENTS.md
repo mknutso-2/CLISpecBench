@@ -49,3 +49,38 @@ Example invocation:
 ```
 /codex:adversarial-review Review the working-tree changes. Check alignment with AGENTS.md, Evals/CNCSim/CNCSim-Design.md, Evals/CNCSim/prompt/base-prompt.md, Evals/CNCSim/prompt/technical-requirements-prompt.md, and the RS274 docs. Be skeptical. Focus on concrete findings with file references, not style.
 ```
+
+### Post-Run Log Inspection (required for all eval runs)
+
+After every eval run completes, the agent operating the harness **must** inspect the result and transcript before moving on to the next run. Do not batch up runs and inspect later — inspect each one as it finishes. The `metadata.notes` field in the result JSON exists for recording these observations.
+
+**For every run that scores 0/N (zero tests passed):**
+
+Open the transcript (`transcript.jsonl` in the run directory) and determine the root cause. Classify it as one of:
+
+- **timeout**: Agent was still actively working when killed. Note whether it had written any source files and whether they were buildable.
+- **auth_failure**: Agent logs show 401/403 errors, expired tokens, or credential problems. The agent never started real work.
+- **rate_limit**: Agent logs show 429 errors or quota exhaustion from the model API.
+- **context_exhausted**: Agent hit context window limits (e.g. `context_length_exceeded`). Note how far it got.
+- **no_code_written**: Agent completed voluntarily (`end_turn` / `exit_code=0`) but never wrote source files. Check if it only planned/analyzed without implementing.
+- **build_failure**: Agent wrote source but it doesn't compile. Check build diagnostics.
+- **agent_error**: Agent crashed, threw an unhandled exception, or encountered an internal error.
+- **model_error**: The backing model API returned errors unrelated to auth/rate limits (e.g. server errors, capacity issues).
+
+Record the classification and a brief explanation in the result JSON's `metadata.notes` field, or if the harness has already written the file, note it in your report to the user.
+
+**For every run that scores > 0:**
+
+Confirm from the transcript that the agent acknowledged it was done working. Specifically check:
+- Did the agent voluntarily exit / signal completion? (Good — this is a clean run.)
+- Was the agent still actively working when the timeout killed it? (The score is valid but the agent might have scored higher with more time — note this.)
+- Did the agent ask for user input or clarification but get no response because we weren't running interactively? (This is a harness problem — note it.)
+- Did the agent hit a rate limit or error partway through but had already written enough code to pass some tests? (Partial result — note it.)
+
+**Report format:**
+
+When presenting results to the user, always include:
+1. The language/task variant used (e.g. `cncsim-full` = C++, `cncsim-full-py` = Python)
+2. For each zero-score run: the root cause category and a one-line explanation
+3. For non-zero runs that timed out: note that the score may be artificially low
+4. Any infrastructure issues discovered (auth problems, rate limits, etc.) that invalidate results and require reruns

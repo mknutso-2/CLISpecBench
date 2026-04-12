@@ -580,7 +580,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     run_parser.add_argument("--runs", type=int, default=3)
     run_parser.add_argument("--prompt-variant", default=None)
-    run_parser.add_argument("--timeout", type=float, default=30 * 60)
+    run_parser.add_argument("--timeout", type=float, default=4 * 60 * 60)
     run_parser.add_argument("--output-dir", default="results")
     run_parser.add_argument("--model", default=None, help="Model to use (e.g. opus, sonnet, o3)")
     run_parser.add_argument(

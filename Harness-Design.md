@@ -535,7 +535,7 @@ swe-buildbench run
     --runs <N>                         # Default: 3 for agentic, 1 for model-api
     --prompt-variant <name>            # Default: base
     --skip-extensions                  # Skip extension tasks
-    --timeout <seconds>                # Override default 30-minute timeout
+    --timeout <seconds>                # Override default 4-hour timeout
     --output-dir <path>                # Default: results/
     --model <model-id>                 # For model-api mode: claude-opus-4-6, gpt-4o, etc.
     --api-key-env <VAR=value>          # Repeatable: inject secrets into container

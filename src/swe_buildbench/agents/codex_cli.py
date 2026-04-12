@@ -132,10 +132,18 @@ class CodexCLIAdapter(AgentAdapter):
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         # Mount only the auth file, not the whole .codex/ dir, to avoid
         # read-only filesystem errors from Codex writing state files.
+        #
+        # Mode is "rw" because Codex uses single-use refresh tokens: each
+        # API call may rotate the refresh token and write the replacement
+        # back to auth.json.  With "ro" the write fails silently, and
+        # the *next* container run finds a stale (already-consumed) token
+        # and gets 401 Unauthorized on every request.  With "rw" the
+        # refreshed token is written through the bind mount to the host
+        # file, so sequential runs each see the latest credentials.
         return {
             (host_home / ".codex" / "auth.json").as_posix(): {
                 "bind": "/root/.codex/auth.json",
-                "mode": "ro",
+                "mode": "rw",
             },
         }
 
