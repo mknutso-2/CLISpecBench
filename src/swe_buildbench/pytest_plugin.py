@@ -83,7 +83,7 @@ def _load_eval_config(request: pytest.FixtureRequest) -> EvalConfig:
     # Fall back: scan all loaded conftests for one with EVAL_CONFIG.
     import sys
 
-    for mod in sys.modules.values():
+    for mod in list(sys.modules.values()):
         config = getattr(mod, "EVAL_CONFIG", None)
         if isinstance(config, EvalConfig) and mod.__name__.endswith("conftest"):
             return config
