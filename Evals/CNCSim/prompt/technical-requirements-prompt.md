@@ -188,10 +188,11 @@
     linear motion and true arc length for G2/G3, including the axial component for helical
     arcs. A center-format arc whose programmed start and end points coincide is a full circle
     of path length 2*pi*radius (not zero). Effective feed rate follows the active feed-rate
-    mode (G93 inverse-time, G94 units/min). Under G93 inverse-time, the
-    moving block's total duration is 1/F seconds regardless of geometry; on a block that
-    expands into multiple feed sub-motions, each sub-motion's duration is 1/F apportioned in
-    proportion to its path length so that the sub-motion durations sum to 1/F.
+    mode (G93 inverse-time, G94 units/min). Under G93 inverse-time, F is in
+    inverse minutes (per RS274 §3.5.19.1), so the moving block's total duration
+    is 60/F seconds regardless of geometry; on a block that expands into multiple
+    feed sub-motions, each sub-motion's duration is 60/F apportioned in
+    proportion to its path length so that the sub-motion durations sum to 60/F.
   - Rapid motion (G0 and canned-cycle rapid sub-motions): duration is computed at a fixed rate
     of 1000 inches/minute. Path length is converted to inches before division.
   - Dwell (G4 with P > 0): exactly one entry with "time" equal to the P value converted to

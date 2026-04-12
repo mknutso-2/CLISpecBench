@@ -659,8 +659,9 @@ def _feed_duration(
 ) -> float:
     """Compute feed-motion duration in seconds."""
     if feed_mode == "G93":
-        # Inverse time: total duration is 1/F seconds.
-        return 1.0 / feed_rate if feed_rate > 0 else 0.0
+        # Inverse time: F is inverse minutes (RS274 §3.5.19.1),
+        # so duration = 60/F seconds.
+        return 60.0 / feed_rate if feed_rate > 0 else 0.0
     # G94: units per minute.
     if rotary_only:
         # RS274 §2.1.2.5 Case B/C: feed rate is deg/min regardless of

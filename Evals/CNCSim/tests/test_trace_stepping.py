@@ -429,13 +429,13 @@ def test_g93_inverse_time_duration(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    """Under G93, block duration is 1/F seconds regardless of geometry.
+    """Under G93, F is inverse minutes so duration is 60/F seconds.
 
-    G93 G1 X2 F2 -> duration = 1/2 = 0.5s. Large step -> single final entry.
+    G93 G1 X2 F120 -> duration = 60/120 = 0.5s. Large step -> single final entry.
     """
     _, _, trace = run_cncsim_trace(
         submission_command,
-        input_gcode="G93\nG1 X2 F2\n",
+        input_gcode="G93\nG1 X2 F120\n",
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
@@ -876,13 +876,13 @@ def test_g93_inverse_time_multi_line(
 ) -> None:
     """G93 inverse-time: each G1 block has its own F word determining duration.
 
-    G93 F2 G1 X1 → duration = 1/2 = 0.5 s.
-    G1 X2 F4      → duration = 1/4 = 0.25 s.
+    G93 F120 G1 X1 → duration = 60/120 = 0.5 s.
+    G1 X2 F240     → duration = 60/240 = 0.25 s.
     Line 2 time resets, so entry times are local to each line.
     """
     _, _, trace = run_cncsim_trace(
         submission_command,
-        input_gcode="G93 G1 X1 F2\nG1 X2 F4\n",
+        input_gcode="G93 G1 X1 F120\nG1 X2 F240\n",
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
@@ -962,20 +962,20 @@ def test_g93_inverse_time_arc_duration(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    """Under G93 inverse-time, arc duration must be 1/F regardless of geometry.
+    """Under G93 inverse-time, arc duration must be 60/F regardless of geometry.
 
-    G2 X0 Y0 I-1 J0 at F2 should have duration 1/2 = 0.5 seconds.
+    G2 X0 Y0 I-1 J0 at F120 should have duration 60/120 = 0.5 seconds.
     Arc starts at (2, 0), circles via center (1, 0) back to (2, 0).
     """
     _, _, trace = run_cncsim_trace(
         submission_command,
-        input_gcode="G1 X2 F60\nG93\nG2 X2 Y0 I-1 J0 F2\n",
+        input_gcode="G1 X2 F60\nG93\nG2 X2 Y0 I-1 J0 F120\n",
         trace_time_step=100.0,  # Large step → only final entry.
         tmp_path=tmp_path,
     )
     arc_entries = [e for e in trace["entries"] if e["line_number"] == 3]
     assert len(arc_entries) >= 1
-    # G93 F2 → duration = 1/F = 0.5 seconds, regardless of arc geometry.
+    # G93 F120 → duration = 60/F = 0.5 seconds, regardless of arc geometry.
     # "time" is per-line (seconds since start of the source line).
     assert arc_entries[-1]["time"] == pytest.approx(0.5, abs=1e-6)
 
