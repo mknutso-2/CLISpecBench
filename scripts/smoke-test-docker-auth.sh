@@ -15,6 +15,7 @@
 # Run a single agent:
 #   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
 #   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
+#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-copilot.sh
 #   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
 #
 # Note: Running all three sequentially takes 3-5 minutes (each agent pulls
@@ -25,7 +26,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 passed=0
 failed=0
 
-for agent in claude codex gemini; do
+for agent in claude codex copilot gemini; do
     echo ""
     if bash "$SCRIPT_DIR/smoke-test-${agent}.sh"; then
         ((passed++))

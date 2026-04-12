@@ -15,7 +15,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Defaults
 TASK=""
-AGENTS="claude-code,codex-cli,gemini-cli"
+AGENTS="claude-code,codex-cli,copilot-cli,gemini-cli"
 RUNS=1
 TIMEOUT=1800
 OUTPUT_DIR="results"

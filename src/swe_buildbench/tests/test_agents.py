@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath
 
 from swe_buildbench.agents.claude_code import ClaudeCodeAdapter
 from swe_buildbench.agents.codex_cli import CodexCLIAdapter
+from swe_buildbench.agents.copilot_cli import CopilotCLIAdapter
 from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
 
 
@@ -69,6 +70,37 @@ class TestGeminiCLICredentialMounts:
         assert "--output-format stream-json" in bash_script
 
 
+class TestCopilotCLICredentialMounts:
+    def test_returns_empty_when_no_hosts_file(self, tmp_path: Path) -> None:
+        adapter = CopilotCLIAdapter()
+        mounts = adapter.credential_mounts(tmp_path)
+        assert len(mounts) == 0
+
+    def test_mounts_xdg_hosts_yml(self, tmp_path: Path) -> None:
+        gh_dir = tmp_path / ".config" / "gh"
+        gh_dir.mkdir(parents=True)
+        (gh_dir / "hosts.yml").write_text("github.com:\n  oauth_token: test\n")
+        adapter = CopilotCLIAdapter()
+        mounts = adapter.credential_mounts(tmp_path)
+        assert len(mounts) == 1
+        key = (gh_dir / "hosts.yml").as_posix()
+        assert key in mounts
+        assert mounts[key]["bind"] == "/root/.config/gh/hosts.yml"
+        assert mounts[key]["mode"] == "ro"
+
+    def test_mounts_appdata_hosts_yml(self, tmp_path: Path) -> None:
+        appdata_dir = tmp_path / "AppData" / "Roaming" / "GitHub CLI"
+        appdata_dir.mkdir(parents=True)
+        (appdata_dir / "hosts.yml").write_text("github.com:\n  oauth_token: test\n")
+        adapter = CopilotCLIAdapter()
+        mounts = adapter.credential_mounts(tmp_path)
+        assert len(mounts) == 1
+        key = (appdata_dir / "hosts.yml").as_posix()
+        assert key in mounts
+        assert mounts[key]["bind"] == "/root/.config/gh/hosts.yml"
+        assert mounts[key]["mode"] == "ro"
+
+
 class TestAgentVersions:
     def test_claude_code_version_from_dockerfile(self) -> None:
         adapter = ClaudeCodeAdapter()
@@ -83,6 +115,11 @@ class TestAgentVersions:
 
     def test_gemini_cli_version_from_dockerfile(self) -> None:
         adapter = GeminiCLIAdapter()
+        assert adapter.version != "unknown"
+        assert "." in adapter.version
+
+    def test_copilot_cli_version_from_dockerfile(self) -> None:
+        adapter = CopilotCLIAdapter()
         assert adapter.version != "unknown"
         assert "." in adapter.version
 
@@ -128,6 +165,27 @@ class TestModelAndEffort:
         assert '--model "gemini-2.5-pro"' in bash_script
         assert "--yolo" in bash_script
 
+    def test_copilot_model_in_command(self) -> None:
+        adapter = CopilotCLIAdapter(model="gpt-5.2", effort="high")
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        bash_script = cmd[2]
+        assert '--model "gpt-5.2"' in bash_script
+        assert '--effort "high"' in bash_script
+        assert "--yolo" in bash_script
+
+    def test_copilot_no_model_flags_by_default(self) -> None:
+        adapter = CopilotCLIAdapter()
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        bash_script = cmd[2]
+        assert "--model" not in bash_script
+        assert "--effort" not in bash_script
+
     def test_adapter_model_property(self) -> None:
         adapter = ClaudeCodeAdapter(model="opus")
         assert adapter.model == "opus"
@@ -151,3 +209,7 @@ class TestTelemetryPaths:
     def test_gemini_has_no_telemetry_paths(self) -> None:
         adapter = GeminiCLIAdapter()
         assert adapter.telemetry_paths == []
+
+    def test_copilot_has_otel_path(self) -> None:
+        adapter = CopilotCLIAdapter()
+        assert any("copilot-otel" in p for p in adapter.telemetry_paths)

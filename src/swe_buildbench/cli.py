@@ -34,7 +34,7 @@ def _get_adapter(
     """Resolve an agent name to an adapter instance."""
     from collections.abc import Callable
 
-    from swe_buildbench.agents import claude_code, codex_cli, gemini_cli, model_api
+    from swe_buildbench.agents import claude_code, codex_cli, copilot_cli, gemini_cli, model_api
 
     adapters: dict[str, Callable[[], AgentAdapter]] = {
         "claude-code": lambda: claude_code.ClaudeCodeAdapter(
@@ -42,6 +42,10 @@ def _get_adapter(
             effort=effort,
         ),
         "codex-cli": lambda: codex_cli.CodexCLIAdapter(
+            model=model,
+            effort=effort,
+        ),
+        "copilot-cli": lambda: copilot_cli.CopilotCLIAdapter(
             model=model,
             effort=effort,
         ),
@@ -572,7 +576,7 @@ def main(argv: list[str] | None = None) -> None:
     run_parser.add_argument(
         "--agent",
         required=True,
-        choices=["claude-code", "codex-cli", "gemini-cli", "model-api"],
+        choices=["claude-code", "codex-cli", "copilot-cli", "gemini-cli", "model-api"],
     )
     run_parser.add_argument("--runs", type=int, default=3)
     run_parser.add_argument("--prompt-variant", default=None)

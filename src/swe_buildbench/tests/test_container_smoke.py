@@ -32,6 +32,7 @@ from swe_buildbench.harness.docker import ContainerConfig, DockerSandbox
 BASE_IMAGE = "swe-buildbench-base"
 CLAUDE_IMAGE = "swe-buildbench-claude-code"
 CODEX_IMAGE = "swe-buildbench-codex-cli"
+COPILOT_IMAGE = "swe-buildbench-copilot-cli"
 GEMINI_IMAGE = "swe-buildbench-gemini-cli"
 
 
@@ -81,6 +82,10 @@ skip_no_claude_image = pytest.mark.skipif(
 skip_no_codex_image = pytest.mark.skipif(
     not _image_available(CODEX_IMAGE),
     reason=f"Docker image {CODEX_IMAGE} not available",
+)
+skip_no_copilot_image = pytest.mark.skipif(
+    not _image_available(COPILOT_IMAGE),
+    reason=f"Docker image {COPILOT_IMAGE} not available",
 )
 skip_no_gemini_image = pytest.mark.skipif(
     not _image_available(GEMINI_IMAGE),
@@ -255,6 +260,11 @@ class TestAgentCliInstalled:
     def test_codex_cli_version(self) -> None:
         exit_code, logs = _run_in_container(CODEX_IMAGE, "codex --version")
         assert exit_code == 0, f"codex --version failed: {logs}"
+
+    @skip_no_copilot_image
+    def test_copilot_cli_version(self) -> None:
+        exit_code, logs = _run_in_container(COPILOT_IMAGE, "copilot --version")
+        assert exit_code == 0, f"copilot --version failed: {logs}"
 
     @skip_no_gemini_image
     def test_gemini_cli_version(self) -> None:
