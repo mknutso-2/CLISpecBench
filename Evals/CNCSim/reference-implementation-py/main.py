@@ -2345,22 +2345,21 @@ class Interpreter:
             raise NgcError("G38.2 requires the probe tool to be in the spindle")
         if self.state.spindle_direction != "OFF":
             raise NgcError("G38.2 requires the spindle to be stopped")
-        # Compute target programmed position
+        # Compute target programmed position (internal inches).
         new_prog = self.state.programmed.copy()
         for axis in AXIS_LETTERS:
             if axis in word_dict:
-                v = word_dict[axis]
+                v_in = self._axis_word_inches(axis, word_dict[axis])
                 if self.state.distance_mode == "G91":
-                    new_prog.set(axis, new_prog.get(axis) + v)
+                    new_prog.set(axis, new_prog.get(axis) + v_in)
                 else:
-                    new_prog.set(axis, v)
-        # Validate distance > 0.01 inch / 0.254 mm
-        units = self.state.units
+                    new_prog.set(axis, v_in)
+        # Validate distance > 0.01 inch
         dx = (new_prog.x - self.state.programmed.x)
         dy = (new_prog.y - self.state.programmed.y)
         dz = (new_prog.z - self.state.programmed.z)
         dist = math.hypot(math.hypot(dx, dy), dz)
-        min_dist = 0.01 if units == "G20" else 0.254
+        min_dist = 0.01
         if dist < min_dist:
             raise NgcError("G38.2 distance is too small")
 

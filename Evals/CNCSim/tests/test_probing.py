@@ -182,6 +182,26 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
         PROBE_TOOL_TABLE,
     ),
     (
+        "x-probe-g91-g21-incremental-metric",
+        (1.0, 2.0, 0.0, 10.0, 0.0, 10.0),
+        "G21\n"
+        "G91 G94\n"
+        "T2 M6\n"
+        "G90 G0 X0.0 Y127.0 Z127.0\n"
+        "G91\n"
+        "F254.0\n"
+        "G38.2 X50.0\n",
+        {
+            PROBE_TRIP_X_PARAMETER: 25.4,
+            PROBE_TRIP_Y_PARAMETER: 127.0,
+            PROBE_TRIP_Z_PARAMETER: 127.0,
+            PROBE_TRIP_A_PARAMETER: 0.0,
+            PROBE_TRIP_B_PARAMETER: 0.0,
+            PROBE_TRIP_C_PARAMETER: 0.0,
+        },
+        None,
+    ),
+    (
         "probe-accepts-stationary-rotary-words-and-reports-rotary-trip-parameters",
         (0.0, 10.0, 0.0, 10.0, 2.0, 4.0),
         "G20\n"
