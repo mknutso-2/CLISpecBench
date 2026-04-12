@@ -638,6 +638,24 @@ def test_cs_offsets_sparse_two_level_delta(
     assert cs_delta["1"]["x"] == pytest.approx(1.0)
 
 
+def test_cs_offset_delta_uses_active_units(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """G10 L2 under G21 should report CS offset delta in mm, not inches."""
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G21\nG10 L2 P1 X25.4\n",  # 25.4 mm = 1 inch
+        trace_time_step=0.5,
+        tmp_path=tmp_path,
+    )
+    g10_entries = [e for e in trace["entries"] if e["line_number"] == 2]
+    assert len(g10_entries) == 1
+    cs_delta = g10_entries[0]["coordinate_system_offsets"]["1"]
+    # Value should be 25.4 (mm), not 1.0 (inches).
+    assert cs_delta["x"] == pytest.approx(25.4, abs=0.1)
+
+
 # ---------------------------------------------------------------------------
 # Coordinates in G53 space with offsets active
 # ---------------------------------------------------------------------------
@@ -721,6 +739,35 @@ def test_m2_resets_produce_correct_delta(
     assert final["active_modal_g_codes"]["2"] == "G17"  # plane reset
 
 
+def test_m2_parameter_delta_includes_selected_cs_reset(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """M2 resets selected_cs to 1 (parameter 5220); the delta must report it.
+
+    Select G55 (CS 2), then M2. Parameter 5220 changes from 2.0 → 1.0.
+    The M2 entry's parameters delta must include this change.
+    """
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G55\nM2\n",
+        trace_time_step=0.5,
+        tmp_path=tmp_path,
+    )
+    m2_entries = [e for e in trace["entries"] if e["line_number"] == 2]
+    assert len(m2_entries) == 1
+    m2_entry = m2_entries[0]
+    assert m2_entry["time"] == pytest.approx(0.0001)
+    # Parameter 5220 (selected coordinate system) must appear in the delta.
+    assert "parameters" in m2_entry, \
+        "M2 entry must carry a parameters delta when selected_cs resets"
+    assert m2_entry["parameters"]["5220"] == pytest.approx(1.0)
+    # Verify reconstructed final state.
+    final = reconstruct_state(trace, len(trace["entries"]) - 1)
+    assert final["parameters"]["5220"] == pytest.approx(1.0)
+    assert final["active_modal_g_codes"]["12"] == "G54"  # CS 1
+
+
 # ---------------------------------------------------------------------------
 # initial_state reflects --parameter-input and --tool-table
 # ---------------------------------------------------------------------------
@@ -768,6 +815,10 @@ def test_initial_state_includes_tool_table(
     t1_entries = [e for e in trace["entries"] if e["line_number"] == 1]
     assert len(t1_entries) == 1
     assert t1_entries[0].get("selected_tool") == 1
+    # M6 loads the tool into the spindle — verify tool_in_spindle delta.
+    m6_entries = [e for e in trace["entries"] if e["line_number"] == 2]
+    assert len(m6_entries) == 1
+    assert m6_entries[0].get("tool_in_spindle") == 1
 
 
 # ---------------------------------------------------------------------------
@@ -791,6 +842,12 @@ def test_block_deleted_line_produces_no_entry(
     assert 2 not in line_numbers  # Block-deleted line 2.
     assert 1 in line_numbers
     assert 3 in line_numbers
+    # Line 3 moves from X=1 (skipping deleted line 2) to X=3.
+    final = reconstruct_state(trace, len(trace["entries"]) - 1)
+    assert final["machine_position"]["x"] == pytest.approx(3.0, abs=1e-6)
+    # Duration: 2 inches at 60 ipm = 2.0 s (not 1.0 s if line 2 executed).
+    l3_entries = [e for e in trace["entries"] if e["line_number"] == 3]
+    assert l3_entries[-1]["time"] == pytest.approx(2.0, abs=0.05)
 
 
 # ---------------------------------------------------------------------------
@@ -991,7 +1048,7 @@ def test_zero_length_g28_suppresses_nonmodal_label(
         submission_command,
         input_gcode="G28\nM2\n",
         trace_time_step=0.5,
-        parameter_input_content="5161 0.0\n5162 0.0\n5163 0.0\n",
+        parameter_input_content=build_parameter_file({5161: 0.0, 5162: 0.0, 5163: 0.0}),
         tmp_path=tmp_path,
     )
     g28_entries = [e for e in trace["entries"] if e["line_number"] == 1]

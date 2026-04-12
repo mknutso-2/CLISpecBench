@@ -591,8 +591,20 @@ class LineParser:
 def _linear_path_length_inches(
     start: "Position", end: "Position",
 ) -> float:
-    """Euclidean distance across all 6 axes (linear in inches, rotary in degrees)."""
-    return math.sqrt(sum((end.get(a) - start.get(a)) ** 2 for a in AXIS_LETTERS))
+    """Feed-rate path length for a linear move, in inches.
+
+    Per RS274 §2.1.2.5 Case A, when any linear axis (XYZ) moves the
+    path length is the XYZ Euclidean distance, ignoring rotary axes.
+    When only rotary axes move (Case B/C), the rotary Euclidean
+    distance in degrees is returned (treated as length for duration
+    and stepping calculations).
+    """
+    xyz_sq = sum((end.get(a) - start.get(a)) ** 2 for a in ("x", "y", "z"))
+    if xyz_sq > 0:
+        return math.sqrt(xyz_sq)
+    return math.sqrt(
+        sum((end.get(a) - start.get(a)) ** 2 for a in ("a", "b", "c"))
+    )
 
 
 def _arc_sweep_and_length(
@@ -643,12 +655,20 @@ def _feed_duration(
     feed_rate: float,
     feed_mode: str,
     units: str,
+    rotary_only: bool = False,
 ) -> float:
     """Compute feed-motion duration in seconds."""
     if feed_mode == "G93":
         # Inverse time: total duration is 1/F seconds.
         return 1.0 / feed_rate if feed_rate > 0 else 0.0
-    # G94: units per minute. Convert feed rate to inches/min.
+    # G94: units per minute.
+    if rotary_only:
+        # RS274 §2.1.2.5 Case B/C: feed rate is deg/min regardless of
+        # G20/G21. No inch↔mm conversion.
+        if feed_rate <= 0:
+            return 0.0
+        return path_length_inches / (feed_rate / 60.0)
+    # Linear axes moving: convert feed rate to inches/min.
     rate_ipm = feed_rate if units == "G20" else feed_rate / 25.4
     if rate_ipm <= 0:
         return 0.0
@@ -2097,12 +2117,17 @@ class Interpreter:
         if self.trace and _trace_start is not None:
             end_prog = self.state.programmed
             path_len = _linear_path_length_inches(_trace_start, end_prog)
+            _rotary_only = not any(
+                abs(end_prog.get(a) - _trace_start.get(a)) > 0
+                for a in ("x", "y", "z")
+            )
             if mode == "G0" or force_g0:
                 dur = _rapid_duration(path_len)
             else:
                 dur = _feed_duration(
                     path_len, self.state.feed_rate,
                     self.state.feed_mode, self.state.units,
+                    rotary_only=_rotary_only,
                 )
             self.trace.emit_sub_motion(
                 _trace_start, end_prog, dur, path_len,

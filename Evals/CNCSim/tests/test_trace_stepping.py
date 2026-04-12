@@ -373,6 +373,9 @@ def test_canned_cycle_zero_duration_sm_skipped(
     # First entry should be SM2 (rapid), at time=0.12.
     assert g81_entries[0]["motion_kind"] == "rapid"
     assert g81_entries[0]["time"] == pytest.approx(0.12, abs=0.01)
+    # G81 modal delta must ride the first emitted entry (SM2, since SM1 was
+    # zero-length and skipped).
+    assert g81_entries[0].get("active_modal_g_codes", {}).get("1") == "G81"
     # SM3 feed.
     assert g81_entries[1]["motion_kind"] == "feed"
     # SM4 rapid.
@@ -805,6 +808,19 @@ def test_g84_g99_spindle_reversal_visible(
             break
     assert found_cw_restore, "G84 G99 should show spindle restored to CW"
 
+    # Spec: trailing entry rule — the CW restore must be a separate entry at
+    # the same time as the preceding CCW entry (not folded/overwritten).
+    ccw_idx = next(
+        i for i, e in enumerate(g84_entries) if e.get("spindle_direction") == "CCW"
+    )
+    cw_idx = next(
+        i for i, e in enumerate(g84_entries) if e.get("spindle_direction") == "CW"
+    )
+    assert cw_idx > ccw_idx, "CW restore must follow CCW entry"
+    assert g84_entries[cw_idx]["time"] == pytest.approx(
+        g84_entries[ccw_idx]["time"]
+    ), "Trailing entry must share time with the preceding entry"
+
     # Reconstructed final state must be CW.
     final = reconstruct_state(trace, len(trace["entries"]) - 1)
     assert final["spindle_direction"] == "CW"
@@ -1207,3 +1223,202 @@ def test_g89_boring_dwell_feed_retract(
 
     final = reconstruct_state(trace, len(trace["entries"]) - 1)
     assert final["machine_position"]["z"] == pytest.approx(1.0, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# Unit switch mid-program (G20 → G21)
+# ---------------------------------------------------------------------------
+
+
+def test_unit_switch_mid_program_trace_coordinates(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """Entries before G21 use inches; entries after G21 use mm.
+
+    Line 1: G1 X1 F60   (G20 default — inches, 1 inch in 1 s)
+    Line 2: G21          (switch to mm)
+    Line 3: G1 X50.8 F1524  (mm, 50.8 mm = 2 inches, F1524 mm/min = ~1 s)
+
+    Large step so each motion has exactly 1 entry (the final).
+    """
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G1 X1 F60\nG21\nG1 X50.8 F1524\n",
+        trace_time_step=100.0,
+        tmp_path=tmp_path,
+    )
+    # Line 1 (inches): final position X = 1.0 inch
+    l1_entries = [e for e in trace["entries"] if e["line_number"] == 1]
+    assert len(l1_entries) == 1
+    assert l1_entries[0]["machine_position"]["x"] == pytest.approx(1.0, abs=0.01)
+
+    # Line 3 (mm): final position X = 50.8 mm
+    l3_entries = [e for e in trace["entries"] if e["line_number"] == 3]
+    assert len(l3_entries) == 1
+    assert l3_entries[0]["machine_position"]["x"] == pytest.approx(50.8, abs=0.1)
+
+
+def test_g21_arc_distance_stepping(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """Distance stepping for an arc under G21 uses inches, coordinates in mm.
+
+    G21 G2 X0 Y0 I-25.4 F1524  (full circle, radius 25.4 mm = 1 inch,
+    circumference = 2*pi inches ~= 6.283 inches).
+    --trace-distance-step 2.0 (inches) -> 3 interior + 1 final = 4 entries.
+    All positions should be in mm.
+    """
+    # Start at (25.4, 0) mm = (1, 0) inches so arc center is at origin.
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G21\nG0 X25.4 Y0\nG2 X25.4 Y0 I-25.4 F1524\n",
+        trace_distance_step=2.0,
+        tmp_path=tmp_path,
+    )
+    arc_entries = [e for e in trace["entries"] if e["line_number"] == 3]
+    # Circumference ~= 6.283 inches / 2.0 step -> 3 interior + 1 final = 4.
+    assert len(arc_entries) >= 3, \
+        f"Expected >=3 arc entries for full circle with 2-inch step, got {len(arc_entries)}"
+
+    # All positions should be in mm (radius 25.4 mm from origin).
+    for entry in arc_entries:
+        state = reconstruct_state(trace, trace["entries"].index(entry))
+        x = state["machine_position"]["x"]
+        y = state["machine_position"]["y"]
+        r = math.sqrt(x**2 + y**2)
+        assert r == pytest.approx(25.4, abs=0.5), \
+            f"Arc point ({x}, {y}) should be ~25.4 mm from origin, got r={r}"
+
+    # Final entry returns to start (25.4, 0) mm.
+    final_state = reconstruct_state(trace, len(trace["entries"]) - 1)
+    assert final_state["machine_position"]["x"] == pytest.approx(25.4, abs=0.1)
+    assert final_state["machine_position"]["y"] == pytest.approx(0.0, abs=0.1)
+
+
+# ---------------------------------------------------------------------------
+# RS274 §2.1.2.5 Case A: linear + rotary path length uses XYZ only
+# ---------------------------------------------------------------------------
+
+
+def test_linear_plus_rotary_duration_uses_xyz_path_only(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """RS274 §2.1.2.5 Case A: path length excludes rotary axes.
+
+    G1 X1 A90 F60: XYZ path = 1 inch, duration = 1.0 s.
+    If rotary axes are incorrectly included, path ~= 90, duration ~= 90 s.
+    """
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G1 X1 A90 F60\n",
+        trace_time_step=100.0,
+        tmp_path=tmp_path,
+    )
+    entries = [e for e in trace["entries"] if e["line_number"] == 1]
+    assert len(entries) == 1
+    # Duration should be ~1.0 s (1 inch at 60 ipm), NOT ~90 s.
+    assert entries[0]["time"] == pytest.approx(1.0, abs=0.05)
+
+
+def test_rotary_only_g21_feed_rate_not_converted(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """RS274 §2.1.2.5 Case B: rotary-only feed rate is deg/min, not mm/min.
+
+    G21 G1 A90 F90: path = 90 degrees, rate = 90 deg/min, duration = 60 s.
+    Bug: G21 would convert 90 "mm/min" to ~3.54 in/min, giving ~1524 s.
+    """
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G21\nG1 A90 F90\n",
+        trace_time_step=1000.0,
+        tmp_path=tmp_path,
+    )
+    entries = [e for e in trace["entries"] if e["line_number"] == 2]
+    assert len(entries) == 1
+    # 90 degrees at 90 deg/min = 60 seconds, NOT ~1524 seconds.
+    assert entries[0]["time"] == pytest.approx(60.0, abs=0.5)
+
+
+# ---------------------------------------------------------------------------
+# G88 boring cycle trace coverage
+# ---------------------------------------------------------------------------
+
+
+def test_g88_boring_rapid_retract(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """G88 (boring, manual retract) sub-motions: like G86 with spindle on.
+
+    SM1: rapid XY, SM2: rapid to R, SM3: feed to Z, SM4: rapid retract.
+    """
+    tool_table = "POCKET FMS TLO DIAMETER\n\n1 1 0.0 0.0\n"
+    setup = "T1\nM6\nM3\nG90\nG98\nG0 X0 Y0 Z1\n"
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode=setup + "G88 X1 Z-1 R0 P0.5 F60\n",
+        trace_distance_step=1000.0,
+        tool_table_content=tool_table,
+        tmp_path=tmp_path,
+    )
+    g88_entries = [e for e in trace["entries"] if e["line_number"] == 7]
+    assert len(g88_entries) >= 3
+
+    kinds = [e.get("motion_kind") for e in g88_entries if "motion_kind" in e]
+    assert "rapid" in kinds, "G88 should have rapid sub-motions"
+    assert "feed" in kinds, "G88 should have feed sub-motions"
+
+    final = reconstruct_state(trace, len(trace["entries"]) - 1)
+    assert final["machine_position"]["z"] == pytest.approx(1.0, abs=1e-6)
+
+
+# ---------------------------------------------------------------------------
+# G28 per-sub-motion stepping
+# ---------------------------------------------------------------------------
+
+
+def test_g28_stepping_applied_per_sub_motion(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    """G28 stepping is applied to each sub-motion independently.
+
+    G28 from (0,0,0) via intermediate (3,0,0) to home (6,0,0).
+    SM1: rapid (0,0,0)→(3,0,0), 3 inches.
+    SM2: rapid (3,0,0)→(6,0,0), 3 inches.
+    With --trace-distance-step 2.0: each SM gets 1 interior + 1 final = 2 entries.
+    Total G28 entries = 4 (not 3, which would mean stepping across the whole move).
+    """
+    from cncsim_support import build_parameter_file
+
+    params = build_parameter_file({5161: 6.0, 5162: 0.0, 5163: 0.0})
+    _, _, trace = run_cncsim_trace(
+        submission_command,
+        input_gcode="G28 X3\n",
+        trace_distance_step=2.0,
+        parameter_input_content=params,
+        tmp_path=tmp_path,
+    )
+    g28_entries = [e for e in trace["entries"] if e["line_number"] == 1]
+    # Per-SM stepping: each 3-inch SM with 2-inch step → 1 interior + 1 final = 2.
+    # Total = 4 entries. If stepping were applied across the whole 6-inch move,
+    # we'd get 3 interior + 1 final = 4 — same count but different time resets.
+    assert len(g28_entries) == 4
+
+    # Verify time resets at SM boundary: SM2's first entry should have a time
+    # that includes SM1's total duration, not restart from zero.
+    sm1_final_time = g28_entries[1]["time"]
+    sm2_first_time = g28_entries[2]["time"]
+    assert sm2_first_time > sm1_final_time, \
+        "SM2 entries should have cumulative time greater than SM1"
+
+    # Verify positions at SM boundaries.
+    sm1_final = reconstruct_state(trace, trace["entries"].index(g28_entries[1]))
+    assert sm1_final["machine_position"]["x"] == pytest.approx(3.0, abs=0.01)
+    sm2_final = reconstruct_state(trace, trace["entries"].index(g28_entries[3]))
+    assert sm2_final["machine_position"]["x"] == pytest.approx(6.0, abs=0.01)
