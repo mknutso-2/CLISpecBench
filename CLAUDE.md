@@ -87,6 +87,40 @@ Confirm from the transcript that the agent acknowledged it was done. Check wheth
 3. Whether non-zero timed-out runs might have scored higher
 4. Infrastructure issues requiring reruns
 
+### Official results table rules
+
+Only runs with `exit_reason: "completed"` appear in the per-run detail tables and
+are included in Best/Mean calculations. Runs that errored, timed out, or were
+rate-limited are excluded from the table and noted below it as needing reruns.
+If a model has zero completed runs, list it in the summary table with `- | -` for
+Best/Mean and describe the failure in the Status column.
+
+### Last Message column
+
+The "Last Message" column summarizes `metadata.agent_last_message` from the result
+JSON. **Do not copy the first sentence verbatim** — agents often sound confident
+even when they produced nothing. Instead, write a short editorial summary that
+surfaces the agent's actual completion state. The goal is to make it immediately
+obvious to a casual reader whether the agent considered the task done.
+
+Key signals to surface (quote the agent's own words when possible):
+
+- **Claims complete**: "Claims complete." / "Claims complete; built and tested."
+- **Incomplete — asked to continue**: "Incomplete; wrote no code. Asked 'Shall I
+  proceed with building the simulator?'" / "Incomplete; scaffolded only. Asked
+  'Let me know if you want to proceed.'"
+- **Incomplete — acknowledged but didn't ask**: "Incomplete; scaffolded only.
+  Acknowledged 'core logic will be implemented next.'"
+- **Incomplete — not acknowledged**: "Claims complete but only wrote stubs (0 LOC)."
+- **Asking a question**: "Asked for clarification on X."
+
+Read the full `agent_last_message` (not just the first line) and cross-reference
+with Files/LOC to judge whether the agent's claim is credible. A message that says
+"simulator is working" with 0 files is a false claim — flag it. Always check for
+questions directed at the user ("Should I proceed?", "Let me know if you want to
+continue", "Shall I...?") — these are strong signals that the agent treated the
+task as interactive despite the one-shot prompt.
+
 ## Environment notes
 
 - **Use `python`, not `python3`**, for all shell commands. On this Windows system, `python3` is not available; `python` resolves to the correct interpreter.

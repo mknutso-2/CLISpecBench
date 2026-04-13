@@ -151,6 +151,26 @@ class CodexCLIAdapter(AgentAdapter):
     def allowed_hosts(self) -> list[str]:
         return ["chatgpt.com"]
 
+    def extract_last_agent_message(self, container_logs: str) -> str | None:
+        """Extract last agent_message text from Codex CLI JSONL output."""
+        for line in reversed(container_logs.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if event.get("type") != "item.completed":
+                continue
+            item = event.get("item", {})
+            if item.get("type") != "agent_message":
+                continue
+            text = item.get("text", "")
+            if isinstance(text, str) and text.strip():
+                return text
+        return None
+
 
 def _count_tool_calls(container_logs: str) -> int:
     """Count command_execution items in Codex JSONL event stream."""

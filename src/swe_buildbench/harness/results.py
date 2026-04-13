@@ -160,6 +160,9 @@ class RunMetadata:
     # hidden tests (what scores it). See ``harness/hashing.py``.
     prompt_content_sha: str = "unknown"
     test_suite_sha: str = "unknown"
+    # Last text message from the agent — helps identify whether the agent
+    # considered the task complete vs. acknowledged it was incomplete.
+    agent_last_message: str | None = None
 
 
 @dataclass
@@ -379,6 +382,7 @@ def load_result(path: Path) -> RunResult:
     meta.setdefault("harness_version", "unknown")
     meta.setdefault("prompt_content_sha", "unknown")
     meta.setdefault("test_suite_sha", "unknown")
+    meta.setdefault("agent_last_message", None)
     metadata = RunMetadata(**meta)
     token_usage = (
         TokenUsage(

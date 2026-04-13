@@ -127,6 +127,24 @@ class ClaudeCodeAdapter(AgentAdapter):
     def allowed_hosts(self) -> list[str]:
         return ["api.anthropic.com"]
 
+    def extract_last_agent_message(self, container_logs: str) -> str | None:
+        """Extract last assistant text from Claude Code stream-json output."""
+        for line in reversed(container_logs.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if event.get("type") != "assistant":
+                continue
+            content = event.get("message", {}).get("content", [])
+            texts = [b.get("text", "") for b in content if b.get("type") == "text"]
+            if texts:
+                return texts[-1]
+        return None
+
 
 def _parse_stream_json_usage(container_logs: str) -> TokenUsage | None:
     """Parse token usage from the stream-json ``result`` event."""

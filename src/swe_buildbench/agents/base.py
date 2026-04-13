@@ -129,3 +129,12 @@ class AgentAdapter(ABC):
     def image_tag(self) -> str:
         """Docker image tag for this agent (e.g. ``swe-buildbench-claude-code``)."""
         return f"swe-buildbench-{self.name}"
+
+    def extract_last_agent_message(self, container_logs: str) -> str | None:
+        """Extract the last text message the agent produced.
+
+        Used to determine whether the agent considered the task complete or
+        acknowledged it was incomplete before stopping.  Returns the raw text
+        (may be long); callers truncate for storage.
+        """
+        return None

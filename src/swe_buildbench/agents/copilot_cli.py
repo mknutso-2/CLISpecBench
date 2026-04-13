@@ -135,6 +135,24 @@ class CopilotCLIAdapter(AgentAdapter):
             "copilot-proxy.githubusercontent.com",
         ]
 
+    def extract_last_agent_message(self, container_logs: str) -> str | None:
+        """Extract last assistant.message text from Copilot CLI JSONL output."""
+        for line in reversed(container_logs.splitlines()):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if event.get("type") != "assistant.message":
+                continue
+            data = event.get("data", event)
+            text = data.get("text", data.get("content", ""))
+            if isinstance(text, str) and text.strip():
+                return text
+        return None
+
 
 def _parse_jsonl_usage(container_logs: str) -> TokenUsage | None:
     """Parse token usage from the Copilot CLI JSON output.

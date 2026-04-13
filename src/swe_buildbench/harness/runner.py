@@ -232,6 +232,15 @@ def run_evaluation(
             exit_reason = "no_output"
             log.warning("Agent produced no tokens and no output files")
 
+        # Extract last agent message for completeness assessment
+        agent_last_message: str | None = None
+        try:
+            raw_msg = adapter.extract_last_agent_message(container_logs)
+            if raw_msg:
+                agent_last_message = raw_msg[:2000]
+        except Exception:
+            log.debug("Failed to extract last agent message", exc_info=True)
+
         metadata = RunMetadata(
             run_id=run_id,
             task=task.task_id,
@@ -250,6 +259,7 @@ def run_evaluation(
             effort=adapter.effort,
             prompt_content_sha=prompt_hash.sha256,
             test_suite_sha=test_hash.sha256,
+            agent_last_message=agent_last_message,
         )
 
         # --- 10. Save artifacts ---

@@ -106,6 +106,38 @@ class GeminiCLIAdapter(AgentAdapter):
     def allowed_hosts(self) -> list[str]:
         return ["generativelanguage.googleapis.com", "oauth2.googleapis.com"]
 
+    def extract_last_agent_message(self, container_logs: str) -> str | None:
+        """Extract last assistant turn from Gemini stream-json output.
+
+        Gemini streams content as sequential ``message`` events with
+        ``role: "assistant"`` and ``delta: True``.  The last turn's full
+        text is the concatenation of the trailing block of consecutive
+        assistant message deltas.
+        """
+        lines = container_logs.splitlines()
+        parts: list[str] = []
+        for line in reversed(lines):
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if event.get("type") == "result":
+                continue
+            if event.get("type") == "message" and event.get("role") == "assistant":
+                content = event.get("content", "")
+                if isinstance(content, str):
+                    parts.append(content)
+            elif parts:
+                # Hit a non-assistant event after we started collecting
+                break
+        if not parts:
+            return None
+        parts.reverse()
+        return "".join(parts)
+
 
 def _parse_stream_json_stats(container_logs: str) -> TokenUsage | None:
     """Parse token usage from the Gemini stream-json ``result`` event."""
