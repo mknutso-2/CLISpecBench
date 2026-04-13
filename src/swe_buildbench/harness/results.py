@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import json
+import logging
+import os
 import shutil
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = "1.0"
 
@@ -221,6 +225,93 @@ def next_eval_number(
         if d.is_dir() and d.name.startswith("eval") and d.name[4:].isdigit()
     ]
     return max(existing, default=0) + 1
+
+
+class EvalLock:
+    """Filesystem lock that prevents concurrent runs for the same config.
+
+    Uses ``O_CREAT | O_EXCL`` for atomic creation — if two processes race,
+    exactly one wins and the other gets ``FileExistsError``.
+
+    Usage::
+
+        lock = EvalLock.acquire(output_dir, task, agent, model, effort)
+        try:
+            ...  # run evaluation
+        finally:
+            lock.release()
+    """
+
+    def __init__(self, lock_path: Path, pid: int) -> None:
+        self._lock_path = lock_path
+        self._pid = pid
+
+    @classmethod
+    def acquire(
+        cls,
+        output_dir: Path,
+        task: str,
+        agent: str,
+        model: str | None = None,
+        effort: str | None = None,
+    ) -> EvalLock:
+        """Acquire a lock, or raise ``SystemExit`` if one is already held."""
+        base = _model_base_dir(output_dir, task, agent, model, effort)
+        base.mkdir(parents=True, exist_ok=True)
+        lock_path = base / ".eval.lock"
+        pid = os.getpid()
+
+        # Check for stale lock from a dead process
+        if lock_path.exists():
+            try:
+                old_pid = int(lock_path.read_text().strip())
+                try:
+                    os.kill(old_pid, 0)  # signal 0 = check existence
+                except OSError:
+                    # Process is dead — stale lock
+                    log.warning(
+                        "Removing stale lock %s (pid %d is dead)", lock_path, old_pid
+                    )
+                    lock_path.unlink(missing_ok=True)
+                else:
+                    raise SystemExit(
+                        f"Another evaluation is already running for "
+                        f"{task}/{agent}/{model or 'default'} "
+                        f"(pid {old_pid}, lock: {lock_path}). "
+                        f"Wait for it to finish or remove the lock file manually."
+                    )
+            except (ValueError, OSError):
+                # Corrupt lock file — remove it
+                log.warning("Removing corrupt lock file %s", lock_path)
+                lock_path.unlink(missing_ok=True)
+
+        # Atomic create — races between the stale check and this are still
+        # safe because O_EXCL fails if the file already exists.
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(pid).encode())
+            os.close(fd)
+        except FileExistsError as exc:
+            raise SystemExit(
+                f"Another evaluation is already running for "
+                f"{task}/{agent}/{model or 'default'} "
+                f"(lock: {lock_path}). "
+                f"Wait for it to finish or remove the lock file manually."
+            ) from exc
+
+        log.info("Acquired eval lock: %s (pid %d)", lock_path, pid)
+        return cls(lock_path, pid)
+
+    def release(self) -> None:
+        """Release the lock if we still own it."""
+        try:
+            if self._lock_path.exists():
+                current_pid = int(self._lock_path.read_text().strip())
+                if current_pid == self._pid:
+                    self._lock_path.unlink(missing_ok=True)
+                    log.info("Released eval lock: %s", self._lock_path)
+        except (ValueError, OSError) as exc:
+            log.warning("Failed to release lock %s: %s", self._lock_path, exc)
 
 
 def save_transcript(result_json_path: Path, transcript_data: str) -> str:

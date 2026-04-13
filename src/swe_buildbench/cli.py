@@ -10,7 +10,13 @@ from pathlib import Path
 from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.harness.flakiness import compute_flakiness
 from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
-from swe_buildbench.harness.results import RunResult, load_result, next_eval_number
+from swe_buildbench.harness.results import (
+    EvalLock,
+    RunResult,
+    load_result,
+    next_eval_number,
+    result_path,
+)
 from swe_buildbench.harness.runner import run_evaluation
 from swe_buildbench.harness.scoring import compute_subscores
 from swe_buildbench.harness.task import list_tasks, resolve_task
@@ -90,42 +96,68 @@ def _cmd_run(args: argparse.Namespace) -> None:
 
     num_runs: int = args.runs
     output_dir = Path(args.output_dir)
-    eval_num = next_eval_number(
+
+    # Acquire a filesystem lock to prevent concurrent runs for the same config.
+    lock = EvalLock.acquire(
         output_dir,
         task.task_id,
         adapter.name,
         adapter.model,
         adapter.effort,
     )
-    log = logging.getLogger(__name__)
-    log.info("Writing results to eval%d (runs 1-%d)", eval_num, num_runs)
-
-    for run_number in range(1, num_runs + 1):
-        print(f"\n{'=' * 60}")
-        print(
-            f"eval{eval_num}/run{run_number} ({run_number}/{num_runs}): "
-            f"{args.task} / {adapter.name}"
+    try:
+        eval_num = next_eval_number(
+            output_dir,
+            task.task_id,
+            adapter.name,
+            adapter.model,
+            adapter.effort,
         )
-        print(f"{'=' * 60}\n")
+        log = logging.getLogger(__name__)
+        log.info("Writing results to eval%d (runs 1-%d)", eval_num, num_runs)
 
-        result = run_evaluation(
-            task=task,
-            adapter=adapter,
-            run_number=run_number,
-            eval_number=eval_num,
-            prompt_variant=args.prompt_variant,
-            timeout_seconds=args.timeout,
-            output_dir=Path(args.output_dir),
-            api_key_env=api_key_env,
-            skip_extensions=args.skip_extensions,
-        )
+        for run_number in range(1, num_runs + 1):
+            print(f"\n{'=' * 60}")
+            print(
+                f"eval{eval_num}/run{run_number} ({run_number}/{num_runs}): "
+                f"{args.task} / {adapter.name}"
+            )
+            print(f"{'=' * 60}\n")
 
-        print(f"\nResult: {result.metadata.exit_reason}")
-        print(f"Tests: {result.test_summary.passed}/{result.test_summary.total} passed")
-        if result.scores.task_score is not None:
-            print(f"Task score: {result.scores.task_score:.3f}")
-        if result.token_usage:
-            print(f"Tokens: {result.token_usage.total_tokens:,}")
+            result = run_evaluation(
+                task=task,
+                adapter=adapter,
+                run_number=run_number,
+                eval_number=eval_num,
+                prompt_variant=args.prompt_variant,
+                timeout_seconds=args.timeout,
+                output_dir=Path(args.output_dir),
+                api_key_env=api_key_env,
+                skip_extensions=args.skip_extensions,
+            )
+
+            print(f"\nResult: {result.metadata.exit_reason}")
+            print(f"Tests: {result.test_summary.passed}/{result.test_summary.total} passed")
+            if result.scores.task_score is not None:
+                print(f"Task score: {result.scores.task_score:.3f}")
+            if result.token_usage:
+                print(f"Tokens: {result.token_usage.total_tokens:,}")
+
+            # Write a progress file next to the results so external observers
+            # can tell the eval is alive and how far along it is without
+            # parsing stdout.
+            progress_path = result_path(
+                output_dir, task.task_id, adapter.name,
+                run_number, adapter.model, adapter.effort, eval_num,
+            ).parent.parent / "progress.txt"
+            progress_path.write_text(
+                f"run {run_number}/{num_runs} completed\n"
+                f"last: {result.test_summary.passed}/{result.test_summary.total} "
+                f"({result.metadata.exit_reason})\n",
+                encoding="utf-8",
+            )
+    finally:
+        lock.release()
 
 
 # ---------------------------------------------------------------------------
@@ -644,6 +676,14 @@ def main(argv: list[str] | None = None) -> None:
     validate_parser.add_argument("--task", required=True, choices=list_tasks())
 
     args = parser.parse_args(argv)
+
+    # Force line-buffered stdout/stderr so log lines are visible immediately
+    # when the harness runs as a background task with output redirected to a
+    # file.  Without this, Python's default block-buffering hides all output
+    # until the process exits, making it impossible to tell whether a
+    # multi-hour eval is alive or dead.
+    sys.stdout.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
+    sys.stderr.reconfigure(line_buffering=True)  # type: ignore[attr-defined]
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
