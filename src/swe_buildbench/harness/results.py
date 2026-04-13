@@ -88,6 +88,45 @@ class Scores:
 
 
 @dataclass
+class SourceStats:
+    """Size metrics for the agent's submitted source code."""
+
+    file_count: int = 0
+    lines_of_code: int = 0  # non-blank lines
+
+
+# Source-file extensions counted for SourceStats, keyed by language.
+_SOURCE_EXTENSIONS: dict[str, set[str]] = {
+    "cpp": {".cpp", ".h", ".c", ".hpp", ".cxx", ".cc", ".hxx"},
+    "py": {".py"},
+    "js": {".js", ".ts", ".mjs", ".cjs"},
+    "rs": {".rs"},
+}
+# Union of all, used as fallback when language is unknown.
+_ALL_SOURCE_EXTENSIONS: set[str] = {ext for exts in _SOURCE_EXTENSIONS.values() for ext in exts}
+
+
+def compute_source_stats(source_dir: Path, language: str | None = None) -> SourceStats:
+    """Count source files and non-blank lines in *source_dir*."""
+    if not source_dir.is_dir():
+        return SourceStats()
+    extensions = _SOURCE_EXTENSIONS.get(language or "", _ALL_SOURCE_EXTENSIONS)
+    # CMakeLists.txt is always counted for C++ projects
+    file_count = 0
+    loc = 0
+    for f in source_dir.rglob("*"):
+        if not f.is_file():
+            continue
+        if f.suffix in extensions or (f.name == "CMakeLists.txt" and language in (None, "cpp")):
+            file_count += 1
+            try:
+                loc += sum(1 for line in f.read_text(errors="replace").splitlines() if line.strip())
+            except OSError:
+                pass
+    return SourceStats(file_count=file_count, lines_of_code=loc)
+
+
+@dataclass
 class RunArtifacts:
     """Paths to preserved artifacts from the run, relative to the result file."""
 
@@ -134,6 +173,7 @@ class RunResult:
     test_summary: TestSummary
     scores: Scores
     artifacts: RunArtifacts = field(default_factory=RunArtifacts)
+    source_stats: SourceStats = field(default_factory=SourceStats)
     surgery: str | None = None  # Description of post-hoc fix applied to get code to compile
 
     @property
@@ -153,6 +193,7 @@ class RunResult:
         d["test_summary"] = {**asdict(self.test_summary), "total": self.test_summary.total}
         d["scores"] = asdict(self.scores)
         d["artifacts"] = asdict(self.artifacts)
+        d["source_stats"] = asdict(self.source_stats)
         if self.surgery:
             d["surgery"] = self.surgery
         return d
@@ -370,6 +411,11 @@ def load_result(path: Path) -> RunResult:
         transcript=artifacts_data.get("transcript"),
         source_dir=artifacts_data.get("source_dir"),
     )
+    ss_data = data.get("source_stats", {})
+    source_stats = SourceStats(
+        file_count=ss_data.get("file_count", 0),
+        lines_of_code=ss_data.get("lines_of_code", 0),
+    )
     return RunResult(
         metadata=metadata,
         token_usage=token_usage,
@@ -378,5 +424,6 @@ def load_result(path: Path) -> RunResult:
         test_summary=summary,
         scores=scores,
         artifacts=artifacts,
+        source_stats=source_stats,
         surgery=data.get("surgery"),
     )

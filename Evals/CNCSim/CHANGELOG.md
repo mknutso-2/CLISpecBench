@@ -1,5 +1,15 @@
 # CNCSim Changelog
 
+## v2.0.2 — 2026-04-12
+
+### Changed
+
+- **Prompt: non-interactive instruction**: appended shared
+  `Evals/_shared/require-one-shot.md` to the assembled prompt, telling agents
+  this is a non-interactive task — implement the full solution without asking
+  questions or waiting for confirmation. Addresses haiku-4.5 runs that asked
+  "Should I proceed?" and stopped.
+
 ## v2.0.1 — 2026-04-11
 
 RS274 spec-compliance fixes found during adversarial subagent review of

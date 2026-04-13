@@ -8,6 +8,8 @@ from pathlib import Path
 
 from swe_buildbench.harness.task import TaskDefinition
 
+SHARED_PROMPTS_DIR = Path(__file__).resolve().parents[3] / "Evals" / "_shared"
+
 
 def assemble_prompt(task: TaskDefinition, variant: str | None = None) -> str:
     """Concatenate the base prompt (or variant) with the technical requirements."""
@@ -25,13 +27,18 @@ def assemble_prompt(task: TaskDefinition, variant: str | None = None) -> str:
     base_text = prompt_path.read_text(encoding="utf-8")
     language_text = task.language_prompt_path.read_text(encoding="utf-8")
     tech_text = task.technical_prompt_path.read_text(encoding="utf-8")
-    return (
-        base_text.rstrip()
-        + "\n\n"
-        + language_text.strip()
-        + "\n\n"
-        + tech_text.lstrip()
-    )
+
+    parts = [
+        base_text.rstrip(),
+        language_text.strip(),
+        tech_text.lstrip(),
+    ]
+
+    one_shot = SHARED_PROMPTS_DIR / "require-one-shot.md"
+    if one_shot.is_file():
+        parts.append(one_shot.read_text(encoding="utf-8").strip())
+
+    return "\n\n".join(parts)
 
 
 def prepare_workspace(

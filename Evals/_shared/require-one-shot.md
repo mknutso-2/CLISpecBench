@@ -1,0 +1,1 @@
+This is a non-interactive task. Implement the complete solution without asking questions, requesting clarification, or waiting for confirmation. Everything you need is in the specification and the technical requirements. Write all the code and make sure it builds.

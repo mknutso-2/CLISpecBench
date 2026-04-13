@@ -124,6 +124,14 @@ def hash_prompt_content(task: TaskDefinition, variant: str | None = None) -> Con
         ("prompt/technical-requirements-prompt.md", task.technical_prompt_path),
         ("prompt/docs", task.docs_dir),
     ]
+
+    # Shared prompt fragments appended by assemble_prompt
+    from swe_buildbench.harness.workspace import SHARED_PROMPTS_DIR
+
+    one_shot = SHARED_PROMPTS_DIR / "require-one-shot.md"
+    if one_shot.is_file():
+        entries.append(("_shared/require-one-shot.md", one_shot))
+
     return hash_paths(entries)
 
 

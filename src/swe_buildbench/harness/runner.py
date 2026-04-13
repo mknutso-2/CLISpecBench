@@ -26,6 +26,7 @@ from swe_buildbench.harness.results import (
     RunMetadata,
     RunResult,
     TokenUsage,
+    compute_source_stats,
     make_run_id,
     result_path,
     save_source_dir,
@@ -268,7 +269,8 @@ def run_evaluation(
         if container_logs:
             artifacts.transcript = save_transcript(out_path, container_logs)
 
-        # Save agent source code
+        # Save agent source code and compute stats
+        source_stats = compute_source_stats(submission_dir, task.language)
         if submission_dir.exists() and any(submission_dir.iterdir()):
             artifacts.source_dir = save_source_dir(out_path, submission_dir)
 
@@ -280,6 +282,7 @@ def run_evaluation(
             test_summary=test_summary,
             scores=scores,
             artifacts=artifacts,
+            source_stats=source_stats,
         )
 
         # --- 11. Write result ---
