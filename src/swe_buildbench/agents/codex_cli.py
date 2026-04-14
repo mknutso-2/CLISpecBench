@@ -83,7 +83,8 @@ class CodexCLIAdapter(AgentAdapter):
         sources: list[str] = []
         if container_logs:
             sources.append(container_logs)
-        event_log = container_fs / "tmp" / "codex-events.jsonl"
+        # copy_out() extracts /tmp/codex-events.jsonl → extract_dir/codex-events.jsonl
+        event_log = container_fs / "codex-events.jsonl"
         if event_log.is_file():
             sources.append(event_log.read_text(encoding="utf-8"))
 

@@ -130,7 +130,6 @@ def _cmd_run(args: argparse.Namespace) -> None:
                 run_number=run_number,
                 eval_number=eval_num,
                 prompt_variant=args.prompt_variant,
-                timeout_seconds=args.timeout,
                 output_dir=Path(args.output_dir),
                 api_key_env=api_key_env,
                 skip_extensions=args.skip_extensions,
@@ -612,7 +611,6 @@ def main(argv: list[str] | None = None) -> None:
     )
     run_parser.add_argument("--runs", type=int, default=3)
     run_parser.add_argument("--prompt-variant", default=None)
-    run_parser.add_argument("--timeout", type=float, default=4 * 60 * 60)
     run_parser.add_argument("--output-dir", default="results")
     run_parser.add_argument("--model", default=None, help="Model to use (e.g. opus, sonnet, o3)")
     run_parser.add_argument(

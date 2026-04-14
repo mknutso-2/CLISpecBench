@@ -97,7 +97,8 @@ class ClaudeCodeAdapter(AgentAdapter):
         if usage is not None:
             return usage
 
-        otel_dir = container_fs / "tmp" / "otel"
+        # copy_out() extracts /tmp/otel → extract_dir/otel
+        otel_dir = container_fs / "otel"
         if not otel_dir.is_dir():
             log.info("No OpenTelemetry directory found at %s", otel_dir)
             return None

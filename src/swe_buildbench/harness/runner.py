@@ -45,7 +45,7 @@ from swe_buildbench.harness.workspace import prepare_workspace
 
 log = logging.getLogger(__name__)
 
-DEFAULT_TIMEOUT = 30 * 60  # 30 minutes
+DEFAULT_TIMEOUT = 24 * 60 * 60  # 24 hours — safety backstop, not a meaningful limit
 
 
 def _git_sha() -> str:
@@ -278,6 +278,14 @@ def run_evaluation(
         # Save agent transcript (container stdout/stderr)
         if container_logs:
             artifacts.transcript = save_transcript(out_path, container_logs)
+
+        # Save extracted telemetry files alongside results
+        for tpath in adapter.telemetry_paths:
+            tfile = extract_dir / PurePosixPath(tpath).name
+            if tfile.is_file():
+                dest = out_path.parent / tfile.name
+                shutil.copy2(tfile, dest)
+                log.debug("Saved telemetry file %s", dest)
 
         # Save agent source code and compute stats
         source_stats = compute_source_stats(submission_dir, task.language)

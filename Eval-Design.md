@@ -305,7 +305,7 @@ Do not include any text outside the JSON object.
 
 **Sandboxing.** Agent runs must execute in Docker containers with no outbound network access, resource limits (CPU, memory), and filesystem isolation. An agent that can execute arbitrary shell commands must not be able to affect the host system or contact external services.
 
-**Timeouts.** Agent sessions are capped at 4 hours wall-clock time by default. A session that exceeds this limit is terminated; the harness scores whatever files exist in the working directory at that point. The timeout can be overridden with `--timeout <seconds>` but should never be set below 4 hours for CNCSim-Full evaluations, as many capable agents need 30-60+ minutes to produce a working implementation.
+**No artificial timeouts.** Agent sessions run until the agent exits naturally. The harness has a 24-hour safety backstop to catch truly hung containers, but this is not intended as a meaningful constraint. Agents that need hours to iterate should be allowed to finish — killing a run mid-execution produces artificially low scores and wastes compute.
 
 **Token budgets.** Agent sessions are capped at 500,000 tokens. This is logged per run. Sessions approaching the cap are noted in results, as context exhaustion is a meaningful capability dimension.
 

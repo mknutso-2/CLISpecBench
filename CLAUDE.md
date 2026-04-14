@@ -54,6 +54,24 @@ Single test: `pytest path/to/test_file.py::test_name`. Pytest markers `docker` a
 - **Bump per-eval `VERSION` + `CHANGELOG.md` on any contract-affecting change.** Each `Evals/<Task>/` has a `VERSION` file (semver) and a `CHANGELOG.md`. Bump both whenever you change anything an agent or scoring run can observe (prompts, docs, tests, harness contract, reference impls reflecting a spec change). See README.md → "Versioning" for patch/minor/major guidance and the full rule.
 ## Running evals
 
+### Launching eval runs
+
+**There is no timeout flag.** Agent sessions run until the agent exits naturally.
+The harness has a 24-hour safety backstop for hung containers, but this should
+never be hit in practice. Killing a run mid-execution produces artificially low
+scores and wastes compute.
+
+Run evals in the background and monitor them periodically. Do not block on them.
+The harness writes `progress.txt` in the eval directory as runs complete —
+check that file and the Docker container status to track progress. You will be
+notified when the background command finishes.
+
+Example launch:
+```bash
+DOCKER_HOST=tcp://localhost:2375 swe-buildbench run \
+  --task cncsim-full --agent codex-cli --model gpt-5.2-codex --effort xhigh --runs 3
+```
+
 ### Post-run log inspection (required)
 
 After every eval run completes, inspect the result and transcript before moving on. Do not batch up runs and check later.
@@ -106,20 +124,31 @@ obvious to a casual reader whether the agent considered the task done.
 Key signals to surface (quote the agent's own words when possible):
 
 - **Claims complete**: "Claims complete." / "Claims complete; built and tested."
-- **Incomplete — asked to continue**: "Incomplete; wrote no code. Asked 'Shall I
-  proceed with building the simulator?'" / "Incomplete; scaffolded only. Asked
-  'Let me know if you want to proceed.'"
-- **Incomplete — acknowledged but didn't ask**: "Incomplete; scaffolded only.
-  Acknowledged 'core logic will be implemented next.'"
+- **Incomplete — acknowledged**: When the model explicitly acknowledges its
+  implementation is incomplete, this MUST be surfaced. Look for: "remaining work"
+  lists, "pending" / "TODO" items, future tense about core features ("will be
+  implemented next"), progress-report framing ("began structuring..."), or explicit
+  statements that the code doesn't build/run yet. Always quote or paraphrase the
+  acknowledgment so a reader can see the model knew it was incomplete.
+  Examples: "Incomplete; acknowledged — listed 3 'Remaining work' items and noted
+  'build and runtime logic are still pending.'" / "Incomplete; acknowledged 'core
+  logic will be implemented next.'"
+- **Incomplete — asked to continue**: When the model requests user input to
+  continue, flag it. Direct questions ("Shall I proceed?", "Let me know if you
+  want to continue") and indirect handoffs ("If you can break the problem into
+  narrower slices...", numbered continuation plans) both count — the model treated
+  the one-shot task as interactive. Examples: "Incomplete; wrote no code. Asked
+  'Shall I proceed with building the simulator?'" / "Incomplete; declined task.
+  Asked user to 'break the problem into narrower slices.'"
 - **Incomplete — not acknowledged**: "Claims complete but only wrote stubs (0 LOC)."
 - **Asking a question**: "Asked for clarification on X."
 
+Note: "acknowledged" and "asked to continue" are not mutually exclusive — a model
+can do both. Surface whichever signals are present.
+
 Read the full `agent_last_message` (not just the first line) and cross-reference
 with Files/LOC to judge whether the agent's claim is credible. A message that says
-"simulator is working" with 0 files is a false claim — flag it. Always check for
-questions directed at the user ("Should I proceed?", "Let me know if you want to
-continue", "Shall I...?") — these are strong signals that the agent treated the
-task as interactive despite the one-shot prompt.
+"simulator is working" with 0 files is a false claim — flag it.
 
 ## Environment notes
 

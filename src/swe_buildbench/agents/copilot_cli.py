@@ -61,7 +61,12 @@ class CopilotCLIAdapter(AgentAdapter):
                     "No GitHub token found. Set COPILOT_GITHUB_TOKEN, "
                     "GH_TOKEN, or run 'gh auth login'."
                 )
-        # Enable OTel file export for token tracking
+        # Enable OTel file export for token tracking.
+        # COPILOT_OTEL_ENABLED activates instrumentation (available since
+        # v1.0.4).  COPILOT_OTEL_FILE_EXPORTER_PATH tells the CLI to write
+        # metrics/traces as JSON-lines to a local file instead of requiring
+        # an OTLP endpoint.
+        env["COPILOT_OTEL_ENABLED"] = "true"
         env["COPILOT_OTEL_FILE_EXPORTER_PATH"] = OTEL_FILE_PATH
         return env
 
@@ -93,14 +98,25 @@ class CopilotCLIAdapter(AgentAdapter):
         container_fs: Path,
         container_logs: str = "",
     ) -> TokenUsage | None:
-        """Parse token usage from JSONL output or OTel file export."""
+        """Parse token usage from OTel file export or JSONL output.
+
+        OTel is preferred because it reports both input and output tokens,
+        while the JSONL event stream only has output tokens.
+        """
+        # copy_out() extracts /tmp/copilot-otel.jsonl to extract_dir/copilot-otel.jsonl
+        otel_file = container_fs / "copilot-otel.jsonl"
+        log.debug("Looking for OTel file at %s (exists=%s)", otel_file, otel_file.is_file())
+        if otel_file.is_file():
+            otel_usage = _parse_otel_file(otel_file)
+            if otel_usage is not None:
+                # Supplement with tool call count from JSONL
+                otel_usage.tool_calls = _count_tool_calls(container_logs)
+                return otel_usage
+
+        # Fall back to JSONL output (only has output tokens)
         usage = _parse_jsonl_usage(container_logs)
         if usage is not None:
             return usage
-
-        otel_file = container_fs / "tmp" / "copilot-otel.jsonl"
-        if otel_file.is_file():
-            return _parse_otel_file(otel_file)
 
         log.info("No token usage found in Copilot CLI output")
         return None
@@ -224,7 +240,13 @@ def _count_tool_calls(container_logs: str) -> int:
 
 
 def _parse_otel_file(otel_file: Path) -> TokenUsage | None:
-    """Parse token usage from the OTel JSON-lines file export."""
+    """Parse token usage from the Copilot CLI OTel JSON-lines file.
+
+    The CLI writes flat JSONL records (not OTLP-wrapped ``resourceMetrics``).
+    Token data comes from ``gen_ai.client.token.usage`` metric entries whose
+    ``dataPoints`` carry cumulative histogram values.  The file may contain
+    multiple snapshots; we take the last one (highest cumulative totals).
+    """
     input_tokens = 0
     output_tokens = 0
 
@@ -237,42 +259,36 @@ def _parse_otel_file(otel_file: Path) -> TokenUsage | None:
                 record: Any = json.loads(line)
             except (json.JSONDecodeError, ValueError):
                 continue
-            # OTel file exporter emits resource metrics
-            for rm in record.get("resourceMetrics", []):
-                for sm in rm.get("scopeMetrics", []):
-                    for metric in sm.get("metrics", []):
-                        if "token" not in metric.get("name", ""):
-                            continue
-                        for dp in metric.get("dataPoints", []):
-                            attrs = _parse_otel_attrs(dp.get("attributes", []))
-                            value = int(dp.get("asInt", dp.get("asDouble", 0)))
-                            token_type = attrs.get("type", attrs.get("gen_ai.token.type", ""))
-                            if token_type == "input":
-                                input_tokens += value
-                            elif token_type == "output":
-                                output_tokens += value
+
+            if record.get("type") != "metric":
+                continue
+            if record.get("name") != "gen_ai.client.token.usage":
+                continue
+
+            for dp in record.get("dataPoints", []):
+                attrs = dp.get("attributes", {})
+                if not isinstance(attrs, dict):
+                    continue
+                typed_attrs = cast(dict[str, Any], attrs)
+                token_type = str(typed_attrs.get("gen_ai.token.type", ""))
+                # Value may be a histogram dict ({"sum": N, ...}) or a scalar
+                raw_value = dp.get("value", 0)
+                if isinstance(raw_value, dict):
+                    typed_value = cast(dict[str, Any], raw_value)
+                    value = int(typed_value.get("sum", 0))
+                else:
+                    value = int(raw_value)
+                # Cumulative — last entry wins
+                if token_type == "input":
+                    input_tokens = value
+                elif token_type == "output":
+                    output_tokens = value
     except (OSError, TypeError, AttributeError):
         log.warning("Failed to parse OTel file %s", otel_file, exc_info=True)
 
     if input_tokens == 0 and output_tokens == 0:
         return None
     return TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens)
-
-
-def _parse_otel_attrs(raw_attrs: Any) -> dict[str, str]:
-    """Extract key-value string pairs from OTLP attribute arrays."""
-    attrs: dict[str, str] = {}
-    if not isinstance(raw_attrs, list):
-        return attrs
-    typed_attrs = cast(list[dict[str, Any]], raw_attrs)
-    for a in typed_attrs:
-        k = str(a.get("key", ""))
-        v = cast(dict[str, Any] | None, a.get("value"))
-        if isinstance(v, dict):
-            attrs[k] = str(v.get("stringValue", ""))
-        else:
-            attrs[k] = ""
-    return attrs
 
 
 def _discover_gh_token() -> str | None:
