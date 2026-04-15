@@ -138,6 +138,7 @@ _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     "wordcount-py": _RegisteredTask("Evals/WordCount", language="py"),
     "wordcount-js": _RegisteredTask("Evals/WordCount", language="js"),
     "wordcount-rs": _RegisteredTask("Evals/WordCount", language="rs"),
+    "iges": _RegisteredTask("Evals/IGES"),
 }
 
 

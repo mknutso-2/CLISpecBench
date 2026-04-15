@@ -1,0 +1,3 @@
+I work with mechanical CAD systems and I need a tool that can read and write IGES files — the file format CAD systems have used for decades to exchange 3D geometry, annotations, and assembly structure between incompatible tools.
+
+The complete IGES 5.3 specification is in the docs/ directory. Please read it and build a tool that can parse IGES files into a structured representation, write that representation back out as a conforming IGES file, extract individual entities by reference, evaluate parametric curves and surfaces at given parameter values, and round-trip real-world CAD files without losing information. The tool should also reject malformed input cleanly with a diagnostic that points to the spec section that was violated.

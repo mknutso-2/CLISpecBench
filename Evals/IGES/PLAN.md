@@ -11,10 +11,10 @@ can reference section IDs.
 - [x] Create `Evals/IGES/` directory.
 - [x] `Evals/IGES/README.md` — initial README.
 - [x] `Evals/IGES/PLAN.md` — this file.
-- [ ] `Evals/IGES/VERSION` = `1.0.0`.
-- [ ] `Evals/IGES/CHANGELOG.md` — initial `1.0.0 — initial release` entry.
-- [ ] Register task IDs in `src/swe_buildbench/harness/task.py` `_KNOWN_TASKS`:
-  - [ ] `"iges": _RegisteredTask("Evals/IGES")`
+- [x] `Evals/IGES/VERSION` = `1.0.0`.
+- [x] `Evals/IGES/CHANGELOG.md` — initial `1.0.0 — initial release` entry.
+- [x] Register task IDs in `src/swe_buildbench/harness/task.py` `_KNOWN_TASKS`:
+  - [x] `"iges": _RegisteredTask("Evals/IGES")`
   - [ ] (later) `iges-py`, `iges-js`, `iges-rs` once those ref-impls exist.
 - [ ] Decide disposition of the original `Evals/IGES-SDK/` directory once the
       port completes (keep as snapshot vs. delete). Leave in place until the
@@ -65,9 +65,10 @@ prompt/
     figures/
 ```
 
-- [ ] `docs/iges-5-3-specification.md` — move from `IGES-SDK/` unchanged.
-- [ ] `docs/figures/` — move all 85 PNGs from `IGES-SDK/figures/` unchanged.
-- [ ] `base-prompt.md` — ~6-line domain-expert prompt (see README draft).
+- [x] `docs/iges-5-3-specification.md` — moved from `IGES-SDK/` unchanged.
+- [x] `docs/figures/` — copied 86 PNGs from `IGES-SDK/figures/` unchanged
+      (counts 036a/036b as separate files).
+- [x] `base-prompt.md` — domain-expert prompt drafted.
 - [ ] `technical-requirements-prompt.md` — CLI contract + full JSON schema
       (§1 + §2 above).
 - [ ] Confirm total prompt token count fits within a baseline agent's
