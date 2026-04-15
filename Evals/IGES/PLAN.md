@@ -227,6 +227,15 @@ prompt/
 - [ ] **Reference fixtures**
   - [ ] `test_reference_files.cpp` → `test_reference_fixtures.py`
         (round-trip `ex1`/`ex2`/`ex3`, assert entity counts + key fields).
+- [ ] **Defaulted-field regression coverage** (from Known Issues 2026-04-14)
+  - [ ] Connect Point (§4.26) with empty `cid` / `cfn` parses successfully
+        and round-trips to `""`.
+  - [ ] Network Subfigure Definition (§4.22) with empty `prd` parses
+        successfully and round-trips to `""`.
+  - [ ] Rectangular Array (§4.41) with omitted `ddf` parses successfully
+        and round-trips to `0`.
+  - [ ] `ex1.iges` is the canonical fixture covering all three above;
+        add a targeted pytest asserting it parses with 21 entities.
 
 ## 6. Eval Design Doc
 
@@ -274,3 +283,44 @@ once resolved (and capture the decision in `IGES-Design.md`).
 - [ ] Tolerance policy — single global tolerance, or per-entity-type?
 - [ ] Whether `query --de <n>` on an out-of-range index is exit 1
       (malformed input) or a distinct error class.
+
+---
+
+## Known Issues / Investigations
+
+Parked items to revisit — not blockers for shipping 1.0.0 but should not
+be forgotten.
+
+- [ ] **Docker build via `run_in_background` silently dropped output**
+      (2026-04-14). Ran `wsl.exe -d Ubuntu -e bash -lc 'docker run ...'`
+      as a backgrounded shell command; the container never appeared in
+      `docker ps`, the redirected log file was zero bytes, and the agent
+      had no signal the build had died. Re-running the same command
+      foreground succeeded in ~1s configure + a couple minutes compile.
+      Suspected cause: Windows→WSL→docker pipe handoff drops stdout
+      when the outer shell exits immediately (backgrounded). Workarounds:
+      always run WSL docker builds foreground, or have the wrapper write
+      to a mounted file path instead of relying on stdout capture.
+      Next step: reproduce deterministically; decide whether to patch
+      the `Bash` tool wrapper or forbid backgrounding WSL commands.
+
+- [x] ~~**Ref-impl parses `ex1.iges` with "expected string, got default"**~~
+      Fixed 2026-04-14. Root cause was three entity parsers calling
+      `next_string()` / `next_integer()` for optional fields that IGES
+      §4 defines as defaultable:
+      - `connect_point_entity.cpp`: `cid`, `cfn` (§4.26)
+      - `network_subfigure_definition_entity.cpp`: `prd` (§4.22)
+      - `rectangular_array_entity.cpp`: `ddf` (§4.41)
+      Changed each to the `_or(default)` variant. `ex1.iges` now parses
+      with 21 entities (matching the SDK Catch2 assertion). **Test debt**:
+      when §5 pytest tests land, each of these defaulted-field paths
+      needs a dedicated test — see §5 below.
+
+- [ ] **Roundtrip is not byte-identical** on `ex2.iges`: writer
+      normalizes defaulted Global delimiters (`,,` → `1H,,1H;`),
+      expands 2-digit year timestamps (`900729` → `19900729`), and
+      zero-pads status codes (`       0` → `000000000`). These are
+      all spec-legal but surface as diffs. **Semantic** roundtrip
+      (parse → write → parse, diff JSON) is clean on all 3 fixtures
+      (ex1/ex2/ex3 = 21/90/109 entities, zero mismatches). Tests
+      must use semantic comparison — see §5 fixture test.
