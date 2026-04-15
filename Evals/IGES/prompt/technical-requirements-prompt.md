@@ -101,10 +101,12 @@ diagnostic list goes in `diagnostics`.
 
 Supported entity types for `iges eval`:
 
-- **Curves** (Types `100`, `110`, `112`, `126`): `--t` required, `--s`
-  rejected as invalid input. `tangent` may be `null` if the tool does
-  not compute it.
-- **Surfaces** (Types `114`, `128`): both `--t` and `--s` required;
+- **Curves** (Types `100`, `102`, `104`, `106` forms `11`/`12`/`63`,
+  `110`, `112`, `126`, `130`): `--t` required, `--s` rejected as
+  invalid input. `tangent` may be `null` if the tool does not compute
+  it.
+- **Surfaces** (Types `114`, `118`, `120`, `122`, `128`, `140`, `190`,
+  `192`, `194`, `196`, `198`): both `--t` and `--s` required;
   `tangent` must be `null`.
 
 Any other entity type is non-parametric for this contract: `iges eval`
@@ -118,10 +120,26 @@ fractions. The CLI does not remap curves to `[0, 1]` or surfaces to
 `[0, 1]²`; each entity type uses the parameter domain defined for it by
 the IGES 5.3 spec.
 
+**Curves**
+
 - Type `100` Circular Arc: `t` is the angular parameter in radians, with
   `t = start_angle` at the start point `(x2, y2)` and `t = terminate_angle`
   at the terminate point `(x3, y3)`. The spec's default parameterization
   is `C(t) = (x1 + R·cos t, y1 + R·sin t, zt)` (§4.3).
+- Type `102` Composite Curve: `t` is the composite parameter defined in
+  §4.4 (default parameterization section), where each constituent curve
+  `CC(i)` receives a sub-interval `[T(i), T(i+1)]` of the composite
+  parameter line sized by its own parameterization. `iges eval`
+  dispatches to the constituent curve with its native parameter.
+- Type `104` Conic Arc: `t ∈ [t1, t2]` using the form-specific default
+  parameterization in §4.5 (parabola `C(t) = (t, −(A/E)t², zT)`;
+  ellipse `C(t) = (a cos t, b sin t, zT)`; hyperbola `(a sec t,
+  b tan t, zT)` etc.). Transformation from definition space to model
+  space uses the entity's Transformation Matrix pointer.
+- Type `106` Copious Data (forms `11`/`12`/`63`): `t ∈ [0, N−1]` where
+  `N` is the number of points, with local `[0, 1]` parameterization on
+  each segment `[i, i+1]` per §4.6. Forms 11 and 63 are 2D paths at
+  constant `zT`; form 12 is a 3D path.
 - Type `110` Line: Form 0 uses `t ∈ [0, 1]` with
   `C(t) = P1 + t·(P2 − P1)` (§4.13). Forms 1 and 2 extend the domain
   to `[0, ∞)` and `(−∞, ∞)` respectively with the same formula.
@@ -130,11 +148,30 @@ the IGES 5.3 spec.
 - Type `126` Rational B-Spline Curve: `t` lies in the native spline
   parameter domain declared by the entity's `v0` / `v1` fields and its
   knot vector (§4.23).
+- Type `130` Offset Curve: `t ∈ [TT1, TT2]` using the base curve's
+  native parameter domain per §4.25.
+
+**Surfaces**
+
 - Type `114` Parametric Spline Surface: `(t, s)` are the native `u, v`
   breakpoint parameters of the surface patch grid (§4.15).
+- Type `118` Ruled Surface: `t` in the shared domain of the two defining
+  curves (normalized to a common `[0, 1]` by default per §4.17 form 0,
+  or native per form 1), `s ∈ [0, 1]` across the rule.
+- Type `120` Surface of Revolution: `t` in the generatrix's native
+  parameter domain, `s ∈ [start_angle, terminate_angle]` in radians
+  per §4.18.
+- Type `122` Tabulated Cylinder: `t` in the directrix's native
+  parameter domain, `s ∈ [0, 1]` along the generatrix direction per §4.19.
 - Type `128` Rational B-Spline Surface: `(t, s)` lie in the native
   `(u, v)` parameter domain declared by the entity's `u0/u1/v0/v1` and
   its two knot vectors (§4.24).
+- Type `140` Offset Surface: `(t, s)` in the base surface's native
+  `(u, v)` parameter domain per §4.30.
+- Types `190`/`192`/`194`/`196`/`198` Analytic Surfaces: `(t, s)` follow
+  the native `(u, v)` parameterizations documented in §§4.50–4.54
+  (e.g. Cylindrical `u ∈ [0°, 360°]` and `v ∈ (−∞, ∞)`). The CLI uses
+  degrees for `u` where the spec uses degrees; radians otherwise.
 
 Hidden tests call `iges eval` only with parameter values inside the
 documented native domain of the target entity.

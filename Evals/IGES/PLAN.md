@@ -310,10 +310,20 @@ once resolved (and capture the decision in `IGES-Design.md`).
      gives per-entity "default parameterization if required" rather
      than a global one. -->
 
-- [ ] Narrow `iges eval` hidden tests to only the supported types
-      (`100, 110, 112, 114, 126, 128`) once per-entity §4.X test
-      files are written — current `test_geometric_eval.py` only
-      exercises Type 100.
+## `iges eval` expansion (in-progress 2026-04-15)
+
+The contract in `technical-requirements-prompt.md` §1.5 lists curves
+`100, 102, 104, 106/11/12/63, 110, 112, 126, 130` and surfaces
+`114, 118, 120, 122, 128, 140, 190/192/194/196/198` as parametric.
+The C++ ref-impl + SDK only implement `evaluate()` for 6 of those
+(`100, 110, 112, 114, 126, 128`). Broadening both to match.
+
+- [x] §1.5 reverted to broad type list (2026-04-15).
+- [x] §1.6 expanded to cover all contract types' native `t` / `(t, s)`.
+- [ ] Thread Model into `evaluate_entity_dispatch`.
+- [ ] Add SDK + ref-impl `evaluate()`: 104, 106, 102, 130, 118, 120,
+      122, 140, 190/192/194/196/198.
+- [ ] CLI hidden tests for each new type.
 
 ---
 
