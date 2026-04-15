@@ -25,34 +25,36 @@ can reference section IDs.
 Five subcommands on a single `iges` binary. All write JSON on both success
 and error. Exit codes: `0` success, `1` invalid input, `2` internal error.
 
-- [ ] `iges parse --input <file.iges> --output <file.json>` — full parse to
+- [x] `iges parse --input <file.iges> --output <file.json>` — full parse to
       canonical IGES-JSON.
-- [ ] `iges write --input <file.json> --output <file.iges>` — inverse.
-- [ ] `iges query --input <file.iges> --de <n> --output <entity.json>` —
+- [x] `iges write --input <file.json> --output <file.iges>` — inverse.
+- [x] `iges query --input <file.iges> --de <n> --output <entity.json>` —
       single-entity extract by DE sequence number.
-- [ ] `iges eval --input <file.iges> --de <n> --t <f> --output <point.json>` —
+- [x] `iges eval --input <file.iges> --de <n> --t <f> --output <point.json>` —
       geometric evaluation for parametric entities.
-- [ ] `iges roundtrip --input <file.iges> --output <out.iges>` — one-shot
+- [x] `iges roundtrip --input <file.iges> --output <out.iges>` — one-shot
       parse+write for idempotence testing.
-- [ ] Diagnostic JSON shape defined:
-      `{"error": "...", "spec_ref": "§X.Y", "line": N, "section": "..."}`.
+- [x] Diagnostic JSON shape defined:
+      `{"error": "...", "spec_ref": "§X.Y", "line": N, "section": "..."}`
+      + full `diagnostics[]` list.
 
 ## 2. Canonical IGES-JSON Schema
 
 Lives in `prompt/technical-requirements-prompt.md`. Machine-extracted from
 `IGES-SDK/src/entities/*.hpp` structs, then hand-edited for clarity.
 
-- [ ] Top-level shape: `{start_lines, global, entities[]}`.
-- [ ] `global` — all 26 named fields with spec-defined defaults.
-- [ ] `directory_entry` — all 20 named fields per entity.
-- [ ] `entity.data` schema for each of the 87 entity types.
-- [ ] Decide schema format: prose vs. JSON Schema vs. TypeScript-style. Pick
-      one and apply uniformly.
+- [x] Top-level shape: `{start_lines, global, entities[]}`.
+- [x] `global` — all 26 named fields with spec-defined defaults.
+- [x] `directory_entry` — all 20 named fields per entity.
+- [ ] `entity.data` schema for each of the 87 entity types. **Stage 2 —
+      in progress; appendix §A stub in place.**
+- [x] Schema format decided: TypeScript-style for `data` payloads, prose
+      for the envelope and CLI contract.
 - [ ] Form-dependent entity schemas (Drawing/External Ref/Line Font Def/
       Ordinate Dim/Radius Dim/View/Surfaces 190-198/Attr Table Def) call out
-      per-form field lists.
-- [ ] Numerical tolerance for `eval` picked and documented (initial target:
-      relative `1e-9`).
+      per-form field lists. **Stage 2.**
+- [x] Numerical tolerance for `eval` picked and documented:
+      relative `1e-9`, absolute `1e-12` near zero.
 
 ## 3. Prompt Authoring
 
