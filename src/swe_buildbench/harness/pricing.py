@@ -75,6 +75,8 @@ OPENAI_PRICING: dict[str, ModelPricing] = {
     "gpt-5.2":             ModelPricing(input=1.75,  output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
     "gpt-5.1-codex-max":   ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
     "gpt-5.1-codex-mini":  ModelPricing(input=0.25,  output=2.00,  cached_input=0.025, cache_write=0),  # noqa: E501
+    "gpt-5.1":             ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
+    "gpt-5":               ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
 }
 
 # Google Gemini (text input, <=200k context)

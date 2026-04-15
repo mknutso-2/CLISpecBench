@@ -59,21 +59,21 @@ Prior eval (eval1): all 3 runs failed with `no_output` in 5s (startup issue).
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 278/542 (51.3%) | 16.4 min | 6.6M | 87K | - | 52 | 2 | 2117 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; full CLI with modal state, expressions, motion, probing, trace stepping in single `main.cpp`. |
-| 2 | 41/542 (7.6%) | 12.8 min | 4.6M | 71K | - | 43 | 8 | 1431 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete despite low score; "syntactically correct RS274/NGC parser" but runtime behavior mostly broken (41/542). |
-| 3 | 197/542 (36.3%) | 16.9 min | 4.3M | 92K | - | 48 | 7 | 2015 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; modular parser/simulator split across multiple files. |
+| 1 | 278/542 (51.3%) | 16.4 min | 6.6M | 87K | ~$1.94 | 52 | 2 | 2117 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; full CLI with modal state, expressions, motion, probing, trace stepping in single `main.cpp`. |
+| 2 | 41/542 (7.6%) | 12.8 min | 4.6M | 71K | ~$1.41 | 43 | 8 | 1431 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete despite low score; "syntactically correct RS274/NGC parser" but runtime behavior mostly broken (41/542). |
+| 3 | 197/542 (36.3%) | 16.9 min | 4.3M | 92K | ~$1.50 | 48 | 7 | 2015 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; modular parser/simulator split across multiple files. |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models.
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models.
 
 #### gpt-5 / high
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 1/542 (0.2%) | 12.1 min | 3.5M | 69K | - | 44 | 4 | 12 | [result](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Incomplete; acknowledged — agent gave up citing "hard technical limitation in the current execution environment: the terminal tool mangles quotes and backslashes in long multi-line file writes." Wrote stub only (12 LOC). |
-| 2 | 197/542 (36.3%) | 8.7 min | 3.6M | 42K | - | 27 | 10 | 1282 | [result](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Claims complete; standalone RS274/NGC simulator in C++20. |
-| 3 | 1/542 (0.2%) | 13.1 min | 2.6M | 88K | - | 30 | 3 | 9 | [result](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Incomplete; acknowledged — "stub doesn't yet execute or trace G‑code; it only compiles successfully." Listed 8 remaining work items. Asked "If you want, I'll proceed now." |
+| 1 | 1/542 (0.2%) | 12.1 min | 3.5M | 69K | ~$1.22 | 44 | 4 | 12 | [result](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Incomplete; acknowledged — agent gave up citing "hard technical limitation in the current execution environment: the terminal tool mangles quotes and backslashes in long multi-line file writes." Wrote stub only (12 LOC). |
+| 2 | 197/542 (36.3%) | 8.7 min | 3.6M | 42K | ~$0.96 | 27 | 10 | 1282 | [result](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Claims complete; standalone RS274/NGC simulator in C++20. |
+| 3 | 1/542 (0.2%) | 13.1 min | 2.6M | 88K | ~$1.30 | 30 | 3 | 9 | [result](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Incomplete; acknowledged — "stub doesn't yet execute or trace G‑code; it only compiles successfully." Listed 8 remaining work items. Asked "If you want, I'll proceed now." |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models.
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models.
 
 #### gpt-5.1-codex-mini
 
@@ -192,21 +192,21 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 203/542 (37.5%) | 16.5 min | 5.8M | 97K | - | 52 | 7 | 1658 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; modular multi-file Node.js implementation; acknowledged "important limitations" inline. |
-| 2 | 218/542 (40.2%) | 15.5 min | 8.2M | 91K | - | 53 | 7 | 2701 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete; modular simulator with convenience `main.js` wrapper. |
-| 3 | 201/542 (37.1%) | 16.5 min | 7.9M | 78K | - | 70 | 7 | 2817 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; seven-file modular Node.js simulator. |
+| 1 | 203/542 (37.5%) | 16.5 min | 5.8M | 97K | ~$1.81 | 52 | 7 | 1658 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; modular multi-file Node.js implementation; acknowledged "important limitations" inline. |
+| 2 | 218/542 (40.2%) | 15.5 min | 8.2M | 91K | ~$2.07 | 53 | 7 | 2701 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete; modular simulator with convenience `main.js` wrapper. |
+| 3 | 201/542 (37.1%) | 16.5 min | 7.9M | 78K | ~$1.93 | 70 | 7 | 2817 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; seven-file modular Node.js simulator. |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
 
 #### gpt-5 / high
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 249/542 (45.9%) | 9.2 min | 4.7M | 48K | - | 48 | 1 | 1495 | [result](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Claims complete; self-contained Node.js 22+ simulator with no dependencies. |
-| 2 | 0/542 (0.0%) | 5.8 min | 2.7M | 29K | - | 43 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Incomplete; wrote no code. Blamed "command-quoting issue while writing multi-line JS files via the terminal tool." Offered to retry with "base64 → decode" pipeline. |
-| 3 | 0/542 (0.0%) | 10.4 min | 2.2M | 66K | - | 31 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Incomplete; wrote no code. Acknowledged "writing the Node.js source file(s) into output/ from this environment failed repeatedly due to quoting/truncation issues." |
+| 1 | 249/542 (45.9%) | 9.2 min | 4.7M | 48K | ~$1.17 | 48 | 1 | 1495 | [result](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Claims complete; self-contained Node.js 22+ simulator with no dependencies. |
+| 2 | 0/542 (0.0%) | 5.8 min | 2.7M | 29K | ~$0.71 | 43 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Incomplete; wrote no code. Blamed "command-quoting issue while writing multi-line JS files via the terminal tool." Offered to retry with "base64 → decode" pipeline. |
+| 3 | 0/542 (0.0%) | 10.4 min | 2.2M | 66K | ~$1.08 | 31 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Incomplete; wrote no code. Acknowledged "writing the Node.js source file(s) into output/ from this environment failed repeatedly due to quoting/truncation issues." |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
 
 #### gpt-5.1-codex-mini
 
@@ -248,21 +248,21 @@ Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, g
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 4/542 (0.7%) | 11.2 min | 3.2M | 77K | - | 45 | 1 | 133 | [result](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Incomplete; acknowledged — "didn't finish implementing the full RS274 execution engine... interpreter and motion engine are not fully implemented." Wrote CLI shell only (133 LOC). |
-| 2 | 335/542 (61.8%) | 16.3 min | 6.5M | 77K | - | 56 | 1 | 1783 | [result](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Claims complete; self-contained pure-Python RS274/NGC simulator. |
-| 3 | 10/542 (1.8%) | 10.0 min | 4.7M | 57K | - | 41 | 2 | 648 | [result](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Claims complete but failed 532/542; built CLI with partial motion/canned-cycle coverage that runtime-broke on most programs. |
+| 1 | 4/542 (0.7%) | 11.2 min | 3.2M | 77K | ~$1.28 | 45 | 1 | 133 | [result](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Incomplete; acknowledged — "didn't finish implementing the full RS274 execution engine... interpreter and motion engine are not fully implemented." Wrote CLI shell only (133 LOC). |
+| 2 | 335/542 (61.8%) | 16.3 min | 6.5M | 77K | ~$1.81 | 56 | 1 | 1783 | [result](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Claims complete; self-contained pure-Python RS274/NGC simulator. |
+| 3 | 10/542 (1.8%) | 10.0 min | 4.7M | 57K | ~$1.24 | 41 | 2 | 648 | [result](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Claims complete but failed 532/542; built CLI with partial motion/canned-cycle coverage that runtime-broke on most programs. |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
 
 #### gpt-5.1 / high
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 205/542 (37.8%) | 11.3 min | 3.4M | 69K | - | 40 | 1 | 1557 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; stdlib-only standalone simulator with required CLI. |
-| 2 | 4/542 (0.7%) | 12.3 min | 4.6M | 63K | - | 57 | 2 | 1155 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Incomplete; acknowledged — "currently supports only a subset of the full specification." Wrote simulator that runs but fails 538/542. |
-| 3 | 198/542 (36.5%) | 13.8 min | 5.9M | 78K | - | 44 | 9 | 1938 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; multi-file stdlib-only Python implementation. |
+| 1 | 205/542 (37.8%) | 11.3 min | 3.4M | 69K | ~$1.20 | 40 | 1 | 1557 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; stdlib-only standalone simulator with required CLI. |
+| 2 | 4/542 (0.7%) | 12.3 min | 4.6M | 63K | ~$1.31 | 57 | 2 | 1155 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Incomplete; acknowledged — "currently supports only a subset of the full specification." Wrote simulator that runs but fails 538/542. |
+| 3 | 198/542 (36.5%) | 13.8 min | 5.9M | 78K | ~$1.61 | 44 | 9 | 1938 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; multi-file stdlib-only Python implementation. |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models. eval_version=2.1.0 (prompt SHA identical to v2.0.2).
 
 #### gpt-5.1-codex-mini
 
@@ -314,11 +314,11 @@ All Rust runs are eval_version=2.1.0 (Rust ref impl and `cncsim-full-rs` variant
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 165/542 (30.4%) | 12.4 min | 4.3M | 76K | - | 38 | 1 | 1969 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; std-only Cargo project, single-file `main.rs`. |
-| 2 | 302/542 (55.7%) | 20.6 min | 14.5M | 106K | - | 72 | 1 | 2838 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete; single-file Cargo project building with `cargo build --release`. |
-| 3 | 186/542 (34.3%) | 13.2 min | 4.5M | 90K | - | 29 | 5 | 2140 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; multi-file Cargo project with module layout. |
+| 1 | 165/542 (30.4%) | 12.4 min | 4.3M | 76K | ~$1.37 | 38 | 1 | 1969 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run1/transcript.jsonl) | Claims complete; std-only Cargo project, single-file `main.rs`. |
+| 2 | 302/542 (55.7%) | 20.6 min | 14.5M | 106K | ~$3.01 | 72 | 1 | 2838 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete; single-file Cargo project building with `cargo build --release`. |
+| 3 | 186/542 (34.3%) | 13.2 min | 4.5M | 90K | ~$1.53 | 29 | 5 | 2140 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; multi-file Cargo project with module layout. |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models.
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models.
 
 #### gpt-5.1-codex-max / xhigh
 
@@ -342,8 +342,8 @@ Note: run 1 token usage failed to parse (`'str' object has no attribute 'get'` i
 
 | Run | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 1 | 0/542 (0.0%) | 9.9 min | 4.1M | 59K | - | 55 | 0 | 0 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Incomplete; wrote no code. Blamed "CLI's shell-quoting mangles embedded quotes and braces in long here-documents." Presented design plan only. |
-| 2 | 4/542 (0.7%) | 11.1 min | 4.0M | 58K | - | 37 | 1 | 1491 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Claims complete; std-only Cargo project — but 538/542 tests failed. |
-| 3 | 0/542 (0.0%) | 10.6 min | 1.9M | 57K | - | 29 | 1 | 396 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Incomplete; acknowledged — "wasn't able to create files in output/ because the terminal is mangling multi-line writes." Wrote design doc in response only (396 LOC is partial stub). |
+| 1 | 0/542 (0.0%) | 9.9 min | 4.1M | 59K | ~$1.21 | 55 | 0 | 0 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run1/transcript.jsonl) | Incomplete; wrote no code. Blamed "CLI's shell-quoting mangles embedded quotes and braces in long here-documents." Presented design plan only. |
+| 2 | 4/542 (0.7%) | 11.1 min | 4.0M | 58K | ~$1.18 | 37 | 1 | 1491 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run2/transcript.jsonl) | Claims complete; std-only Cargo project — but 538/542 tests failed. |
+| 3 | 0/542 (0.0%) | 10.6 min | 1.9M | 57K | ~$0.89 | 29 | 1 | 396 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5_high/eval1/run3/transcript.jsonl) | Incomplete; acknowledged — "wasn't able to create files in output/ because the terminal is mangling multi-line writes." Wrote design doc in response only (396 LOC is partial stub). |
 
-Note: ChatGPT-auth codex-cli does not report cost for non-codex models (gpt-5, gpt-5.1). Captured before OpenAI deprecated these models.
+Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models.
