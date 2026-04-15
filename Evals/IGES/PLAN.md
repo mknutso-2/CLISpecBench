@@ -109,18 +109,19 @@ prompt/
 
 `Evals/IGES/tests/`.
 
-- [ ] `conftest.py` — copy CNCSim's, repoint `EVAL_CONFIG` to `iges`.
-- [ ] `iges_support.py` — test helpers:
-  - [ ] `run_iges(submission_command, subcommand, **kwargs) -> dict`
-  - [ ] `build_iges_file(start_lines, global_overrides, entities) -> str`
-  - [ ] `parse_iges_string(s) -> dict` (CLI round-trip helper)
-- [ ] `data/ex1.iges`, `data/ex2.iges`, `data/ex3.iges` — copy unchanged.
+- [x] `conftest.py` — copy CNCSim's, repoint `EVAL_CONFIG` to `iges`.
+- [x] `iges_support.py` — test helpers. Shape landed: canonical-JSON
+      builders (`default_global`, `default_directory_entry`,
+      `make_entity`, `wrap_entities`, `single_line_document`) + CLI
+      drivers (`write_iges_from_json`, `parse_iges_to_json`,
+      `query_entity`, `evaluate_entity`, `roundtrip_iges`,
+      `semantic_roundtrip_json`).
+- [x] `data/ex1.iges`, `data/ex2.iges`, `data/ex3.iges` — copied from
+      `Evals/IGES-SDK/tests/data/` unchanged.
 - [ ] `test_build.py` — smoke test that the `iges` binary builds and is
       invokable (mirror CNCSim's).
-- [ ] **Pilot port: Line entity end-to-end**
-  - [ ] Port `test_4_13_line_entity.cpp` → `test_entity_line.py`.
-  - [ ] Validate with the ref-impl that both parse + round-trip tests pass.
-  - [ ] Treat this as the template for all remaining entity ports.
+- [x] **Pilot port: Line entity end-to-end** — `test_line_entity.py`,
+      10 tests, all passing against the C++ ref-impl.
 - [ ] **File format / data type tests** (higher value — port first)
   - [ ] `test_2_2_2_*.cpp` → `test_data_types.py` (integer, real, string,
         pointer, logical).
@@ -132,7 +133,7 @@ prompt/
   - [ ] §4.4 Composite Curve (102)
   - [ ] §4.5 Conic Arc / Copious Data (104 / 106)
   - [ ] §4.12 Plane (108)
-  - [ ] §4.13 Line (110) — **pilot, see above**
+  - [x] §4.13 Line (110) — pilot, `test_line_entity.py`
   - [ ] §4.14 Parametric Spline Curve (112)
   - [ ] §4.15 Parametric Spline Surface (114)
   - [ ] §4.16 Point (116)
@@ -224,18 +225,18 @@ prompt/
   - [ ] `test_malformed.cpp` → `test_malformed.py` (exit 1 + `spec_ref`).
 - [ ] **Validation**
   - [ ] `test_validate.cpp` → `test_validation.py`.
-- [ ] **Reference fixtures**
-  - [ ] `test_reference_files.cpp` → `test_reference_fixtures.py`
-        (round-trip `ex1`/`ex2`/`ex3`, assert entity counts + key fields).
-- [ ] **Defaulted-field regression coverage** (from Known Issues 2026-04-14)
-  - [ ] Connect Point (§4.26) with empty `cid` / `cfn` parses successfully
-        and round-trips to `""`.
-  - [ ] Network Subfigure Definition (§4.22) with empty `prd` parses
-        successfully and round-trips to `""`.
-  - [ ] Rectangular Array (§4.41) with omitted `ddf` parses successfully
-        and round-trips to `0`.
-  - [ ] `ex1.iges` is the canonical fixture covering all three above;
-        add a targeted pytest asserting it parses with 21 entities.
+- [x] **Reference fixtures** — `test_reference_fixtures.py`, 6 tests,
+      parses ex1/ex2/ex3 via `iges parse` and asserts entity counts +
+      globals + per-type mix. Ported from
+      `Evals/IGES-SDK/tests/integration/test_reference_files.cpp`.
+- [x] **Defaulted-field regression coverage** (from Known Issues
+      2026-04-14) — `test_defaulted_fields.py`, 3 tests:
+  - [x] Connect Point (§4.26) with empty `cid` / `cfn` round-trips to `""`.
+  - [x] Network Subfigure Definition (§4.22) with empty `prd` round-trips
+        to `""`.
+  - [x] Rectangular Array (§4.41) with omitted `ddf` round-trips to `0`.
+  - [x] `ex1.iges` parses with 21 entities (asserted in
+        `test_reference_fixtures.py::test_ex1_parses_with_expected_global_and_entity_count`).
 
 ## 6. Eval Design Doc
 
