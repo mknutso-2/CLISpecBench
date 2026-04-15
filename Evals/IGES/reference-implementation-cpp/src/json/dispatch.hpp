@@ -13,6 +13,7 @@
 #include "../entities/entity.hpp"
 #include "../parser/param_tokenizer.hpp"
 #include <expected>
+#include <functional>
 #include <optional>
 #include <string>
 #include <nlohmann/json.hpp>
@@ -25,6 +26,27 @@ struct EvalResult {
     std::optional<Vec3> normal;   // surfaces only
 };
 
+// A resolved entity record returned by an EntityResolver.
+// Shape matches the per-entity record inside canonical IGES-JSON
+// (§2.5: `{type, form, data}`).
+struct ResolvedEntity {
+    int type;
+    int form;
+    nlohmann::json data;
+};
+
+// Callback that resolves a 1-based odd DE index to the parsed
+// `(type, form, data)` triple for that entity, or a Diagnostic on
+// error (index out of range, entity fails to parse, etc.).
+//
+// Used by entities whose `evaluate()` contract references other
+// entities by DE pointer — Composite Curve (102), Offset Curve (130),
+// Ruled Surface (118), etc. Simple self-contained entities like
+// Circular Arc (100) or Line (110) ignore the resolver.
+using EntityResolver = std::function<
+    std::expected<ResolvedEntity, Diagnostic>(int de_index)
+>;
+
 std::expected<nlohmann::json, Diagnostic>
 parse_entity_dispatch(int type, int form, ParamTokenizer& tok);
 
@@ -33,6 +55,7 @@ write_entity_dispatch(int type, int form, nlohmann::json const& data);
 
 std::expected<EvalResult, Diagnostic>
 evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
-                         Real t, std::optional<Real> s);
+                         Real t, std::optional<Real> s,
+                         EntityResolver const& resolver);
 
 } // namespace iges

@@ -195,8 +195,10 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
     lines: list[str] = [
         "std::expected<EvalResult, Diagnostic>",
         "evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,",
-        "                         Real t, std::optional<Real> s) {",
+        "                         Real t, std::optional<Real> s,",
+        "                         EntityResolver const& resolver) {",
         "    (void)form;",
+        "    (void)resolver;  // unused by simple self-contained evaluators",
         "    try {",
         "        switch (type) {",
     ]

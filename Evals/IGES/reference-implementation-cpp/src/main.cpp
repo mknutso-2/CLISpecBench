@@ -423,7 +423,30 @@ int cmd_eval(Args const& a) {
                                         json::array({diag_to_json(d)})));
         return 1;
     }
-    auto result = iges::evaluate_entity_dispatch(type, form, *data, *a.t, a.s);
+    // Resolver used by pointer-bearing evaluators (Composite Curve,
+    // Offset Curve, Ruled Surface, etc.) to look up constituent
+    // entities by DE index. Parses on demand; a file with one
+    // malformed non-target entity still succeeds for eval on the
+    // target if the target's constituents are all valid.
+    iges::EntityResolver resolver =
+        [&parsed](int de) -> std::expected<iges::ResolvedEntity, iges::Diagnostic> {
+        auto pos = de_to_position(de, parsed->entities.size());
+        if (!pos) return std::unexpected(iges::Diagnostic{
+            iges::Diagnostic::Severity::Error, 0, iges::SectionKind::Parameter,
+            std::string{"DE index out of range or not odd: "} + std::to_string(de),
+            "§1"});
+        auto const& ref = parsed->entities[*pos];
+        iges::ParamTokenizer rt(ref.pd_string,
+                                 parsed->global.param_delimiter,
+                                 parsed->global.record_delimiter);
+        auto rd = iges::parse_entity_dispatch(
+            ref.de.entity_type.value, ref.de.form.value, rt);
+        if (!rd) return std::unexpected(rd.error());
+        return iges::ResolvedEntity{
+            ref.de.entity_type.value, ref.de.form.value, *rd};
+    };
+    auto result = iges::evaluate_entity_dispatch(
+        type, form, *data, *a.t, a.s, resolver);
     if (!result) {
         auto const& d = result.error();
         write_json(a.output, make_error(d.message, d.spec_ref, d.line, "parameter"));

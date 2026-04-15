@@ -1081,8 +1081,10 @@ write_entity_dispatch(int type, int form, nlohmann::json const& data) {
 
 std::expected<EvalResult, Diagnostic>
 evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
-                         Real t, std::optional<Real> s) {
+                         Real t, std::optional<Real> s,
+                         EntityResolver const& resolver) {
     (void)form;
+    (void)resolver;  // unused by simple self-contained evaluators
     try {
         switch (type) {
         case 100: {
@@ -1155,3 +1157,5 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
 }
 
 } // namespace iges
+
+// 87 entities dispatched
