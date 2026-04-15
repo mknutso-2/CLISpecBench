@@ -176,6 +176,85 @@ def test_arc_eval_respects_z_plane(
     assert payload["point"][2] == pytest.approx(2.5)
 
 
+# §4.6 + §1.6: Copious Data polyline parameterization.
+#
+# Forms 11 (2D linear path), 12 (3D linear path), and 63 (simple closed
+# 2D area) evaluate as piecewise-linear polylines with parameter
+# ``t ∈ [0, N−1]``: integer values land on tuple points, and fractional
+# values linearly interpolate between adjacent tuples.
+def _copious_data_form11_document(
+    zt: float, points_2d: Sequence[tuple[float, float]]
+) -> dict[str, object]:
+    flat: list[float] = []
+    for x, y in points_2d:
+        flat.extend([x, y])
+    return wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=106,
+            form=11,
+            data={"ip": 1, "n": len(points_2d), "zt": zt, "data": flat},
+        ),
+    ])
+
+
+def _copious_data_form12_document(
+    points_3d: Sequence[tuple[float, float, float]],
+) -> dict[str, object]:
+    flat: list[float] = []
+    for x, y, z in points_3d:
+        flat.extend([x, y, z])
+    return wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=106,
+            form=12,
+            data={"ip": 2, "n": len(points_3d), "zt": 0.0, "data": flat},
+        ),
+    ])
+
+
+def test_copious_data_form11_at_vertex_returns_point(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _copious_data_form11_document(
+        2.5, [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]
+    )
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 1.0, tmp_path)
+    assert payload["ok"] is True
+    # Tuple index 1 with zt=2.5 supplying z.
+    assert payload["point"] == pytest.approx([1.0, 0.0, 2.5], abs=1e-9)
+
+
+def test_copious_data_form11_midpoint_interpolates(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _copious_data_form11_document(
+        0.0, [(0.0, 0.0), (2.0, 0.0), (2.0, 4.0)]
+    )
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t = 1.5: halfway between tuples 1 (2,0) and 2 (2,4).
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 1.5, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.0, 2.0, 0.0], abs=1e-9)
+
+
+def test_copious_data_form12_3d_path_at_fractional_t(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _copious_data_form12_document([
+        (0.0, 0.0, 0.0),
+        (3.0, 0.0, 0.0),
+        (3.0, 0.0, 6.0),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t = 0.25: 25% between tuples 0 and 1 → (0.75, 0, 0).
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.25, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.75, 0.0, 0.0], abs=1e-9)
+
+
 # §1 eval contract: non-parametric entity types must be rejected.
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path

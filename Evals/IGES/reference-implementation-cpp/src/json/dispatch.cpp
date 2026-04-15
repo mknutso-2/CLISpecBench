@@ -1096,6 +1096,15 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
             r.point = ent.evaluate(t);
             return r;
         }
+        case 106: {
+            auto ent = data.get<iges::CopiousDataEntity>();
+            if (s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Curve entity does not accept --s", "§1"});
+            EvalResult r;
+            r.point = ent.evaluate(t);
+            return r;
+        }
         case 110: {
             auto ent = data.get<iges::LineEntity>();
             if (s.has_value()) return std::unexpected(Diagnostic{
@@ -1157,5 +1166,3 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
 }
 
 } // namespace iges
-
-// 87 entities dispatched
