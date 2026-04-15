@@ -114,9 +114,19 @@ HEADER = """\
 
 #include "dispatch.hpp"
 #include "entity_json.hpp"
+#include "eval_helpers.hpp"
 
 // Parser signatures
 """
+
+
+# Types whose evaluator depends on other entities by DE pointer — their
+# eval cases dispatch to hand-written free functions in eval_helpers.cpp
+# rather than to an entity member function. Keys map to (helper_stem,
+# kind) where kind is "curve" or "surface".
+RESOLVER_USING: dict[int, tuple[str, str]] = {
+    102: ("composite_curve", "curve"),
+}
 
 
 def emit_parser_includes(entities: list[Entity]) -> str:
@@ -203,9 +213,27 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
         "        switch (type) {",
     ]
     for e in entities:
+        cxx = e.cxx_name
+        resolver_entry = RESOLVER_USING.get(e.type_number)
+        if resolver_entry is not None:
+            helper_stem, kind = resolver_entry
+            lines.append(f"        case {e.type_number}: {{")
+            lines.append(f"            auto ent = data.get<iges::{cxx}>();")
+            if kind == "curve":
+                lines.append(f"            if (s.has_value()) return std::unexpected(Diagnostic{{")
+                lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
+                lines.append(f'                "Curve entity does not accept --s", "§1"}});')
+                lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, resolver);")
+            else:  # surface
+                lines.append(f"            if (!s.has_value()) return std::unexpected(Diagnostic{{")
+                lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
+                lines.append(f'                "Surface entity requires --s", "§1"}});')
+                lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, *s, resolver);")
+            lines.append(f"        }}")
+            continue
+
         if e.eval_kind == "none":
             continue
-        cxx = e.cxx_name
         lines.append(f"        case {e.type_number}: {{")
         lines.append(f"            auto ent = data.get<iges::{cxx}>();")
         if e.eval_kind == "curve":

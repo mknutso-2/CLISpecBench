@@ -3,6 +3,7 @@
 
 #include "dispatch.hpp"
 #include "entity_json.hpp"
+#include "eval_helpers.hpp"
 
 // Parser signatures
 
@@ -1095,6 +1096,13 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
             EvalResult r;
             r.point = ent.evaluate(t);
             return r;
+        }
+        case 102: {
+            auto ent = data.get<iges::CompositeCurveEntity>();
+            if (s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Curve entity does not accept --s", "§1"});
+            return iges::evaluate_composite_curve(ent, t, resolver);
         }
         case 106: {
             auto ent = data.get<iges::CopiousDataEntity>();

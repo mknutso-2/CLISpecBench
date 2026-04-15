@@ -255,6 +255,101 @@ def test_copious_data_form12_3d_path_at_fractional_t(
     assert payload["point"] == pytest.approx([0.75, 0.0, 0.0], abs=1e-9)
 
 
+# §4.4: Composite Curve default parameterization.
+#
+# The composite parameter line accumulates each constituent's native
+# span: T(0) = 0, T(i+1) = T(i) + (v1_i − v0_i). Two Line constituents
+# (native span [0, 1] each) produce a composite domain of [0, 2];
+# t < 1 picks the first line at local (t), t ≥ 1 picks the second at
+# local (t − 1).
+def test_composite_curve_eval_at_start_returns_first_constituent_start(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
+        make_entity(de_index=5, entity_type=102, data={
+            "constituents": [1, 3]}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 5, 0.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.0, 0.0, 0.0], abs=1e-9)
+
+
+def test_composite_curve_eval_inside_first_constituent(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
+        make_entity(de_index=5, entity_type=102, data={
+            "constituents": [1, 3]}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t = 0.5 → halfway along first Line (native [0,1]) → (1.5, 0, 0)
+    _, payload = evaluate_entity(submission_command, iges_path, 5, 0.5, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([1.5, 0.0, 0.0], abs=1e-9)
+
+
+def test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
+        make_entity(de_index=5, entity_type=102, data={
+            "constituents": [1, 3]}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t = 1.0 is the junction; both legs pass through (3, 0, 0).
+    _, payload = evaluate_entity(submission_command, iges_path, 5, 1.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([3.0, 0.0, 0.0], abs=1e-9)
+
+
+def test_composite_curve_eval_inside_second_constituent(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
+        make_entity(de_index=5, entity_type=102, data={
+            "constituents": [1, 3]}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t = 1.5 → halfway along second Line, local t = 0.5 → (3, 2, 0)
+    _, payload = evaluate_entity(submission_command, iges_path, 5, 1.5, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([3.0, 2.0, 0.0], abs=1e-9)
+
+
+def test_composite_curve_eval_at_terminus_returns_second_constituent_end(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
+        make_entity(de_index=5, entity_type=102, data={
+            "constituents": [1, 3]}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 5, 2.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([3.0, 4.0, 0.0], abs=1e-9)
+
+
 # §1 eval contract: non-parametric entity types must be rejected.
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path
