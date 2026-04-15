@@ -335,9 +335,1237 @@ for your target language.
 
 ## Appendix A — Per-entity `data` schemas
 
-*This appendix contains the TypeScript-style `data` schema for each of
-the 87 IGES 5.3 entity types covered by this eval, in spec-section order.*
+This appendix lists the TypeScript-style `data` schema for each of the 87
+IGES 5.3 entity types covered by this eval, in entity-type-number order.
+Schemas are mechanically extracted from the reference implementation; see
+`Evals/IGES-SDK/scripts/extract_entity_schemas.py` for the extractor.
 
-**[TO BE FILLED IN — tracked in `Evals/IGES/PLAN.md` §2. Stage 2 of the
-technical-requirements-prompt.md draft will populate this appendix by
-extracting struct field lists from the reference implementation.]**
+Conventions:
+
+- Field names are lowercased versions of the IGES spec PD parameter names
+  (e.g. `XT` → `xt`, `DENOTE` → `denote`).
+- Nested types (`BoundaryCurve`, `NoteString`, etc.) are declared
+  immediately before the parent `*Data` type they belong to.
+- For **form-dependent** entities (marked with `— form-dependent`), the
+  `data` schema lists the union of all possible fields across forms. The
+  agent must decide per-form which fields are populated. See the spec in
+  `docs/iges-5-3-specification.md` for the form-to-field mapping —
+  specifically §4.131 (Drawing), §4.135 (External Reference), §4.91 (Line
+  Font Definition), §4.61 (Ordinate Dimension), §4.63 (Radius Dimension),
+  §4.134 (View), §4.50-§4.54 (parametric surface forms), and §4.79
+  (Attribute Table Definition).
+- Fields the writer may re-derive (DE sequence numbers, param_data_ptr,
+  param_line_count) are not marked optional in these types — the schemas
+  describe the fully-resolved post-parse shape per §2.3 and §2.4.
+
+### Type 0 — NullEntity
+
+```ts
+type NullData = {
+};
+```
+
+### Type 100 — CircularArcEntity
+
+```ts
+type CircularArcData = {
+  zt: number,  // ZT displacement from XT,YT plane
+  x1: number,  // Center X
+  y1: number,  // Center Y
+  x2: number,  // Start X
+  y2: number,  // Start Y
+  x3: number,  // Terminate X
+  y3: number,  // Terminate Y
+};
+```
+
+### Type 102 — CompositeCurveEntity
+
+```ts
+type CompositeCurveData = {
+  constituents: DEIndex[],  // pointers to constituent entity DEs
+};
+```
+
+### Type 104 — ConicArcEntity
+
+```ts
+type ConicArcData = {
+  A: number,
+  B: number,
+  C: number,
+  D: number,
+  E: number,
+  F: number,
+  zt: number,  // Z coordinate of the plane
+  x1: number,  // Start point X
+  y1: number,  // Start point Y
+  x2: number,  // Terminate point X
+  y2: number,  // Terminate point Y
+};
+```
+
+### Type 106 — CopiousDataEntity
+
+```ts
+type CopiousDataData = {
+  ip: number,  // interpretation flag: 1=2D, 2=3D, 3=3D+vector
+  n: number,  // number of tuples
+  zt: number,  // common z displacement (IP=1 only)
+  data: number[],  // flat array: N*2, N*3, or N*6 values
+};
+```
+
+### Type 108 — PlaneEntity
+
+```ts
+type PlaneData = {
+  A: number,
+  B: number,
+  C: number,
+  D: number,
+  x: number,
+  y: number,
+  z: number,
+  size: number,  // Size parameter for display symbol
+};
+```
+
+### Type 110 — LineEntity
+
+```ts
+type LineData = {
+  start: Vec3,  // P1
+  terminate: Vec3,  // P2
+};
+```
+
+### Type 112 — ParametricSplineCurveEntity
+
+```ts
+type SplineCurveSegment = {
+  ax: number,
+  ay: number,
+  az: number
+};
+
+type ParametricSplineCurveData = {
+  ctype: number,  // Spline type: 1=Linear,2=Quadratic,3=Cubic,4=WF,5=MWF,6=B-spline
+  H: number,  // Degree of continuity w.r.t. arc length
+  ndim: number,  // Number of dimensions: 2=planar, 3=nonplanar
+  breakpoints: number[],  // N+1 breakpoints: T(1)..T(N+1)
+  segments: SplineCurveSegment[],  // N segments
+  tpx0: number,
+  tpy0: number,
+  tpz0: number
+};
+```
+
+### Type 114 — ParametricSplineSurfaceEntity
+
+```ts
+type SplineSurfacePatch = {
+  // 48 coefficients per patch (16 for X, 16 for Y, 16 for Z).
+  // X(u,v) = sum_{p=0..3} sum_{q=0..3} coeff_x[4*p+q] * s^q * t^p,
+  // with s = u - tu[i], t = v - tv[j]. Same for coeff_y, coeff_z.
+  coeff_x: number[],  // length 16 (AX,BX,CX,DX, EX,FX,GX,HX, KX,LX,MX,NX, PX,QX,RX,SX)
+  coeff_y: number[],  // length 16
+  coeff_z: number[]   // length 16
+};
+
+type ParametricSplineSurfaceData = {
+  ctype: number,  // Spline boundary type
+  ptype: number,  // Patch type: 0=unspecified, 1=Cartesian product
+  M: number,  // Number of u segments
+  N: number,  // Number of v segments
+  tu: number[],  // M+1 u breakpoints
+  tv: number[],  // N+1 v breakpoints
+  patches: SplineSurfacePatch[]
+};
+```
+
+### Type 116 — PointEntity
+
+```ts
+type PointData = {
+  coords: Vec3,
+  display_symbol: DEIndex,  // 0 = no display symbol
+};
+```
+
+### Type 118 — RuledSurfaceEntity
+
+```ts
+type RuledSurfaceData = {
+  de1: DEIndex,  // Pointer to first curve entity
+  de2: DEIndex,  // Pointer to second curve entity
+  dirflg: number,  // 0 = first-to-first, 1 = first-to-last
+  devflg: number,  // 0 = possibly not developable, 1 = developable
+};
+```
+
+### Type 120 — SurfaceOfRevolutionEntity
+
+```ts
+type SurfaceOfRevolutionData = {
+  l: DEIndex,  // Pointer to Line Entity (axis of revolution)
+  c: DEIndex,  // Pointer to generatrix entity
+  sa: number,  // Start angle in radians
+  ta: number,  // Terminate angle in radians
+};
+```
+
+### Type 122 — TabulatedCylinderEntity
+
+```ts
+type TabulatedCylinderData = {
+  de: DEIndex,  // Pointer to directrix curve entity
+  terminate_point: Vec3,  // (LX, LY, LZ) terminate point of generatrix
+};
+```
+
+### Type 123 — DirectionEntity
+
+```ts
+type DirectionData = {
+  x: number,  // Direction ratio w.r.t. X axis
+  y: number,  // Direction ratio w.r.t. Y axis
+  z: number,  // Direction ratio w.r.t. Z axis
+};
+```
+
+### Type 124 — TransformationMatrixEntity
+
+```ts
+type TransformationMatrixData = {
+  rotation: Matrix3x3,
+  translation: Vec3
+};
+```
+
+### Type 125 — FlashEntity
+
+```ts
+type FlashData = {
+  x: number,  // X reference of flash
+  y: number,  // Y reference of flash
+  dim1: number,  // First flash sizing parameter
+  dim2: number,  // Second flash sizing parameter
+  rot: number,  // Rotation about reference point in radians
+  de: DEIndex,  // Pointer to DE of referenced entity or zero
+};
+```
+
+### Type 126 — RationalBSplineCurveEntity
+
+```ts
+type RationalBSplineCurveData = {
+  K: number,  // Upper index of sum (number of control points = K+1)
+  M: number,  // Degree of basis functions
+  prop1: number,  // 0 = nonplanar, 1 = planar
+  prop2: number,  // 0 = open, 1 = closed
+  prop3: number,  // 0 = rational, 1 = polynomial
+  prop4: number,  // 0 = nonperiodic, 1 = periodic
+  knots: number[],  // length = A+1 where A = N+2*M, N = 1+K-M
+  weights: number[],  // length = K+1
+  control_points: Vec3[],  // length = K+1
+  v0: number,  // Starting parameter value
+  v1: number,  // Ending parameter value
+};
+```
+
+### Type 128 — RationalBSplineSurfaceEntity
+
+```ts
+type RationalBSplineSurfaceData = {
+  K1: number,  // Upper index of first sum
+  K2: number,  // Upper index of second sum
+  M1: number,  // Degree of first set of basis functions
+  M2: number,  // Degree of second set of basis functions
+  prop1: number,  // 1 = closed in first parametric direction
+  prop2: number,  // 1 = closed in second parametric direction
+  prop3: number,  // 0 = rational, 1 = polynomial
+  prop4: number,  // 1 = periodic in first parametric direction
+  prop5: number,  // 1 = periodic in second parametric direction
+  knots_u: number[],  // first knot vector, length A+1
+  knots_v: number[],  // second knot vector, length B+1
+  weights: number[],  // C values, stored (K1+1)*(K2+1)
+  control_points: Vec3[],  // C triples, stored (K1+1)*(K2+1)
+  u0: number,  // parameter range in U
+  v0: number,  // parameter range in V
+};
+```
+
+### Type 130 — OffsetCurveEntity
+
+```ts
+type OffsetCurveData = {
+  de1: DEIndex,  // Pointer to base curve to be offset
+  flag: number,  // 1=uniform, 2=linear, 3=function
+  de2: DEIndex,  // Pointer to function curve (FLAG=3), else 0
+  ndim: number,  // Coordinate of DE2 for offset (FLAG=3)
+  ptype: number,  // 1=arc length, 2=parameter
+  d1: number,  // First offset distance
+  td1: number,  // Arc length or param of first offset (FLAG=2)
+  d2: number,  // Second offset distance
+  td2: number,  // Arc length or param of second offset (FLAG=2)
+  vx: number,  // Normal vector X component
+  vy: number,  // Normal vector Y component
+  vz: number,  // Normal vector Z component
+  tt1: number,  // Starting parameter value
+  tt2: number,  // Ending parameter value
+};
+```
+
+### Type 132 — ConnectPointEntity
+
+```ts
+type ConnectPointData = {
+  location: Vec3,  // 1-3: X, Y, Z
+  display_symbol: DEIndex,  // 4: PTR — display symbol geometry DE
+  tf: number,  // 5: TF — Type flag
+  ff: number,  // 6: FF — Function flag (0/1/2)
+  cid: string,  // 7: CID — Function identifier
+  pttcid: DEIndex,  // 8: PTTCID — Text Display Template for CID
+  cfn: string,  // 9: CFN — Connection Point Function Name
+  pttcfn: DEIndex,  // 10: PTTCFN — Text Display Template for CFN
+  cpid: number,  // 11: CPID — Unique Connect Point Identifier
+  fc: number,  // 12: FC — Connect Point Function Code
+  sf: number,  // 13: SF — Swap Flag (0=may swap, 1=may not)
+  psfi: DEIndex,  // 14: PSFI — Pointer to owner
+};
+```
+
+### Type 134 — NodeEntity (§4.27)
+
+> A geometric point used in the definition of a finite element.
+
+```ts
+type NodeData = {
+  x: number,  // First nodal coordinate
+  y: number,  // Second nodal coordinate
+  z: number,  // Third nodal coordinate
+};
+```
+
+### Type 136 — FiniteElementEntity
+
+```ts
+type FiniteElementData = {
+  itop: number,  // Topology type (1-38, 5001=implementor-defined)
+  n: number,  // Number of nodes defining element
+  nodes: DEIndex[],  // Pointers to Node entities (Type 134)
+  etyp: string,  // Element type name (e.g., "BEAM", "LTRIA")
+};
+```
+
+### Type 138 — NodalDisplacementEntity
+
+```ts
+type NodalDisplacementValues = {
+  x: number,  // X-Incr. translation
+  y: number,  // Y-Incr. translation
+  z: number,  // Z-Incr. translation
+  rx: number,  // RX-Incr. rotation
+  ry: number,  // RY-Incr. rotation
+  rz: number,  // RZ-Incr. rotation
+};
+
+type NodalDisplacementNode = {
+  node_id: number,  // Node number identifier
+  cases: NodalDisplacementValues[],  // One per analysis case (NC values)
+};
+
+type NodalDisplacementData = {
+  nc: number,  // Number of analysis cases
+  gp: DEIndex[],  // Pointers to General Note entities (NC)
+  nn: number,  // Number of nodes
+  nodes: NodalDisplacementNode[]
+};
+```
+
+### Type 140 — OffsetSurfaceEntity
+
+```ts
+type OffsetSurfaceData = {
+  nx: number,  // Offset indicator X component
+  ny: number,  // Offset indicator Y component
+  nz: number,  // Offset indicator Z component
+  d: number,  // Offset distance
+  de: DEIndex,  // Pointer to surface entity to be offset
+};
+```
+
+### Type 141 — BoundaryEntity
+
+```ts
+type BoundaryCurve = {
+  crvpt: DEIndex,  // Model space curve pointer
+  sense: number,  // 1=no reversal, 2=reversed
+  k: number,  // Number of param space curves
+  pscpt: DEIndex[],  // Parameter space curve pointers
+};
+
+type BoundaryData = {
+  type: number,  // 0=model space only, 1=model+param
+  pref: number,  // Preferred representation
+  sptr: DEIndex,  // Pointer to untrimmed surface
+  n: number,  // Number of curves
+  curves: BoundaryCurve[]
+};
+```
+
+### Type 142 — CurveOnParametricSurfaceEntity
+
+```ts
+type CurveOnParametricSurfaceData = {
+  crtn: number,  // Creation method: 0=unspecified, 1=projection,
+  sptr: DEIndex,  // Pointer to surface S
+  bptr: DEIndex,  // Pointer to curve B in (u,v) parameter space
+  cptr: DEIndex,  // Pointer to curve C in model space
+  pref: number  // Preferred representation: 0=unspecified,
+};
+```
+
+### Type 143 — BoundedSurfaceEntity
+
+```ts
+type BoundedSurfaceData = {
+  type: number,  // 0 = model space only, 1 = model + parameter space
+  sptr: DEIndex,  // Pointer to untrimmed surface
+  n: number,  // Number of boundary entities
+  bdpt: DEIndex[],  // Pointers to Boundary entities (Type 141)
+};
+```
+
+### Type 144 — TrimmedSurfaceEntity
+
+```ts
+type TrimmedSurfaceData = {
+  pts: DEIndex,  // Pointer to surface being trimmed
+  n1: number,  // 0 = outer boundary is boundary of D
+  n2: number,  // Number of inner boundary curves
+  pto: DEIndex,  // Outer boundary (Type 142) or zero
+  pti: DEIndex[],  // Inner boundary pointers (Type 142)
+};
+```
+
+### Type 146 — NodalResultsEntity
+
+```ts
+type NodalResultsNode = {
+  node_id: number,  // FEM node number identifier
+  values: number[],  // NV data values for this node
+};
+
+type NodalResultsData = {
+  scn: number,  // Analysis subcase number (0 = no subcase)
+  time: number,  // Analysis time value
+  nv: number,  // Number of real values per node
+  nn: number,  // Number of FEM nodes
+  nodes: NodalResultsNode[]
+};
+```
+
+### Type 148 — ElementResultsEntity
+
+```ts
+type ElementResultsElement = {
+  en: number,  // FEM element number identifier
+  itop: number,  // Element Topology type
+  nl: number,  // Number of layers per results data report location
+  dlf: number,  // Data Layer Flag (0..4)
+  nrl: number,  // Number of results data report locations
+  rdrl: number[],  // Results data report locations (NRL values)
+  numv: number,  // Total number of result values (NV*NL*NRL)
+  values: number[],  // Result values V(J,K,L) in column-major order
+};
+
+type ElementResultsData = {
+  scn: number,  // Analysis subcase number (0 = no subcase)
+  time: number,  // Analysis time value
+  nv: number,  // Number of results values per report location
+  rrf: number,  // Results Reporting Flag (0..3)
+  ne: number,  // Number of FEM elements
+  elements: ElementResultsElement[]
+};
+```
+
+### Type 150 — BlockEntity
+
+```ts
+type BlockData = {
+  lx: number,  // Edge lengths
+};
+```
+
+### Type 152 — WedgeEntity
+
+```ts
+type WedgeData = {
+  lx: number,  // Edge lengths
+  ltx: number,  // X-length at distance LY
+};
+```
+
+### Type 154 — RightCircularCylinderEntity
+
+```ts
+type RightCircularCylinderData = {
+  h: number,  // Height
+  r: number,  // Radius
+};
+```
+
+### Type 156 — ConeFrustumEntity
+
+```ts
+type ConeFrustumData = {
+  h: number,  // Height
+  r1: number,  // Larger face radius
+  r2: number,  // Smaller face radius (0 for apex)
+};
+```
+
+### Type 158 — SphereEntity
+
+```ts
+type SphereData = {
+  radius: number
+};
+```
+
+### Type 160 — TorusEntity
+
+```ts
+type TorusData = {
+  r1: number,  // Major radius (axis to disc center)
+  r2: number,  // Minor radius (disc radius)
+};
+```
+
+### Type 162 — SolidOfRevolutionEntity
+
+```ts
+type SolidOfRevolutionData = {
+  ptr: DEIndex,  // Pointer to curve to be revolved
+  f: number,  // Fraction of full rotation
+};
+```
+
+### Type 164 — SolidOfLinearExtrusionEntity
+
+```ts
+type SolidOfLinearExtrusionData = {
+  ptr: DEIndex,  // Pointer to closed curve
+  length: number,  // Extrusion length
+};
+```
+
+### Type 168 — EllipsoidEntity
+
+```ts
+type EllipsoidData = {
+  lx: number,  // Semi-axis lengths
+};
+```
+
+### Type 180 — BooleanTreeEntity
+
+```ts
+type BooleanTreeData = {
+  n: number,  // Length of post-order notation
+  entries: number[],  // Positive = operation, negative = pointer
+};
+```
+
+### Type 182 — SelectedComponentEntity
+
+```ts
+type SelectedComponentData = {
+  btree: DEIndex,  // Pointer to Boolean Tree Entity
+  sel_point: Vec3,  // Point in or on desired component
+};
+```
+
+### Type 184 — SolidAssemblyEntity
+
+```ts
+type SolidAssemblyData = {
+  n: number,  // Number of items
+  items: DEIndex[],  // Item pointers
+  transforms: DEIndex[],  // Transform matrix pointers (0=identity)
+};
+```
+
+### Type 186 — MSBOEntity (§4.49)
+
+> The MSBO defines a manifold solid by enumerating its boundary.
+
+```ts
+type VoidShell = {
+  shell: DEIndex,
+  orientation: boolean
+};
+
+type MSBOData = {
+  shell: DEIndex,  // Outer shell pointer
+  sof: boolean,  // Shell orientation flag
+  n: number,  // Number of void shells
+  voids: VoidShell[]
+};
+```
+
+### Type 190 — PlaneSurfaceEntity — form-dependent
+
+```ts
+type PlaneSurfaceData = {
+  deloc: DEIndex,  // Point on surface
+  denrml: DEIndex,  // Surface normal direction
+  derefd: DEIndex,  // Reference direction (Form 1 only)
+};
+```
+
+### Type 192 — CylindricalSurfaceEntity — form-dependent
+
+```ts
+type CylindricalSurfaceData = {
+  deloc: DEIndex,  // Point on axis
+  deaxis: DEIndex,  // Axis direction
+  radius: number,
+  derefd: DEIndex,  // Reference direction (Form 1 only)
+};
+```
+
+### Type 194 — ConicalSurfaceEntity — form-dependent
+
+```ts
+type ConicalSurfaceData = {
+  deloc: DEIndex,
+  deaxis: DEIndex,
+  radius: number,
+  sangle: number,  // Semi-angle in degrees
+  derefd: DEIndex,  // Reference direction (Form 1 only)
+};
+```
+
+### Type 196 — SphericalSurfaceEntity — form-dependent
+
+```ts
+type SphericalSurfaceData = {
+  deloc: DEIndex,  // Center point
+  radius: number,
+  deaxis: DEIndex,  // Axis direction (Form 1 only)
+  derefd: DEIndex,  // Reference direction (Form 1 only)
+};
+```
+
+### Type 198 — ToroidalSurfaceEntity — form-dependent
+
+```ts
+type ToroidalSurfaceData = {
+  deloc: DEIndex,
+  deaxis: DEIndex,
+  majrad: number,
+  minrad: number,
+  derefd: DEIndex,  // Reference direction (Form 1 only)
+};
+```
+
+### Type 202 — AngularDimensionEntity
+
+```ts
+type AngularDimensionData = {
+  denote: DEIndex,
+  dewit1: DEIndex,
+  dewit2: DEIndex,
+  xt: number,
+  yt: number,
+  radius: number,
+  dearrw1: DEIndex,
+  dearrw2: DEIndex
+};
+```
+
+### Type 204 — CurveDimensionEntity
+
+```ts
+type CurveDimensionData = {
+  denote: DEIndex,  // Pointer to DE of General Note Entity
+  decurv1: DEIndex,  // Pointer to DE of first curve
+  decurv2: DEIndex,  // Pointer to DE of second curve
+  dearr1: DEIndex,  // Pointer to DE of first leader (arrow)
+  dearr2: DEIndex,  // Pointer to DE of second leader (arrow)
+  dewit1: DEIndex,  // Pointer to DE of first witness line
+  dewit2: DEIndex,  // Pointer to DE of second witness line
+};
+```
+
+### Type 206 — DiameterDimensionEntity
+
+```ts
+type DiameterDimensionData = {
+  denote: DEIndex,
+  dearrw1: DEIndex,
+  dearrw2: DEIndex,
+  xt: number,
+  yt: number
+};
+```
+
+### Type 208 — FlagNoteEntity
+
+```ts
+type FlagNoteData = {
+  xt: number,  // X coordinate of lower left corner
+  yt: number,  // Y coordinate of lower left corner
+  zt: number,  // Z coordinate of lower left corner
+  angle: number,  // Rotation angle in radians
+  denote: DEIndex,  // Pointer to DE of General Note Entity
+  n: number,  // Number of associated leader arrows
+  leaders: DEIndex[],  // Pointers to DE of leader arrows
+};
+```
+
+### Type 210 — GeneralLabelEntity
+
+```ts
+type GeneralLabelData = {
+  denote: DEIndex,
+  n: number,
+  leaders: DEIndex[]
+};
+```
+
+### Type 212 — GeneralNoteEntity (§4.58)
+
+> A General Note Entity consists of one or more text strings.
+
+```ts
+type NoteString = {
+  nc: number,
+  wc: number,
+  hc: number,
+  fc: number,
+  slant: number,
+  angle: number,
+  mirror: number,
+  vh: number,
+  start: Vec3,
+  text: string
+};
+
+type GeneralNoteData = {
+  ns: number,
+  strings: NoteString[]
+};
+```
+
+### Type 213 — NewGeneralNoteEntity
+
+```ts
+type NewNoteString = {
+  fixvar: number,  // Fixed/Variable width character display
+  chrwid: number,  // Character width
+  chrhgt: number,  // Character height
+  cspace: number,  // Inter-character spacing
+  lspace: number,  // Interline spacing
+  font: number,  // Font style
+  chrang: number,  // Character angle
+  cctext: string,  // Control code string
+  nc: number,  // Number of characters in TEXT
+  wt: number,  // Box width
+  ht: number,  // Box height
+  chrset: number,  // Character set interpretation
+  sl: number,  // Slant angle
+  a: number,  // Rotation angle
+  m: number,  // Mirror flag (0, 1, 2)
+  vh: number,  // Rotate internal text flag (0, 1)
+  xs: number,  // Text start point X
+  ys: number,  // Text start point Y
+  zs: number,  // Text start point Z depth
+  text: string,  // Text string
+};
+
+type NewGeneralNoteData = {
+  txtcw: number,  // Text containment area width
+  txtch: number,  // Text containment area height
+  justcd: number,  // Justification code (0-3)
+  txtcx: number,  // Text containment area location X
+  txtcy: number,  // Text containment area location Y
+  txtcz: number,  // Z depth from TXTCX,TXTCY plane
+  txtag: number,  // Rotation angle of text containment area
+  baselx: number,  // Position of first base line X
+  basely: number,  // Position of first base line Y
+  baselz: number,  // Z depth from BASELX,BASELY plane
+  nils: number,  // Normal interline spacing
+  ns: number,  // Number of text strings
+  strings: NewNoteString[]
+};
+```
+
+### Type 214 — LeaderArrowEntity
+
+```ts
+type LeaderSegment = {
+  x: number,
+  y: number
+};
+
+type LeaderArrowData = {
+  n: number,
+  ad1: number,  // Arrowhead height
+  ad2: number,  // Arrowhead width
+  zt: number,  // Z depth
+  xh: number,  // Arrowhead coordinate X
+  yh: number,  // Arrowhead coordinate Y
+  segments: LeaderSegment[]
+};
+```
+
+### Type 216 — LinearDimensionEntity
+
+```ts
+type LinearDimensionData = {
+  denote: DEIndex,
+  dearrw1: DEIndex,
+  dearrw2: DEIndex,
+  dewit1: DEIndex,
+  dewit2: DEIndex
+};
+```
+
+### Type 218 — OrdinateDimensionEntity — form-dependent
+
+```ts
+type OrdinateDimensionData = {
+  form: number,
+  denote: DEIndex,  // 1: Pointer to General Note DE
+  dewit: DEIndex,  // 2 (Form 0): Pointer to Witness Line or Leader DE
+  deord: DEIndex,  // 2 (Form 1): Pointer to Leader (ordinate) DE
+  desupp: DEIndex,  // 3 (Form 1): Pointer to Leader (supplementary) DE
+};
+```
+
+### Type 220 — PointDimensionEntity
+
+```ts
+type PointDimensionData = {
+  denote: DEIndex,  // Pointer to DE of General Note Entity
+  dearrw: DEIndex,  // Pointer to DE of leader (arrow)
+  degeom: DEIndex,  // Pointer to DE of the enclosing geometric entity
+};
+```
+
+### Type 222 — RadiusDimensionEntity — form-dependent
+
+```ts
+type RadiusDimensionData = {
+  form: number,
+  denote: DEIndex,  // 1: Pointer to General Note DE
+  dearrw: DEIndex,  // 2: Pointer to Leader (arrow) DE
+  xt: number,  // 3: Arc center X
+  yt: number,  // 4: Arc center Y
+  dearrw2: DEIndex,  // 5 (Form 1 only): Pointer to second Leader DE
+};
+```
+
+### Type 228 — GeneralSymbolEntity
+
+```ts
+type GeneralSymbolData = {
+  denote: DEIndex,  // Pointer to DE of General Note Entity
+  n: number,  // Number of geometric entities
+  geometries: DEIndex[],  // Pointers to DE of geometric entities
+  l: number,  // Number of leader (arrow) entities
+  leaders: DEIndex[],  // Pointers to DE of leader entities
+};
+```
+
+### Type 230 — SectionedAreaEntity
+
+```ts
+type SectionedAreaData = {
+  bndp: DEIndex,  // Pointer to DE of exterior definition curve
+  patrn: number,  // Fill pattern code (0-19 standard, 20+ extended)
+  xt: number,  // X coordinate through which a line shall pass
+  yt: number,  // Y coordinate through which a line shall pass
+  zt: number,  // Z depth of lines
+  dist: number,  // Normal distance between adjacent lines
+  angle: number,  // Angle in radians from XT axis to section lines
+  n: number,  // Number of island curves or zero
+  islands: DEIndex[],  // Pointers to DE of interior island curves
+};
+```
+
+### Type 302 — AssociativityDefinitionEntity
+
+```ts
+type AssociativityClass = {
+  bp: number,  // 1 = back pointers required, 2 = not required
+  order: number,  // 1 = ordered class, 2 = unordered class
+  n: number,  // Number of items per entry
+  item_types: number[],  // Type of each item (1=pointer, 2=value, 3=either)
+};
+
+type AssociativityDefinitionData = {
+  k: number,  // Number of class definitions
+  classes: AssociativityClass[]
+};
+```
+
+### Type 304 — LineFontDefinitionEntity — form-dependent
+
+```ts
+type LineFontDefinitionData = {
+  form: number,
+  m: number,  // Display flag (0=align with axes, 1=align with tangent)
+  l1: DEIndex,  // Pointer to Subfigure Definition Entity
+  l2: number,  // Common arc length distance between displays
+  l3: number,  // Scale factor
+  segments: number[],  // M segment lengths
+  bitmask: string,  // Hex bitmask: which segments are visible/blank
+};
+```
+
+### Type 308 — SubfigureDefinitionEntity
+
+```ts
+type SubfigureDefinitionData = {
+  depth: number,
+  name: string,
+  n: number,
+  entities: DEIndex[]
+};
+```
+
+### Type 310 — TextFontDefinitionEntity
+
+```ts
+type PenMotion = {
+  pf: number,  // Pen up/down flag: 0 = down, 1 = up
+  x: number,  // Grid X location
+  y: number,  // Grid Y location
+};
+
+type CharacterDefinition = {
+  ac: number,  // ASCII code
+  nx: number,  // Grid X of next character origin
+  ny: number,  // Grid Y of next character origin
+  nm: number,  // Number of pen motions
+  motions: PenMotion[]
+};
+
+type TextFontDefinitionData = {
+  fc: number,  // Font Code
+  fname: string,  // Font Name
+  sf: number,  // Supersedes Font (number or negated DE pointer)
+  scale: number,  // Grid units per text height unit
+  n: number,  // Number of characters
+  characters: CharacterDefinition[]
+};
+```
+
+### Type 312 — TextDisplayTemplateEntity
+
+```ts
+type TextDisplayTemplateData = {
+  cbw: number,  // Character box width
+  cbh: number,  // Character box height
+  fc: number,  // Font code (or negative pointer to Type 310)
+  sl: number,  // Slant angle of text in radians (pi/2 = no slant)
+  a: number,  // Rotation angle in radians
+  m: number,  // Mirror flag: 0=none, 1=perpendicular to base, 2=about base
+  vh: number,  // Rotate internal text flag: 0=horizontal, 1=vertical
+  xs: number,  // X of start (Form 0) or X increment (Form 1)
+  ys: number,  // Y of start (Form 0) or Y increment (Form 1)
+  zs: number,  // Z of start (Form 0) or Z increment (Form 1)
+};
+```
+
+### Type 314 — ColorDefinitionEntity
+
+```ts
+type ColorDefinitionData = {
+  red: number,
+  green: number,
+  blue: number,
+  name: string
+};
+```
+
+### Type 316 — UnitsDataEntity
+
+```ts
+type UnitEntry = {
+  typ: string,  // Unit type name (e.g. "LENGTH")
+  val: string,  // Unit value (e.g. "MM")
+  sf: number,  // Scale factor
+};
+
+type UnitsDataData = {
+  np: number,  // Number of units
+  units: UnitEntry[]
+};
+```
+
+### Type 320 — NetworkSubfigureDefinitionEntity
+
+```ts
+type NetworkSubfigureDefinitionData = {
+  depth: number,  // Depth of subfigure nesting
+  name: string,  // Subfigure name
+  na: number,  // Number of associated entities
+  associated: DEIndex[],  // Associated entity pointers
+  tf: number,  // Type flag: 0=not specified, 1=logical, 2=physical
+  prd: string,  // Primary reference designator
+  nc: number,  // Number of connect points
+  connects: DEIndex[],  // Connect point pointers (or zero)
+};
+```
+
+### Type 322 — AttributeTableDefinitionEntity — form-dependent
+
+```ts
+type AttributeEntry = {
+  at: number,  // Attribute type number
+  avdt: number,  // Attribute value data type (0-6)
+  avc: number,  // Attribute value count
+  values: (number | string | DEIndex)[],  // AVC values (Forms 1, 2 only)
+  display_ptrs: DEIndex[],  // AVC display template pointers (Form 2 only)
+};
+
+type AttributeTableDefinitionData = {
+  name: string,  // NAME — table name
+  alt: number,  // ALT — attribute list type
+  na: number,  // NA — number of attributes
+  attributes: AttributeEntry[]
+};
+```
+
+### Type 402 — AssociativityInstanceEntity
+
+```ts
+type AssociativityInstanceData = {
+  n: number,
+  entries: DEIndex[]
+};
+```
+
+### Type 404 — DrawingEntity — form-dependent
+
+```ts
+type DrawingView = {
+  view: DEIndex,
+  x_origin: number,
+  y_origin: number,
+  angle: number,  // Form 1 only: orientation angle in radians
+};
+
+type DrawingData = {
+  n: number,
+  views: DrawingView[],
+  m: number,
+  annotations: DEIndex[]
+};
+```
+
+### Type 406 — PropertyEntity
+
+```ts
+type PropertyData = {
+  np: number,
+  values: FieldValue[]
+};
+```
+
+### Type 408 — SubfigureInstanceEntity
+
+```ts
+type SubfigureInstanceData = {
+  de: DEIndex,
+  translation: Vec3,
+  scale: number
+};
+```
+
+### Type 410 — ViewEntity — form-dependent
+
+```ts
+type ViewData = {
+  form: number,
+  view_number: number,
+  scale: number,
+  clip_planes: DEIndex[],
+  view_plane_normal: Vec3,  // 3-5: VPNX, VPNY, VPNZ
+  view_reference_point: Vec3,  // 6-8: VRPX, VRPY, VRPZ
+  center_of_projection: Vec3,  // 9-11: CPX, CPY, CPZ
+  view_up_vector: Vec3,  // 12-14: VUPX, VUPY, VUPZ
+  view_plane_distance: number,  // 15: VPD
+  umin: number,  // 16: UMIN
+  umax: number,  // 17: UMAX
+  vmin: number,  // 18: VMIN
+  vmax: number,  // 19: VMAX
+  depth_clipping: number,  // 20: DCI
+  wmin: number,  // 21: WMIN
+  wmax: number,  // 22: WMAX
+};
+```
+
+### Type 412 — RectangularArrayEntity
+
+```ts
+type RectangularArrayData = {
+  de: DEIndex,  // 1: Pointer to base entity DE
+  s: number,  // 2: Scale factor (default 1.0)
+  position: Vec3,  // 3-5: Lower left corner X, Y, Z
+  nc: number,  // 6: Number of columns
+  nr: number,  // 7: Number of rows
+  dx: number,  // 8: Horizontal distance between columns
+  dy: number,  // 9: Vertical distance between rows
+  ax: number,  // 10: Rotation angle in radians
+  lc: number,  // 11: DO-DON'T list count (0=display all)
+  ddf: number,  // 12: DO-DON'T flag (0=DO, 1=DON'T)
+  positions: number[],  // 13..12+LC: Position numbers
+};
+```
+
+### Type 414 — CircularArrayEntity
+
+```ts
+type CircularArrayData = {
+  de: DEIndex,  // 1: Pointer to base entity DE
+  ne: number,  // 2: Total number of possible instance locations
+  center: Vec3,  // 3-5: Center of imaginary circle X, Y, Z
+  r: number,  // 6: Radius of imaginary circle
+  as: number,  // 7: Start angle in radians
+  ad: number,  // 8: Delta angle in radians
+  lc: number,  // 9: DO-DON'T list count (0=display all)
+  ddf: number,  // 10: DO-DON'T flag (0=DO, 1=DON'T)
+  positions: number[],  // 11..10+LC: Position numbers
+};
+```
+
+### Type 416 — ExternalReferenceEntity — form-dependent
+
+```ts
+type ExternalReferenceData = {
+  filename: string,
+  entity_name: string
+};
+```
+
+### Type 418 — NodalLoadConstraintEntity
+
+```ts
+type NodalLoadConstraintData = {
+  nc: number,  // Total number of cases
+  type: number,  // 1 = Loads, 2 = Constraints
+  ptrs: DEIndex[],  // Pointers to Tabular Data Properties
+};
+```
+
+### Type 420 — NetworkSubfigureInstanceEntity
+
+```ts
+type NetworkSubfigureInstanceData = {
+  x: number,  // Translation X
+  y: number,  // Translation Y
+  z: number,  // Translation Z
+  xs: number,  // Scale factor X (default 1.0)
+  ys: number,  // Scale factor Y (default XS)
+  zs: number,  // Scale factor Z (default XS)
+  tf: number,  // Type flag: 0=not specified, 1=logical, 2=physical
+  prd: string,  // Primary reference designator
+  nc: number,  // Number of connect points
+  cptrs: DEIndex[],  // Connect point pointers (or zero)
+};
+```
+
+### Type 430 — SolidInstanceEntity
+
+```ts
+type SolidInstanceData = {
+  ptr: DEIndex,  // Pointer to the solid
+};
+```
+
+### Type 502 — VertexListEntity (§4.143.1)
+
+> The Vertex List Entity contains one or more vertices.
+
+```ts
+type VertexListData = {
+  n: number,
+  vertices: Vec3[]
+};
+```
+
+### Type 504 — EdgeListEntity (§4.144.1)
+
+> The Edge List Entity models an edge or a list of edges.
+
+```ts
+type EdgeTuple = {
+  curve: DEIndex,  // Model space curve pointer
+  svp: DEIndex,  // Start vertex list pointer
+  sv: number,  // Start vertex index
+  tvp: DEIndex,  // Terminate vertex list pointer
+  tv: number,  // Terminate vertex index
+};
+
+type EdgeListData = {
+  n: number,
+  edges: EdgeTuple[]
+};
+```
+
+### Type 508 — LoopEntity (§4.145)
+
+> The Loop Entity specifies a bound of a face.
+
+```ts
+type ParamSpaceCurve = {
+  isoparametric: boolean,
+  curve: DEIndex
+};
+
+type EdgeUse = {
+  type: number,  // 0=Edge, 1=Vertex
+  edge: DEIndex,  // Pointer to Edge/Vertex List
+  ndx: number,  // List index
+  orientation: boolean,  // Orientation flag
+  k: number,  // Number of param space curves
+  param_curves: ParamSpaceCurve[]
+};
+
+type LoopData = {
+  n: number,
+  edge_uses: EdgeUse[]
+};
+```
+
+### Type 510 — FaceEntity
+
+```ts
+type FaceData = {
+  surf: DEIndex,  // Underlying surface pointer
+  n: number,  // Number of loops
+  outer_loop_flag: boolean,
+  loops: DEIndex[]
+};
+```
+
+### Type 514 — ShellEntity
+
+```ts
+type FaceUse = {
+  face: DEIndex,
+  orientation: boolean
+};
+
+type ShellData = {
+  n: number,
+  faces: FaceUse[]
+};
+```

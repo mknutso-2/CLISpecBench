@@ -46,13 +46,21 @@ Lives in `prompt/technical-requirements-prompt.md`. Machine-extracted from
 - [x] Top-level shape: `{start_lines, global, entities[]}`.
 - [x] `global` — all 26 named fields with spec-defined defaults.
 - [x] `directory_entry` — all 20 named fields per entity.
-- [ ] `entity.data` schema for each of the 87 entity types. **Stage 2 —
-      in progress; appendix §A stub in place.**
+- [x] `entity.data` schema for each of the 87 entity types. **Mechanically
+      extracted via `Evals/IGES-SDK/scripts/extract_entity_schemas.py` into
+      `prompt/technical-requirements-prompt.md` appendix A.** Spot-fix
+      needed: `SplineSurfacePatch` fixed-size `Real[16]` arrays patched
+      manually; all other 86 entities extracted cleanly. Iterative
+      hand-polish of per-entity comments may follow.
 - [x] Schema format decided: TypeScript-style for `data` payloads, prose
       for the envelope and CLI contract.
-- [ ] Form-dependent entity schemas (Drawing/External Ref/Line Font Def/
-      Ordinate Dim/Radius Dim/View/Surfaces 190-198/Attr Table Def) call out
-      per-form field lists. **Stage 2.**
+- [x] Form-dependent entity schemas (Drawing/External Ref/Line Font Def/
+      Ordinate Dim/Radius Dim/View/Surfaces 190-198/Attr Table Def) called
+      out. Current approach: each form-dependent entity is marked
+      `— form-dependent` in its section heading and emits the union of all
+      fields; the agent is pointed at the spec sections for form-to-field
+      mapping (appendix A preamble). Consider per-form literal-union
+      narrowing as a follow-up if agents conflate forms in practice.
 - [x] Numerical tolerance for `eval` picked and documented:
       relative `1e-9`, absolute `1e-12` near zero.
 
@@ -257,8 +265,9 @@ prompt/
 Decisions that need to be made before or during the port. Remove each item
 once resolved (and capture the decision in `IGES-Design.md`).
 
-- [ ] Schema encoding in the prompt: prose tables vs. JSON Schema vs.
-      TypeScript-style type aliases.
+<!-- Resolved: TypeScript-style for per-entity data, prose for CLI
+     contract and envelope. See technical-requirements-prompt.md. -->
+
 - [ ] Whether to include `IGES5-3.pdf` in `docs/` (license review needed).
 - [ ] Final `eval` subcommand surface — just `{x,y,z}`, or also first/second
       derivatives?
