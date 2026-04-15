@@ -127,6 +127,7 @@ HEADER = """\
 RESOLVER_USING: dict[int, tuple[str, str]] = {
     102: ("composite_curve", "curve"),
     118: ("ruled_surface", "surface_form"),
+    120: ("surface_of_revolution", "surface"),
     130: ("offset_curve", "curve"),
 }
 

@@ -11,6 +11,7 @@
 #include "../entities/composite_curve_entity.hpp"
 #include "../entities/offset_curve_entity.hpp"
 #include "../entities/ruled_surface_entity.hpp"
+#include "../entities/surface_of_revolution_entity.hpp"
 #include <utility>
 
 namespace iges {
@@ -72,5 +73,17 @@ evaluate_ruled_surface(RuledSurfaceEntity const& ent,
                        Real t,
                        Real s,
                        EntityResolver const& resolver);
+
+// Surface of Revolution (Type 120) evaluator (§4.18).
+//
+// Evaluates the generatrix at native parameter `t`, then rotates the
+// resulting point around the axis line by angle `s ∈ [SA, TA]`. The
+// axis entity must be Type 110 Line; its two endpoints define the
+// axis line in 3D (direction = terminate − start).
+std::expected<EvalResult, Diagnostic>
+evaluate_surface_of_revolution(SurfaceOfRevolutionEntity const& ent,
+                               Real t,
+                               Real s,
+                               EntityResolver const& resolver);
 
 } // namespace iges

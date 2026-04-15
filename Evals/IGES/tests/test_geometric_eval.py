@@ -1,14 +1,15 @@
 """Geometric evaluation tests for the ``iges eval`` subcommand.
 
-Line coverage lives in ``test_line_entity.py``. This file adds:
+Line coverage lives in ``test_line_entity.py``. This file covers the
+parametric entity types enumerated in §1.6 of the agent contract —
+Circular Arc (§4.3), Copious Data (§4.6), Composite Curve (§4.4),
+Offset Curve (§4.25), Ruled Surface (§4.17), Surface of Revolution
+(§4.18), and the B-Spline curve/surface types — using each entity's
+**native** parameter domain (not a normalized `[0, 1]`). Also exercises:
 
-* Circular Arc (§4.3) — evaluation at t=0 / t=0.5 / t=1.
 * ``eval`` on a non-parametric entity type — must be rejected.
-* ``eval`` with t outside [0,1] — must be rejected (§1 eval contract).
-
-Ports the CLI-observable subset of ``test_geometric_evaluation.cpp``;
-B-spline / surface / block / sphere / cylinder evaluation is not yet
-covered — a follow-up can layer those on once the CLI is stable.
+* Curve ``eval`` with ``--s`` supplied — must be rejected.
+* Surface ``eval`` without ``--s`` — must be rejected.
 """
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
@@ -474,6 +475,71 @@ def test_ruled_surface_eval_dirflg_reverses_second_curve(
     )
     assert payload["ok"] is True
     assert payload["point"] == pytest.approx([10.0, 5.0, 0.0], abs=1e-9)
+
+
+# §4.18: Surface of Revolution (Type 120).
+#
+# Axis: Z-axis (Line from (0,0,0) to (0,0,1)).
+# Generatrix: Line from (2,0,0) to (2,0,3) (vertical line at x=2 in the
+#   XZ plane). Revolving it produces a cylinder of radius 2 and height
+#   3. At (t, s) on the surface, the point is
+#       (2·cos(s), 2·sin(s), 3·t_fraction_along_generatrix_in_z).
+# Line native param t ∈ [0, 1], so at t=0.5 the generatrix point is
+# (2, 0, 1.5).
+def _cylinder_via_surface_of_revolution(
+    sa: float, ta: float,
+) -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [0.0, 0.0, 1.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [2.0, 0.0, 0.0], "terminate": [2.0, 0.0, 3.0]}),
+        make_entity(de_index=5, entity_type=120, data={
+            "l": 1, "c": 3, "sa": sa, "ta": ta}),
+    ])
+
+
+def test_surface_of_revolution_eval_at_start_angle(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    # Pad the angle range slightly on both sides — IGES real literals
+    # use %.15g and round the last bit of π, which would put s=π
+    # epsilon-past ta=π. The geometric assertion is unaffected.
+    doc = _cylinder_via_surface_of_revolution(sa=-0.1, ta=math.pi + 0.1)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t=0 → generatrix start (2, 0, 0); s=0 → no rotation.
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.0, tmp_path, s=0.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.0, 0.0, 0.0], abs=1e-9)
+
+
+def test_surface_of_revolution_eval_quarter_rotation(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _cylinder_via_surface_of_revolution(sa=-0.1, ta=math.pi + 0.1)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t=0.5 → generatrix point (2, 0, 1.5); s=π/2 → rotate 90° about Z
+    # → (0, 2, 1.5).
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.5, tmp_path, s=math.pi / 2,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.0, 2.0, 1.5], abs=1e-9)
+
+
+def test_surface_of_revolution_eval_half_rotation(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _cylinder_via_surface_of_revolution(sa=-0.1, ta=math.pi + 0.1)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t=1 → generatrix end (2, 0, 3); s=π → rotate 180° → (−2, 0, 3).
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 1.0, tmp_path, s=math.pi,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([-2.0, 0.0, 3.0], abs=1e-9)
 
 
 # §1 eval contract: non-parametric entity types must be rejected.

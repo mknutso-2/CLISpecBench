@@ -1147,6 +1147,13 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Surface entity requires --s", "§1"});
             return iges::evaluate_ruled_surface(ent, form, t, *s, resolver);
         }
+        case 120: {
+            auto ent = data.get<iges::SurfaceOfRevolutionEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface entity requires --s", "§1"});
+            return iges::evaluate_surface_of_revolution(ent, t, *s, resolver);
+        }
         case 126: {
             auto ent = data.get<iges::RationalBSplineCurveEntity>();
             if (s.has_value()) return std::unexpected(Diagnostic{

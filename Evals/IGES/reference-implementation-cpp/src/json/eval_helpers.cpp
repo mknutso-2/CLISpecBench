@@ -288,4 +288,108 @@ evaluate_ruled_surface(RuledSurfaceEntity const& ent,
     return r;
 }
 
+
+// Rotate vector v around unit axis k by angle a (Rodrigues' formula).
+static Vec3 rotate_around_unit_axis(Vec3 const& v, Vec3 const& k, Real a) {
+    Real c = std::cos(a);
+    Real sn = std::sin(a);
+    Real dot = k.x * v.x + k.y * v.y + k.z * v.z;
+    Vec3 cross{
+        k.y * v.z - k.z * v.y,
+        k.z * v.x - k.x * v.z,
+        k.x * v.y - k.y * v.x,
+    };
+    return Vec3{
+        v.x * c + cross.x * sn + k.x * dot * (1.0 - c),
+        v.y * c + cross.y * sn + k.y * dot * (1.0 - c),
+        v.z * c + cross.z * sn + k.z * dot * (1.0 - c),
+    };
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_surface_of_revolution(SurfaceOfRevolutionEntity const& ent,
+                               Real t,
+                               Real s,
+                               EntityResolver const& resolver) {
+    if (!is_valid_de(ent.l.value) || !is_valid_de(ent.c.value)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Surface of Revolution has invalid axis or generatrix DE pointer",
+            "§4.18"});
+    }
+
+    auto axis = resolver(ent.l.value);
+    if (!axis) return std::unexpected(axis.error());
+    if (axis->type != 110) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Surface of Revolution axis must be Type 110 Line; got type "}
+                + std::to_string(axis->type),
+            "§4.18"});
+    }
+    // Pull axis line endpoints directly from JSON so we don't need the
+    // entity struct include here.
+    Vec3 ax_start{
+        axis->data.at("start").at(0).get<Real>(),
+        axis->data.at("start").at(1).get<Real>(),
+        axis->data.at("start").at(2).get<Real>(),
+    };
+    Vec3 ax_end{
+        axis->data.at("terminate").at(0).get<Real>(),
+        axis->data.at("terminate").at(1).get<Real>(),
+        axis->data.at("terminate").at(2).get<Real>(),
+    };
+    Vec3 axis_dir{
+        ax_end.x - ax_start.x,
+        ax_end.y - ax_start.y,
+        ax_end.z - ax_start.z,
+    };
+    Real axis_len = std::sqrt(
+        axis_dir.x * axis_dir.x
+        + axis_dir.y * axis_dir.y
+        + axis_dir.z * axis_dir.z);
+    if (axis_len < 1e-15) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Surface of Revolution axis has zero length", "§4.18"});
+    }
+    Vec3 k{axis_dir.x / axis_len, axis_dir.y / axis_len, axis_dir.z / axis_len};
+
+    // Evaluate generatrix at native parameter t.
+    auto gen = resolver(ent.c.value);
+    if (!gen) return std::unexpected(gen.error());
+    auto genpt = sample_curve_point(*gen, t, resolver);
+    if (!genpt) return std::unexpected(genpt.error());
+
+    if (s < ent.sa || s > ent.ta) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Surface of Revolution s="} + std::to_string(s)
+                + " is outside [SA, TA] = ["
+                + std::to_string(ent.sa) + ", " + std::to_string(ent.ta) + "]",
+            "§4.18"});
+    }
+
+    // Radius vector from axis-projected foot to the generatrix point.
+    Vec3 rel{
+        genpt->x - ax_start.x,
+        genpt->y - ax_start.y,
+        genpt->z - ax_start.z,
+    };
+    Real along = rel.x * k.x + rel.y * k.y + rel.z * k.z;
+    Vec3 foot{
+        ax_start.x + along * k.x,
+        ax_start.y + along * k.y,
+        ax_start.z + along * k.z,
+    };
+    Vec3 radial{genpt->x - foot.x, genpt->y - foot.y, genpt->z - foot.z};
+
+    Vec3 rotated = rotate_around_unit_axis(radial, k, s);
+    EvalResult r;
+    r.point.x = foot.x + rotated.x;
+    r.point.y = foot.y + rotated.y;
+    r.point.z = foot.z + rotated.z;
+    return r;
+}
+
 } // namespace iges

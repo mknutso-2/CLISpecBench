@@ -175,6 +175,15 @@ the IGES 5.3 spec.
   (e.g. Cylindrical `u ∈ [0°, 360°]` and `v ∈ (−∞, ∞)`). The CLI uses
   degrees for `u` where the spec uses degrees; radians otherwise.
 
+**Angle-range sweep convention.** For entities whose parameter domain
+is an angle range `[start_angle, terminate_angle]` — specifically Type
+`100` Circular Arc (the `t` range) and Type `120` Surface of Revolution
+(the `s` range) — IGES 5.3 prescribes a forward sweep with
+`0 < terminate_angle − start_angle ≤ 2π`. Evaluators traverse the
+range in increasing-angle order; a full-turn loop is encoded as
+`ta = sa + 2π`, not as `ta = sa`. Hidden tests honor this and do not
+probe the complementary (wrap-around) arc.
+
 Hidden tests call `iges eval` only with parameter values inside the
 documented native domain of the target entity.
 
