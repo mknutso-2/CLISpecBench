@@ -90,20 +90,20 @@ prompt/
 
 `Evals/IGES/reference-implementation-cpp/`.
 
-- [ ] Copy `IGES-SDK/src/{types.hpp,types.cpp,entities/,model/,parser/,writer/}`
+- [x] Copy `IGES-SDK/src/{types.hpp,types.cpp,entities/,model/,parser/,writer/}`
       verbatim into `reference-implementation-cpp/src/`.
-- [ ] New `src/main.cpp` implementing subcommand dispatch for all five
+- [x] New `src/main.cpp` implementing subcommand dispatch for all five
       subcommands.
-- [ ] Add `nlohmann/json` as a header-only dep (fetched via CMake
+- [x] Add `nlohmann/json` as a header-only dep (fetched via CMake
       FetchContent or vendored).
-- [ ] Per-entity JSON serialization: `to_json` / `from_json` free functions
+- [x] Per-entity JSON serialization: `to_json` / `from_json` free functions
       mirroring the existing `parse_*_entity` / `write_*_entity` pattern —
       87 small functions in a new `src/json/entity_json.{hpp,cpp}`.
-- [ ] `CMakeLists.txt` producing a single `iges` executable target (no
+- [x] `CMakeLists.txt` producing a single `iges` executable target (no
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
-- [ ] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [ ] Ref-impl passes the full Python test suite.
+- [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
+- [x] Ref-impl passes the full Python test suite (54 tests, 2026-04-14).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -118,7 +118,7 @@ prompt/
       `semantic_roundtrip_json`).
 - [x] `data/ex1.iges`, `data/ex2.iges`, `data/ex3.iges` — copied from
       `Evals/IGES-SDK/tests/data/` unchanged.
-- [ ] `test_build.py` — smoke test that the `iges` binary builds and is
+- [x] `test_build.py` — smoke test that the `iges` binary builds and is
       invokable (mirror CNCSim's).
 - [x] **Pilot port: Line entity end-to-end** — `test_line_entity.py`,
       10 tests, all passing against the C++ ref-impl.
@@ -127,21 +127,25 @@ prompt/
         pointer, logical).
   - [ ] `test_2_2_3_*.cpp` → `test_free_format.py` (delimiters, free format).
   - [ ] `test_2_2_4_*.cpp` → `test_sections.py` (Start/Global/DE/PD/Terminate).
-- [ ] **Per-entity tests** — 87 entity-level ports. Track individually:
-  - [ ] §4.1 Null (0)
-  - [ ] §4.3 Circular Arc (100)
-  - [ ] §4.4 Composite Curve (102)
+- [ ] **Per-entity tests** — 87 entity-level ports. Broad coverage
+      (round-trip of `entity.data` for 14 entity types) now lives in
+      `test_entity_roundtrips.py`; per-entity `§4.X` files below are still
+      desirable for behavioural assertions beyond JSON round-tripping.
+  - [ ] §4.1 Null (0) — covered in `test_entity_roundtrips.py`
+  - [ ] §4.3 Circular Arc (100) — covered in `test_entity_roundtrips.py`
+        + `test_geometric_eval.py`
+  - [ ] §4.4 Composite Curve (102) — covered in `test_entity_roundtrips.py`
   - [ ] §4.5 Conic Arc / Copious Data (104 / 106)
-  - [ ] §4.12 Plane (108)
+  - [ ] §4.12 Plane (108) — covered in `test_entity_roundtrips.py`
   - [x] §4.13 Line (110) — pilot, `test_line_entity.py`
   - [ ] §4.14 Parametric Spline Curve (112)
   - [ ] §4.15 Parametric Spline Surface (114)
-  - [ ] §4.16 Point (116)
+  - [ ] §4.16 Point (116) — covered in `test_entity_roundtrips.py`
   - [ ] §4.17 Ruled Surface (118)
   - [ ] §4.18 Surface of Revolution (120)
   - [ ] §4.19 Tabulated Cylinder (122)
-  - [ ] §4.20 Direction (123)
-  - [ ] §4.21 Transformation Matrix (124)
+  - [ ] §4.20 Direction (123) — covered in `test_entity_roundtrips.py`
+  - [ ] §4.21 Transformation Matrix (124) — covered in `test_entity_roundtrips.py`
   - [ ] §4.22 Flash (125)
   - [ ] §4.23 Rational B-Spline Curve (126)
   - [ ] §4.24 Rational B-Spline Surface (128)
@@ -194,15 +198,15 @@ prompt/
   - [ ] §4.79 Attribute Table Definition (322)
   - [ ] §4.90 Associativity Instance (402)
   - [ ] §4.91 Line Font Definition (304)
-  - [ ] §4.92 Subfigure Definition (308)
+  - [ ] §4.92 Subfigure Definition (308) — covered in `test_entity_roundtrips.py`
   - [ ] §4.93 Color Definition (314)
-  - [ ] §4.97 Property (406)
-  - [ ] §4.131 Drawing (404)
-  - [ ] §4.133 Subfigure Instance (408)
-  - [ ] §4.134 View (410)
+  - [ ] §4.97 Property (406) — covered in `test_entity_roundtrips.py`
+  - [ ] §4.131 Drawing (404) — covered in `test_entity_roundtrips.py`
+  - [ ] §4.133 Subfigure Instance (408) — covered in `test_entity_roundtrips.py`
+  - [ ] §4.134 View (410) — covered in `test_entity_roundtrips.py`
   - [ ] §4.135 External Reference (416)
-  - [ ] §4.136 Rectangular Array (412)
-  - [ ] §4.137 Circular Array (414)
+  - [ ] §4.136 Rectangular Array (412) — covered in `test_defaulted_fields.py`
+  - [ ] §4.137 Circular Array (414) — covered in `test_entity_roundtrips.py`
   - [ ] §4.139 Nodal Load/Constraint (418)
   - [ ] §4.140 Network Subfigure Instance (420)
   - [ ] §4.142 Solid Instance (430)
@@ -217,12 +221,22 @@ prompt/
   - [ ] `test_writer_global.cpp` → `test_writer_global.py`.
   - [ ] `test_writer_param.cpp` → `test_writer_param.py`.
   - [ ] `test_writer_file.cpp` → `test_writer_file.py`.
-  - [ ] `test_writer_roundtrip*.cpp` → `test_writer_roundtrip.py`.
-- [ ] **Geometric evaluation**
-  - [ ] `test_geometric_evaluation.cpp` → `test_geometric_eval.py` (drives
-        `iges eval` with known inputs).
-- [ ] **Malformed input**
-  - [ ] `test_malformed.cpp` → `test_malformed.py` (exit 1 + `spec_ref`).
+  - [x] `test_writer_roundtrip*.cpp` → `test_roundtrip_cli.py` —
+        parametrized over ex1/ex2/ex3: entity-count + per-entity data
+        preservation + byte-level idempotence after one normalization
+        pass. Library-internal `test_writer_roundtrip*.cpp` per-entity
+        cases are covered by `test_entity_roundtrips.py`.
+- [x] **Geometric evaluation** — `test_geometric_eval.py`, 5 tests:
+      Circular Arc evaluation at start/end/mid-angle, z-plane respect,
+      eval-on-non-parametric rejected. Ports the CLI-observable subset
+      of `test_geometric_evaluation.cpp`; B-spline / surface / block /
+      sphere / cylinder evaluation is a follow-up once the Arc contract
+      is settled (see Open Questions).
+- [x] **Malformed input** — `test_malformed.py`, 6 tests covering
+      MAL-1/MAL-2/MAL-10/MAL-12 plus query-on-nonexistent-DE and
+      random-bytes-input. Asserts `ok:false` + `error` field on the
+      diagnostic envelope (spec_ref / line exact values left
+      implementation-dependent).
 - [ ] **Validation**
   - [ ] `test_validate.cpp` → `test_validation.py`.
 - [x] **Reference fixtures** — `test_reference_fixtures.py`, 6 tests,
@@ -240,13 +254,16 @@ prompt/
 
 ## 6. Eval Design Doc
 
-- [ ] `Evals/IGES/IGES-Design.md` — capture:
-  - [ ] Why this eval exists (CNCSim saturation, harder spec-comprehension).
-  - [ ] CLI contract rationale (why 5 subcommands).
-  - [ ] IGES-JSON schema design choices.
-  - [ ] Scoping: entities in scope, explicit non-goals (Binary Format,
+- [x] `Evals/IGES/IGES-Design.md` — 6 sections:
+  - [x] Why this eval exists (CNCSim saturation, harder spec-comprehension).
+  - [x] CLI contract rationale (why 5 subcommands).
+  - [x] IGES-JSON schema design choices.
+  - [x] Scoping: entities in scope, explicit non-goals (Binary Format,
         MACRO, drafting-only, Compressed Format).
-  - [ ] Known spec ambiguities the tests deliberately do not assert.
+  - [x] Known spec ambiguities the tests deliberately do not assert
+        (includes the CircularArc `t`-parameterization finding — see
+        Open Questions below).
+  - [x] Reference implementation roles.
 
 ## 7. End-to-End Validation
 
@@ -284,6 +301,18 @@ once resolved (and capture the decision in `IGES-Design.md`).
 - [ ] Tolerance policy — single global tolerance, or per-entity-type?
 - [ ] Whether `query --de <n>` on an out-of-range index is exit 1
       (malformed input) or a distinct error class.
+- [ ] **Circular Arc `t`-parameter convention for `iges eval`.** The
+      SDK's `CircularArcEntity::evaluate()` treats `t` as the angular
+      parameter in radians (`C(t) = (x1+R·cos(t), y1+R·sin(t), zt)`),
+      whereas the Line entity uses `t ∈ [0, 1]`. Current
+      `test_geometric_eval.py` asserts the ref-impl's angular
+      behaviour, but this inconsistency will confuse agents. Decide:
+      (a) normalize Arc `t` to `[0, 1]` across the contract (requires
+      changing `CircularArcEntity::evaluate()` and any other parametric
+      entity that doesn't already normalize), or (b) document
+      per-entity-type parameterization explicitly in
+      `technical-requirements-prompt.md` §1 `eval`. See
+      `IGES-Design.md` §5.
 
 ---
 
