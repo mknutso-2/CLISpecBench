@@ -198,4 +198,94 @@ evaluate_offset_curve(OffsetCurveEntity const& ent,
     return r;
 }
 
+
+// Helper for Ruled Surface: sample a resolved curve at a native
+// parameter and return just the point.
+static std::expected<Vec3, Diagnostic>
+sample_curve_point(ResolvedEntity const& curve,
+                   Real u,
+                   EntityResolver const& resolver) {
+    auto r = evaluate_entity_dispatch(
+        curve.type, curve.form, curve.data, u, std::nullopt, resolver);
+    if (!r) return std::unexpected(r.error());
+    return r->point;
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_ruled_surface(RuledSurfaceEntity const& ent,
+                       int form,
+                       Real t,
+                       Real s,
+                       EntityResolver const& resolver) {
+    if (!is_valid_de(ent.de1.value) || !is_valid_de(ent.de2.value)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Ruled Surface has invalid DE pointer for de1 or de2", "§4.17"});
+    }
+    if (s < 0.0 || s > 1.0) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Ruled Surface s="} + std::to_string(s)
+                + " must lie in [0, 1]",
+            "§4.17"});
+    }
+
+    auto c1 = resolver(ent.de1.value);
+    if (!c1) return std::unexpected(c1.error());
+    auto c2 = resolver(ent.de2.value);
+    if (!c2) return std::unexpected(c2.error());
+
+    // Decide the curve parameter for each curve from t.
+    Real u1 = 0.0;
+    Real u2 = 0.0;
+    if (form == 0) {
+        // Form 0: t ∈ [0, 1] is a fraction of each curve's native span.
+        if (t < 0.0 || t > 1.0) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                std::string{"Ruled Surface form 0 expects t ∈ [0, 1]; got "}
+                    + std::to_string(t),
+                "§4.17"});
+        }
+        auto sp1 = curve_native_span(c1->type, c1->form, c1->data);
+        if (!sp1) return std::unexpected(sp1.error());
+        auto sp2 = curve_native_span(c2->type, c2->form, c2->data);
+        if (!sp2) return std::unexpected(sp2.error());
+        u1 = sp1->first + t * (sp1->second - sp1->first);
+        // dirflg=1 traverses curve 2 in reverse.
+        Real t2 = (ent.dirflg == 1) ? (1.0 - t) : t;
+        u2 = sp2->first + t2 * (sp2->second - sp2->first);
+    } else if (form == 1) {
+        // Form 1: t is directly the native curve parameter for both
+        // curves. Spec assumes both domains are identical; we do not
+        // enforce that here (the evaluator just samples both at t).
+        u1 = t;
+        u2 = t;
+        if (ent.dirflg == 1) {
+            // Flip by reflecting within the second curve's native span.
+            auto sp2 = curve_native_span(c2->type, c2->form, c2->data);
+            if (!sp2) return std::unexpected(sp2.error());
+            u2 = sp2->first + sp2->second - t;
+        }
+    } else {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Ruled Surface has unsupported form "}
+                + std::to_string(form),
+            "§4.17"});
+    }
+
+    auto p1 = sample_curve_point(*c1, u1, resolver);
+    if (!p1) return std::unexpected(p1.error());
+    auto p2 = sample_curve_point(*c2, u2, resolver);
+    if (!p2) return std::unexpected(p2.error());
+
+    // Linear rule: P(t, s) = (1 − s) · P1 + s · P2.
+    EvalResult r;
+    r.point.x = (1.0 - s) * p1->x + s * p2->x;
+    r.point.y = (1.0 - s) * p1->y + s * p2->y;
+    r.point.z = (1.0 - s) * p1->z + s * p2->z;
+    return r;
+}
+
 } // namespace iges

@@ -126,6 +126,7 @@ HEADER = """\
 # kind) where kind is "curve" or "surface".
 RESOLVER_USING: dict[int, tuple[str, str]] = {
     102: ("composite_curve", "curve"),
+    118: ("ruled_surface", "surface_form"),
     130: ("offset_curve", "curve"),
 }
 
@@ -225,11 +226,18 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
                 lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
                 lines.append(f'                "Curve entity does not accept --s", "§1"}});')
                 lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, resolver);")
-            else:  # surface
+            elif kind == "surface":
                 lines.append(f"            if (!s.has_value()) return std::unexpected(Diagnostic{{")
                 lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
                 lines.append(f'                "Surface entity requires --s", "§1"}});')
                 lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, *s, resolver);")
+            elif kind == "surface_form":
+                lines.append(f"            if (!s.has_value()) return std::unexpected(Diagnostic{{")
+                lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
+                lines.append(f'                "Surface entity requires --s", "§1"}});')
+                lines.append(f"            return iges::evaluate_{helper_stem}(ent, form, t, *s, resolver);")
+            else:
+                raise AssertionError(f"unknown resolver kind: {kind!r}")
             lines.append(f"        }}")
             continue
 

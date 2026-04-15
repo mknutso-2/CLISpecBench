@@ -404,6 +404,78 @@ def test_offset_curve_eval_nonzero_offset_follows_base(
     assert payload["point"] == pytest.approx([2.5, 5.0, 0.0], abs=1e-9)
 
 
+# §4.17: Ruled Surface (Type 118).
+#
+# Two parallel line segments bound a flat ruled surface:
+#   Curve 1: (0,0,0) → (10,0,0)
+#   Curve 2: (0,5,0) → (10,5,0)
+# Form 0: t ∈ [0, 1] along curves, s ∈ [0, 1] across the rule.
+# At (t, s) = (0.3, 0.4): point = (3, 2, 0).
+def _ruled_surface_two_lines_doc(
+    dirflg: int = 0, form: int = 0
+) -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [10.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=110, data={
+            "start": [0.0, 5.0, 0.0], "terminate": [10.0, 5.0, 0.0]}),
+        make_entity(de_index=5, entity_type=118, form=form, data={
+            "de1": 1, "de2": 3, "dirflg": dirflg, "devflg": 0}),
+    ])
+
+
+def test_ruled_surface_eval_interior_point(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.3, tmp_path, s=0.4,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([3.0, 2.0, 0.0], abs=1e-9)
+
+
+def test_ruled_surface_eval_on_first_curve_returns_curve1_point(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.5, tmp_path, s=0.0,
+    )
+    assert payload["ok"] is True
+    # s=0 is on curve 1 at u=0.5 → (5, 0, 0)
+    assert payload["point"] == pytest.approx([5.0, 0.0, 0.0], abs=1e-9)
+
+
+def test_ruled_surface_eval_on_second_curve_returns_curve2_point(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.5, tmp_path, s=1.0,
+    )
+    assert payload["ok"] is True
+    # s=1 is on curve 2 at u=0.5 → (5, 5, 0)
+    assert payload["point"] == pytest.approx([5.0, 5.0, 0.0], abs=1e-9)
+
+
+def test_ruled_surface_eval_dirflg_reverses_second_curve(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    # dirflg=1 matches curve 1 start to curve 2 end. At t=0, s=1 we end
+    # up at the *end* of curve 2, which is (10, 5, 0).
+    doc = _ruled_surface_two_lines_doc(dirflg=1)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.0, tmp_path, s=1.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([10.0, 5.0, 0.0], abs=1e-9)
+
+
 # §1 eval contract: non-parametric entity types must be rejected.
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path

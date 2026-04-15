@@ -10,6 +10,7 @@
 #include "dispatch.hpp"
 #include "../entities/composite_curve_entity.hpp"
 #include "../entities/offset_curve_entity.hpp"
+#include "../entities/ruled_surface_entity.hpp"
 #include <utility>
 
 namespace iges {
@@ -52,5 +53,24 @@ std::expected<EvalResult, Diagnostic>
 evaluate_offset_curve(OffsetCurveEntity const& ent,
                       Real t,
                       EntityResolver const& resolver);
+
+// Ruled Surface (Type 118) evaluator (§4.17).
+//
+// Surface parameterization: `u = t` runs along the two defining curves,
+// `v = s` runs across the rule (v=0 on curve 1, v=1 on curve 2).
+//
+// * Form 0 (default): `u ∈ [0, 1]` is a normalized fraction. Each
+//   curve's sample is at native `v0_i + u · (v1_i − v0_i)`.
+// * Form 1 (native): `u` is directly in each curve's native
+//   parameter domain (both domains are required to match per §4.17).
+//
+// `dirflg=1` reverses the second curve's traversal (matches curve 1's
+// start to curve 2's end).
+std::expected<EvalResult, Diagnostic>
+evaluate_ruled_surface(RuledSurfaceEntity const& ent,
+                       int form,
+                       Real t,
+                       Real s,
+                       EntityResolver const& resolver);
 
 } // namespace iges
