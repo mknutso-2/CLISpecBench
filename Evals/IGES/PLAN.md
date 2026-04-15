@@ -301,18 +301,19 @@ once resolved (and capture the decision in `IGES-Design.md`).
 - [ ] Tolerance policy — single global tolerance, or per-entity-type?
 - [ ] Whether `query --de <n>` on an out-of-range index is exit 1
       (malformed input) or a distinct error class.
-- [ ] **Circular Arc `t`-parameter convention for `iges eval`.** The
-      SDK's `CircularArcEntity::evaluate()` treats `t` as the angular
-      parameter in radians (`C(t) = (x1+R·cos(t), y1+R·sin(t), zt)`),
-      whereas the Line entity uses `t ∈ [0, 1]`. Current
-      `test_geometric_eval.py` asserts the ref-impl's angular
-      behaviour, but this inconsistency will confuse agents. Decide:
-      (a) normalize Arc `t` to `[0, 1]` across the contract (requires
-      changing `CircularArcEntity::evaluate()` and any other parametric
-      entity that doesn't already normalize), or (b) document
-      per-entity-type parameterization explicitly in
-      `technical-requirements-prompt.md` §1 `eval`. See
-      `IGES-Design.md` §5.
+<!-- Resolved 2026-04-15: chose (b) — native per-entity parameters,
+     documented in technical-requirements-prompt.md §1.6. See Codex
+     review transcript codex-conversations/2026-04-15-08-47-iges-arc-t-convention.md
+     and IGES-Design.md §5. Decisive evidence: Line Forms 1/2 have
+     infinite native domains (spec §4.13 lines 2628-2629) so [0,1]
+     normalization is literally undefined for them; the spec itself
+     gives per-entity "default parameterization if required" rather
+     than a global one. -->
+
+- [ ] Narrow `iges eval` hidden tests to only the supported types
+      (`100, 110, 112, 114, 126, 128`) once per-entity §4.X test
+      files are written — current `test_geometric_eval.py` only
+      exercises Type 100.
 
 ---
 

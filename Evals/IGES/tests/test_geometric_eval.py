@@ -95,6 +95,76 @@ def test_arc_eval_at_midangle_is_on_arc(
     assert payload["point"] == pytest.approx([expected, expected, 0.0], abs=1e-9)
 
 
+# §4.3: arc with a non-zero start angle.
+#
+# Start point at (R·cos(π/6), R·sin(π/6)), end point at (R·cos(2π/3),
+# R·sin(2π/3)). Evaluating `iges eval` at t = π/6 must return the
+# start point; t = 2π/3 must return the end point; t = π/2 (midway in
+# angle space) must lie on the circle of radius R.
+#
+# This guards against implementations that silently assume the arc
+# begins at angle 0.
+def test_arc_eval_at_nonzero_start_angle_returns_start_point(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    r = 5.0
+    start_angle = math.pi / 6
+    end_angle = 2.0 * math.pi / 3
+    start = (r * math.cos(start_angle), r * math.sin(start_angle))
+    end = (r * math.cos(end_angle), r * math.sin(end_angle))
+    doc = _single_arc_document(0.0, (0.0, 0.0), start, end)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 1, start_angle, tmp_path,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx(
+        [start[0], start[1], 0.0], abs=1e-9,
+    )
+
+
+def test_arc_eval_at_nonzero_end_angle_returns_end_point(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    r = 5.0
+    start_angle = math.pi / 6
+    end_angle = 2.0 * math.pi / 3
+    start = (r * math.cos(start_angle), r * math.sin(start_angle))
+    end = (r * math.cos(end_angle), r * math.sin(end_angle))
+    doc = _single_arc_document(0.0, (0.0, 0.0), start, end)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 1, end_angle, tmp_path,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx(
+        [end[0], end[1], 0.0], abs=1e-9,
+    )
+
+
+def test_arc_eval_offcenter_arc_midangle_on_circle(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    # Arc centered at (10, 20), radius 3, spanning angles π/4 to 3π/4.
+    cx, cy = 10.0, 20.0
+    r = 3.0
+    start_angle = math.pi / 4
+    end_angle = 3.0 * math.pi / 4
+    start = (cx + r * math.cos(start_angle), cy + r * math.sin(start_angle))
+    end = (cx + r * math.cos(end_angle), cy + r * math.sin(end_angle))
+    doc = _single_arc_document(0.0, (cx, cy), start, end)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # Mid-arc angle must land on the circle centered at (cx, cy).
+    mid = (start_angle + end_angle) / 2.0
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 1, mid, tmp_path,
+    )
+    assert payload["ok"] is True
+    px, py, pz = payload["point"]
+    assert (px - cx) ** 2 + (py - cy) ** 2 == pytest.approx(r * r, abs=1e-9)
+    assert pz == pytest.approx(0.0, abs=1e-9)
+
+
 def test_arc_eval_respects_z_plane(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:

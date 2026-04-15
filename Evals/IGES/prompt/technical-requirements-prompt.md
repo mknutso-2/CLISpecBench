@@ -99,10 +99,45 @@ diagnostic list goes in `diagnostics`.
 }
 ```
 
-For curve entities (Types 100, 102, 104, 106 forms 11-13, 110, 112, 126,
-130), `--s` is rejected as invalid input. For surface entities (Types 114,
-118, 120, 122, 128, 140, 190-198), both `--t` and `--s` are required and
-`tangent` is null.
+Supported entity types for `iges eval`:
+
+- **Curves** (Types `100`, `110`, `112`, `126`): `--t` required, `--s`
+  rejected as invalid input. `tangent` may be `null` if the tool does
+  not compute it.
+- **Surfaces** (Types `114`, `128`): both `--t` and `--s` required;
+  `tangent` must be `null`.
+
+Any other entity type is non-parametric for this contract: `iges eval`
+must exit `1` with a diagnostic whose `error` mentions that the entity
+is not parametric.
+
+### 1.6 `t` and `s` parameter convention
+
+`t` and `s` are **native IGES entity parameters**, not harness-normalized
+fractions. The CLI does not remap curves to `[0, 1]` or surfaces to
+`[0, 1]²`; each entity type uses the parameter domain defined for it by
+the IGES 5.3 spec.
+
+- Type `100` Circular Arc: `t` is the angular parameter in radians, with
+  `t = start_angle` at the start point `(x2, y2)` and `t = terminate_angle`
+  at the terminate point `(x3, y3)`. The spec's default parameterization
+  is `C(t) = (x1 + R·cos t, y1 + R·sin t, zt)` (§4.3).
+- Type `110` Line: Form 0 uses `t ∈ [0, 1]` with
+  `C(t) = P1 + t·(P2 − P1)` (§4.13). Forms 1 and 2 extend the domain
+  to `[0, ∞)` and `(−∞, ∞)` respectively with the same formula.
+- Type `112` Parametric Spline Curve: `t` is the native breakpoint
+  parameter as declared in the entity's `T(i)` breakpoint array (§4.14).
+- Type `126` Rational B-Spline Curve: `t` lies in the native spline
+  parameter domain declared by the entity's `v0` / `v1` fields and its
+  knot vector (§4.23).
+- Type `114` Parametric Spline Surface: `(t, s)` are the native `u, v`
+  breakpoint parameters of the surface patch grid (§4.15).
+- Type `128` Rational B-Spline Surface: `(t, s)` lie in the native
+  `(u, v)` parameter domain declared by the entity's `u0/u1/v0/v1` and
+  its two knot vectors (§4.24).
+
+Hidden tests call `iges eval` only with parameter values inside the
+documented native domain of the target entity.
 
 ---
 
