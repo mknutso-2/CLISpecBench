@@ -350,6 +350,60 @@ def test_composite_curve_eval_at_terminus_returns_second_constituent_end(
     assert payload["point"] == pytest.approx([3.0, 4.0, 0.0], abs=1e-9)
 
 
+# §4.25: Offset Curve (FLAG=1 uniform offset).
+#
+# Given a base Line from (0,0,0) to (10,0,0) with native t ∈ [0, 1],
+# offset by d1 = 2 along the +Y unit normal, the offset curve at
+# parameter t_in_base is (10*t_in_base, 2, 0). The offset curve uses
+# the base curve's parameter [TT1, TT2] = [0, 1].
+def _offset_curve_over_line_doc(d1: float) -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [0.0, 0.0, 0.0], "terminate": [10.0, 0.0, 0.0]}),
+        make_entity(de_index=3, entity_type=130, data={
+            "de1": 1,
+            "flag": 1,    # uniform offset
+            "de2": 0,
+            "ndim": 0,
+            "ptype": 2,   # parameter
+            "d1": d1, "td1": 0.0, "d2": 0.0, "td2": 0.0,
+            "vx": 0.0, "vy": 1.0, "vz": 0.0,  # +Y unit normal
+            "tt1": 0.0, "tt2": 1.0,
+        }),
+    ])
+
+
+def test_offset_curve_eval_at_start_is_displaced_base_start(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _offset_curve_over_line_doc(d1=2.0)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 3, 0.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.0, 2.0, 0.0], abs=1e-9)
+
+
+def test_offset_curve_eval_at_midparam_follows_base(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _offset_curve_over_line_doc(d1=2.0)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 3, 0.5, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([5.0, 2.0, 0.0], abs=1e-9)
+
+
+def test_offset_curve_eval_nonzero_offset_follows_base(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    # Ensure the offset displacement actually scales with d1.
+    doc = _offset_curve_over_line_doc(d1=5.0)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 3, 0.25, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.5, 5.0, 0.0], abs=1e-9)
+
+
 # §1 eval contract: non-parametric entity types must be rejected.
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path

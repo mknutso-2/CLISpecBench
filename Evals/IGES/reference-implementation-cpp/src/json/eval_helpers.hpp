@@ -9,6 +9,7 @@
 
 #include "dispatch.hpp"
 #include "../entities/composite_curve_entity.hpp"
+#include "../entities/offset_curve_entity.hpp"
 #include <utility>
 
 namespace iges {
@@ -39,5 +40,17 @@ std::expected<EvalResult, Diagnostic>
 evaluate_composite_curve(CompositeCurveEntity const& ent,
                          Real t,
                          EntityResolver const& resolver);
+
+// Offset Curve (Type 130) evaluator (§4.25).
+//
+// Implements FLAG=1 (uniform offset): evaluates the base curve at the
+// native parameter `t ∈ [TT1, TT2]` and displaces by
+// `d1 · (VX, VY, VZ)`. FLAG=2 (linear variation) and FLAG=3 (function
+// curve) are rejected with a diagnostic — they are not required by
+// §1.6 and their data-curve dependency is out of scope for v0.
+std::expected<EvalResult, Diagnostic>
+evaluate_offset_curve(OffsetCurveEntity const& ent,
+                      Real t,
+                      EntityResolver const& resolver);
 
 } // namespace iges

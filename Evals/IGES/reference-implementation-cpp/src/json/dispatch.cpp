@@ -1158,6 +1158,13 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
             r.point = ent.evaluate(t, *s);
             return r;
         }
+        case 130: {
+            auto ent = data.get<iges::OffsetCurveEntity>();
+            if (s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Curve entity does not accept --s", "§1"});
+            return iges::evaluate_offset_curve(ent, t, resolver);
+        }
         default:
             return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,

@@ -149,7 +149,9 @@ the IGES 5.3 spec.
   parameter domain declared by the entity's `v0` / `v1` fields and its
   knot vector (§4.23).
 - Type `130` Offset Curve: `t ∈ [TT1, TT2]` using the base curve's
-  native parameter domain per §4.25.
+  native parameter domain per §4.25. Hidden `eval` tests exercise only
+  `FLAG = 1` (uniform offset); implementations may support `FLAG` 2/3
+  but are not required to.
 
 **Surfaces**
 

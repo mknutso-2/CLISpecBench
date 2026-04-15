@@ -152,4 +152,50 @@ evaluate_composite_curve(CompositeCurveEntity const& ent,
     return r;
 }
 
+
+std::expected<EvalResult, Diagnostic>
+evaluate_offset_curve(OffsetCurveEntity const& ent,
+                      Real t,
+                      EntityResolver const& resolver) {
+    if (ent.flag != 1) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Offset Curve evaluator supports only FLAG=1 "}
+                + "(uniform offset); got FLAG=" + std::to_string(ent.flag),
+            "§4.25"});
+    }
+    if (!is_valid_de(ent.de1.value)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Offset Curve has invalid base curve DE pointer "}
+                + std::to_string(ent.de1.value),
+            "§4.25"});
+    }
+    if (t < ent.tt1 || t > ent.tt2) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Offset Curve parameter t="} + std::to_string(t)
+                + " is outside [TT1, TT2] = ["
+                + std::to_string(ent.tt1) + ", " + std::to_string(ent.tt2) + "]",
+            "§4.25"});
+    }
+
+    auto base = resolver(ent.de1.value);
+    if (!base) return std::unexpected(base.error());
+    auto child = evaluate_entity_dispatch(
+        base->type, base->form, base->data, t, std::nullopt, resolver);
+    if (!child) return std::unexpected(child.error());
+
+    // Uniform offset: displace the base point by d1 along (vx, vy, vz).
+    // §4.25 defines (VX, VY, VZ) as a unit vector; the offset magnitude
+    // is d1, so the displacement is d1 · (vx, vy, vz). We do not
+    // re-normalize here — agents are expected to produce unit normals
+    // in their output (validation lives in the writer/parser layer).
+    EvalResult r;
+    r.point.x = child->point.x + ent.d1 * ent.vx;
+    r.point.y = child->point.y + ent.d1 * ent.vy;
+    r.point.z = child->point.z + ent.d1 * ent.vz;
+    return r;
+}
+
 } // namespace iges

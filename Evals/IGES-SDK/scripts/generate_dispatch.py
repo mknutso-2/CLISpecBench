@@ -126,6 +126,7 @@ HEADER = """\
 # kind) where kind is "curve" or "surface".
 RESOLVER_USING: dict[int, tuple[str, str]] = {
     102: ("composite_curve", "curve"),
+    130: ("offset_curve", "curve"),
 }
 
 
