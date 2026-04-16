@@ -129,7 +129,7 @@ STRUCT_RE = re.compile(r"struct\s+(\w+)\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}\s*;"
 FIELD_RE = re.compile(
     r"^\s*(?P<type>(?:(?!//|\breturn\b)[\w:<>&,\s])+?)\s+"
     r"(?P<name>[a-zA-Z_]\w*)"
-    r"(?:\s*=\s*[^;]+)?"
+    r"(?:\s*(?:=\s*[^;]+|\{[^;]*\}))?"
     r"\s*;(?:\s*//\s*(?P<comment>.*))?$",
 )
 
@@ -150,7 +150,15 @@ def extract_fields(body: str) -> list[Field]:
         # Skip method declarations (contain '(' before ';')
         if "(" in code_stripped and ")" in code_stripped:
             continue
-        if "{" in code_stripped or "}" in code_stripped:
+        eq_idx = code_stripped.find("=")
+        brace_idx = code_stripped.find("{")
+        if eq_idx >= 0 and (brace_idx < 0 or eq_idx < brace_idx):
+            check_region = code_stripped[:eq_idx]
+        elif brace_idx >= 0:
+            check_region = code_stripped[:brace_idx]
+        else:
+            check_region = code_stripped
+        if "{" in check_region or "}" in check_region:
             continue
         if not code_stripped.endswith(";"):
             continue

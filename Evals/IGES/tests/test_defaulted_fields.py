@@ -71,6 +71,7 @@ def test_network_subfigure_definition_with_defaulted_prd_roundtrips(
                 "associated": [],
                 "tf": 0,
                 "prd": "",       # defaulted
+                "dptr": 0,
                 "nc": 0,
                 "connects": [],
             },
@@ -79,6 +80,7 @@ def test_network_subfigure_definition_with_defaulted_prd_roundtrips(
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     data = reparsed["entities"][0]["entity"]["data"]
     assert data["prd"] == ""
+    assert data["dptr"] == 0
     assert data["name"] == "NET"
 
 

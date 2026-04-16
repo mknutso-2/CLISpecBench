@@ -532,6 +532,7 @@ type PlaneData = {
   B: number,
   C: number,
   D: number,
+  ptr: DEIndex,
   x: number,
   y: number,
   z: number,
@@ -753,6 +754,7 @@ type NodeData = {
   x: number,  // First nodal coordinate
   y: number,  // Second nodal coordinate
   z: number,  // Third nodal coordinate
+  ndcsp: DEIndex,  // Pointer to Transformation Matrix Entity (Form 10/11/12); 0 = Global Cartesian
 };
 ```
 
@@ -781,6 +783,7 @@ type NodalDisplacementValues = {
 
 type NodalDisplacementNode = {
   node_id: number,  // Node number identifier
+  np: DEIndex,  // Pointer to the Node Entity
   cases: NodalDisplacementValues[],  // One per analysis case (NC values)
 };
 
@@ -863,10 +866,12 @@ type TrimmedSurfaceData = {
 ```ts
 type NodalResultsNode = {
   node_id: number,  // FEM node number identifier
+  np: DEIndex,  // Pointer to the DE of the Node Entity
   values: number[],  // NV data values for this node
 };
 
 type NodalResultsData = {
+  gnote: DEIndex,  // Pointer to General Note Entity
   scn: number,  // Analysis subcase number (0 = no subcase)
   time: number,  // Analysis time value
   nv: number,  // Number of real values per node
@@ -880,6 +885,7 @@ type NodalResultsData = {
 ```ts
 type ElementResultsElement = {
   en: number,  // FEM element number identifier
+  ep: DEIndex,  // Pointer to the DE of the FEM Element Entity
   itop: number,  // Element Topology type
   nl: number,  // Number of layers per results data report location
   dlf: number,  // Data Layer Flag (0..4)
@@ -890,6 +896,7 @@ type ElementResultsElement = {
 };
 
 type ElementResultsData = {
+  gnote: DEIndex,  // Pointer to General Note Entity
   scn: number,  // Analysis subcase number (0 = no subcase)
   time: number,  // Analysis time value
   nv: number,  // Number of results values per report location
@@ -1427,6 +1434,7 @@ type NetworkSubfigureDefinitionData = {
   associated: DEIndex[],  // Associated entity pointers
   tf: number,  // Type flag: 0=not specified, 1=logical, 2=physical
   prd: string,  // Primary reference designator
+  dptr: DEIndex,  // Pointer to Text Display Template DE
   nc: number,  // Number of connect points
   connects: DEIndex[],  // Connect point pointers (or zero)
 };
@@ -1569,6 +1577,7 @@ type ExternalReferenceData = {
 type NodalLoadConstraintData = {
   nc: number,  // Total number of cases
   type: number,  // 1 = Loads, 2 = Constraints
+  de: DEIndex,  // Pointer to Node
   ptrs: DEIndex[],  // Pointers to Tabular Data Properties
 };
 ```
@@ -1577,6 +1586,7 @@ type NodalLoadConstraintData = {
 
 ```ts
 type NetworkSubfigureInstanceData = {
+  de: DEIndex,  // Pointer to Network Subfigure Definition
   x: number,  // Translation X
   y: number,  // Translation Y
   z: number,  // Translation Z
@@ -1585,6 +1595,7 @@ type NetworkSubfigureInstanceData = {
   zs: number,  // Scale factor Z (default XS)
   tf: number,  // Type flag: 0=not specified, 1=logical, 2=physical
   prd: string,  // Primary reference designator
+  dptr: DEIndex,  // Pointer to Text Display Template DE
   nc: number,  // Number of connect points
   cptrs: DEIndex[],  // Connect point pointers (or zero)
 };

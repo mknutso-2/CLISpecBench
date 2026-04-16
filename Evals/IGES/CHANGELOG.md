@@ -1,5 +1,38 @@
 # IGES Changelog
 
+## v1.0.7 — unreleased
+
+### Added
+
+- Regression coverage in `tests/test_pointer_backed_fields.py` for
+  brace-default-initialized DE-pointer fields on:
+  - Plane (108)
+  - Node (134)
+  - Nodal Displacement / Results / Element Results (138 / 146 / 148)
+  - Network Subfigure Definition / Instance (320 / 420)
+  - Nodal Load/Constraint (418)
+
+### Changed
+
+- `Evals/IGES-SDK/scripts/generate_entity_json.py` and
+  `extract_entity_schemas.py` now preserve brace-default-initialized
+  fields such as `DEIndex ptr{0};` instead of silently dropping them.
+- Regenerated `reference-implementation-cpp/src/json/entity_json.hpp`
+  so the ref-impl's canonical JSON includes the previously omitted
+  pointer fields.
+- `prompt/technical-requirements-prompt.md` now matches the corrected
+  canonical JSON for Types `108`, `134`, `138`, `146`, `148`, `320`,
+  `418`, and `420`.
+- Existing tests that depended on the buggy omission now pass explicit
+  default values (`ptr: 0`, `dptr: 0`) in their canonical JSON payloads.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`161 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.6 — unreleased
 
 ### Added

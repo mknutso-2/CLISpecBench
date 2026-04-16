@@ -105,6 +105,7 @@ def test_plane_roundtrip(
 ) -> None:
     payload = {
         "A": 0.0, "B": 0.0, "C": 1.0, "D": 0.0,
+        "ptr": 0,
         "x": 0.0, "y": 0.0, "z": 0.0,
         "size": 0.0,
     }

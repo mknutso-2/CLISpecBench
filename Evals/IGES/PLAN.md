@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (153 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (161 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -138,7 +138,8 @@ prompt/
   - [ ] §4.4 Composite Curve (102) — covered in `test_entity_roundtrips.py`
   - [x] §4.5 Conic Arc / Copious Data (104 / 106) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
-  - [ ] §4.12 Plane (108) — covered in `test_entity_roundtrips.py`
+  - [x] §4.12 Plane (108) — covered in `test_entity_roundtrips.py`
+        + `test_pointer_backed_fields.py`
   - [x] §4.13 Line (110) — pilot, `test_line_entity.py`
   - [ ] §4.14 Parametric Spline Curve (112)
   - [ ] §4.15 Parametric Spline Surface (114)
@@ -157,17 +158,20 @@ prompt/
   - [x] §4.25 Offset Curve (130) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.26 Connect Point (132)
-  - [ ] §4.27 Node (134)
+  - [x] §4.27 Node (134) — covered in `test_pointer_backed_fields.py`
   - [ ] §4.28 Finite Element (136)
-  - [ ] §4.29 Nodal Displacement (138)
+  - [x] §4.29 Nodal Displacement (138) — covered in
+        `test_pointer_backed_fields.py`
   - [x] §4.30 Offset Surface (140) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.31 Boundary (141)
   - [ ] §4.32 Curve on Parametric Surface (142)
   - [ ] §4.33 Bounded Surface (143)
   - [ ] §4.34 Trimmed Surface (144)
-  - [ ] §4.35 Nodal Results (146)
-  - [ ] §4.36 Element Results (148)
+  - [x] §4.35 Nodal Results (146) — covered in
+        `test_pointer_backed_fields.py`
+  - [x] §4.36 Element Results (148) — covered in
+        `test_pointer_backed_fields.py`
   - [ ] §4.37 Block (150)
   - [ ] §4.38 Right Angular Wedge (152)
   - [ ] §4.39 Right Circular Cylinder (154)
@@ -217,7 +221,8 @@ prompt/
   - [ ] §4.74 Text Font Definition (310)
   - [ ] §4.75 Text Display Template (312)
   - [ ] §4.77 Units Data (316)
-  - [ ] §4.78 Network Subfigure Definition (320)
+  - [x] §4.78 Network Subfigure Definition (320) — covered in
+        `test_pointer_backed_fields.py` + `test_defaulted_fields.py`
   - [ ] §4.79 Attribute Table Definition (322)
   - [ ] §4.90 Associativity Instance (402)
   - [ ] §4.91 Line Font Definition (304)
@@ -230,8 +235,10 @@ prompt/
   - [ ] §4.135 External Reference (416)
   - [ ] §4.136 Rectangular Array (412) — covered in `test_defaulted_fields.py`
   - [ ] §4.137 Circular Array (414) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.139 Nodal Load/Constraint (418)
-  - [ ] §4.140 Network Subfigure Instance (420)
+  - [x] §4.139 Nodal Load/Constraint (418) — covered in
+        `test_pointer_backed_fields.py`
+  - [x] §4.140 Network Subfigure Instance (420) — covered in
+        `test_pointer_backed_fields.py`
   - [ ] §4.142 Solid Instance (430)
   - [x] §4.143 Vertex List (502) — covered in `test_entity_roundtrips.py`
   - [x] §4.144 Edge List (504) — covered in `test_entity_roundtrips.py`

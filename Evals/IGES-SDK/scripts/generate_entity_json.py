@@ -31,7 +31,7 @@ STRUCT_RE = re.compile(
 FIELD_RE = re.compile(
     r"^\s*(?P<type>(?:(?!//|\breturn\b)[\w:<>&,\s])+?)\s+"
     r"(?P<name>[a-zA-Z_]\w*)"
-    r"(?:\s*=\s*[^;]+)?"
+    r"(?:\s*(?:=\s*[^;]+|\{[^;]*\}))?"
     r"\s*;(?:\s*//\s*(?P<comment>.*))?$",
 )
 
@@ -70,7 +70,13 @@ def extract_fields(body: str) -> list[tuple[str, str, int]]:
         # But a bare `{` or `}` on its own is structural (nested scope).
         # We detect structural braces by seeing whether they come before `=`.
         eq_idx = code.find("=")
-        check_region = code if eq_idx < 0 else code[:eq_idx]
+        brace_idx = code.find("{")
+        if eq_idx >= 0 and (brace_idx < 0 or eq_idx < brace_idx):
+            check_region = code[:eq_idx]
+        elif brace_idx >= 0:
+            check_region = code[:brace_idx]
+        else:
+            check_region = code
         if "{" in check_region or "}" in check_region:
             continue
 
