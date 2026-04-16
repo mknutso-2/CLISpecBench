@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (138 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (153 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -191,17 +191,28 @@ prompt/
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [x] §4.54 Toroidal Surface (198) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
-  - [ ] §4.55 Angular Dimension (202)
-  - [ ] §4.56 Curve / Diameter Dimension (204 / 206)
-  - [ ] §4.57 General Label (210)
-  - [ ] §4.58 Flag Note / General Note (208 / 212)
-  - [ ] §4.59 Leader Arrow (214)
-  - [ ] §4.60 Linear Dimension (216)
-  - [ ] §4.61 New General Note / Ordinate Dimension (213 / 218)
-  - [ ] §4.63 Radius Dimension (222)
-  - [ ] §4.65 Point Dimension (220)
-  - [ ] §4.67 General Symbol (228)
-  - [ ] §4.68 Sectioned Area (230)
+  - [x] §4.55 Angular Dimension (202) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.56 Curve / Diameter Dimension (204 / 206) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.57 General Label (210) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.58 Flag Note / General Note (208 / 212) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.59 Leader Arrow (214) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.60 Linear Dimension (216) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.61 New General Note / Ordinate Dimension (213 / 218) —
+        covered in `test_annotation_entities.py`
+  - [x] §4.63 Radius Dimension (222) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.65 Point Dimension (220) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.67 General Symbol (228) — covered in
+        `test_annotation_entities.py`
+  - [x] §4.68 Sectioned Area (230) — covered in
+        `test_annotation_entities.py`
   - [ ] §4.69 Associativity Definition (302)
   - [ ] §4.74 Text Font Definition (310)
   - [ ] §4.75 Text Display Template (312)

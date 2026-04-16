@@ -1,5 +1,29 @@
 # IGES Changelog
 
+## v1.0.6 — unreleased
+
+### Added
+
+- CLI-level annotation/dimension coverage in
+  `tests/test_annotation_entities.py` for:
+  - Angular Dimension (202)
+  - Curve / Diameter Dimension (204 / 206)
+  - Flag Note / General Note (208 / 212)
+  - General Label (210)
+  - Leader Arrow (214)
+  - Linear Dimension (216)
+  - New General Note / Ordinate Dimension (213 / 218)
+  - Point / Radius Dimension (220 / 222)
+  - General Symbol (228)
+  - Sectioned Area (230)
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`153 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.5 — unreleased
 
 ### Changed
