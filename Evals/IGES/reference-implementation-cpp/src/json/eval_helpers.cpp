@@ -15,6 +15,379 @@ bool is_valid_de(int de) {
     return de >= 1 && (de % 2) == 1;
 }
 
+struct SurfaceParams {
+    Real u;
+    Real v;
+};
+
+std::expected<Vec3, Diagnostic>
+normalize_or_error(Vec3 v, char const* what, char const* spec_ref) {
+    Real len = v.length();
+    if (len < 1e-15) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            what, spec_ref});
+    }
+    return Vec3{v.x / len, v.y / len, v.z / len};
+}
+
+std::expected<Vec3, Diagnostic>
+resolve_point_entity(int de,
+                     char const* what,
+                     char const* spec_ref,
+                     EntityResolver const& resolver) {
+    if (!is_valid_de(de)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{what} + " has invalid DE pointer " + std::to_string(de),
+            spec_ref});
+    }
+    auto resolved = resolver(de);
+    if (!resolved) return std::unexpected(resolved.error());
+    if (resolved->type != 116) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{what} + " must be Type 116 Point; got type "
+                + std::to_string(resolved->type),
+            spec_ref});
+    }
+    auto const& coords = resolved->data.at("coords");
+    return Vec3{
+        coords.at(0).get<Real>(),
+        coords.at(1).get<Real>(),
+        coords.at(2).get<Real>(),
+    };
+}
+
+std::expected<Vec3, Diagnostic>
+resolve_direction_entity(int de,
+                         char const* what,
+                         char const* spec_ref,
+                         EntityResolver const& resolver) {
+    if (!is_valid_de(de)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{what} + " has invalid DE pointer " + std::to_string(de),
+            spec_ref});
+    }
+    auto resolved = resolver(de);
+    if (!resolved) return std::unexpected(resolved.error());
+    if (resolved->type != 123) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{what} + " must be Type 123 Direction; got type "
+                + std::to_string(resolved->type),
+            spec_ref});
+    }
+    return Vec3{
+        resolved->data.at("x").get<Real>(),
+        resolved->data.at("y").get<Real>(),
+        resolved->data.at("z").get<Real>(),
+    };
+}
+
+std::expected<Vec3, Diagnostic>
+resolve_surface_reference_direction(int de,
+                                    char const* what,
+                                    char const* spec_ref,
+                                    EntityResolver const& resolver) {
+    auto raw = resolve_direction_entity(de, what, spec_ref, resolver);
+    if (!raw) return std::unexpected(raw.error());
+    return normalize_or_error(*raw, what, spec_ref);
+}
+
+std::expected<Vec3, Diagnostic>
+build_surface_x_axis(Vec3 const& ref_dir,
+                     Vec3 const& z_axis,
+                     char const* what,
+                     char const* spec_ref) {
+    Vec3 projected = ref_dir - dot(ref_dir, z_axis) * z_axis;
+    return normalize_or_error(projected, what, spec_ref);
+}
+
+std::expected<Vec3, Diagnostic>
+evaluate_plane_surface_form1(nlohmann::json const& data,
+                             Real u,
+                             Real v,
+                             EntityResolver const& resolver) {
+    int deloc = data.at("deloc").get<int>();
+    int denrml = data.at("denrml").get<int>();
+    int derefd = data.at("derefd").get<int>();
+    auto center = resolve_point_entity(
+        deloc, "Plane Surface location", "§4.50", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto normal_raw = resolve_direction_entity(
+        denrml, "Plane Surface normal", "§4.50", resolver);
+    if (!normal_raw) return std::unexpected(normal_raw.error());
+    auto z_axis = normalize_or_error(
+        *normal_raw, "Plane Surface normal must be non-zero", "§4.50");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        derefd, "Plane Surface reference direction", "§4.50", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Plane Surface reference direction must not be parallel to the normal",
+        "§4.50");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    return *center + u * *x_axis + v * y_axis;
+}
+
+std::expected<Vec3, Diagnostic>
+plane_surface_normal_form1(nlohmann::json const& data,
+                           EntityResolver const& resolver) {
+    auto normal_raw = resolve_direction_entity(
+        data.at("denrml").get<int>(),
+        "Plane Surface normal",
+        "§4.50",
+        resolver);
+    if (!normal_raw) return std::unexpected(normal_raw.error());
+    return normalize_or_error(
+        *normal_raw, "Plane Surface normal must be non-zero", "§4.50");
+}
+
+std::expected<Vec3, Diagnostic>
+evaluate_cylindrical_surface_form1(nlohmann::json const& data,
+                                   Real u_degrees,
+                                   Real v,
+                                   EntityResolver const& resolver) {
+    int deloc = data.at("deloc").get<int>();
+    int deaxis = data.at("deaxis").get<int>();
+    int derefd = data.at("derefd").get<int>();
+    Real radius = data.at("radius").get<Real>();
+
+    auto center = resolve_point_entity(
+        deloc, "Cylindrical Surface location", "§4.51", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto axis_raw = resolve_direction_entity(
+        deaxis, "Cylindrical Surface axis", "§4.51", resolver);
+    if (!axis_raw) return std::unexpected(axis_raw.error());
+    auto z_axis = normalize_or_error(
+        *axis_raw, "Cylindrical Surface axis must be non-zero", "§4.51");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        derefd, "Cylindrical Surface reference direction", "§4.51", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Cylindrical Surface reference direction must not be parallel to the axis",
+        "§4.51");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    Real u = u_degrees * 3.14159265358979323846 / 180.0;
+    return *center + radius * (std::cos(u) * *x_axis + std::sin(u) * y_axis) + v * *z_axis;
+}
+
+std::expected<Vec3, Diagnostic>
+cylindrical_surface_normal_form1(nlohmann::json const& data,
+                                 Real u_degrees,
+                                 EntityResolver const& resolver) {
+    int deaxis = data.at("deaxis").get<int>();
+    int derefd = data.at("derefd").get<int>();
+    auto axis_raw = resolve_direction_entity(
+        deaxis, "Cylindrical Surface axis", "§4.51", resolver);
+    if (!axis_raw) return std::unexpected(axis_raw.error());
+    auto z_axis = normalize_or_error(
+        *axis_raw, "Cylindrical Surface axis must be non-zero", "§4.51");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        derefd, "Cylindrical Surface reference direction", "§4.51", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Cylindrical Surface reference direction must not be parallel to the axis",
+        "§4.51");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    Real u = u_degrees * 3.14159265358979323846 / 180.0;
+    return std::cos(u) * *x_axis + std::sin(u) * y_axis;
+}
+
+std::expected<Vec3, Diagnostic>
+sample_surface_point(int type,
+                     int form,
+                     nlohmann::json const& data,
+                     Real u,
+                     Real v,
+                     EntityResolver const& resolver);
+
+std::expected<Vec3, Diagnostic>
+sample_surface_normal(int type,
+                      int form,
+                      nlohmann::json const& data,
+                      Real u,
+                      Real v,
+                      EntityResolver const& resolver);
+
+std::expected<SurfaceParams, Diagnostic>
+surface_reference_parameters(int type,
+                             int form,
+                             nlohmann::json const& data,
+                             EntityResolver const& resolver) {
+    switch (type) {
+    case 114: {
+        auto const& tu = data.at("tu");
+        auto const& tv = data.at("tv");
+        return SurfaceParams{
+            0.5 * (tu.at(0).get<Real>() + tu.at(tu.size() - 1).get<Real>()),
+            0.5 * (tv.at(0).get<Real>() + tv.at(tv.size() - 1).get<Real>()),
+        };
+    }
+    case 118:
+        if (form == 0) return SurfaceParams{0.5, 0.5};
+        if (form == 1) {
+            int de1 = data.at("de1").get<int>();
+            if (!is_valid_de(de1)) {
+                return std::unexpected(Diagnostic{
+                    Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                    "Ruled Surface de1 has invalid DE pointer", "§4.17"});
+            }
+            auto curve = resolver(de1);
+            if (!curve) return std::unexpected(curve.error());
+            auto span = curve_native_span(curve->type, curve->form, curve->data);
+            if (!span) return std::unexpected(span.error());
+            return SurfaceParams{0.5 * (span->first + span->second), 0.5};
+        }
+        break;
+    case 120: {
+        int curve_de = data.at("c").get<int>();
+        if (!is_valid_de(curve_de)) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface of Revolution generatrix has invalid DE pointer",
+                "§4.18"});
+        }
+        auto curve = resolver(curve_de);
+        if (!curve) return std::unexpected(curve.error());
+        auto span = curve_native_span(curve->type, curve->form, curve->data);
+        if (!span) return std::unexpected(span.error());
+        return SurfaceParams{
+            0.5 * (span->first + span->second),
+            0.5 * (data.at("sa").get<Real>() + data.at("ta").get<Real>()),
+        };
+    }
+    case 122: {
+        int directrix_de = data.at("de").get<int>();
+        if (!is_valid_de(directrix_de)) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Tabulated Cylinder directrix has invalid DE pointer",
+                "§4.19"});
+        }
+        auto directrix = resolver(directrix_de);
+        if (!directrix) return std::unexpected(directrix.error());
+        auto span = curve_native_span(
+            directrix->type, directrix->form, directrix->data);
+        if (!span) return std::unexpected(span.error());
+        return SurfaceParams{0.5 * (span->first + span->second), 0.5};
+    }
+    case 128:
+        return SurfaceParams{
+            0.5 * (data.at("u0").get<Real>() + data.at("u1").get<Real>()),
+            0.5 * (data.at("v0").get<Real>() + data.at("v1").get<Real>()),
+        };
+    case 140: {
+        int de = data.at("de").get<int>();
+        if (!is_valid_de(de)) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Offset Surface base-surface DE pointer is invalid",
+                "§4.30"});
+        }
+        auto base = resolver(de);
+        if (!base) return std::unexpected(base.error());
+        return surface_reference_parameters(
+            base->type, base->form, base->data, resolver);
+    }
+    case 190:
+    case 192:
+        return SurfaceParams{0.0, 0.0};
+    default:
+        break;
+    }
+    return std::unexpected(Diagnostic{
+        Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+        std::string{"Offset Surface does not know reference parameters for base surface type "}
+            + std::to_string(type),
+        "§4.30"});
+}
+
+std::expected<Vec3, Diagnostic>
+sample_surface_point(int type,
+                     int form,
+                     nlohmann::json const& data,
+                     Real u,
+                     Real v,
+                     EntityResolver const& resolver) {
+    if (type == 190) {
+        if (form != 1) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Plane Surface requires form 1 for parametric evaluation",
+                "§4.50"});
+        }
+        return evaluate_plane_surface_form1(data, u, v, resolver);
+    }
+    if (type == 192) {
+        if (form != 1) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Cylindrical Surface requires form 1 for parametric evaluation",
+                "§4.51"});
+        }
+        return evaluate_cylindrical_surface_form1(data, u, v, resolver);
+    }
+    auto sample = evaluate_entity_dispatch(type, form, data, u, v, resolver);
+    if (!sample) return std::unexpected(sample.error());
+    return sample->point;
+}
+
+std::expected<Vec3, Diagnostic>
+sample_surface_normal(int type,
+                      int form,
+                      nlohmann::json const& data,
+                      Real u,
+                      Real v,
+                      EntityResolver const& resolver) {
+    if (type == 190) {
+        if (form != 1) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Plane Surface requires form 1 for parametric evaluation",
+                "§4.50"});
+        }
+        return plane_surface_normal_form1(data, resolver);
+    }
+    if (type == 192) {
+        if (form != 1) {
+            return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Cylindrical Surface requires form 1 for parametric evaluation",
+                "§4.51"});
+        }
+        return cylindrical_surface_normal_form1(data, u, resolver);
+    }
+
+    Real du = 1e-6 * std::max<Real>(1.0, std::abs(u));
+    Real dv = 1e-6 * std::max<Real>(1.0, std::abs(v));
+    auto pu_minus = sample_surface_point(type, form, data, u - du, v, resolver);
+    if (!pu_minus) return std::unexpected(pu_minus.error());
+    auto pu_plus = sample_surface_point(type, form, data, u + du, v, resolver);
+    if (!pu_plus) return std::unexpected(pu_plus.error());
+    auto pv_minus = sample_surface_point(type, form, data, u, v - dv, resolver);
+    if (!pv_minus) return std::unexpected(pv_minus.error());
+    auto pv_plus = sample_surface_point(type, form, data, u, v + dv, resolver);
+    if (!pv_plus) return std::unexpected(pv_plus.error());
+
+    Vec3 du_vec = *pu_plus - *pu_minus;
+    Vec3 dv_vec = *pv_plus - *pv_minus;
+    return normalize_or_error(
+        cross(du_vec, dv_vec),
+        "Offset Surface base normal is degenerate at the sampled parameters",
+        "§4.30");
+}
+
 } // namespace
 
 
@@ -263,6 +636,51 @@ evaluate_tabulated_cylinder(TabulatedCylinderEntity const& ent,
     r.point.x = directrix_point->x + s * generatrix.x;
     r.point.y = directrix_point->y + s * generatrix.y;
     r.point.z = directrix_point->z + s * generatrix.z;
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_offset_surface(OffsetSurfaceEntity const& ent,
+                        Real t,
+                        Real s,
+                        EntityResolver const& resolver) {
+    if (!is_valid_de(ent.de.value)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Offset Surface has invalid base surface DE pointer "}
+                + std::to_string(ent.de.value),
+            "§4.30"});
+    }
+
+    auto base = resolver(ent.de.value);
+    if (!base) return std::unexpected(base.error());
+
+    auto point = sample_surface_point(
+        base->type, base->form, base->data, t, s, resolver);
+    if (!point) return std::unexpected(point.error());
+    auto normal = sample_surface_normal(
+        base->type, base->form, base->data, t, s, resolver);
+    if (!normal) return std::unexpected(normal.error());
+    auto ref_params = surface_reference_parameters(
+        base->type, base->form, base->data, resolver);
+    if (!ref_params) return std::unexpected(ref_params.error());
+    auto ref_normal = sample_surface_normal(
+        base->type, base->form, base->data, ref_params->u, ref_params->v, resolver);
+    if (!ref_normal) return std::unexpected(ref_normal.error());
+
+    auto indicator = normalize_or_error(
+        Vec3{ent.nx, ent.ny, ent.nz},
+        "Offset Surface indicator vector must be non-zero",
+        "§4.30");
+    if (!indicator) return std::unexpected(indicator.error());
+
+    Vec3 oriented_normal = *normal;
+    if (dot(*ref_normal, *indicator) < 0.0) {
+        oriented_normal = -1.0 * oriented_normal;
+    }
+
+    EvalResult r;
+    r.point = *point + ent.d * oriented_normal;
     return r;
 }
 

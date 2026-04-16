@@ -1186,6 +1186,13 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Curve entity does not accept --s", "§1"});
             return iges::evaluate_offset_curve(ent, t, resolver);
         }
+        case 140: {
+            auto ent = data.get<iges::OffsetSurfaceEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface entity requires --s", "§1"});
+            return iges::evaluate_offset_surface(ent, t, *s, resolver);
+        }
         default:
             return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,

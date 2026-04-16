@@ -10,6 +10,7 @@
 #include "dispatch.hpp"
 #include "../entities/composite_curve_entity.hpp"
 #include "../entities/offset_curve_entity.hpp"
+#include "../entities/offset_surface_entity.hpp"
 #include "../entities/ruled_surface_entity.hpp"
 #include "../entities/surface_of_revolution_entity.hpp"
 #include "../entities/tabulated_cylinder_entity.hpp"
@@ -99,5 +100,18 @@ evaluate_tabulated_cylinder(TabulatedCylinderEntity const& ent,
                             Real t,
                             Real s,
                             EntityResolver const& resolver);
+
+// Offset Surface (Type 140) evaluator (§4.30).
+//
+// Evaluates the base surface at native `(t, s)` and offsets by `d`
+// along the base surface's oriented unit normal field. The entity's
+// `(nx, ny, nz)` offset indicator is used only to select which global
+// normal orientation is considered positive; the indicator itself does
+// not participate in the point formula.
+std::expected<EvalResult, Diagnostic>
+evaluate_offset_surface(OffsetSurfaceEntity const& ent,
+                        Real t,
+                        Real s,
+                        EntityResolver const& resolver);
 
 } // namespace iges
