@@ -32,6 +32,19 @@ DEFAULT_CPU_COUNT = min(4, os.cpu_count() or 4)
 DEFAULT_DISK_LIMIT = "10g"
 
 
+def _docker_env_value(name: str) -> str:
+    value = os.environ.get(name)
+    if value is None:
+        return "<unset>"
+    if value == "":
+        return "<empty>"
+    return value
+
+
+def _describe_docker_exception(exc: BaseException) -> str:
+    return f"{type(exc).__name__}: {exc}"
+
+
 def _resolve_docker_client() -> DockerClient:
     """Create a Docker client, handling Windows-WSL and native Linux.
 
@@ -42,15 +55,40 @@ def _resolve_docker_client() -> DockerClient:
        daemon is configured to listen on TCP (see ``scripts/install-docker-wsl.sh``).
     3. Raise with a helpful error message.
     """
+    platform = sys.platform
+    docker_host = _docker_env_value("DOCKER_HOST")
+    docker_context = _docker_env_value("DOCKER_CONTEXT")
+
     # Attempt 1: standard detection (env vars, default socket)
     try:
         client = docker.from_env()
         client.ping()  # pyright: ignore[reportUnknownMemberType]
         log.debug("Docker connected via default environment")
         return client
-    except docker.errors.DockerException:
-        if sys.platform != "win32":
-            raise
+    except docker.errors.DockerException as exc:
+        default_error = exc
+        log_fn = log.info if platform == "win32" else log.warning
+        log_fn(
+            "Docker default connection attempt failed "
+            "(platform=%s, DOCKER_HOST=%s, DOCKER_CONTEXT=%s): %s",
+            platform,
+            docker_host,
+            docker_context,
+            _describe_docker_exception(exc),
+        )
+        if platform != "win32":
+            msg = (
+                "Cannot connect to Docker daemon.\n"
+                f"  platform={platform}\n"
+                f"  DOCKER_HOST={docker_host}\n"
+                f"  DOCKER_CONTEXT={docker_context}\n"
+                f"  default client failed: {_describe_docker_exception(default_error)}\n"
+                "  - On Linux/macOS: ensure Docker is running and the current "
+                "endpoint is reachable.\n"
+                "  - If you rely on a non-default Docker endpoint, set DOCKER_HOST "
+                "and retry."
+            )
+            raise docker.errors.DockerException(msg) from exc
 
     # Attempt 2: Windows — try TCP to WSL2 Docker daemon
     tcp_url = "tcp://localhost:2375"
@@ -59,17 +97,28 @@ def _resolve_docker_client() -> DockerClient:
         client.ping()  # pyright: ignore[reportUnknownMemberType]
         log.info("Docker connected via %s (WSL2)", tcp_url)
         return client
-    except docker.errors.DockerException:
-        pass
+    except docker.errors.DockerException as exc:
+        tcp_error = exc
+        log.warning(
+            "Docker TCP fallback connection attempt failed (base_url=%s): %s",
+            tcp_url,
+            _describe_docker_exception(exc),
+        )
 
     msg = (
         "Cannot connect to Docker daemon.\n"
-        "  - On Linux: ensure Docker is running (sudo service docker start).\n"
+        f"  platform={platform}\n"
+        f"  DOCKER_HOST={docker_host}\n"
+        f"  DOCKER_CONTEXT={docker_context}\n"
+        f"  default client failed: {_describe_docker_exception(default_error)}\n"
+        f"  tcp fallback failed: {_describe_docker_exception(tcp_error)}\n"
+        "  - On Linux/macOS: ensure Docker is running and the current endpoint "
+        "is reachable.\n"
         "  - On Windows (WSL2): either set DOCKER_HOST=tcp://localhost:2375\n"
         "    or configure the WSL2 Docker daemon to listen on TCP.\n"
         "    See scripts/install-docker-wsl.sh for setup instructions."
     )
-    raise docker.errors.DockerException(msg)
+    raise docker.errors.DockerException(msg) from tcp_error
 
 
 @dataclass
