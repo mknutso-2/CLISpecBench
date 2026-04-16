@@ -201,6 +201,25 @@ class TestRunHiddenTests:
         cmd = mock_run.call_args[0][0]
         assert "--executable" not in " ".join(cmd)
 
+    def test_uses_the_extended_default_timeout(self, tmp_path: Path) -> None:
+        test_dir = tmp_path / "tests"
+        test_dir.mkdir()
+        submission_dir = tmp_path / "submission"
+        submission_dir.mkdir()
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps({"tests": []}))
+
+        with patch("swe_buildbench.harness.scoring.subprocess.run") as mock_run:
+            mock_run.return_value.returncode = 0
+            run_hidden_tests(
+                test_dir=test_dir,
+                submission_dir=submission_dir,
+                report_path=report_path,
+                use_docker=False,
+            )
+
+        assert mock_run.call_args.kwargs["timeout"] == pytest.approx(1200.0)
+
 
 class TestParseJsonReport:
     """Verify JSON report parsing."""
@@ -242,6 +261,69 @@ class TestParseJsonReport:
         assert summary.skipped == 1
         assert summary.total == 3
         assert tests[1].message == "AssertionError: expected 1"
+
+    def test_parses_nested_phase_durations_when_top_level_duration_is_missing(
+        self, tmp_path: Path
+    ) -> None:
+        report = {
+            "tests": [
+                {
+                    "nodeid": "test_a",
+                    "outcome": "passed",
+                    "setup": {"duration": 0.25},
+                    "call": {"duration": 0.5},
+                    "teardown": {"duration": 0.125},
+                }
+            ]
+        }
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps(report))
+
+        tests, summary = parse_json_report(report_path)
+        assert summary.passed == 1
+        assert summary.total == 1
+        assert tests[0].duration_seconds == pytest.approx(0.875)
+
+    def test_prefers_explicit_top_level_duration_when_present(self, tmp_path: Path) -> None:
+        report = {
+            "tests": [
+                {
+                    "nodeid": "test_a",
+                    "outcome": "passed",
+                    "duration": 1.5,
+                    "setup": {"duration": 0.25},
+                    "call": {"duration": 0.5},
+                    "teardown": {"duration": 0.125},
+                }
+            ]
+        }
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps(report))
+
+        tests, summary = parse_json_report(report_path)
+        assert summary.passed == 1
+        assert summary.total == 1
+        assert tests[0].duration_seconds == pytest.approx(1.5)
+
+    def test_tolerates_phase_dicts_without_duration_keys(self, tmp_path: Path) -> None:
+        report = {
+            "tests": [
+                {
+                    "nodeid": "test_a",
+                    "outcome": "passed",
+                    "setup": {},
+                    "call": {"longrepr": "unused"},
+                    "teardown": {},
+                }
+            ]
+        }
+        report_path = tmp_path / "report.json"
+        report_path.write_text(json.dumps(report))
+
+        tests, summary = parse_json_report(report_path)
+        assert summary.passed == 1
+        assert summary.total == 1
+        assert tests[0].duration_seconds == 0.0
 
     def test_missing_report_returns_empty(self, tmp_path: Path) -> None:
         tests, summary = parse_json_report(tmp_path / "nonexistent.json")

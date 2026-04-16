@@ -12,6 +12,7 @@ from rs274_parameters import (
 )
 
 ProbeBox = tuple[float, float, float, float, float, float]
+CNCSIM_INVOCATION_TIMEOUT_SECONDS = 5
 
 
 def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
@@ -112,7 +113,7 @@ def _run_cncsim_and_read_outputs(
         capture_output=True,
         check=False,
         text=True,
-        timeout=30,
+        timeout=CNCSIM_INVOCATION_TIMEOUT_SECONDS,
     )
 
     assert output_path.is_file(), completed.stderr
@@ -330,7 +331,7 @@ def run_cncsim_trace(
         capture_output=True,
         check=False,
         text=True,
-        timeout=30,
+        timeout=CNCSIM_INVOCATION_TIMEOUT_SECONDS,
     )
 
     assert output_path.is_file(), f"--output not written. stderr: {completed.stderr}"

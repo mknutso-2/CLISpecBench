@@ -1,5 +1,22 @@
 # CNCSim Changelog
 
+## v2.1.1 — 2026-04-15
+
+### Fixed
+
+- **Hidden-test timing metadata**: `parse_json_report()` now reads the
+  per-phase durations emitted by `pytest-json-report` instead of recording
+  every test as `0.0s`.
+
+### Changed
+
+- **Per-test simulator timeout**: reduced the CNCSim test helper timeout from
+  30 seconds to 5 seconds so hanging submissions consume less scorer wall
+  clock per failing test.
+- **Outer hidden-test timeout**: increased the harness-level hidden-test cap
+  from 600 seconds to 1200 seconds so runs with repeated per-test timeouts can
+  still produce more complete scoring signal before the scorer is killed.
+
 ## v2.1.0 — 2026-04-13
 
 ### Added

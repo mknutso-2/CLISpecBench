@@ -6,6 +6,7 @@ import json
 import logging
 import subprocess
 from pathlib import Path, PurePosixPath
+from typing import cast
 
 from swe_buildbench.harness.results import Scores, TestOutcome, TestSummary
 
@@ -20,6 +21,7 @@ _CONTAINER_TESTS = PurePosixPath("/tmp/tests")
 _CONTAINER_SUBMISSION = PurePosixPath("/tmp/submission")
 _CONTAINER_SRC = PurePosixPath("/tmp/src")
 _CONTAINER_REPORT = PurePosixPath("/tmp/report.json")
+_DEFAULT_HIDDEN_TEST_TIMEOUT_SECONDS = 1200.0
 
 
 # ---------------------------------------------------------------------------
@@ -31,7 +33,7 @@ def run_hidden_tests(
     test_dir: Path,
     submission_dir: Path,
     report_path: Path,
-    timeout_seconds: float = 600,
+    timeout_seconds: float = _DEFAULT_HIDDEN_TEST_TIMEOUT_SECONDS,
     use_docker: bool = True,
     language: str = "cpp",
 ) -> tuple[list[TestOutcome], TestSummary]:
@@ -189,7 +191,19 @@ def parse_json_report(report_path: Path) -> tuple[list[TestOutcome], TestSummary
     for test in data.get("tests", []):
         outcome_str: str = test.get("outcome", "error")
         node_id: str = test.get("nodeid", "unknown")
-        duration: float = test.get("duration", 0.0)
+        raw_duration = test.get("duration")
+        if isinstance(raw_duration, int | float):
+            duration = float(raw_duration)
+        else:
+            duration = 0.0
+            for phase_name in ("setup", "call", "teardown"):
+                phase_info = test.get(phase_name)
+                if not isinstance(phase_info, dict):
+                    continue
+                phase_data = cast(dict[str, object], phase_info)
+                phase_duration = phase_data.get("duration")
+                if isinstance(phase_duration, int | float):
+                    duration += float(phase_duration)
 
         # Extract failure message if present
         message: str | None = None
