@@ -12,6 +12,7 @@
 #include "../entities/offset_curve_entity.hpp"
 #include "../entities/ruled_surface_entity.hpp"
 #include "../entities/surface_of_revolution_entity.hpp"
+#include "../entities/tabulated_cylinder_entity.hpp"
 #include <utility>
 
 namespace iges {
@@ -85,5 +86,18 @@ evaluate_surface_of_revolution(SurfaceOfRevolutionEntity const& ent,
                                Real t,
                                Real s,
                                EntityResolver const& resolver);
+
+// Tabulated Cylinder (Type 122) evaluator (§4.19).
+//
+// Evaluates the directrix at native parameter `t`, then translates by
+// `s ∈ [0, 1]` along the generatrix vector
+//     terminate_point − directrix_start_point
+// where the directrix start point is the point on the directrix at the
+// start of its native parameter domain.
+std::expected<EvalResult, Diagnostic>
+evaluate_tabulated_cylinder(TabulatedCylinderEntity const& ent,
+                            Real t,
+                            Real s,
+                            EntityResolver const& resolver);
 
 } // namespace iges

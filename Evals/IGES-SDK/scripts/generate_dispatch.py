@@ -28,8 +28,13 @@ WRITER_HPP = Path(__file__).resolve().parents[1] / "src" / "writer" / "entity_wr
 EXCLUDE = {"entity.hpp"}
 
 
-HEADER_RE = re.compile(r"//\s*iges::(?P<name>\w+Entity)\s+[—-]\s+Type[s]?\s+(?P<types>[\d, /]+)")
-PARSE_RE = re.compile(r"^(?P<fn>parse_\w+_entity)\s*\(\s*ParamTokenizer&\s+tok(?P<rest>[^)]*)\)", re.MULTILINE)
+HEADER_RE = re.compile(
+    r"//\s*iges::(?P<name>\w+Entity)\s+[—-]\s+Type[s]?\s+(?P<types>[\d, /]+)"
+)
+PARSE_RE = re.compile(
+    r"^(?P<fn>parse_\w+_entity)\s*\(\s*ParamTokenizer&\s+tok(?P<rest>[^)]*)\)",
+    re.MULTILINE,
+)
 EVAL_CURVE_RE = re.compile(r"\bVec3\s+evaluate\s*\(\s*Real\s+\w+\s*\)\s*const")
 EVAL_SURFACE_RE = re.compile(r"\bVec3\s+evaluate\s*\(\s*Real\s+\w+\s*,\s*Real\s+\w+\s*\)\s*const")
 
@@ -128,6 +133,7 @@ RESOLVER_USING: dict[int, tuple[str, str]] = {
     102: ("composite_curve", "curve"),
     118: ("ruled_surface", "surface_form"),
     120: ("surface_of_revolution", "surface"),
+    122: ("tabulated_cylinder", "surface"),
     130: ("offset_curve", "curve"),
 }
 
@@ -153,10 +159,10 @@ def emit_parse_dispatch(entities: list[Entity]) -> str:
         call += ")"
         lines.append(f"    case {e.type_number}: {{")
         lines.append(f"        auto r = {call};")
-        lines.append(f"        if (!r) return std::unexpected(r.error());")
-        lines.append(f"        nlohmann::json j = *r;")
-        lines.append(f"        return j;")
-        lines.append(f"    }}")
+        lines.append("        if (!r) return std::unexpected(r.error());")
+        lines.append("        nlohmann::json j = *r;")
+        lines.append("        return j;")
+        lines.append("    }")
     lines.append("    default:")
     lines.append("        return std::unexpected(Diagnostic{")
     lines.append("            Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
@@ -184,9 +190,9 @@ def emit_write_dispatch(entities: list[Entity]) -> str:
         if e.writer_takes_form:
             lines.append(f"            return iges::{writer}(ent, form);")
         else:
-            lines.append(f"            (void)form;")
+            lines.append("            (void)form;")
             lines.append(f"            return iges::{writer}(ent);")
-        lines.append(f"        }}")
+        lines.append("        }")
     lines.append("        default:")
     lines.append("            return std::unexpected(Diagnostic{")
     lines.append("                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
@@ -223,23 +229,44 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
             lines.append(f"        case {e.type_number}: {{")
             lines.append(f"            auto ent = data.get<iges::{cxx}>();")
             if kind == "curve":
-                lines.append(f"            if (s.has_value()) return std::unexpected(Diagnostic{{")
-                lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
-                lines.append(f'                "Curve entity does not accept --s", "§1"}});')
+                lines.append(
+                    "            if (s.has_value()) return std::unexpected(Diagnostic{"
+                )
+                lines.append(
+                    "                Diagnostic::Severity::Error, 0,"
+                    " SectionKind::Parameter,"
+                )
+                lines.append('                "Curve entity does not accept --s", "§1"});')
                 lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, resolver);")
             elif kind == "surface":
-                lines.append(f"            if (!s.has_value()) return std::unexpected(Diagnostic{{")
-                lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
-                lines.append(f'                "Surface entity requires --s", "§1"}});')
-                lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, *s, resolver);")
+                lines.append(
+                    "            if (!s.has_value()) return std::unexpected(Diagnostic{"
+                )
+                lines.append(
+                    "                Diagnostic::Severity::Error, 0,"
+                    " SectionKind::Parameter,"
+                )
+                lines.append('                "Surface entity requires --s", "§1"});')
+                lines.append(
+                    f"            return iges::evaluate_{helper_stem}("
+                    "ent, t, *s, resolver);"
+                )
             elif kind == "surface_form":
-                lines.append(f"            if (!s.has_value()) return std::unexpected(Diagnostic{{")
-                lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
-                lines.append(f'                "Surface entity requires --s", "§1"}});')
-                lines.append(f"            return iges::evaluate_{helper_stem}(ent, form, t, *s, resolver);")
+                lines.append(
+                    "            if (!s.has_value()) return std::unexpected(Diagnostic{"
+                )
+                lines.append(
+                    "                Diagnostic::Severity::Error, 0,"
+                    " SectionKind::Parameter,"
+                )
+                lines.append('                "Surface entity requires --s", "§1"});')
+                lines.append(
+                    f"            return iges::evaluate_{helper_stem}("
+                    "ent, form, t, *s, resolver);"
+                )
             else:
                 raise AssertionError(f"unknown resolver kind: {kind!r}")
-            lines.append(f"        }}")
+            lines.append("        }")
             continue
 
         if e.eval_kind == "none":
@@ -247,24 +274,27 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
         lines.append(f"        case {e.type_number}: {{")
         lines.append(f"            auto ent = data.get<iges::{cxx}>();")
         if e.eval_kind == "curve":
-            lines.append(f"            if (s.has_value()) return std::unexpected(Diagnostic{{")
-            lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
-            lines.append(f'                "Curve entity does not accept --s", "§1"}});')
-            lines.append(f"            EvalResult r;")
-            lines.append(f"            r.point = ent.evaluate(t);")
-            lines.append(f"            return r;")
+            lines.append("            if (s.has_value()) return std::unexpected(Diagnostic{")
+            lines.append("                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
+            lines.append('                "Curve entity does not accept --s", "§1"});')
+            lines.append("            EvalResult r;")
+            lines.append("            r.point = ent.evaluate(t);")
+            lines.append("            return r;")
         else:  # surface
-            lines.append(f"            if (!s.has_value()) return std::unexpected(Diagnostic{{")
-            lines.append(f"                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
-            lines.append(f'                "Surface entity requires --s", "§1"}});')
-            lines.append(f"            EvalResult r;")
-            lines.append(f"            r.point = ent.evaluate(t, *s);")
-            lines.append(f"            return r;")
-        lines.append(f"        }}")
+            lines.append("            if (!s.has_value()) return std::unexpected(Diagnostic{")
+            lines.append("                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
+            lines.append('                "Surface entity requires --s", "§1"});')
+            lines.append("            EvalResult r;")
+            lines.append("            r.point = ent.evaluate(t, *s);")
+            lines.append("            return r;")
+        lines.append("        }")
     lines.append("        default:")
     lines.append("            return std::unexpected(Diagnostic{")
     lines.append("                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
-    lines.append('                std::string{"Entity type "} + std::to_string(type) + " is not parametric",')
+    lines.append(
+        '                std::string{"Entity type "} + std::to_string(type)'
+        ' + " is not parametric",'
+    )
     lines.append('                "§1"});')
     lines.append("        }")
     lines.append("    } catch (nlohmann::json::exception const& ex) {")

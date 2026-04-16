@@ -212,6 +212,61 @@ sample_curve_point(ResolvedEntity const& curve,
 }
 
 std::expected<EvalResult, Diagnostic>
+evaluate_tabulated_cylinder(TabulatedCylinderEntity const& ent,
+                            Real t,
+                            Real s,
+                            EntityResolver const& resolver) {
+    if (!is_valid_de(ent.de.value)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Tabulated Cylinder has invalid directrix DE pointer "}
+                + std::to_string(ent.de.value),
+            "§4.19"});
+    }
+    if (s < 0.0 || s > 1.0) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Tabulated Cylinder s="} + std::to_string(s)
+                + " must lie in [0, 1]",
+            "§4.19"});
+    }
+
+    auto directrix = resolver(ent.de.value);
+    if (!directrix) return std::unexpected(directrix.error());
+
+    auto span = curve_native_span(
+        directrix->type, directrix->form, directrix->data);
+    if (!span) return std::unexpected(span.error());
+
+    if (t < span->first || t > span->second) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Tabulated Cylinder parameter t="} + std::to_string(t)
+                + " is outside the directrix domain ["
+                + std::to_string(span->first) + ", "
+                + std::to_string(span->second) + "]",
+            "§4.19"});
+    }
+
+    auto directrix_start = sample_curve_point(*directrix, span->first, resolver);
+    if (!directrix_start) return std::unexpected(directrix_start.error());
+    auto directrix_point = sample_curve_point(*directrix, t, resolver);
+    if (!directrix_point) return std::unexpected(directrix_point.error());
+
+    Vec3 generatrix{
+        ent.terminate_point.x - directrix_start->x,
+        ent.terminate_point.y - directrix_start->y,
+        ent.terminate_point.z - directrix_start->z,
+    };
+
+    EvalResult r;
+    r.point.x = directrix_point->x + s * generatrix.x;
+    r.point.y = directrix_point->y + s * generatrix.y;
+    r.point.z = directrix_point->z + s * generatrix.z;
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
 evaluate_ruled_surface(RuledSurfaceEntity const& ent,
                        int form,
                        Real t,

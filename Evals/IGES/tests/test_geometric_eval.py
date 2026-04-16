@@ -542,6 +542,58 @@ def test_surface_of_revolution_eval_half_rotation(
     assert payload["point"] == pytest.approx([-2.0, 0.0, 3.0], abs=1e-9)
 
 
+# §4.19: Tabulated Cylinder (Type 122).
+#
+# The directrix supplies the varying surface point; the generatrix
+# direction is fixed by the vector from the directrix start point to the
+# entity's terminate point. `s` runs from the directrix (`s=0`) to the
+# terminate point (`s=1`) along that fixed vector.
+def _tabulated_cylinder_over_line_doc() -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=110, data={
+            "start": [1.0, 2.0, 3.0], "terminate": [5.0, 2.0, 3.0]}),
+        make_entity(de_index=3, entity_type=122, data={
+            "de": 1, "terminate_point": [1.0, 2.0, 7.0]}),
+    ])
+
+
+def _tabulated_cylinder_over_arc_doc() -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=100, data={
+            "zt": 1.0,
+            "x1": 0.0, "y1": 0.0,
+            "x2": 2.0, "y2": 0.0,
+            "x3": 0.0, "y3": 2.0,
+        }),
+        make_entity(de_index=3, entity_type=122, data={
+            "de": 1, "terminate_point": [3.0, 0.0, 4.0]}),
+    ])
+
+
+def test_tabulated_cylinder_over_line_interpolates_along_generatrix(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _tabulated_cylinder_over_line_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 3, 0.25, tmp_path, s=0.5,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.0, 2.0, 5.0], abs=1e-9)
+
+
+def test_tabulated_cylinder_over_arc_keeps_generatrix_parallel(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _tabulated_cylinder_over_arc_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 3, math.pi / 2, tmp_path, s=1.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([1.0, 2.0, 4.0], abs=1e-9)
+
+
 # §1 eval contract: non-parametric entity types must be rejected.
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path
