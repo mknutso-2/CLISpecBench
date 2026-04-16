@@ -1081,11 +1081,11 @@ write_entity_dispatch(int type, int form, nlohmann::json const& data) {
 }
 
 std::expected<EvalResult, Diagnostic>
-evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
+evaluate_entity_dispatch(int type, int form, int xform_de,
+                         nlohmann::json const& data,
                          Real t, std::optional<Real> s,
                          EntityResolver const& resolver) {
     (void)form;
-    (void)resolver;  // unused by simple self-contained evaluators
     try {
         switch (type) {
         case 100: {
@@ -1095,14 +1095,25 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Curve entity does not accept --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 102: {
             auto ent = data.get<iges::CompositeCurveEntity>();
             if (s.has_value()) return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,
                 "Curve entity does not accept --s", "§1"});
-            return iges::evaluate_composite_curve(ent, t, resolver);
+            auto r = iges::evaluate_composite_curve(ent, t, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
+        }
+        case 104: {
+            auto ent = data.get<iges::ConicArcEntity>();
+            if (s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Curve entity does not accept --s", "§1"});
+            EvalResult r;
+            r.point = ent.evaluate(t);
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 106: {
             auto ent = data.get<iges::CopiousDataEntity>();
@@ -1111,7 +1122,7 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Curve entity does not accept --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 110: {
             auto ent = data.get<iges::LineEntity>();
@@ -1120,7 +1131,7 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Curve entity does not accept --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 112: {
             auto ent = data.get<iges::ParametricSplineCurveEntity>();
@@ -1129,7 +1140,7 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Curve entity does not accept --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 114: {
             auto ent = data.get<iges::ParametricSplineSurfaceEntity>();
@@ -1138,28 +1149,34 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Surface entity requires --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t, *s);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 118: {
             auto ent = data.get<iges::RuledSurfaceEntity>();
             if (!s.has_value()) return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,
                 "Surface entity requires --s", "§1"});
-            return iges::evaluate_ruled_surface(ent, form, t, *s, resolver);
+            auto r = iges::evaluate_ruled_surface(ent, form, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
         }
         case 120: {
             auto ent = data.get<iges::SurfaceOfRevolutionEntity>();
             if (!s.has_value()) return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,
                 "Surface entity requires --s", "§1"});
-            return iges::evaluate_surface_of_revolution(ent, t, *s, resolver);
+            auto r = iges::evaluate_surface_of_revolution(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
         }
         case 122: {
             auto ent = data.get<iges::TabulatedCylinderEntity>();
             if (!s.has_value()) return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,
                 "Surface entity requires --s", "§1"});
-            return iges::evaluate_tabulated_cylinder(ent, t, *s, resolver);
+            auto r = iges::evaluate_tabulated_cylinder(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
         }
         case 126: {
             auto ent = data.get<iges::RationalBSplineCurveEntity>();
@@ -1168,7 +1185,7 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Curve entity does not accept --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 128: {
             auto ent = data.get<iges::RationalBSplineSurfaceEntity>();
@@ -1177,21 +1194,25 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
                 "Surface entity requires --s", "§1"});
             EvalResult r;
             r.point = ent.evaluate(t, *s);
-            return r;
+            return iges::apply_entity_transform(r, xform_de, resolver);
         }
         case 130: {
             auto ent = data.get<iges::OffsetCurveEntity>();
             if (s.has_value()) return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,
                 "Curve entity does not accept --s", "§1"});
-            return iges::evaluate_offset_curve(ent, t, resolver);
+            auto r = iges::evaluate_offset_curve(ent, t, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
         }
         case 140: {
             auto ent = data.get<iges::OffsetSurfaceEntity>();
             if (!s.has_value()) return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,
                 "Surface entity requires --s", "§1"});
-            return iges::evaluate_offset_surface(ent, t, *s, resolver);
+            auto r = iges::evaluate_offset_surface(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
         }
         default:
             return std::unexpected(Diagnostic{
@@ -1205,7 +1226,7 @@ evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
             std::string{"JSON deserialization failed: "} + ex.what(),
             "§2"});
     }
-    (void)t; (void)s;
+    (void)t; (void)s; (void)xform_de;
 }
 
 } // namespace iges

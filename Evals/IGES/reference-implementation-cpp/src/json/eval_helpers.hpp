@@ -25,6 +25,7 @@ namespace iges {
 //
 // Supports curves whose domain is fully determined by the parsed JSON:
 //   * Type 100 Circular Arc — [start_angle, terminate_angle]
+//   * Type 104 Conic Arc — [t1, t2] per the §4.5 default parameterization
 //   * Type 106 Copious Data (forms 11/12/63) — [0, N−1]
 //   * Type 110 Line — [0, 1]
 //   * Type 126 Rational B-Spline Curve — [v0, v1]
@@ -113,5 +114,13 @@ evaluate_offset_surface(OffsetSurfaceEntity const& ent,
                         Real t,
                         Real s,
                         EntityResolver const& resolver);
+
+// Apply an entity's own DE transformation matrix, if present, to an
+// evaluation result. Points receive the full affine transform; tangents
+// and normals receive only the rotation component.
+std::expected<EvalResult, Diagnostic>
+apply_entity_transform(EvalResult result,
+                       int xform_de,
+                       EntityResolver const& resolver);
 
 } // namespace iges

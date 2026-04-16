@@ -4,6 +4,7 @@
 #include "entity.hpp"
 #include "../parser/param_tokenizer.hpp"
 #include <expected>
+#include <utility>
 
 namespace iges {
 
@@ -40,6 +41,13 @@ struct ConicArcEntity {
     bool is_ellipse() const;
     bool is_hyperbola() const;
     bool is_parabola() const;
+
+    // Evaluate the spec's default parameterization in definition space.
+    Vec3 evaluate(Real t) const;
+
+    // Native parameter interval [t1, t2] from the entity's start and
+    // terminate points, following the §4.5 default parameterization.
+    std::pair<Real, Real> parameter_span() const;
 };
 
 std::expected<ConicArcEntity, Diagnostic>

@@ -2,10 +2,11 @@
 
 Line coverage lives in ``test_line_entity.py``. This file covers the
 parametric entity types enumerated in §1.6 of the agent contract —
-Circular Arc (§4.3), Copious Data (§4.6), Composite Curve (§4.4),
-Offset Curve (§4.25), Ruled Surface (§4.17), Surface of Revolution
-(§4.18), and the B-Spline curve/surface types — using each entity's
-**native** parameter domain (not a normalized `[0, 1]`). Also exercises:
+Circular Arc (§4.3), Conic Arc (§4.5), Copious Data (§4.6),
+Composite Curve (§4.4), Offset Curve (§4.25), Ruled Surface (§4.17),
+Surface of Revolution (§4.18), and the B-Spline curve/surface types —
+using each entity's **native** parameter domain (not a normalized
+`[0, 1]`). Also exercises:
 
 * ``eval`` on a non-parametric entity type — must be rejected.
 * Curve ``eval`` with ``--s`` supplied — must be rejected.
@@ -175,6 +176,119 @@ def test_arc_eval_respects_z_plane(
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
     assert payload["ok"] is True
     assert payload["point"][2] == pytest.approx(2.5)
+
+
+# §4.5: Conic Arc parameterization.
+#
+# The spec's default parameterization is form-dependent and evaluated in
+# definition space before any entity transformation matrix is applied.
+def _parabolic_conic_document() -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=104, form=3, data={
+            "A": 1.0, "B": 0.0, "C": 0.0, "D": 0.0, "E": -1.0, "F": 0.0,
+            "zt": 2.0,
+            "x1": -2.0, "y1": 4.0,
+            "x2": 2.0, "y2": 4.0,
+        }),
+    ])
+
+
+def _elliptic_conic_document() -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=104, form=1, data={
+            "A": -0.25, "B": 0.0, "C": -(1.0 / 9.0),
+            "D": 0.0, "E": 0.0, "F": 1.0,
+            "zt": 1.5,
+            "x1": 2.0, "y1": 0.0,
+            "x2": 0.0, "y2": 3.0,
+        }),
+    ])
+
+
+def _hyperbolic_conic_document() -> dict[str, object]:
+    root_two = math.sqrt(2.0)
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=104, form=2, data={
+            "A": 0.25, "B": 0.0, "C": -(1.0 / 9.0),
+            "D": 0.0, "E": 0.0, "F": -1.0,
+            "zt": -1.0,
+            "x1": 2.0 * root_two, "y1": -3.0,
+            "x2": 2.0 * root_two, "y2": 3.0,
+        }),
+    ])
+
+
+def _transformed_elliptic_conic_document() -> dict[str, object]:
+    return wrap_entities([
+        make_entity(de_index=1, entity_type=124, data={
+            "rotation": [
+                [0.0, -1.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0],
+            ],
+            "translation": [10.0, -5.0, 2.0],
+        }),
+        make_entity(
+            de_index=3,
+            entity_type=104,
+            form=1,
+            data={
+                "A": -0.25, "B": 0.0, "C": -(1.0 / 9.0),
+                "D": 0.0, "E": 0.0, "F": 1.0,
+                "zt": 1.0,
+                "x1": 2.0, "y1": 0.0,
+                "x2": 0.0, "y2": 3.0,
+            },
+            directory_entry_overrides={"xform_matrix": 1},
+        ),
+    ])
+
+
+def test_parabolic_conic_eval_reaches_vertex_at_midparameter(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _parabolic_conic_document()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.0, 0.0, 2.0], abs=1e-9)
+
+
+def test_elliptic_conic_eval_midangle_matches_semiaxes(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _elliptic_conic_document()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 1, math.pi / 4, tmp_path
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx(
+        [math.sqrt(2.0), 3.0 / math.sqrt(2.0), 1.5],
+        abs=1e-9,
+    )
+
+
+def test_hyperbolic_conic_eval_branch_midparameter_matches_vertex(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _hyperbolic_conic_document()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.0, 0.0, -1.0], abs=1e-9)
+
+
+def test_transformed_elliptic_conic_applies_entity_matrix_after_eval(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _transformed_elliptic_conic_document()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 3, math.pi / 2, tmp_path
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([7.0, -5.0, 3.0], abs=1e-9)
 
 
 # §4.6 + §1.6: Copious Data polyline parameterization.

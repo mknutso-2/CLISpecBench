@@ -32,6 +32,7 @@ struct EvalResult {
 struct ResolvedEntity {
     int type;
     int form;
+    int xform_de;
     nlohmann::json data;
 };
 
@@ -54,7 +55,7 @@ std::expected<std::string, Diagnostic>
 write_entity_dispatch(int type, int form, nlohmann::json const& data);
 
 std::expected<EvalResult, Diagnostic>
-evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,
+evaluate_entity_dispatch(int type, int form, int xform_de, nlohmann::json const& data,
                          Real t, std::optional<Real> s,
                          EntityResolver const& resolver);
 

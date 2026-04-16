@@ -443,10 +443,11 @@ int cmd_eval(Args const& a) {
             ref.de.entity_type.value, ref.de.form.value, rt);
         if (!rd) return std::unexpected(rd.error());
         return iges::ResolvedEntity{
-            ref.de.entity_type.value, ref.de.form.value, *rd};
+            ref.de.entity_type.value, ref.de.form.value,
+            ref.de.xform_matrix.value, *rd};
     };
     auto result = iges::evaluate_entity_dispatch(
-        type, form, *data, *a.t, a.s, resolver);
+        type, form, raw.de.xform_matrix.value, *data, *a.t, a.s, resolver);
     if (!result) {
         auto const& d = result.error();
         write_json(a.output, make_error(d.message, d.spec_ref, d.line, "parameter"));

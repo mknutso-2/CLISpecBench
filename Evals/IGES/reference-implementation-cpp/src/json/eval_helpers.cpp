@@ -2,6 +2,8 @@
 
 #include "eval_helpers.hpp"
 
+#include "../entities/conic_arc_entity.hpp"
+
 #include <cmath>
 
 namespace iges {
@@ -19,6 +21,66 @@ struct SurfaceParams {
     Real u;
     Real v;
 };
+
+struct TransformData {
+    Matrix3x3 rotation;
+    Vec3 translation;
+};
+
+std::expected<TransformData, Diagnostic>
+resolve_transform_entity(int xform_de, EntityResolver const& resolver) {
+    if (!is_valid_de(xform_de)) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Transformation Matrix DE pointer is invalid: "}
+                + std::to_string(xform_de),
+            "§3.2"});
+    }
+    auto resolved = resolver(xform_de);
+    if (!resolved) return std::unexpected(resolved.error());
+    if (resolved->type != 124) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            std::string{"Transformation Matrix pointer must reference Type 124; got type "}
+                + std::to_string(resolved->type),
+            "§3.2"});
+    }
+
+    TransformData tx;
+    auto const& rotation = resolved->data.at("rotation");
+    for (int r = 0; r < 3; ++r) {
+        for (int c = 0; c < 3; ++c) {
+            tx.rotation(r, c) = rotation.at(r).at(c).get<Real>();
+        }
+    }
+    auto const& translation = resolved->data.at("translation");
+    tx.translation = Vec3{
+        translation.at(0).get<Real>(),
+        translation.at(1).get<Real>(),
+        translation.at(2).get<Real>(),
+    };
+    return tx;
+}
+
+std::expected<Vec3, Diagnostic>
+apply_point_transform(Vec3 point,
+                      int xform_de,
+                      EntityResolver const& resolver) {
+    if (xform_de == 0) return point;
+    auto tx = resolve_transform_entity(xform_de, resolver);
+    if (!tx) return std::unexpected(tx.error());
+    return tx->rotation * point + tx->translation;
+}
+
+std::expected<Vec3, Diagnostic>
+apply_vector_transform(Vec3 vector,
+                       int xform_de,
+                       EntityResolver const& resolver) {
+    if (xform_de == 0) return vector;
+    auto tx = resolve_transform_entity(xform_de, resolver);
+    if (!tx) return std::unexpected(tx.error());
+    return tx->rotation * vector;
+}
 
 std::expected<Vec3, Diagnostic>
 normalize_or_error(Vec3 v, char const* what, char const* spec_ref) {
@@ -52,11 +114,12 @@ resolve_point_entity(int de,
             spec_ref});
     }
     auto const& coords = resolved->data.at("coords");
-    return Vec3{
+    auto point = Vec3{
         coords.at(0).get<Real>(),
         coords.at(1).get<Real>(),
         coords.at(2).get<Real>(),
     };
+    return apply_point_transform(point, resolved->xform_de, resolver);
 }
 
 std::expected<Vec3, Diagnostic>
@@ -79,11 +142,12 @@ resolve_direction_entity(int de,
                 + std::to_string(resolved->type),
             spec_ref});
     }
-    return Vec3{
+    auto direction = Vec3{
         resolved->data.at("x").get<Real>(),
         resolved->data.at("y").get<Real>(),
         resolved->data.at("z").get<Real>(),
     };
+    return apply_vector_transform(direction, resolved->xform_de, resolver);
 }
 
 std::expected<Vec3, Diagnostic>
@@ -207,6 +271,7 @@ cylindrical_surface_normal_form1(nlohmann::json const& data,
 std::expected<Vec3, Diagnostic>
 sample_surface_point(int type,
                      int form,
+                     int xform_de,
                      nlohmann::json const& data,
                      Real u,
                      Real v,
@@ -215,6 +280,7 @@ sample_surface_point(int type,
 std::expected<Vec3, Diagnostic>
 sample_surface_normal(int type,
                       int form,
+                      int xform_de,
                       nlohmann::json const& data,
                       Real u,
                       Real v,
@@ -316,6 +382,7 @@ surface_reference_parameters(int type,
 std::expected<Vec3, Diagnostic>
 sample_surface_point(int type,
                      int form,
+                     int xform_de,
                      nlohmann::json const& data,
                      Real u,
                      Real v,
@@ -327,7 +394,9 @@ sample_surface_point(int type,
                 "Plane Surface requires form 1 for parametric evaluation",
                 "§4.50"});
         }
-        return evaluate_plane_surface_form1(data, u, v, resolver);
+        auto point = evaluate_plane_surface_form1(data, u, v, resolver);
+        if (!point) return std::unexpected(point.error());
+        return apply_point_transform(*point, xform_de, resolver);
     }
     if (type == 192) {
         if (form != 1) {
@@ -336,9 +405,12 @@ sample_surface_point(int type,
                 "Cylindrical Surface requires form 1 for parametric evaluation",
                 "§4.51"});
         }
-        return evaluate_cylindrical_surface_form1(data, u, v, resolver);
+        auto point = evaluate_cylindrical_surface_form1(data, u, v, resolver);
+        if (!point) return std::unexpected(point.error());
+        return apply_point_transform(*point, xform_de, resolver);
     }
-    auto sample = evaluate_entity_dispatch(type, form, data, u, v, resolver);
+    auto sample = evaluate_entity_dispatch(
+        type, form, xform_de, data, u, v, resolver);
     if (!sample) return std::unexpected(sample.error());
     return sample->point;
 }
@@ -346,6 +418,7 @@ sample_surface_point(int type,
 std::expected<Vec3, Diagnostic>
 sample_surface_normal(int type,
                       int form,
+                      int xform_de,
                       nlohmann::json const& data,
                       Real u,
                       Real v,
@@ -357,7 +430,14 @@ sample_surface_normal(int type,
                 "Plane Surface requires form 1 for parametric evaluation",
                 "§4.50"});
         }
-        return plane_surface_normal_form1(data, resolver);
+        auto normal = plane_surface_normal_form1(data, resolver);
+        if (!normal) return std::unexpected(normal.error());
+        auto transformed = apply_vector_transform(*normal, xform_de, resolver);
+        if (!transformed) return std::unexpected(transformed.error());
+        return normalize_or_error(
+            *transformed,
+            "Plane Surface transformed normal must be non-zero",
+            "§4.50");
     }
     if (type == 192) {
         if (form != 1) {
@@ -366,18 +446,29 @@ sample_surface_normal(int type,
                 "Cylindrical Surface requires form 1 for parametric evaluation",
                 "§4.51"});
         }
-        return cylindrical_surface_normal_form1(data, u, resolver);
+        auto normal = cylindrical_surface_normal_form1(data, u, resolver);
+        if (!normal) return std::unexpected(normal.error());
+        auto transformed = apply_vector_transform(*normal, xform_de, resolver);
+        if (!transformed) return std::unexpected(transformed.error());
+        return normalize_or_error(
+            *transformed,
+            "Cylindrical Surface transformed normal must be non-zero",
+            "§4.51");
     }
 
     Real du = 1e-6 * std::max<Real>(1.0, std::abs(u));
     Real dv = 1e-6 * std::max<Real>(1.0, std::abs(v));
-    auto pu_minus = sample_surface_point(type, form, data, u - du, v, resolver);
+    auto pu_minus = sample_surface_point(
+        type, form, xform_de, data, u - du, v, resolver);
     if (!pu_minus) return std::unexpected(pu_minus.error());
-    auto pu_plus = sample_surface_point(type, form, data, u + du, v, resolver);
+    auto pu_plus = sample_surface_point(
+        type, form, xform_de, data, u + du, v, resolver);
     if (!pu_plus) return std::unexpected(pu_plus.error());
-    auto pv_minus = sample_surface_point(type, form, data, u, v - dv, resolver);
+    auto pv_minus = sample_surface_point(
+        type, form, xform_de, data, u, v - dv, resolver);
     if (!pv_minus) return std::unexpected(pv_minus.error());
-    auto pv_plus = sample_surface_point(type, form, data, u, v + dv, resolver);
+    auto pv_plus = sample_surface_point(
+        type, form, xform_de, data, u, v + dv, resolver);
     if (!pv_plus) return std::unexpected(pv_plus.error());
 
     Vec3 du_vec = *pu_plus - *pu_minus;
@@ -410,6 +501,25 @@ curve_native_span(int type, int form, nlohmann::json const& data) {
         if (end <= start) end += 2.0 * 3.14159265358979323846;
         (void)form;
         return std::pair<Real, Real>{start, end};
+    }
+    case 104: {
+        // Conic Arc (§4.5): form-specific default parameterization from
+        // the standard-position conic coefficients and the declared
+        // start/terminate points.
+        ConicArcEntity ent;
+        ent.A = data.at("A").get<Real>();
+        ent.B = data.at("B").get<Real>();
+        ent.C = data.at("C").get<Real>();
+        ent.D = data.at("D").get<Real>();
+        ent.E = data.at("E").get<Real>();
+        ent.F = data.at("F").get<Real>();
+        ent.zt = data.at("zt").get<Real>();
+        ent.x1 = data.at("x1").get<Real>();
+        ent.y1 = data.at("y1").get<Real>();
+        ent.x2 = data.at("x2").get<Real>();
+        ent.y2 = data.at("y2").get<Real>();
+        (void)form;
+        return ent.parameter_span();
     }
     case 106: {
         // Copious Data (§4.6 forms 11/12/63): [0, N−1].
@@ -513,7 +623,7 @@ evaluate_composite_curve(CompositeCurveEntity const& ent,
     Real local_t = leg.v0 + (t - leg.t_start);
 
     auto child = evaluate_entity_dispatch(
-        leg.resolved.type, leg.resolved.form, leg.resolved.data,
+        leg.resolved.type, leg.resolved.form, leg.resolved.xform_de, leg.resolved.data,
         local_t, std::nullopt, resolver);
     if (!child) return std::unexpected(child.error());
 
@@ -556,7 +666,7 @@ evaluate_offset_curve(OffsetCurveEntity const& ent,
     auto base = resolver(ent.de1.value);
     if (!base) return std::unexpected(base.error());
     auto child = evaluate_entity_dispatch(
-        base->type, base->form, base->data, t, std::nullopt, resolver);
+        base->type, base->form, base->xform_de, base->data, t, std::nullopt, resolver);
     if (!child) return std::unexpected(child.error());
 
     // Uniform offset: displace the base point by d1 along (vx, vy, vz).
@@ -579,7 +689,7 @@ sample_curve_point(ResolvedEntity const& curve,
                    Real u,
                    EntityResolver const& resolver) {
     auto r = evaluate_entity_dispatch(
-        curve.type, curve.form, curve.data, u, std::nullopt, resolver);
+        curve.type, curve.form, curve.xform_de, curve.data, u, std::nullopt, resolver);
     if (!r) return std::unexpected(r.error());
     return r->point;
 }
@@ -656,16 +766,17 @@ evaluate_offset_surface(OffsetSurfaceEntity const& ent,
     if (!base) return std::unexpected(base.error());
 
     auto point = sample_surface_point(
-        base->type, base->form, base->data, t, s, resolver);
+        base->type, base->form, base->xform_de, base->data, t, s, resolver);
     if (!point) return std::unexpected(point.error());
     auto normal = sample_surface_normal(
-        base->type, base->form, base->data, t, s, resolver);
+        base->type, base->form, base->xform_de, base->data, t, s, resolver);
     if (!normal) return std::unexpected(normal.error());
     auto ref_params = surface_reference_parameters(
         base->type, base->form, base->data, resolver);
     if (!ref_params) return std::unexpected(ref_params.error());
     auto ref_normal = sample_surface_normal(
-        base->type, base->form, base->data, ref_params->u, ref_params->v, resolver);
+        base->type, base->form, base->xform_de, base->data,
+        ref_params->u, ref_params->v, resolver);
     if (!ref_normal) return std::unexpected(ref_normal.error());
 
     auto indicator = normalize_or_error(
@@ -812,6 +923,14 @@ evaluate_surface_of_revolution(SurfaceOfRevolutionEntity const& ent,
         axis->data.at("terminate").at(1).get<Real>(),
         axis->data.at("terminate").at(2).get<Real>(),
     };
+    auto transformed_ax_start = apply_point_transform(
+        ax_start, axis->xform_de, resolver);
+    if (!transformed_ax_start) return std::unexpected(transformed_ax_start.error());
+    auto transformed_ax_end = apply_point_transform(
+        ax_end, axis->xform_de, resolver);
+    if (!transformed_ax_end) return std::unexpected(transformed_ax_end.error());
+    ax_start = *transformed_ax_start;
+    ax_end = *transformed_ax_end;
     Vec3 axis_dir{
         ax_end.x - ax_start.x,
         ax_end.y - ax_start.y,
@@ -863,6 +982,29 @@ evaluate_surface_of_revolution(SurfaceOfRevolutionEntity const& ent,
     r.point.y = foot.y + rotated.y;
     r.point.z = foot.z + rotated.z;
     return r;
+}
+
+std::expected<EvalResult, Diagnostic>
+apply_entity_transform(EvalResult result,
+                       int xform_de,
+                       EntityResolver const& resolver) {
+    if (xform_de == 0) return result;
+
+    auto point = apply_point_transform(result.point, xform_de, resolver);
+    if (!point) return std::unexpected(point.error());
+    result.point = *point;
+
+    if (result.tangent.has_value()) {
+        auto tangent = apply_vector_transform(*result.tangent, xform_de, resolver);
+        if (!tangent) return std::unexpected(tangent.error());
+        result.tangent = *tangent;
+    }
+    if (result.normal.has_value()) {
+        auto normal = apply_vector_transform(*result.normal, xform_de, resolver);
+        if (!normal) return std::unexpected(normal.error());
+        result.normal = *normal;
+    }
+    return result;
 }
 
 } // namespace iges

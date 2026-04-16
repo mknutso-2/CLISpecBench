@@ -214,11 +214,11 @@ def emit_write_dispatch(entities: list[Entity]) -> str:
 def emit_evaluate_dispatch(entities: list[Entity]) -> str:
     lines: list[str] = [
         "std::expected<EvalResult, Diagnostic>",
-        "evaluate_entity_dispatch(int type, int form, nlohmann::json const& data,",
+        "evaluate_entity_dispatch(int type, int form, int xform_de,",
+        "                         nlohmann::json const& data,",
         "                         Real t, std::optional<Real> s,",
         "                         EntityResolver const& resolver) {",
         "    (void)form;",
-        "    (void)resolver;  // unused by simple self-contained evaluators",
         "    try {",
         "        switch (type) {",
     ]
@@ -238,7 +238,10 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
                     " SectionKind::Parameter,"
                 )
                 lines.append('                "Curve entity does not accept --s", "§1"});')
-                lines.append(f"            return iges::evaluate_{helper_stem}(ent, t, resolver);")
+                lines.append(
+                    f"            auto r = iges::evaluate_{helper_stem}("
+                    "ent, t, resolver);"
+                )
             elif kind == "surface":
                 lines.append(
                     "            if (!s.has_value()) return std::unexpected(Diagnostic{"
@@ -249,7 +252,7 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
                 )
                 lines.append('                "Surface entity requires --s", "§1"});')
                 lines.append(
-                    f"            return iges::evaluate_{helper_stem}("
+                    f"            auto r = iges::evaluate_{helper_stem}("
                     "ent, t, *s, resolver);"
                 )
             elif kind == "surface_form":
@@ -262,11 +265,13 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
                 )
                 lines.append('                "Surface entity requires --s", "§1"});')
                 lines.append(
-                    f"            return iges::evaluate_{helper_stem}("
+                    f"            auto r = iges::evaluate_{helper_stem}("
                     "ent, form, t, *s, resolver);"
                 )
             else:
                 raise AssertionError(f"unknown resolver kind: {kind!r}")
+            lines.append("            if (!r) return std::unexpected(r.error());")
+            lines.append("            return iges::apply_entity_transform(*r, xform_de, resolver);")
             lines.append("        }")
             continue
 
@@ -280,14 +285,14 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
             lines.append('                "Curve entity does not accept --s", "§1"});')
             lines.append("            EvalResult r;")
             lines.append("            r.point = ent.evaluate(t);")
-            lines.append("            return r;")
+            lines.append("            return iges::apply_entity_transform(r, xform_de, resolver);")
         else:  # surface
             lines.append("            if (!s.has_value()) return std::unexpected(Diagnostic{")
             lines.append("                Diagnostic::Severity::Error, 0, SectionKind::Parameter,")
             lines.append('                "Surface entity requires --s", "§1"});')
             lines.append("            EvalResult r;")
             lines.append("            r.point = ent.evaluate(t, *s);")
-            lines.append("            return r;")
+            lines.append("            return iges::apply_entity_transform(r, xform_de, resolver);")
         lines.append("        }")
     lines.append("        default:")
     lines.append("            return std::unexpected(Diagnostic{")
@@ -304,7 +309,7 @@ def emit_evaluate_dispatch(entities: list[Entity]) -> str:
     lines.append('            std::string{"JSON deserialization failed: "} + ex.what(),')
     lines.append('            "§2"});')
     lines.append("    }")
-    lines.append("    (void)t; (void)s;")
+    lines.append("    (void)t; (void)s; (void)xform_de;")
     lines.append("}")
     return "\n".join(lines)
 
