@@ -2,14 +2,46 @@
 
 ## v1.0.0 — unreleased
 
-Initial release (in progress). Scaffolding only — the eval is not yet
-functional. See `PLAN.md` for port status.
+Initial IGES eval release. The task is now functional end-to-end with a
+buildable C++ reference implementation, prompt/docs bundle, and full
+Python CLI test suite.
 
 ### Added
 
-- `Evals/IGES/` directory with `README.md` and `PLAN.md`.
-- `VERSION` = `1.0.0`, this `CHANGELOG.md`.
-- `iges` task registered in `src/swe_buildbench/harness/task.py`
-  `_KNOWN_TASKS` (pointing at `Evals/IGES`, language `cpp`). The task
-  will not actually run end-to-end until the prompt, tests, and
-  reference implementation land.
+- `iges` task registration in `src/swe_buildbench/harness/task.py`.
+- Full IGES prompt bundle:
+  - `prompt/base-prompt.md`
+  - `prompt/technical-requirements-prompt.md`
+  - `prompt/docs/iges-5-3-specification.md`
+  - `prompt/docs/figures/` (86 copied figures)
+- C++ reference implementation under
+  `reference-implementation-cpp/` with all five CLI subcommands:
+  `parse`, `write`, `query`, `eval`, and `roundtrip`.
+- Python CLI test suite under `Evals/IGES/tests/` covering build,
+  malformed input, line/entity round-trips, fixture parsing,
+  roundtrip behavior, defaulted fields, and geometric evaluation.
+- Parametric evaluation coverage for the contract's curve/surface types,
+  including Composite Curve, Offset Curve, Ruled Surface, Surface of
+  Revolution, Tabulated Cylinder, Offset Surface, Conic Arc, and
+  analytic surfaces `190/192/194/196/198`.
+
+### Changed
+
+- Evaluation dispatch now threads referenced-entity resolution and DE
+  transformation matrices through nested curve/surface sampling.
+- `dispatch.cpp` is regenerated via a binary-safe workflow to avoid the
+  accidental embedded-NUL corruption seen during development.
+- IGES-SDK helper scripts touched during the port are now Ruff- and
+  Pyright-clean.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`93 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+- First real-agent smoke run completed cleanly:
+  `iges / claude-code / claude-opus-4-6` scored `43/93`
+  (`exit_reason: "completed"`). The agent voluntarily exited and
+  claimed full success despite partial correctness, so the low score was
+  model behavior rather than harness/auth/rate-limit failure.
