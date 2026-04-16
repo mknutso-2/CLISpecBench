@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (107 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (119 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -217,11 +217,11 @@ prompt/
   - [ ] §4.146 Face (510)
   - [ ] §4.147 Shell (514)
 - [ ] **Writer-specific tests**
-  - [ ] `test_writer_format.cpp` → `test_writer_format.py` (Hollerith,
+  - [x] `test_writer_format.cpp` → `test_writer_format.py` (Hollerith,
         integer, real, column packing).
-  - [ ] `test_writer_global.cpp` → `test_writer_global.py`.
-  - [ ] `test_writer_param.cpp` → `test_writer_param.py`.
-  - [ ] `test_writer_file.cpp` → `test_writer_file.py`.
+  - [x] `test_writer_global.cpp` → `test_writer_global.py`.
+  - [x] `test_writer_param.cpp` → `test_writer_param.py`.
+  - [x] `test_writer_file.cpp` → `test_writer_file.py`.
   - [x] `test_writer_roundtrip*.cpp` → `test_roundtrip_cli.py` —
         parametrized over ex1/ex2/ex3: entity-count + per-entity data
         preservation + byte-level idempotence after one normalization

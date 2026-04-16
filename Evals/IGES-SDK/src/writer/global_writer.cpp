@@ -67,6 +67,7 @@ std::string write_global_section(GlobalSection const& g) {
         pw.write_string("");
     }
     // Field 26: app protocol
+    pw.write_string(g.app_protocol);
     // Terminate record (this adds the record delimiter)
     pw.end_record();
 

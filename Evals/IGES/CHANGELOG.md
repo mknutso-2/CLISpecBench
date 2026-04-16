@@ -1,5 +1,27 @@
 # IGES Changelog
 
+## v1.0.2 — unreleased
+
+### Added
+
+- Writer-focused hidden coverage:
+  - `tests/test_writer_global.py`
+  - `tests/test_writer_format.py`
+  - `tests/test_writer_param.py`
+  - `tests/test_writer_file.py`
+
+### Changed
+
+- `write_global_section()` now emits Global field 26
+  (`app_protocol`) instead of silently dropping non-empty values.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`119 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.1 — unreleased
 
 ### Added
@@ -24,7 +46,7 @@
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`107 passed`, 2026-04-16).
+  (`119 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
@@ -65,7 +87,7 @@ Python CLI test suite.
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`107 passed`, 2026-04-16).
+  (`119 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 - First real-agent smoke run completed cleanly:
