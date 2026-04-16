@@ -36,6 +36,8 @@ No v2.0.2 runs yet. See `results-2_0_1.md` for v2.0.1 results.
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| gpt-5.4 | xhigh | 2.1.1 | 423/542 (78.0%) | 57.5% | 3/3 | Complete (eval7); earlier evals 1-4 superseded by harness/timeout changes |
+| gpt-5.4-mini | xhigh | 2.1.1 | 248/542 (45.8%) | 27.9% | 3/3 | Complete (eval4); run 3 context-exhausted mid-scaffold (0/542) |
 | gpt-5.3-codex | xhigh | 2.1.0 | 265/542 (48.9%) | 48.3% | 2/3 | Run 1 scorer-timeout artifact (`0/0`) excluded |
 | gpt-5.2-codex | xhigh | 2.0.2 | 419/542 (77.3%) | 58.0% | 3/3 | Complete |
 | gpt-5.2 | high | 2.1.0 | 412/542 (76.0%) | 65.4% | 3/3 | Complete |
@@ -43,6 +45,26 @@ No v2.0.2 runs yet. See `results-2_0_1.md` for v2.0.1 results.
 | gpt-5.1 | high | 2.1.0 | 278/542 (51.3%) | 31.7% | 3/3 | Complete |
 | gpt-5 | high | 2.1.0 | 197/542 (36.3%) | 12.2% | 3/3 | Complete; runs 1+3 self-acknowledged incomplete (stub only) |
 | gpt-5.1-codex-mini | - | 2.0.2 | 132/542 (24.4%) | 8.1% | 3/3 | Complete; run 1 refused task, run 3 build failed |
+
+#### gpt-5.4 / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 423/542 (78.0%) | 52.9 min | 8.7M | 155K | ~$5.39 | 82 | 9 | 4276 | [result](../../results/cncsim-full/codex-cli/gpt-5.4_xhigh/eval7/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.4_xhigh/eval7/run1/transcript.jsonl) | Claims complete; multi-file C++20 project under `output/` with `CMakeLists.txt` + `simulator.cpp`. |
+| 2 | 2.1.1 | 249/542 (45.9%) | 36.1 min | 14.7M | 97K | ~$5.87 | 83 | 2 | 3068 | [result](../../results/cncsim-full/codex-cli/gpt-5.4_xhigh/eval7/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.4_xhigh/eval7/run2/transcript.jsonl) | Claims complete; single-file `main.cpp` + `CMakeLists.txt`. |
+| 3 | 2.1.1 | 263/542 (48.5%) | 56.6 min | 13.6M | 111K | ~$6.20 | 66 | 4 | 3811 | [result](../../results/cncsim-full/codex-cli/gpt-5.4_xhigh/eval7/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.4_xhigh/eval7/run3/transcript.jsonl) | Claims complete; `output/main.cpp` + `output/simulator.cpp` + `output/CMakeLists.txt`. |
+
+Prior evals: eval1 all 3 runs hit the old 30-min wall cap (pre-v2.1.1); eval2 runs 1-3 `no_output`; eval3 only run 1 completed; eval4 was a 3/3 completed set (380/262/262) but superseded by eval7; eval5-6 startup errors.
+
+#### gpt-5.4-mini / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 205/542 (37.8%) | 80.7 min | 26.7M | 400K | ~$4.40 | 238 | 5 | 2734 | [result](../../results/cncsim-full/codex-cli/gpt-5.4-mini_xhigh/eval4/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.4-mini_xhigh/eval4/run1/transcript.jsonl) | Claims complete; C++20 project built with `cmake -B build && cmake --build build`. |
+| 2 | 2.1.1 | 248/542 (45.8%) | 105.3 min | 38.2M | 690K | ~$7.23 | 416 | 3 | 4219 | [result](../../results/cncsim-full/codex-cli/gpt-5.4-mini_xhigh/eval4/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.4-mini_xhigh/eval4/run2/transcript.jsonl) | Claims complete; 105-min run with 38M input tokens. |
+| 3 | 2.1.1 | 0/542 (0.0%) | 35.2 min | ? | ? | - | ? | 3 | 234 | [result](../../results/cncsim-full/codex-cli/gpt-5.4-mini_xhigh/eval4/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.4-mini_xhigh/eval4/run3/transcript.jsonl) | Incomplete; context-exhausted while still "fixing the scaffold before the real implementation lands." 3 scaffold files / 234 LOC, no working implementation. |
+
+Run 3 token usage unavailable: context-exhausted during remote compact. Prior evals: eval1 all 3 runs scored 0/542 (two `completed`, one `timeout` on the 30-min cap); eval2-3 startup errors.
 
 #### gpt-5.3-codex / xhigh
 
@@ -192,6 +214,7 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| gpt-5.4 | xhigh | 2.1.1 | 445/542 (82.1%) | 69.1% | 3/3 | Complete |
 | gpt-5.3-codex | xhigh | 2.1.0 | 442/542 (81.5%) | 80.3% | 3/3 | Complete |
 | gpt-5.4-mini | xhigh | 2.1.1 | 346/542 (63.8%) | 36.2% | 3/3 | Complete; runs 1-2 burned 90-130 min each, run 3 context-exhausted before writing code |
 | gpt-5.2-codex | xhigh | 2.1.0 | 268/542 (49.4%) | 48.6% | 3/3 | Complete; runs 72-91 min each |
@@ -200,6 +223,14 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 | gpt-5.1 | high | 2.1.0 | 218/542 (40.2%) | 38.3% | 3/3 | Complete |
 | gpt-5 | high | 2.1.0 | 249/542 (45.9%) | 15.3% | 3/3 | Complete; runs 2+3 wrote zero files (self-reported terminal quoting issues) |
 | gpt-5.1-codex-mini | - | 2.0.2 | 166/542 (30.6%) | 11.4% | 3/3 | Complete; runs 1-2 scaffolded only |
+
+#### gpt-5.4 / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 255/542 (47.0%) | 63.8 min | 9.3M | 92K | ~$4.41 | 83 | 5 | 3107 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.4_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.4_xhigh/eval1/run1/transcript.jsonl) | Claims complete; multi-module CLI with parser/execution/trace in `output/interpreter.js`. |
+| 2 | 2.1.1 | 424/542 (78.2%) | 33.5 min | 9.9M | 90K | ~$4.83 | 61 | 10 | 2881 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.4_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.4_xhigh/eval1/run2/transcript.jsonl) | Claims complete; 10-file module tree under `output/`. |
+| 3 | 2.1.1 | 445/542 (82.1%) | 49.5 min | 6.3M | 95K | ~$3.74 | 74 | 7 | 3411 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.4_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.4_xhigh/eval1/run3/transcript.jsonl) | Claims complete; simulator + parser + runtime split across `main.js` / `simulator.js` / `parser.js`. |
 
 #### gpt-5.3-codex / xhigh
 
@@ -277,6 +308,7 @@ Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex mod
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| gpt-5.4 | xhigh | 2.1.1 | 449/542 (82.8%) | 59.0% | 3/3 | Complete |
 | gpt-5.3-codex | xhigh | 2.1.1 | 460/542 (84.9%) | 69.6% | 3/3 | Complete |
 | gpt-5.4-mini | xhigh | 2.1.1 | 402/542 (74.2%) | 24.7% | 3/3 | Complete; runs 1-2 context-exhausted before writing code (0/542 each); run 3 delivered |
 | gpt-5.2-codex | xhigh | 2.1.0 | 461/542 (85.1%) | 82.8% | 3/3 | Complete; runs 82-91 min each |
@@ -285,6 +317,14 @@ Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex mod
 | gpt-5 | high | 2.1.0 | 335/542 (61.8%) | 21.5% | 3/3 | Complete; runs 1+3 self-acknowledged incomplete (stubs) |
 | gpt-5.1 | high | 2.1.0 | 205/542 (37.8%) | 25.0% | 3/3 | Complete; run 2 self-acknowledged partial coverage |
 | gpt-5.1-codex-mini | - | 2.0.2 | 179/542 (33.0%) | 16.5% | 3/3 | Complete; run 2 scaffolded only, run 3 had syntax errors |
+
+#### gpt-5.4 / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 253/542 (46.7%) | 28.6 min | 8.4M | 83K | ~$4.09 | 55 | 2 | 2758 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.4_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.4_xhigh/eval1/run1/transcript.jsonl) | Claims complete; `main.py` + `simulator.py`; flagged cutter-radius compensation and a few rare behaviors as "pragmatically" implemented. |
+| 2 | 2.1.1 | 258/542 (47.6%) | 40.2 min | 11.3M | 115K | ~$5.72 | 107 | 1 | 2289 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.4_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.4_xhigh/eval1/run2/transcript.jsonl) | Claims complete; single-file `output/main.py`. |
+| 3 | 2.1.1 | 449/542 (82.8%) | 31.4 min | 4.6M | 97K | ~$2.90 | 59 | 2 | 2588 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.4_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.4_xhigh/eval1/run3/transcript.jsonl) | Claims complete; thin `main.py` wrapper + core in `rs274_sim.py`. |
 
 #### gpt-5.3-codex / xhigh
 
