@@ -714,7 +714,9 @@ def test_tabulated_cylinder_over_arc_keeps_generatrix_parallel(
 # field. The entity's indicator vector selects which global orientation
 # is treated as positive, but the final point is always
 # `S(u, v) + d*N(u, v)`.
-def _offset_surface_over_plane_doc(indicator: list[float], distance: float) -> dict[str, object]:
+def _offset_surface_over_base_doc(
+    base_entity: dict[str, object], indicator: list[float], distance: float
+) -> dict[str, object]:
     return wrap_entities([
         make_entity(de_index=1, entity_type=116, data={
             "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
@@ -722,28 +724,58 @@ def _offset_surface_over_plane_doc(indicator: list[float], distance: float) -> d
             "x": 0.0, "y": 0.0, "z": 1.0}),
         make_entity(de_index=5, entity_type=123, data={
             "x": 1.0, "y": 0.0, "z": 0.0}),
-        make_entity(de_index=7, entity_type=190, form=1, data={
-            "deloc": 1, "denrml": 3, "derefd": 5}),
+        base_entity,
         make_entity(de_index=9, entity_type=140, data={
             "nx": indicator[0], "ny": indicator[1], "nz": indicator[2],
             "d": distance, "de": 7}),
     ])
+
+
+def _offset_surface_over_plane_doc(indicator: list[float], distance: float) -> dict[str, object]:
+    return _offset_surface_over_base_doc(
+        make_entity(de_index=7, entity_type=190, form=1, data={
+            "deloc": 1, "denrml": 3, "derefd": 5}),
+        indicator,
+        distance,
+    )
 
 
 def _offset_surface_over_cylinder_doc(indicator: list[float], distance: float) -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=116, data={
-            "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
-        make_entity(de_index=3, entity_type=123, data={
-            "x": 0.0, "y": 0.0, "z": 1.0}),
-        make_entity(de_index=5, entity_type=123, data={
-            "x": 1.0, "y": 0.0, "z": 0.0}),
+    return _offset_surface_over_base_doc(
         make_entity(de_index=7, entity_type=192, form=1, data={
             "deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}),
-        make_entity(de_index=9, entity_type=140, data={
-            "nx": indicator[0], "ny": indicator[1], "nz": indicator[2],
-            "d": distance, "de": 7}),
-    ])
+        indicator,
+        distance,
+    )
+
+
+def _offset_surface_over_cone_doc(indicator: list[float], distance: float) -> dict[str, object]:
+    return _offset_surface_over_base_doc(
+        make_entity(de_index=7, entity_type=194, form=1, data={
+            "deloc": 1, "deaxis": 3, "radius": 2.0,
+            "sangle": 45.0, "derefd": 5}),
+        indicator,
+        distance,
+    )
+
+
+def _offset_surface_over_sphere_doc(indicator: list[float], distance: float) -> dict[str, object]:
+    return _offset_surface_over_base_doc(
+        make_entity(de_index=7, entity_type=196, form=1, data={
+            "deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5}),
+        indicator,
+        distance,
+    )
+
+
+def _offset_surface_over_torus_doc(indicator: list[float], distance: float) -> dict[str, object]:
+    return _offset_surface_over_base_doc(
+        make_entity(de_index=7, entity_type=198, form=1, data={
+            "deloc": 1, "deaxis": 3, "majrad": 5.0,
+            "minrad": 1.0, "derefd": 5}),
+        indicator,
+        distance,
+    )
 
 
 def test_offset_surface_over_plane_offsets_along_plane_normal(
@@ -780,6 +812,45 @@ def test_offset_surface_indicator_flips_global_normal_orientation(
     )
     assert payload["ok"] is True
     assert payload["point"] == pytest.approx([0.0, 1.5, 1.0], abs=1e-9)
+
+
+def test_offset_surface_over_cone_uses_conical_reference_parameters(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _offset_surface_over_cone_doc([1.0, 0.0, -1.0], 0.5)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 9, 90.0, tmp_path, s=1.0,
+    )
+    assert payload["ok"] is True
+    delta = 0.5 / math.sqrt(2.0)
+    assert payload["point"] == pytest.approx([0.0, 3.0 + delta, 1.0 - delta], abs=1e-9)
+
+
+def test_offset_surface_over_sphere_extends_radius_along_spherical_normal(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _offset_surface_over_sphere_doc([0.0, math.sqrt(3.0), 1.0], 0.5)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 9, 90.0, tmp_path, s=30.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx(
+        [0.0, 1.25 * math.sqrt(3.0), 1.25], abs=1e-9,
+    )
+
+
+def test_offset_surface_over_torus_offsets_along_minor_circle_normal(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _offset_surface_over_torus_doc([0.0, 0.0, 1.0], 0.5)
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 9, 90.0, tmp_path, s=180.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([-5.0, 0.0, 1.5], abs=1e-9)
 
 
 # §§4.50–4.54: Analytic surfaces.
@@ -875,6 +946,40 @@ def test_toroidal_surface_eval_matches_major_and_minor_radii(
     )
     assert payload["ok"] is True
     assert payload["point"] == pytest.approx([-5.0, 0.0, 1.0], abs=1e-9)
+
+
+def test_transformed_plane_surface_applies_entity_matrix_after_eval(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=124, data={
+            "rotation": [
+                [0.0, -1.0, 0.0],
+                [1.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0],
+            ],
+            "translation": [10.0, -5.0, 2.0],
+        }),
+        make_entity(de_index=3, entity_type=116, data={
+            "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
+        make_entity(de_index=5, entity_type=123, data={
+            "x": 0.0, "y": 0.0, "z": 1.0}),
+        make_entity(de_index=7, entity_type=123, data={
+            "x": 1.0, "y": 0.0, "z": 0.0}),
+        make_entity(
+            de_index=9,
+            entity_type=190,
+            form=1,
+            data={"deloc": 3, "denrml": 5, "derefd": 7},
+            directory_entry_overrides={"xform_matrix": 1},
+        ),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 9, 2.0, tmp_path, s=-1.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([11.0, -3.0, 2.0], abs=1e-9)
 
 
 # §1 eval contract: non-parametric entity types must be rejected.

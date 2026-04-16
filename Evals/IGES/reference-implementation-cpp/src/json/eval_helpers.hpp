@@ -3,9 +3,10 @@
 // `iges eval` semantics depend on other entities referenced by DE index.
 //
 // The auto-generated `evaluate_entity_dispatch` routes a fixed set of
-// "resolver-using" type numbers (102, 130, 118, 120, 122, 140) to the
-// free functions declared here. Simple self-contained entities (Line,
-// Circular Arc, B-Spline, etc.) stay inline in dispatch.cpp.
+// "resolver-using" type numbers (102, 118, 120, 122, 130, 140,
+// 190/192/194/196/198) to the free functions declared here. Simple
+// self-contained entities (Line, Circular Arc, B-Spline, etc.) stay
+// inline in dispatch.cpp.
 
 #include "dispatch.hpp"
 #include "../entities/conical_surface_entity.hpp"

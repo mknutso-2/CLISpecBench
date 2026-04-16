@@ -368,6 +368,9 @@ surface_reference_parameters(int type,
     }
     case 190:
     case 192:
+    case 194:
+    case 196:
+    case 198:
         return SurfaceParams{0.0, 0.0};
     default:
         break;
@@ -785,6 +788,9 @@ evaluate_offset_surface(OffsetSurfaceEntity const& ent,
         "§4.30");
     if (!indicator) return std::unexpected(indicator.error());
 
+    // The indicator vector selects which global orientation counts as the
+    // surface's positive normal. Anchor that choice at a stable reference
+    // parameter pair, then apply the same sign to the local normal at (t, s).
     Vec3 oriented_normal = *normal;
     if (dot(*ref_normal, *indicator) < 0.0) {
         oriented_normal = -1.0 * oriented_normal;
