@@ -316,16 +316,8 @@ def run_evaluation(
         scores.extension_scores.update(compute_subscores(tests))
 
         # --- 9. Assemble result ---
-        exit_reason = "timeout" if container_run.timed_out else "completed"
-        if container_run.exit_code and container_run.exit_code != 0:
-            exit_reason = "error"
-
-        # Detect runs where the agent produced nothing useful
-        if exit_reason == "completed" and token_usage is None and not any(submission_dir.iterdir()):
-            exit_reason = "no_output"
-            log.warning("Agent produced no tokens and no output files")
-
-        # Extract last agent message for completeness assessment
+        # Extract last agent message for completeness assessment. Pulled up
+        # from later in this block so it can feed into the no_output heuristic.
         agent_last_message: str | None = None
         try:
             raw_msg = adapter.extract_last_agent_message(container_logs)
@@ -333,6 +325,34 @@ def run_evaluation(
                 agent_last_message = raw_msg[:2000]
         except Exception:
             log.debug("Failed to extract last agent message", exc_info=True)
+
+        exit_reason = "timeout" if container_run.timed_out else "completed"
+        if container_run.exit_code and container_run.exit_code != 0:
+            exit_reason = "error"
+
+        # Detect runs where the agent never actually started doing work
+        # (e.g. auth failure, container startup crash, CLI binary missing).
+        # A real agent run takes minutes. If the container exited cleanly in
+        # under a minute with no output files AND no agent chat message, the
+        # agent never ran in any meaningful sense — reclassify as no_output.
+        #
+        # NOTE: token_usage is NOT a reliable signal here. Some CLI adapters
+        # only emit usage on successful turns (codex-cli, for example, only
+        # records tokens on `turn.completed` — a `turn.failed` from context
+        # exhaustion leaves token_usage=None even after a 30-minute run).
+        # Using wall_clock_seconds + agent_last_message avoids conflating
+        # "agent ran and hit an API error" with "agent never started".
+        if (
+            exit_reason == "completed"
+            and container_run.wall_clock_seconds < 60
+            and not any(submission_dir.iterdir())
+            and not agent_last_message
+        ):
+            exit_reason = "no_output"
+            log.warning(
+                "Agent produced no output files in %.1fs — likely startup failure",
+                container_run.wall_clock_seconds,
+            )
 
         metadata = RunMetadata(
             run_id=run_id,
