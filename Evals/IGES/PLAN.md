@@ -141,8 +141,10 @@ prompt/
   - [x] §4.12 Plane (108) — covered in `test_entity_roundtrips.py`
         + `test_pointer_backed_fields.py`
   - [x] §4.13 Line (110) — pilot, `test_line_entity.py`
-  - [ ] §4.14 Parametric Spline Curve (112)
-  - [ ] §4.15 Parametric Spline Surface (114)
+  - [x] §4.14 Parametric Spline Curve (112) — covered in
+        `test_spline_and_fea_entities.py`
+  - [x] §4.15 Parametric Spline Surface (114) — covered in
+        `test_spline_and_fea_entities.py`
   - [ ] §4.16 Point (116) — covered in `test_entity_roundtrips.py`
   - [x] §4.17 Ruled Surface (118) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
@@ -153,13 +155,17 @@ prompt/
   - [ ] §4.20 Direction (123) — covered in `test_entity_roundtrips.py`
   - [ ] §4.21 Transformation Matrix (124) — covered in `test_entity_roundtrips.py`
   - [x] §4.22 Flash (125) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.23 Rational B-Spline Curve (126)
-  - [ ] §4.24 Rational B-Spline Surface (128)
+  - [x] §4.23 Rational B-Spline Curve (126) — covered in
+        `test_spline_and_fea_entities.py`
+  - [x] §4.24 Rational B-Spline Surface (128) — covered in
+        `test_spline_and_fea_entities.py`
   - [x] §4.25 Offset Curve (130) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
-  - [ ] §4.26 Connect Point (132)
+  - [x] §4.26 Connect Point (132) — covered in
+        `test_spline_and_fea_entities.py` + `test_defaulted_fields.py`
   - [x] §4.27 Node (134) — covered in `test_pointer_backed_fields.py`
-  - [ ] §4.28 Finite Element (136)
+  - [x] §4.28 Finite Element (136) — covered in
+        `test_spline_and_fea_entities.py`
   - [x] §4.29 Nodal Displacement (138) — covered in
         `test_pointer_backed_fields.py`
   - [x] §4.30 Offset Surface (140) — covered in

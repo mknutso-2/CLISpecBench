@@ -1,5 +1,27 @@
 # IGES Changelog
 
+## v1.0.11 — unreleased
+
+### Added
+
+- CLI-level spline/NURBS/FEA coverage in
+  `tests/test_spline_and_fea_entities.py` for:
+  - Parametric Spline Curve / Surface (112 / 114)
+  - Rational B-Spline Curve / Surface (126 / 128)
+  - Connect Point / Finite Element (132 / 136)
+
+### Changed
+
+- `prompt/technical-requirements-prompt.md` now includes Type `126`
+  `plane_normal`, matching the shipped canonical JSON schema.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`198 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.10 — unreleased
 
 ### Added

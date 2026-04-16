@@ -698,6 +698,7 @@ type RationalBSplineCurveData = {
   control_points: Vec3[],  // length = K+1
   v0: number,  // Starting parameter value
   v1: number,  // Ending parameter value
+  plane_normal: Vec3,  // Unit normal if planar (PROP1=1)
 };
 ```
 
