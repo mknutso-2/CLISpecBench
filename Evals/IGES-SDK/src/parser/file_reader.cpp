@@ -138,9 +138,9 @@ read_iges_file(std::istream& input) {
         // Strip entity type number prefix from PD string.
         // PD format is: "entity_type,param1,param2,...;"
         // We need to remove "entity_type," to get just the parameter data.
-        auto comma = pd_concat.find(',');
-        if (comma != std::string::npos) {
-            pd_concat = pd_concat.substr(comma + 1);
+        auto delimiter = pd_concat.find(file.global.param_delimiter);
+        if (delimiter != std::string::npos) {
+            pd_concat = pd_concat.substr(delimiter + 1);
         }
 
         file.entities.push_back({std::move(de), std::move(pd_concat)});

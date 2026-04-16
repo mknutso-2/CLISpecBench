@@ -58,6 +58,7 @@ struct PdSplitResult {
 };
 
 PdSplitResult split_pd_lines(std::string_view pd_string, int entity_type,
-                              int de_seq, int& pd_seq_counter);
+                              int de_seq, int& pd_seq_counter,
+                              char param_delimiter = ',');
 
 } // namespace iges

@@ -1,5 +1,33 @@
 # IGES Changelog
 
+## v1.0.1 — unreleased
+
+### Added
+
+- CLI-level ports of the IGES-SDK's spec-backed file-format coverage:
+  - `tests/test_data_types.py`
+  - `tests/test_free_format.py`
+  - `tests/test_sections.py`
+- `tests/raw_iges_support.py` for constructing and inspecting raw
+  physical IGES records in section-format tests.
+
+### Changed
+
+- The C++ reference implementation now honors non-default Global
+  parameter/record delimiters when writing and re-reading PD records,
+  including the entity-type prefix on each PD record.
+- Global-section parsing now surfaces invalid field diagnostics instead
+  of silently defaulting malformed tokens.
+- `test_malformed.py`'s minimal-valid fixture now encodes `"site"` with
+  the correct Hollerith count.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`107 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.0 — unreleased
 
 Initial IGES eval release. The task is now functional end-to-end with a
@@ -37,7 +65,7 @@ Python CLI test suite.
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`93 passed`, 2026-04-16).
+  (`107 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 - First real-agent smoke run completed cleanly:

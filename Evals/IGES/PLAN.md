@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (93 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (107 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -124,10 +124,10 @@ prompt/
 - [x] **Pilot port: Line entity end-to-end** — `test_line_entity.py`,
       10 tests, all passing against the C++ ref-impl.
 - [ ] **File format / data type tests** (higher value — port first)
-  - [ ] `test_2_2_2_*.cpp` → `test_data_types.py` (integer, real, string,
+  - [x] `test_2_2_2_*.cpp` → `test_data_types.py` (integer, real, string,
         pointer, logical).
-  - [ ] `test_2_2_3_*.cpp` → `test_free_format.py` (delimiters, free format).
-  - [ ] `test_2_2_4_*.cpp` → `test_sections.py` (Start/Global/DE/PD/Terminate).
+  - [x] `test_2_2_3_*.cpp` → `test_free_format.py` (delimiters, free format).
+  - [x] `test_2_2_4_*.cpp` → `test_sections.py` (Start/Global/DE/PD/Terminate).
 - [ ] **Per-entity tests** — 87 entity-level ports. Broad coverage
       (round-trip of `entity.data` for 14 entity types) now lives in
       `test_entity_roundtrips.py`; per-entity `§4.X` files below are still

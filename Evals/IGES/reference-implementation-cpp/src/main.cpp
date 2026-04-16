@@ -34,6 +34,7 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <cctype>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -165,6 +166,41 @@ void write_json(std::string const& path, json const& j) {
     write_file(path, j.dump(2) + "\n");
 }
 
+std::string rewrite_pd_delimiters(std::string_view pd_string,
+                                  char param_delimiter,
+                                  char record_delimiter) {
+    if (param_delimiter == ',' && record_delimiter == ';') {
+        return std::string(pd_string);
+    }
+
+    std::string out;
+    out.reserve(pd_string.size());
+    for (std::size_t i = 0; i < pd_string.size();) {
+        if (std::isdigit(static_cast<unsigned char>(pd_string[i])) != 0) {
+            std::size_t scan = i;
+            while (scan < pd_string.size() &&
+                   std::isdigit(static_cast<unsigned char>(pd_string[scan])) != 0) {
+                ++scan;
+            }
+            if (scan < pd_string.size() &&
+                (pd_string[scan] == 'H' || pd_string[scan] == 'h')) {
+                auto count = std::stoul(std::string(pd_string.substr(i, scan - i)));
+                auto end = std::min(pd_string.size(), scan + 1 + count);
+                out.append(pd_string.substr(i, end - i));
+                i = end;
+                continue;
+            }
+        }
+
+        char ch = pd_string[i];
+        if (ch == ',') out += param_delimiter;
+        else if (ch == ';') out += record_delimiter;
+        else out += ch;
+        ++i;
+    }
+    return out;
+}
+
 // ── Parse → canonical JSON ───────────────────────────────────
 
 // Build the canonical IGES-JSON document described in §2 from a parsed
@@ -239,7 +275,8 @@ std::expected<std::string, json> canonical_json_to_iges(json const& j) {
                     d.message, d.spec_ref, d.line, "parameter",
                     json::array({diag_to_json(d)})));
             }
-            w.pd_string = *pd;
+            w.pd_string = rewrite_pd_delimiters(
+                *pd, global.param_delimiter, global.record_delimiter);
             entities.push_back(std::move(w));
         }
 

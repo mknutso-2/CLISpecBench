@@ -57,7 +57,7 @@ def _minimal_valid_iges() -> str:
     # G section — compact single line with all 26 fields defaulted.
     g_body = (
         "1H,,1H;,4Htest,8Htest.igs,3HSDK,3H1.0,32,38,6,308,15,,1.0,"
-        "2,2HMM,1,0.01,15H20260414.120000,1.0E-6,1.0,3Husr,3Hsite,11,3,;"
+        "2,2HMM,1,0.01,15H20260414.120000,1.0E-6,1.0,3Husr,4Hsite,11,3,;"
     )
     g_lines: list[str] = []
     for i in range(0, len(g_body), 72):

@@ -153,9 +153,11 @@ std::string format_directory_entry(DirectoryEntry const& de, int de_seq) {
 // ── PD line splitting (§2.2.4.5) ────────────────────────────────
 
 PdSplitResult split_pd_lines(std::string_view pd_string, int entity_type,
-                              int de_seq, int& pd_seq_counter) {
+                              int de_seq, int& pd_seq_counter,
+                              char param_delimiter) {
     // Prepend entity type number + delimiter to the PD string
-    std::string full = std::format("{},", entity_type) + std::string(pd_string);
+    std::string full = std::format("{}{}", entity_type, param_delimiter) +
+                       std::string(pd_string);
 
     PdSplitResult result;
     std::size_t pos = 0;

@@ -62,7 +62,7 @@ std::string write_iges_file(
         int de_seq = static_cast<int>(i) * 2 + 1;  // DE sequence numbers: 1, 3, 5, ...
         int start_seq = pd_seq;
         auto result = split_pd_lines(ent.pd_string, ent.de.entity_type.value,
-                                      de_seq, pd_seq);
+                                      de_seq, pd_seq, global.param_delimiter);
         pd_infos.push_back({start_seq, result.line_count, std::move(result.lines)});
     }
     int p_count = pd_seq - 1;
