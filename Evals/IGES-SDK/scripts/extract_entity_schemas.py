@@ -50,7 +50,7 @@ class Struct:
     name: str
     fields: list[Field]
     # Nested-struct dependencies that appear in this file above the main struct
-    nested: list["Struct"]
+    nested: list[Struct]
 
 
 @dataclass
@@ -100,7 +100,7 @@ def map_cpp_to_ts(cpp_type: str) -> str:
 
 def split_template_args(args: str) -> list[str]:
     """Split 'A, B<C, D>, E' on top-level commas only."""
-    out = []
+    out: list[str] = []
     depth = 0
     current: list[str] = []
     for ch in args:

@@ -112,7 +112,7 @@ def render_to_json(name: str, fields: list[tuple[str, str, int]]) -> str:
     for _, fname, size in fields:
         if size > 0:
             # Fixed-size C array → JSON array
-            lines.append(f'    {{ auto a = nlohmann::json::array();')
+            lines.append("    { auto a = nlohmann::json::array();")
             lines.append(f"      for (int i = 0; i < {size}; ++i) a.push_back(o.{fname}[i]);")
             lines.append(f'      j["{fname}"] = std::move(a); }}')
         else:
@@ -131,7 +131,10 @@ def render_from_json(name: str, fields: list[tuple[str, str, int]]) -> str:
         if size > 0:
             lines.append(f'    {{ auto const& a = j.at("{fname}");')
             lines.append(f'      if (!a.is_array() || a.size() != {size})')
-            lines.append(f'          throw nlohmann::json::type_error::create(302, "{name}.{fname} expects {size}-element array", &a);')
+            lines.append(
+                f'          throw nlohmann::json::type_error::create(302,'
+                f' "{name}.{fname} expects {size}-element array", &a);'
+            )
             lines.append(f"      for (int i = 0; i < {size}; ++i) a.at(i).get_to(o.{fname}[i]); }}")
         else:
             lines.append(f'    j.at("{fname}").get_to(o.{fname});')
