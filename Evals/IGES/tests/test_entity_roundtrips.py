@@ -179,6 +179,206 @@ def test_transformation_matrix_non_identity(
     assert data["rotation"][1][0] == pytest.approx(1.0)
 
 
+# §4.5 Conic Arc (Type 104, form 1 = ellipse)
+def test_conic_arc_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "A": -0.25, "B": 0.0, "C": -(1.0 / 9.0),
+        "D": 0.0, "E": 0.0, "F": 1.0,
+        "zt": 1.5,
+        "x1": 2.0, "y1": 0.0,
+        "x2": 0.0, "y2": 3.0,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=104, form=1, data=payload,
+    )
+    for key, value in payload.items():
+        if isinstance(value, float):
+            assert data[key] == pytest.approx(value)
+        else:
+            assert data[key] == value
+
+
+# §4.5 Copious Data (Type 106, form 12 = 3D linear path)
+def test_copious_data_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "ip": 2,
+        "n": 3,
+        "zt": 0.0,
+        "data": [0.0, 0.0, 0.0, 1.0, 2.0, 3.0, 3.0, 2.0, 1.0],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=106, form=12, data=payload,
+    )
+    assert data == payload
+
+
+# §4.17 Ruled Surface (Type 118)
+def test_ruled_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"de1": 1, "de2": 3, "dirflg": 0, "devflg": 1}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=118, data=payload,
+    )
+    assert data == payload
+
+
+# §4.18 Surface of Revolution (Type 120)
+def test_surface_of_revolution_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"l": 1, "c": 3, "sa": -0.1, "ta": 3.241592653589793}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=120, data=payload,
+    )
+    assert data["l"] == 1
+    assert data["c"] == 3
+    assert data["sa"] == pytest.approx(-0.1)
+    assert data["ta"] == pytest.approx(payload["ta"])
+
+
+# §4.19 Tabulated Cylinder (Type 122)
+def test_tabulated_cylinder_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"de": 1, "terminate_point": [0.0, 0.0, 5.0]}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=122, data=payload,
+    )
+    assert data["de"] == 1
+    assert data["terminate_point"] == pytest.approx([0.0, 0.0, 5.0])
+
+
+# §4.22 Flash (Type 125)
+def test_flash_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "x": 1.0,
+        "y": 2.0,
+        "dim1": 0.5,
+        "dim2": 0.25,
+        "rot": 0.0,
+        "de": 0,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=125, data=payload,
+    )
+    assert data == payload
+
+
+# §4.25 Offset Curve (Type 130)
+def test_offset_curve_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "de1": 1,
+        "flag": 1,
+        "de2": 0,
+        "ndim": 3,
+        "ptype": 1,
+        "d1": 2.0,
+        "td1": 0.0,
+        "d2": 0.0,
+        "td2": 0.0,
+        "vx": 0.0,
+        "vy": 0.0,
+        "vz": 1.0,
+        "tt1": 0.0,
+        "tt2": 10.0,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=130, data=payload,
+    )
+    assert data == payload
+
+
+# §4.30 Offset Surface (Type 140)
+def test_offset_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"nx": 0.0, "ny": 0.0, "nz": 1.0, "d": 2.5, "de": 7}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=140, data=payload,
+    )
+    assert data == payload
+
+
+# §4.50 Plane Surface (Type 190, form 1)
+def test_plane_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "denrml": 3, "derefd": 5}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=190, form=1, data=payload,
+    )
+    assert data == payload
+
+
+# §4.51 Cylindrical Surface (Type 192, form 1)
+def test_cylindrical_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=192, form=1, data=payload,
+    )
+    assert data == payload
+
+
+# §4.52 Conical Surface (Type 194, form 1)
+def test_conical_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "radius": 2.0,
+        "sangle": 0.5235987755982988,
+        "derefd": 5,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=194, form=1, data=payload,
+    )
+    assert data["deloc"] == 1
+    assert data["deaxis"] == 3
+    assert data["radius"] == pytest.approx(2.0)
+    assert data["sangle"] == pytest.approx(payload["sangle"])
+    assert data["derefd"] == 5
+
+
+# §4.53 Spherical Surface (Type 196, form 1)
+def test_spherical_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "radius": 3.5, "deaxis": 3, "derefd": 5}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=196, form=1, data=payload,
+    )
+    assert data == payload
+
+
+# §4.54 Toroidal Surface (Type 198, form 1)
+def test_toroidal_surface_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "majrad": 6.0,
+        "minrad": 1.5,
+        "derefd": 5,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=198, form=1, data=payload,
+    )
+    assert data == payload
+
+
 # §4.92 Subfigure Definition (Type 308)
 def test_subfigure_definition_roundtrip(
     submission_command: Sequence[str], tmp_path: Path

@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (119 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (132 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -136,26 +136,32 @@ prompt/
   - [ ] §4.3 Circular Arc (100) — covered in `test_entity_roundtrips.py`
         + `test_geometric_eval.py`
   - [ ] §4.4 Composite Curve (102) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.5 Conic Arc / Copious Data (104 / 106)
+  - [x] §4.5 Conic Arc / Copious Data (104 / 106) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.12 Plane (108) — covered in `test_entity_roundtrips.py`
   - [x] §4.13 Line (110) — pilot, `test_line_entity.py`
   - [ ] §4.14 Parametric Spline Curve (112)
   - [ ] §4.15 Parametric Spline Surface (114)
   - [ ] §4.16 Point (116) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.17 Ruled Surface (118)
-  - [ ] §4.18 Surface of Revolution (120)
-  - [ ] §4.19 Tabulated Cylinder (122)
+  - [x] §4.17 Ruled Surface (118) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
+  - [x] §4.18 Surface of Revolution (120) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
+  - [x] §4.19 Tabulated Cylinder (122) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.20 Direction (123) — covered in `test_entity_roundtrips.py`
   - [ ] §4.21 Transformation Matrix (124) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.22 Flash (125)
+  - [x] §4.22 Flash (125) — covered in `test_entity_roundtrips.py`
   - [ ] §4.23 Rational B-Spline Curve (126)
   - [ ] §4.24 Rational B-Spline Surface (128)
-  - [ ] §4.25 Offset Curve (130)
+  - [x] §4.25 Offset Curve (130) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.26 Connect Point (132)
   - [ ] §4.27 Node (134)
   - [ ] §4.28 Finite Element (136)
   - [ ] §4.29 Nodal Displacement (138)
-  - [ ] §4.30 Offset Surface (140)
+  - [x] §4.30 Offset Surface (140) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.31 Boundary (141)
   - [ ] §4.32 Curve on Parametric Surface (142)
   - [ ] §4.33 Bounded Surface (143)
@@ -175,11 +181,16 @@ prompt/
   - [ ] §4.47 Selected Component (182)
   - [ ] §4.48 Solid Assembly (184)
   - [ ] §4.49 MSBO (186)
-  - [ ] §4.50 Plane Surface (190)
-  - [ ] §4.51 Cylindrical Surface (192)
-  - [ ] §4.52 Conical Surface (194)
-  - [ ] §4.53 Spherical Surface (196)
-  - [ ] §4.54 Toroidal Surface (198)
+  - [x] §4.50 Plane Surface (190) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
+  - [x] §4.51 Cylindrical Surface (192) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
+  - [x] §4.52 Conical Surface (194) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
+  - [x] §4.53 Spherical Surface (196) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
+  - [x] §4.54 Toroidal Surface (198) — covered in
+        `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [ ] §4.55 Angular Dimension (202)
   - [ ] §4.56 Curve / Diameter Dimension (204 / 206)
   - [ ] §4.57 General Label (210)

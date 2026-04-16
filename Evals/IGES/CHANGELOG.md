@@ -1,5 +1,29 @@
 # IGES Changelog
 
+## v1.0.3 — unreleased
+
+### Added
+
+- Additional per-entity round-trip coverage in `tests/test_entity_roundtrips.py`
+  for:
+  - Conic Arc (104)
+  - Copious Data (106)
+  - Ruled Surface (118)
+  - Surface of Revolution (120)
+  - Tabulated Cylinder (122)
+  - Flash (125)
+  - Offset Curve (130)
+  - Offset Surface (140)
+  - Plane / Cylindrical / Conical / Spherical / Toroidal Surfaces
+    (190 / 192 / 194 / 196 / 198)
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`132 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.2 — unreleased
 
 ### Added
@@ -18,7 +42,7 @@
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`119 passed`, 2026-04-16).
+  (`132 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
@@ -46,7 +70,7 @@
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`119 passed`, 2026-04-16).
+  (`132 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
@@ -87,7 +111,7 @@ Python CLI test suite.
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`119 passed`, 2026-04-16).
+  (`132 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 - First real-agent smoke run completed cleanly:
