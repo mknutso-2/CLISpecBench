@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (161 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (170 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -217,17 +217,24 @@ prompt/
         `test_annotation_entities.py`
   - [x] §4.68 Sectioned Area (230) — covered in
         `test_annotation_entities.py`
-  - [ ] §4.69 Associativity Definition (302)
-  - [ ] §4.74 Text Font Definition (310)
-  - [ ] §4.75 Text Display Template (312)
-  - [ ] §4.77 Units Data (316)
+  - [x] §4.69 Associativity Definition (302) — covered in
+        `test_metadata_entities.py`
+  - [x] §4.74 Text Font Definition (310) — covered in
+        `test_metadata_entities.py`
+  - [x] §4.75 Text Display Template (312) — covered in
+        `test_metadata_entities.py`
+  - [x] §4.77 Units Data (316) — covered in
+        `test_metadata_entities.py`
   - [x] §4.78 Network Subfigure Definition (320) — covered in
         `test_pointer_backed_fields.py` + `test_defaulted_fields.py`
-  - [ ] §4.79 Attribute Table Definition (322)
+  - [x] §4.79 Attribute Table Definition (322) — covered in
+        `test_metadata_entities.py`
   - [ ] §4.90 Associativity Instance (402)
-  - [ ] §4.91 Line Font Definition (304)
+  - [x] §4.91 Line Font Definition (304) — covered in
+        `test_metadata_entities.py`
   - [ ] §4.92 Subfigure Definition (308) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.93 Color Definition (314)
+  - [x] §4.93 Color Definition (314) — covered in
+        `test_metadata_entities.py`
   - [ ] §4.97 Property (406) — covered in `test_entity_roundtrips.py`
   - [ ] §4.131 Drawing (404) — covered in `test_entity_roundtrips.py`
   - [ ] §4.133 Subfigure Instance (408) — covered in `test_entity_roundtrips.py`
@@ -239,7 +246,8 @@ prompt/
         `test_pointer_backed_fields.py`
   - [x] §4.140 Network Subfigure Instance (420) — covered in
         `test_pointer_backed_fields.py`
-  - [ ] §4.142 Solid Instance (430)
+  - [x] §4.142 Solid Instance (430) — covered in
+        `test_metadata_entities.py`
   - [x] §4.143 Vertex List (502) — covered in `test_entity_roundtrips.py`
   - [x] §4.144 Edge List (504) — covered in `test_entity_roundtrips.py`
   - [x] §4.145 Loop (508) — covered in `test_entity_roundtrips.py`

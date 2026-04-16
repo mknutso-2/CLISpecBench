@@ -1,5 +1,27 @@
 # IGES Changelog
 
+## v1.0.8 — unreleased
+
+### Added
+
+- CLI-level metadata/reference coverage in
+  `tests/test_metadata_entities.py` for:
+  - Associativity Definition (302)
+  - Line Font Definition (304, Forms 1 and 2)
+  - Text Font Definition (310)
+  - Text Display Template (312)
+  - Color Definition (314)
+  - Units Data (316)
+  - Attribute Table Definition (322, Form 2)
+  - Solid Instance (430)
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`170 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.7 — unreleased
 
 ### Added
