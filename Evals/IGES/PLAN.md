@@ -79,10 +79,11 @@ prompt/
 - [x] `docs/figures/` — copied 86 PNGs from `IGES-SDK/figures/` unchanged
       (counts 036a/036b as separate files).
 - [x] `base-prompt.md` — domain-expert prompt drafted.
-- [ ] `technical-requirements-prompt.md` — CLI contract + full JSON schema
+- [x] `technical-requirements-prompt.md` — CLI contract + full JSON schema
       (§1 + §2 above).
-- [ ] Confirm total prompt token count fits within a baseline agent's
-      single-turn context (test with claude-opus-4-6).
+- [x] Confirm baseline-agent prompt usability with `claude-opus-4-6`
+      via a real harness run (completed 2026-04-16 without auth,
+      rate-limit, or context-exhaustion failure).
 - [ ] Decide whether to ship `IGES5-3.pdf` in `docs/` (license check) or
       rely on the transcribed `.md` alone. Default: `.md` only.
 
@@ -103,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (54 tests, 2026-04-14).
+- [x] Ref-impl passes the full Python test suite (93 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -226,12 +227,11 @@ prompt/
         preservation + byte-level idempotence after one normalization
         pass. Library-internal `test_writer_roundtrip*.cpp` per-entity
         cases are covered by `test_entity_roundtrips.py`.
-- [x] **Geometric evaluation** — `test_geometric_eval.py`, 5 tests:
-      Circular Arc evaluation at start/end/mid-angle, z-plane respect,
-      eval-on-non-parametric rejected. Ports the CLI-observable subset
-      of `test_geometric_evaluation.cpp`; B-spline / surface / block /
-      sphere / cylinder evaluation is a follow-up once the Arc contract
-      is settled (see Open Questions).
+- [x] **Geometric evaluation** — `test_geometric_eval.py`, 44 tests:
+      direct coverage for Circular Arc, Copious Data, Composite Curve,
+      Offset Curve, Ruled Surface, Surface of Revolution, Tabulated
+      Cylinder, Offset Surface, Conic Arc, and analytic surfaces
+      190/192/194/196/198, including transform-aware cases.
 - [x] **Malformed input** — `test_malformed.py`, 6 tests covering
       MAL-1/MAL-2/MAL-10/MAL-12 plus query-on-nonexistent-DE and
       random-bytes-input. Asserts `ok:false` + `error` field on the
@@ -267,14 +267,19 @@ prompt/
 
 ## 7. End-to-End Validation
 
-- [ ] `pytest Evals/IGES/tests --language=cpp` passes against the ref-impl.
-- [ ] `uv run ruff check` clean.
-- [ ] `uv run pyright` clean.
-- [ ] Smoke-test with one real agent run (baseline: `swe-buildbench run
+- [x] `pytest Evals/IGES/tests --language=cpp` passes against the ref-impl.
+- [x] `uv run ruff check` clean.
+- [x] `uv run pyright` clean.
+- [x] Smoke-test with one real agent run (baseline: `swe-buildbench run
       --task iges --agent claude-code --model claude-opus-4-6 --runs 1`) —
-      confirm the agent builds something, the harness scores it, and the
-      result JSON is sensible.
-- [ ] Record baseline pass rates before declaring 1.0.0 ready.
+      completed 2026-04-16 with a sensible result JSON and transcript.
+- [x] Record baseline pass rates before declaring 1.0.0 ready.
+      First real-agent run: `iges` / `claude-code` / `claude-opus-4-6`
+      scored `43/93` (46.24%), `exit_reason: "completed"`, no harness /
+      auth / rate-limit issue. Transcript shows the agent voluntarily
+      exited and claimed full success despite missing most parse /
+      roundtrip behavior, so the low score is model-quality, not
+      infrastructure.
 
 ## 8. Follow-up (post-1.0.0)
 
@@ -390,7 +395,7 @@ p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
 
 ### Remaining commits
 
-- [ ] **Commit 8** — Tabulated Cylinder (122). Self-contained
+- [x] **Commit 8** `12440a1` — Tabulated Cylinder (122). Self-contained
       directrix-dependent surface per §4.19: evaluates the directrix
       entity at native parameter `t` and translates by
       `s · (LX-DX, LY-DY, LZ-DZ)` where `(LX, LY, LZ)` is the
@@ -401,9 +406,9 @@ p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
       t, s, resolver)` in `eval_helpers.cpp`. `s ∈ [0, 1]` per §1.6.
       Tests: cylinder over a Line directrix (trivial check), cylinder
       over a Circular Arc directrix (check rotation preserved along
-      the sweep direction).
+      the sweep direction). Landed with full-suite green.
 
-- [ ] **Commit 9** — Offset Surface (140). Resolver-using per §4.30:
+- [x] **Commit 9** `c1f2373` — Offset Surface (140). Resolver-using per §4.30:
       evaluates base surface at `(t, s)`, computes the surface normal
       there, and offsets by the entity's `D` distance along the
       normal. Tricky: normal computation may need numeric
@@ -416,8 +421,10 @@ p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
       Plane Surface (190) — should yield parallel plane at distance
       D along the plane normal; offset of a Cylindrical Surface (192)
       — should yield concentric cylinder with radius increased by D.
+      Follow-up fix: reference-parameter coverage now includes analytic
+      bases 194/196/198 too.
 
-- [ ] **Commit 10** — Conic Arc (104). Form-dependent, self-contained
+- [x] **Commit 10** `604d027` — Conic Arc (104). Form-dependent, self-contained
       (no resolver). §4.5 gives three canonical forms:
       Form 1 Ellipse `C(t) = (a cos t, b sin t, zT)`,
       Form 2 Hyperbola `(a sec t, b tan t, zT)`,
@@ -429,16 +436,21 @@ p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
       also applies. This is the most math-heavy of the remaining
       commits. SDK `conic_arc_entity.hpp` already parses A..F but
       probably has no `evaluate()` — add as a member function. Tests:
-      one arc per form, evaluated at mid-range `t`.
+      one arc per form, evaluated at mid-range `t`. Landed with
+      transform-aware evaluation plumbing for referenced entities.
 
-- [ ] **Commit 11** — Analytic Surfaces (190/192/194/196/198).
+- [x] **Commit 11** `1d12f65` — Analytic Surfaces (190/192/194/196/198).
       Self-contained, parametric per §§4.50–4.54. All have explicit
       closed-form `(u, v) → (x, y, z)` mappings. Member `evaluate()`
       on each entity. §1.6 says "The CLI uses degrees for `u` where
       the spec uses degrees; radians otherwise." — double-check each
       spec section and reflect in the implementation. Five entities
       in one commit is reasonable since each is ~10 lines. Tests:
-      one surface per type at a mid-range `(t, s)`.
+      one surface per type at a mid-range `(t, s)`. Final follow-up
+      after landing: regenerated `dispatch.cpp` with a binary-safe
+      writer (removing accidental NUL bytes) and added offset-surface
+      coverage for conical / spherical / toroidal bases plus a
+      transformed analytic-surface regression.
 
 ### Workflow per commit
 
@@ -476,9 +488,12 @@ p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
   `"entity.hpp"` (not `"../types.hpp"`).
 - **Clang LSP diagnostics may be stale** (docker `compile_commands.json`
   lags the local tree). Trust the `pytest` run, not the editor squiggles.
-- **Pre-existing ruff errors** in `generate_dispatch.py` (36 E501 +
+- [x] ~~**Pre-existing ruff errors** in `generate_dispatch.py` (36 E501 +
   F541 issues) are not new work — fixing them is a separate concern
-  from this expansion.
+  from this expansion.~~
+  Additional IGES-SDK script cleanup landed 2026-04-16 in `e05ddc5`
+  (`extract_entity_schemas.py`, `generate_entity_json.py`) so the
+  touched generator/schema helpers are Ruff- and Pyright-clean.
 
 ### Design-decision audit trail
 
