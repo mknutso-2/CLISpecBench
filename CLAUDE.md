@@ -153,6 +153,8 @@ with Files/LOC to judge whether the agent's claim is credible. A message that sa
 ## Environment notes
 
 - **Use `python`, not `python3`**, for all shell commands. On this Windows system, `python3` is not available; `python` resolves to the correct interpreter.
+- **Do not assume the host `docker` CLI is usable from PowerShell.** On this Windows machine, `Get-Command docker` resolves to a zero-byte `C:\Windows\System32\docker` file, which broke ad hoc PowerShell pipeline usage in local testing, made `cmd /c docker ...` unreliable in local testing, and can trigger Windows "Pick an app to open docker" prompts. The harness itself talks to Docker through the Python Docker SDK (`src/swe_buildbench/harness/docker.py`), so `swe-buildbench run ...` is fine even when manual `docker` shell commands are not.
+- **Do not background eval runs via `Start-Process powershell ...` on this host.** That launch path opened visible external PowerShell windows during local testing. If you need a detached run, prefer a hidden `cmd.exe` wrapper or another non-windowed launcher; otherwise keep the eval in the current shell.
 
 ## Key docs
 

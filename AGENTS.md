@@ -155,6 +155,9 @@ Read the full `agent_last_message`, not just the first line, and cross-reference
 ## Environment notes
 
 - **Use `python`, not `python3`**, for all shell commands. On this Windows system, `python3` is not available; `python` resolves to the correct interpreter.
+- **Do not assume the host `docker` CLI is usable from PowerShell.** On this Windows machine, `Get-Command docker` resolves to a zero-byte `C:\Windows\System32\docker` file, which broke ad hoc PowerShell pipeline usage in local testing, made `cmd /c docker ...` unreliable in local testing, and can trigger Windows "Pick an app to open docker" prompts. The harness itself talks to Docker through the Python Docker SDK (`src/swe_buildbench/harness/docker.py`), so `swe-buildbench run ...` is fine even when manual `docker` shell commands are not.
+- **Do not background eval runs via `Start-Process powershell ...` on this host.** That launch path opened visible external PowerShell windows during local testing. If you need a detached run, prefer a hidden `cmd.exe` wrapper or another non-windowed launcher; otherwise keep the eval in the current shell.
+- **Tested detached eval launcher example on this host:** `Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d <repo> && [optional host-specific env such as DOCKER_HOST=tcp://localhost:2375 &&] uv run swe-buildbench run --task <task> --agent <agent> --model <model> [optional agent-specific flags such as --effort <effort>] [optional --runs <n>] 1>\"<out.log>\" 2>\"<err.log>\"'`. This worked for CNCSim codex-cli runs here without opening visible PowerShell windows.
 
 ## Key docs
 
