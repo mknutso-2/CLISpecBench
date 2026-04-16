@@ -4,7 +4,9 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterator
 from pathlib import Path, PurePosixPath
+from typing import Any, cast
 
 from swe_buildbench.agents.base import AgentAdapter, read_dockerfile_arg
 from swe_buildbench.harness.results import TokenUsage
@@ -13,7 +15,9 @@ log = logging.getLogger(__name__)
 
 DOCKERFILE = (
     Path(__file__).resolve().parent.parent.parent.parent
-    / "docker" / "agents" / "codex-cli.Dockerfile"
+    / "docker"
+    / "agents"
+    / "codex-cli.Dockerfile"
 )
 
 # Path inside the container where we tee the JSONL event stream
@@ -56,18 +60,15 @@ class CodexCLIAdapter(AgentAdapter):
 
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Use `codex exec --json` and tee the event stream for token parsing.
-        flags = (
-            f"--json --dangerously-bypass-approvals-and-sandbox"
-            f' --cd "{work_dir}"'
-        )
+        flags = f'--json --dangerously-bypass-approvals-and-sandbox --cd "{work_dir}"'
         if self._model:
             flags += f' --model "{self._model}"'
         if self._effort:
             flags += f' -c model_reasoning_effort="{self._effort}"'
         return [
-            "bash", "-c",
-            f'cat {prompt_path} | codex exec {flags}'
-            f' 2>&1 | tee {EVENT_LOG_PATH}',
+            "bash",
+            "-c",
+            f"cat {prompt_path} | codex exec {flags} 2>&1 | tee {EVENT_LOG_PATH}",
         ]
 
     def parse_token_usage(
@@ -97,21 +98,15 @@ class CodexCLIAdapter(AgentAdapter):
         cached_input_tokens = 0
 
         for source in sources:
-            for line in source.splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
+            for event in _iter_dict_events(source):
                 if event.get("type") == "turn.completed":
-                    usage = event.get("usage", {})
-                    input_tokens += usage.get("input_tokens", 0)
-                    output_tokens += usage.get("output_tokens", 0)
-                    cached_input_tokens += usage.get(
-                        "cached_input_tokens", 0,
-                    )
+                    usage = event.get("usage")
+                    if not isinstance(usage, dict):
+                        continue
+                    usage_d = cast(dict[str, Any], usage)
+                    input_tokens += int(usage_d.get("input_tokens", 0) or 0)
+                    output_tokens += int(usage_d.get("output_tokens", 0) or 0)
+                    cached_input_tokens += int(usage_d.get("cached_input_tokens", 0) or 0)
                     break  # Only one turn in exec mode
             if input_tokens > 0:
                 break  # Found usage, don't double-count from second source
@@ -154,20 +149,16 @@ class CodexCLIAdapter(AgentAdapter):
 
     def extract_last_agent_message(self, container_logs: str) -> str | None:
         """Extract last agent_message text from Codex CLI JSONL output."""
-        for line in reversed(container_logs.splitlines()):
-            line = line.strip()
-            if not line:
-                continue
-            try:
-                event = json.loads(line)
-            except (json.JSONDecodeError, ValueError):
-                continue
+        for event in _iter_dict_events(container_logs, reverse=True):
             if event.get("type") != "item.completed":
                 continue
-            item = event.get("item", {})
-            if item.get("type") != "agent_message":
+            item = event.get("item")
+            if not isinstance(item, dict):
                 continue
-            text = item.get("text", "")
+            item_d = cast(dict[str, Any], item)
+            if item_d.get("type") != "agent_message":
+                continue
+            text = item_d.get("text", "")
             if isinstance(text, str) and text.strip():
                 return text
         return None
@@ -176,7 +167,34 @@ class CodexCLIAdapter(AgentAdapter):
 def _count_tool_calls(container_logs: str) -> int:
     """Count command_execution items in Codex JSONL event stream."""
     count = 0
-    for line in container_logs.splitlines():
+    for event in _iter_dict_events(container_logs):
+        if event.get("type") != "item.completed":
+            continue
+        item = event.get("item")
+        if isinstance(item, dict):
+            item_d = cast(dict[str, Any], item)
+            if item_d.get("type") == "command_execution":
+                count += 1
+    return count
+
+
+def _iter_dict_events(
+    text: str,
+    *,
+    reverse: bool = False,
+) -> Iterator[dict[str, Any]]:
+    """Yield dict events from a Codex JSONL stream, skipping noise.
+
+    The codex-cli adapter tees stdout+stderr to the event log, so any bare
+    JSON literal the agent emits (``true`` / ``false`` / a quoted string of
+    source code / a bare number) ends up interleaved with the real event
+    dicts. Downstream parsers only care about dict-shaped events — skip
+    everything else here so callers don't need to repeat the guard.
+    """
+    lines = text.splitlines()
+    if reverse:
+        lines = list(reversed(lines))
+    for line in lines:
         line = line.strip()
         if not line:
             continue
@@ -184,8 +202,5 @@ def _count_tool_calls(container_logs: str) -> int:
             event = json.loads(line)
         except (json.JSONDecodeError, ValueError):
             continue
-        if event.get("type") == "item.completed":
-            item = event.get("item", {})
-            if item.get("type") == "command_execution":
-                count += 1
-    return count
+        if isinstance(event, dict):
+            yield event
