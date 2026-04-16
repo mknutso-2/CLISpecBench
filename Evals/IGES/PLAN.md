@@ -316,14 +316,178 @@ The contract in `technical-requirements-prompt.md` §1.5 lists curves
 `100, 102, 104, 106/11/12/63, 110, 112, 126, 130` and surfaces
 `114, 118, 120, 122, 128, 140, 190/192/194/196/198` as parametric.
 The C++ ref-impl + SDK only implement `evaluate()` for 6 of those
-(`100, 110, 112, 114, 126, 128`). Broadening both to match.
+(`100, 110, 112, 114, 126, 128`). Broadening both to match, using an
+**11-commit staging plan**. Commits land incrementally; each is
+self-contained (ref-impl change + dispatch regen + tests + green full
+suite). No `VERSION` / `CHANGELOG.md` bumps until after first agent
+run — per user rule, eval is still in active pre-first-run dev.
 
-- [x] §1.5 reverted to broad type list (2026-04-15).
+### Architecture of the expansion
+
+Self-contained curves/surfaces (those whose evaluation depends only on
+their own PD fields) get member `Vec3 evaluate(Real t)` / `evaluate(Real
+t, Real s)` methods in `Evals/IGES-SDK/src/entities/*.hpp`. The
+generator `Evals/IGES-SDK/scripts/generate_dispatch.py` auto-detects
+these via regex (`EVAL_CURVE_RE` / `EVAL_SURFACE_RE`) and emits switch
+cases into `Evals/IGES/reference-implementation-cpp/src/json/dispatch.cpp`.
+
+Resolver-using entities (those that reference other entities by DE
+pointer — Composite Curve 102, Ruled Surface 118, Surface of Revolution
+120, Offset Curve 130) get hand-written free functions in
+`Evals/IGES/reference-implementation-cpp/src/json/eval_helpers.{hpp,cpp}`
+and are registered in the generator's `RESOLVER_USING` map with kind
+`"curve"` / `"surface"` / `"surface_form"`.
+
+Shared helper `curve_native_span(type, form, data) → (v0, v1)` in
+`eval_helpers.cpp` returns the native parameter domain of a curve
+referenced by DE pointer — used by composite/offset/ruled/SoR
+constructions that need to know their constituent curves' parameter
+ranges without fully evaluating them.
+
+### Regeneration + Windows CRLF quirk
+
+After editing either a `RESOLVER_USING` entry or an entity's header,
+regenerate dispatch with:
+
+```bash
+python Evals/IGES-SDK/scripts/generate_dispatch.py \
+    > Evals/IGES/reference-implementation-cpp/src/json/dispatch.cpp
+```
+
+**Then normalize line endings** — Python's stdout redirection on
+Windows inserts `\r\n` and breaks the build's cross-platform line
+endings. Run immediately after:
+
+```python
+from pathlib import Path
+p = Path("Evals/IGES/reference-implementation-cpp/src/json/dispatch.cpp")
+p.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
+```
+
+### Landed commits
+
+- [x] §1.5 reverted to broad type list (2026-04-15, `eec0219`).
 - [x] §1.6 expanded to cover all contract types' native `t` / `(t, s)`.
-- [ ] Thread Model into `evaluate_entity_dispatch`.
-- [ ] Add SDK + ref-impl `evaluate()`: 104, 106, 102, 130, 118, 120,
-      122, 140, 190/192/194/196/198.
-- [ ] CLI hidden tests for each new type.
+- [x] §1.6 sweep-convention note: forward sweep `0 < Δ ≤ 2π` for
+      Type 100 and Type 120 angle ranges, full turn encoded as
+      `ta = sa + 2π`, hidden tests do not probe complementary arc
+      (commit `4bcc2d9`).
+- [x] **Commit 1** `5f5aaa4` — Thread `EntityResolver` through
+      `evaluate_entity_dispatch`.
+- [x] **Commit 2** `d1b472e` — Copious Data (106) forms 11/12/63
+      polyline evaluator.
+- [x] **Commit 3** `3c484e6` — Composite Curve (102) evaluator.
+- [x] **Commit 4** `8dfae4d` — Offset Curve (130) `FLAG=1` evaluator
+      (FLAG 2/3 out of scope, documented in §1.6).
+- [x] **Commit 5** `5b00097` — Ruled Surface (118) evaluator with
+      `surface_form` kind to thread `form` for Form-0 vs Form-1
+      normalization.
+- [x] **Commit 6** (was rolled into commit 1 — resolver threading).
+- [x] **Commit 7** `4bcc2d9` — Surface of Revolution (120) evaluator
+      using Rodrigues' rotation formula; axis entity must be Type 110
+      Line. Test angle range padded to `sa=-0.1, ta=π+0.1` to
+      sidestep `%.15g` last-bit rounding of π.
+
+### Remaining commits
+
+- [ ] **Commit 8** — Tabulated Cylinder (122). Self-contained
+      directrix-dependent surface per §4.19: evaluates the directrix
+      entity at native parameter `t` and translates by
+      `s · (LX-DX, LY-DY, LZ-DZ)` where `(LX, LY, LZ)` is the
+      generatrix terminate point and `(DX, DY, DZ)` is the directrix
+      start point (implicitly the first point of the directrix).
+      Resolver-using — add entry `122: ("tabulated_cylinder", "surface")`
+      to `RESOLVER_USING` and write `evaluate_tabulated_cylinder(ent,
+      t, s, resolver)` in `eval_helpers.cpp`. `s ∈ [0, 1]` per §1.6.
+      Tests: cylinder over a Line directrix (trivial check), cylinder
+      over a Circular Arc directrix (check rotation preserved along
+      the sweep direction).
+
+- [ ] **Commit 9** — Offset Surface (140). Resolver-using per §4.30:
+      evaluates base surface at `(t, s)`, computes the surface normal
+      there, and offsets by the entity's `D` distance along the
+      normal. Tricky: normal computation may need numeric
+      differentiation on the base surface, or analytic normals for
+      known base surface types. Check ref-impl SDK for existing
+      surface-normal code; if none, simplest approach is central-
+      difference around `(t, s)` with a small epsilon
+      (`1e-6 · span_size` on each axis). Register
+      `140: ("offset_surface", "surface")`. Tests: offset of a
+      Plane Surface (190) — should yield parallel plane at distance
+      D along the plane normal; offset of a Cylindrical Surface (192)
+      — should yield concentric cylinder with radius increased by D.
+
+- [ ] **Commit 10** — Conic Arc (104). Form-dependent, self-contained
+      (no resolver). §4.5 gives three canonical forms:
+      Form 1 Ellipse `C(t) = (a cos t, b sin t, zT)`,
+      Form 2 Hyperbola `(a sec t, b tan t, zT)`,
+      Form 3 Parabola `(t, −(A/E)t², zT)`. The entity's `A`..`F`
+      coefficients define the general conic `Ax² + Bxy + Cy² + Dx +
+      Ey + F = 0`, and the implementation must canonicalize to
+      definition space (rotation + translation) before applying the
+      form's default parameterization. Transformation Matrix pointer
+      also applies. This is the most math-heavy of the remaining
+      commits. SDK `conic_arc_entity.hpp` already parses A..F but
+      probably has no `evaluate()` — add as a member function. Tests:
+      one arc per form, evaluated at mid-range `t`.
+
+- [ ] **Commit 11** — Analytic Surfaces (190/192/194/196/198).
+      Self-contained, parametric per §§4.50–4.54. All have explicit
+      closed-form `(u, v) → (x, y, z)` mappings. Member `evaluate()`
+      on each entity. §1.6 says "The CLI uses degrees for `u` where
+      the spec uses degrees; radians otherwise." — double-check each
+      spec section and reflect in the implementation. Five entities
+      in one commit is reasonable since each is ~10 lines. Tests:
+      one surface per type at a mid-range `(t, s)`.
+
+### Workflow per commit
+
+1. Edit SDK entity header (`Evals/IGES-SDK/src/entities/<stem>.hpp`)
+   or write helper in `eval_helpers.{hpp,cpp}`. For resolver-using
+   entities, also add `RESOLVER_USING[type] = (stem, kind)` in
+   `generate_dispatch.py`.
+2. Sync SDK → ref-impl: copy the edited entity file to
+   `Evals/IGES/reference-implementation-cpp/src/entities/`.
+3. Regenerate dispatch (see CRLF quirk above).
+4. Add CLI-level hidden tests in
+   `Evals/IGES/tests/test_geometric_eval.py`.
+5. Run `uv run pytest Evals/IGES/tests -q` and confirm all tests pass.
+6. `uv run ruff check` + `uv run pyright` on changed Python files.
+7. Stage only the IGES-related files (the working tree has
+   unrelated AGENTS.md/CLAUDE.md env-notes edits — leave those
+   uncommitted). Commit with a descriptive message following the
+   pattern of commits 1-7.
+
+### Gotchas picked up along the way
+
+- **`curve_native_span` supports types 100, 106, 110 form 0, 126**.
+  Other curve types (104 conic arc, 112 parametric spline, offset
+  curve 130) return an error because their domains are either
+  resolver-dependent (130) or not yet implemented (104/112). If a
+  new composite curve constituent hits this, extend the switch in
+  `eval_helpers.cpp::curve_native_span`.
+- **IGES writer uses `%.15g`** (see `writer/` in the SDK) — precisely
+  15 significant decimals. `math.pi` round-trips with its last bit
+  changed, so test ranges that touch `π` exactly (SoR angle limits)
+  must be padded. Do NOT switch the writer to `%.17g`; that breaks
+  unrelated round-trip comparisons.
+- **Vec3 lives in `entities/entity.hpp`**, not in `types.hpp`. New
+  entity `.cpp` files that use `Vec3` in free functions must include
+  `"entity.hpp"` (not `"../types.hpp"`).
+- **Clang LSP diagnostics may be stale** (docker `compile_commands.json`
+  lags the local tree). Trust the `pytest` run, not the editor squiggles.
+- **Pre-existing ruff errors** in `generate_dispatch.py` (36 E501 +
+  F541 issues) are not new work — fixing them is a separate concern
+  from this expansion.
+
+### Design-decision audit trail
+
+Codex critique 2026-04-15 on the arc `t`-parameter convention
+concluded Option B (native per-entity parameters, documented in §1.6)
+is the right call for a doc-comprehension benchmark. Transcript:
+`codex-conversations/2026-04-15-08-47-iges-arc-t-convention.md`.
+Captured in IGES-Design.md §5 and in the Resolved open question
+above.
 
 ---
 
