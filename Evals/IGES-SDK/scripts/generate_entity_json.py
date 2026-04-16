@@ -35,6 +35,17 @@ FIELD_RE = re.compile(
     r"\s*;(?:\s*//\s*(?P<comment>.*))?$",
 )
 
+DECL_LINE_RE = re.compile(
+    r"^\s*(?P<type>(?:(?!//|\breturn\b)[\w:<>&,\s])+?)\s+"
+    r"(?P<declarators>.+?)"
+    r"\s*;(?:\s*//\s*(?P<comment>.*))?$",
+)
+
+DECLARATOR_RE = re.compile(
+    r"^\s*(?P<name>[a-zA-Z_]\w*)"
+    r"(?:\s*(?:=\s*.+|\{.*\}))?\s*$"
+)
+
 # C-style fixed array: `Type name[N] = {...};` or `Type name[N];`
 ARRAY_FIELD_RE = re.compile(
     r"^\s*(?P<type>[\w:<>&,\s]+?)\s+"
@@ -43,6 +54,37 @@ ARRAY_FIELD_RE = re.compile(
     r"(?:\s*=\s*[^;]+)?"
     r"\s*;(?:\s*//.*)?$",
 )
+
+
+def split_top_level_commas(text: str) -> list[str]:
+    parts: list[str] = []
+    current: list[str] = []
+    angle = paren = brace = bracket = 0
+    for ch in text:
+        if ch == "<":
+            angle += 1
+        elif ch == ">":
+            angle = max(0, angle - 1)
+        elif ch == "(":
+            paren += 1
+        elif ch == ")":
+            paren = max(0, paren - 1)
+        elif ch == "{":
+            brace += 1
+        elif ch == "}":
+            brace = max(0, brace - 1)
+        elif ch == "[":
+            bracket += 1
+        elif ch == "]":
+            bracket = max(0, bracket - 1)
+        elif ch == "," and angle == 0 and paren == 0 and brace == 0 and bracket == 0:
+            parts.append("".join(current).strip())
+            current = []
+            continue
+        current.append(ch)
+    if current:
+        parts.append("".join(current).strip())
+    return [part for part in parts if part]
 
 
 def extract_fields(body: str) -> list[tuple[str, str, int]]:
@@ -87,6 +129,27 @@ def extract_fields(body: str) -> list[tuple[str, str, int]]:
             cpp_type = re.sub(r"\bconst\b|\bmutable\b|&", "", cpp_type).strip()
             fields.append((cpp_type, am.group("name"), int(am.group("size"))))
             continue
+
+        dm = DECL_LINE_RE.match(line)
+        if dm:
+            cpp_type = re.sub(r"\s+", " ", dm.group("type")).strip()
+            if cpp_type not in {"return", "static", "friend"}:
+                cpp_type = re.sub(r"\bconst\b|\bmutable\b|&", "", cpp_type).strip()
+                declarators = split_top_level_commas(dm.group("declarators"))
+                if declarators:
+                    parsed_any = False
+                    for declarator in declarators:
+                        if "[" in declarator or "]" in declarator:
+                            parsed_any = False
+                            break
+                        dmatch = DECLARATOR_RE.match(declarator)
+                        if dmatch is None:
+                            parsed_any = False
+                            break
+                        fields.append((cpp_type, dmatch.group("name"), 0))
+                        parsed_any = True
+                    if parsed_any:
+                        continue
 
         m = FIELD_RE.match(line)
         if not m:

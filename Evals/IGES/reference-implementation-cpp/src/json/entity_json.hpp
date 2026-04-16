@@ -188,12 +188,16 @@ inline void from_json(nlohmann::json const& j, AttributeTableDefinitionEntity& o
 inline void to_json(nlohmann::json& j, BlockEntity const& o) {
     j = nlohmann::json::object();
     j["lx"] = o.lx;
+    j["ly"] = o.ly;
+    j["lz"] = o.lz;
     j["corner"] = o.corner;
     j["x_axis"] = o.x_axis;
     j["z_axis"] = o.z_axis;
 }
 inline void from_json(nlohmann::json const& j, BlockEntity& o) {
     j.at("lx").get_to(o.lx);
+    j.at("ly").get_to(o.ly);
+    j.at("lz").get_to(o.lz);
     j.at("corner").get_to(o.corner);
     j.at("x_axis").get_to(o.x_axis);
     j.at("z_axis").get_to(o.z_axis);
@@ -623,12 +627,16 @@ inline void from_json(nlohmann::json const& j, ElementResultsEntity& o) {
 inline void to_json(nlohmann::json& j, EllipsoidEntity const& o) {
     j = nlohmann::json::object();
     j["lx"] = o.lx;
+    j["ly"] = o.ly;
+    j["lz"] = o.lz;
     j["center"] = o.center;
     j["x_axis"] = o.x_axis;
     j["z_axis"] = o.z_axis;
 }
 inline void from_json(nlohmann::json const& j, EllipsoidEntity& o) {
     j.at("lx").get_to(o.lx);
+    j.at("ly").get_to(o.ly);
+    j.at("lz").get_to(o.lz);
     j.at("center").get_to(o.center);
     j.at("x_axis").get_to(o.x_axis);
     j.at("z_axis").get_to(o.z_axis);
@@ -1249,13 +1257,31 @@ inline void from_json(nlohmann::json const& j, OrdinateDimensionEntity& o) {
 inline void to_json(nlohmann::json& j, SplineCurveSegment const& o) {
     j = nlohmann::json::object();
     j["ax"] = o.ax;
+    j["bx"] = o.bx;
+    j["cx"] = o.cx;
+    j["dx"] = o.dx;
     j["ay"] = o.ay;
+    j["by"] = o.by;
+    j["cy"] = o.cy;
+    j["dy"] = o.dy;
     j["az"] = o.az;
+    j["bz"] = o.bz;
+    j["cz"] = o.cz;
+    j["dz"] = o.dz;
 }
 inline void from_json(nlohmann::json const& j, SplineCurveSegment& o) {
     j.at("ax").get_to(o.ax);
+    j.at("bx").get_to(o.bx);
+    j.at("cx").get_to(o.cx);
+    j.at("dx").get_to(o.dx);
     j.at("ay").get_to(o.ay);
+    j.at("by").get_to(o.by);
+    j.at("cy").get_to(o.cy);
+    j.at("dy").get_to(o.dy);
     j.at("az").get_to(o.az);
+    j.at("bz").get_to(o.bz);
+    j.at("cz").get_to(o.cz);
+    j.at("dz").get_to(o.dz);
 }
 
 inline void to_json(nlohmann::json& j, ParametricSplineCurveEntity const& o) {
@@ -1266,8 +1292,17 @@ inline void to_json(nlohmann::json& j, ParametricSplineCurveEntity const& o) {
     j["breakpoints"] = o.breakpoints;
     j["segments"] = o.segments;
     j["tpx0"] = o.tpx0;
+    j["tpx1"] = o.tpx1;
+    j["tpx2"] = o.tpx2;
+    j["tpx3"] = o.tpx3;
     j["tpy0"] = o.tpy0;
+    j["tpy1"] = o.tpy1;
+    j["tpy2"] = o.tpy2;
+    j["tpy3"] = o.tpy3;
     j["tpz0"] = o.tpz0;
+    j["tpz1"] = o.tpz1;
+    j["tpz2"] = o.tpz2;
+    j["tpz3"] = o.tpz3;
 }
 inline void from_json(nlohmann::json const& j, ParametricSplineCurveEntity& o) {
     j.at("ctype").get_to(o.ctype);
@@ -1276,8 +1311,17 @@ inline void from_json(nlohmann::json const& j, ParametricSplineCurveEntity& o) {
     j.at("breakpoints").get_to(o.breakpoints);
     j.at("segments").get_to(o.segments);
     j.at("tpx0").get_to(o.tpx0);
+    j.at("tpx1").get_to(o.tpx1);
+    j.at("tpx2").get_to(o.tpx2);
+    j.at("tpx3").get_to(o.tpx3);
     j.at("tpy0").get_to(o.tpy0);
+    j.at("tpy1").get_to(o.tpy1);
+    j.at("tpy2").get_to(o.tpy2);
+    j.at("tpy3").get_to(o.tpy3);
     j.at("tpz0").get_to(o.tpz0);
+    j.at("tpz1").get_to(o.tpz1);
+    j.at("tpz2").get_to(o.tpz2);
+    j.at("tpz3").get_to(o.tpz3);
 }
 
 // â”€â”€ parametric_spline_surface_entity.hpp â”€â”€
@@ -1468,7 +1512,9 @@ inline void to_json(nlohmann::json& j, RationalBSplineSurfaceEntity const& o) {
     j["weights"] = o.weights;
     j["control_points"] = o.control_points;
     j["u0"] = o.u0;
+    j["u1"] = o.u1;
     j["v0"] = o.v0;
+    j["v1"] = o.v1;
 }
 inline void from_json(nlohmann::json const& j, RationalBSplineSurfaceEntity& o) {
     j.at("K1").get_to(o.K1);
@@ -1485,7 +1531,9 @@ inline void from_json(nlohmann::json const& j, RationalBSplineSurfaceEntity& o) 
     j.at("weights").get_to(o.weights);
     j.at("control_points").get_to(o.control_points);
     j.at("u0").get_to(o.u0);
+    j.at("u1").get_to(o.u1);
     j.at("v0").get_to(o.v0);
+    j.at("v1").get_to(o.v1);
 }
 
 // â”€â”€ rectangular_array_entity.hpp â”€â”€
@@ -1945,6 +1993,8 @@ inline void from_json(nlohmann::json const& j, ViewEntity& o) {
 inline void to_json(nlohmann::json& j, WedgeEntity const& o) {
     j = nlohmann::json::object();
     j["lx"] = o.lx;
+    j["ly"] = o.ly;
+    j["lz"] = o.lz;
     j["ltx"] = o.ltx;
     j["corner"] = o.corner;
     j["x_axis"] = o.x_axis;
@@ -1952,6 +2002,8 @@ inline void to_json(nlohmann::json& j, WedgeEntity const& o) {
 }
 inline void from_json(nlohmann::json const& j, WedgeEntity& o) {
     j.at("lx").get_to(o.lx);
+    j.at("ly").get_to(o.ly);
+    j.at("lz").get_to(o.lz);
     j.at("ltx").get_to(o.ltx);
     j.at("corner").get_to(o.corner);
     j.at("x_axis").get_to(o.x_axis);

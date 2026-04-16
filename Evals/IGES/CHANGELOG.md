@@ -1,5 +1,41 @@
 # IGES Changelog
 
+## v1.0.9 — unreleased
+
+### Added
+
+- CLI-level solid/CSG coverage in `tests/test_solid_entities.py` for:
+  - Block / Right Angular Wedge (150 / 152)
+  - Right Circular Cylinder / Cone Frustum / Sphere / Torus
+    (154 / 156 / 158 / 160)
+  - Solid of Revolution / Solid of Linear Extrusion / Ellipsoid
+    (162 / 164 / 168)
+  - Boolean Tree / Selected Component / Solid Assembly
+    (180 / 182 / 184)
+
+### Changed
+
+- `Evals/IGES-SDK/scripts/generate_entity_json.py` and
+  `extract_entity_schemas.py` now expand comma-separated member
+  declarations such as `Real lx = 0.0, ly = 0.0, lz = 0.0;` instead of
+  silently serializing only the first field.
+- Regenerated `reference-implementation-cpp/src/json/entity_json.hpp`
+  so the canonical JSON now includes the missing multi-field members on
+  compact entity structs, including:
+  - solid primitives `150 / 152 / 154 / 156 / 158 / 160 / 168`
+  - `112` Parametric Spline Curve coefficients / terminal derivatives
+  - `128` Rational B-Spline Surface parameter-range endpoints
+  - `162 / 164` solid axis/direction vectors
+- `prompt/technical-requirements-prompt.md` now matches the corrected
+  canonical JSON for those entities.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`182 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.8 — unreleased
 
 ### Added

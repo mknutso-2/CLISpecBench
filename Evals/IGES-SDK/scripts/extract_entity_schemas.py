@@ -133,6 +133,48 @@ FIELD_RE = re.compile(
     r"\s*;(?:\s*//\s*(?P<comment>.*))?$",
 )
 
+DECL_LINE_RE = re.compile(
+    r"^\s*(?P<type>(?:(?!//|\breturn\b)[\w:<>&,\s])+?)\s+"
+    r"(?P<declarators>.+?)"
+    r"\s*;(?:\s*//\s*(?P<comment>.*))?$",
+)
+
+DECLARATOR_RE = re.compile(
+    r"^\s*(?P<name>[a-zA-Z_]\w*)"
+    r"(?:\s*(?:=\s*.+|\{.*\}))?\s*$"
+)
+
+
+def split_top_level_commas(text: str) -> list[str]:
+    out: list[str] = []
+    current: list[str] = []
+    angle = paren = brace = bracket = 0
+    for ch in text:
+        if ch == "<":
+            angle += 1
+        elif ch == ">":
+            angle = max(0, angle - 1)
+        elif ch == "(":
+            paren += 1
+        elif ch == ")":
+            paren = max(0, paren - 1)
+        elif ch == "{":
+            brace += 1
+        elif ch == "}":
+            brace = max(0, brace - 1)
+        elif ch == "[":
+            bracket += 1
+        elif ch == "]":
+            bracket = max(0, bracket - 1)
+        elif ch == "," and angle == 0 and paren == 0 and brace == 0 and bracket == 0:
+            out.append("".join(current).strip())
+            current = []
+            continue
+        current.append(ch)
+    if current:
+        out.append("".join(current).strip())
+    return [part for part in out if part]
+
 
 def extract_fields(body: str) -> list[Field]:
     fields: list[Field] = []
@@ -164,17 +206,41 @@ def extract_fields(body: str) -> list[Field]:
             continue
 
         m = FIELD_RE.match(line)
-        if not m:
+        if m:
+            cpp_type = re.sub(r"\s+", " ", m.group("type")).strip()
+            if cpp_type in {"return", "static", "friend"}:
+                continue
+            cpp_type = re.sub(r"\bconst\b|\bmutable\b|&", "", cpp_type).strip()
+            ts_type = map_cpp_to_ts(cpp_type)
+            comment = (m.group("comment") or "").strip()
+            fields.append(Field(m.group("name"), ts_type, comment))
             continue
-        cpp_type = re.sub(r"\s+", " ", m.group("type")).strip()
-        # Skip if the 'type' is really a C++ keyword like `return`
+
+        dm = DECL_LINE_RE.match(line)
+        if dm is None:
+            continue
+        cpp_type = re.sub(r"\s+", " ", dm.group("type")).strip()
         if cpp_type in {"return", "static", "friend"}:
             continue
-        # Drop leading `const`, references, `mutable`
         cpp_type = re.sub(r"\bconst\b|\bmutable\b|&", "", cpp_type).strip()
         ts_type = map_cpp_to_ts(cpp_type)
-        comment = (m.group("comment") or "").strip()
-        fields.append(Field(m.group("name"), ts_type, comment))
+        comment = (dm.group("comment") or "").strip()
+        declarators = split_top_level_commas(dm.group("declarators"))
+        if not declarators:
+            continue
+        parsed_any = False
+        for declarator in declarators:
+            if "[" in declarator or "]" in declarator:
+                parsed_any = False
+                break
+            dmatch = DECLARATOR_RE.match(declarator)
+            if dmatch is None:
+                parsed_any = False
+                break
+            fields.append(Field(dmatch.group("name"), ts_type, comment))
+            parsed_any = True
+        if not parsed_any:
+            continue
     return fields
 
 

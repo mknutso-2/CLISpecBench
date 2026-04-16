@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (170 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (182 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -172,18 +172,26 @@ prompt/
         `test_pointer_backed_fields.py`
   - [x] §4.36 Element Results (148) — covered in
         `test_pointer_backed_fields.py`
-  - [ ] §4.37 Block (150)
-  - [ ] §4.38 Right Angular Wedge (152)
-  - [ ] §4.39 Right Circular Cylinder (154)
-  - [ ] §4.40 Right Circular Cone Frustum (156)
-  - [ ] §4.41 Sphere (158)
-  - [ ] §4.42 Torus (160)
-  - [ ] §4.43 Solid of Revolution (162)
-  - [ ] §4.44 Solid of Linear Extrusion (164)
-  - [ ] §4.45 Ellipsoid (168)
-  - [ ] §4.46 Boolean Tree (180)
-  - [ ] §4.47 Selected Component (182)
-  - [ ] §4.48 Solid Assembly (184)
+  - [x] §4.37 Block (150) — covered in `test_solid_entities.py`
+  - [x] §4.38 Right Angular Wedge (152) — covered in
+        `test_solid_entities.py`
+  - [x] §4.39 Right Circular Cylinder (154) — covered in
+        `test_solid_entities.py`
+  - [x] §4.40 Right Circular Cone Frustum (156) — covered in
+        `test_solid_entities.py`
+  - [x] §4.41 Sphere (158) — covered in `test_solid_entities.py`
+  - [x] §4.42 Torus (160) — covered in `test_solid_entities.py`
+  - [x] §4.43 Solid of Revolution (162) — covered in
+        `test_solid_entities.py`
+  - [x] §4.44 Solid of Linear Extrusion (164) — covered in
+        `test_solid_entities.py`
+  - [x] §4.45 Ellipsoid (168) — covered in `test_solid_entities.py`
+  - [x] §4.46 Boolean Tree (180) — covered in
+        `test_solid_entities.py`
+  - [x] §4.47 Selected Component (182) — covered in
+        `test_solid_entities.py`
+  - [x] §4.48 Solid Assembly (184) — covered in
+        `test_solid_entities.py`
   - [x] §4.49 MSBO (186) — covered in `test_entity_roundtrips.py`
   - [x] §4.50 Plane Surface (190) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`

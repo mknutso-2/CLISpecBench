@@ -554,8 +554,17 @@ type LineData = {
 ```ts
 type SplineCurveSegment = {
   ax: number,
+  bx: number,
+  cx: number,
+  dx: number,
   ay: number,
-  az: number
+  by: number,
+  cy: number,
+  dy: number,
+  az: number,
+  bz: number,
+  cz: number,
+  dz: number
 };
 
 type ParametricSplineCurveData = {
@@ -565,8 +574,17 @@ type ParametricSplineCurveData = {
   breakpoints: number[],  // N+1 breakpoints: T(1)..T(N+1)
   segments: SplineCurveSegment[],  // N segments
   tpx0: number,
+  tpx1: number,
+  tpx2: number,
+  tpx3: number,
   tpy0: number,
-  tpz0: number
+  tpy1: number,
+  tpy2: number,
+  tpy3: number,
+  tpz0: number,
+  tpz1: number,
+  tpz2: number,
+  tpz3: number
 };
 ```
 
@@ -701,7 +719,9 @@ type RationalBSplineSurfaceData = {
   weights: number[],  // C values, stored (K1+1)*(K2+1)
   control_points: Vec3[],  // C triples, stored (K1+1)*(K2+1)
   u0: number,  // parameter range in U
+  u1: number,  // parameter range in U
   v0: number,  // parameter range in V
+  v1: number,  // parameter range in V
 };
 ```
 
@@ -911,6 +931,11 @@ type ElementResultsData = {
 ```ts
 type BlockData = {
   lx: number,  // Edge lengths
+  ly: number,  // Edge lengths
+  lz: number,  // Edge lengths
+  corner: Vec3,  // Corner point
+  x_axis: Vec3,  // Local X-axis
+  z_axis: Vec3,  // Local Z-axis
 };
 ```
 
@@ -919,7 +944,12 @@ type BlockData = {
 ```ts
 type WedgeData = {
   lx: number,  // Edge lengths
+  ly: number,  // Edge lengths
+  lz: number,  // Edge lengths
   ltx: number,  // X-length at distance LY
+  corner: Vec3,
+  x_axis: Vec3,
+  z_axis: Vec3
 };
 ```
 
@@ -929,6 +959,8 @@ type WedgeData = {
 type RightCircularCylinderData = {
   h: number,  // Height
   r: number,  // Radius
+  face_center: Vec3,  // First face center
+  axis: Vec3,  // Axis direction
 };
 ```
 
@@ -939,6 +971,8 @@ type ConeFrustumData = {
   h: number,  // Height
   r1: number,  // Larger face radius
   r2: number,  // Smaller face radius (0 for apex)
+  face_center: Vec3,  // Larger face center
+  axis: Vec3,  // Axis direction
 };
 ```
 
@@ -946,7 +980,8 @@ type ConeFrustumData = {
 
 ```ts
 type SphereData = {
-  radius: number
+  radius: number,
+  center: Vec3
 };
 ```
 
@@ -956,6 +991,8 @@ type SphereData = {
 type TorusData = {
   r1: number,  // Major radius (axis to disc center)
   r2: number,  // Minor radius (disc radius)
+  center: Vec3,
+  axis: Vec3
 };
 ```
 
@@ -965,6 +1002,8 @@ type TorusData = {
 type SolidOfRevolutionData = {
   ptr: DEIndex,  // Pointer to curve to be revolved
   f: number,  // Fraction of full rotation
+  axis_point: Vec3,  // Point on axis
+  axis_dir: Vec3,  // Axis direction
 };
 ```
 
@@ -974,6 +1013,7 @@ type SolidOfRevolutionData = {
 type SolidOfLinearExtrusionData = {
   ptr: DEIndex,  // Pointer to closed curve
   length: number,  // Extrusion length
+  direction: Vec3,  // Extrusion direction
 };
 ```
 
@@ -982,6 +1022,11 @@ type SolidOfLinearExtrusionData = {
 ```ts
 type EllipsoidData = {
   lx: number,  // Semi-axis lengths
+  ly: number,  // Semi-axis lengths
+  lz: number,  // Semi-axis lengths
+  center: Vec3,
+  x_axis: Vec3,  // Local X (major)
+  z_axis: Vec3,  // Local Z (minor)
 };
 ```
 
