@@ -7,8 +7,11 @@ import logging
 import shutil
 import subprocess
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
+
+import docker.errors
 
 from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.harness.docker import (
@@ -25,6 +28,8 @@ from swe_buildbench.harness.results import (
     RunArtifacts,
     RunMetadata,
     RunResult,
+    Scores,
+    TestSummary,
     TokenUsage,
     compute_source_stats,
     make_run_id,
@@ -70,6 +75,76 @@ def _harness_version() -> str:
         return "unknown"
 
 
+def _write_infrastructure_failure_result(
+    *,
+    out_path: Path,
+    task: TaskDefinition,
+    adapter: AgentAdapter,
+    run_id: str,
+    run_number: int,
+    timestamp: str,
+    prompt_variant: str | None,
+    prompt_content_sha: str,
+    test_suite_sha: str,
+    wall_clock_seconds: float,
+    docker_image_sha: str,
+    diagnostics: str,
+    notes: str,
+) -> RunResult:
+    metadata = RunMetadata(
+        run_id=run_id,
+        task=task.task_id,
+        agent=adapter.name,
+        agent_version=adapter.version,
+        prompt_variant=prompt_variant or "base",
+        run_number=run_number,
+        timestamp=timestamp,
+        test_suite_version=_git_sha(),
+        eval_version=task.version,
+        harness_version=_harness_version(),
+        docker_image_sha=docker_image_sha,
+        wall_clock_seconds=wall_clock_seconds,
+        exit_reason="error",
+        model=adapter.model,
+        effort=adapter.effort,
+        notes=notes,
+        prompt_content_sha=prompt_content_sha,
+        test_suite_sha=test_suite_sha,
+    )
+    result = RunResult(
+        metadata=metadata,
+        token_usage=None,
+        build=BuildResult(
+            success=False,
+            duration_seconds=0.0,
+            diagnostics=diagnostics,
+        ),
+        tests=[],
+        test_summary=TestSummary(),
+        scores=Scores(),
+    )
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    result.write(out_path)
+    log.warning("Wrote infrastructure failure result to %s", out_path)
+    return result
+
+
+def _safe_docker_image_sha(sandbox: DockerSandbox, image_tag: str) -> str:
+    try:
+        return sandbox.get_image_sha(image_tag)
+    except Exception:
+        log.debug("Failed to resolve Docker image SHA for %s", image_tag, exc_info=True)
+        return "unknown"
+
+
+def _docker_failure_note(exc: docker.errors.DockerException) -> str:
+    if isinstance(exc, docker.errors.BuildError):
+        return "infrastructure_failure: Docker image build failed before scoring completed"
+    if isinstance(exc, docker.errors.APIError):
+        return "infrastructure_failure: Docker API error before scoring completed"
+    return "infrastructure_failure: Docker unavailable before scoring completed"
+
+
 def run_evaluation(
     task: TaskDefinition,
     adapter: AgentAdapter,
@@ -108,12 +183,26 @@ def run_evaluation(
         test_hash.sha256[:12],
     )
 
-    sandbox = DockerSandbox()
+    start_time = time.monotonic()
+    out_path = result_path(
+        output_dir,
+        task.task_id,
+        adapter.name,
+        run_number,
+        adapter.model,
+        adapter.effort,
+        eval_number,
+    )
+
+    sandbox: DockerSandbox | None = None
     workspace: Path | None = None
     extract_dir: Path | None = None
     container_logs: str = ""
+    docker_image_sha = "unknown"
 
     try:
+        sandbox = DockerSandbox()
+
         # --- 1. Prepare workspace ---
         workspace = prepare_workspace(task, prompt_variant)
         log.info("Workspace prepared at %s", workspace)
@@ -121,6 +210,7 @@ def run_evaluation(
         # --- 2. Build image if needed ---
         if not sandbox.image_exists(adapter.image_tag):
             sandbox.build_image(adapter.dockerfile, adapter.image_tag)
+        docker_image_sha = _safe_docker_image_sha(sandbox, adapter.image_tag)
 
         # --- 3. Create and run container ---
         host_home = resolve_host_home()
@@ -252,7 +342,7 @@ def run_evaluation(
             test_suite_version=_git_sha(),
             eval_version=task.version,
             harness_version=_harness_version(),
-            docker_image_sha=sandbox.get_image_sha(adapter.image_tag),
+            docker_image_sha=docker_image_sha,
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
             model=adapter.model,
@@ -263,15 +353,6 @@ def run_evaluation(
         )
 
         # --- 10. Save artifacts ---
-        out_path = result_path(
-            output_dir,
-            task.task_id,
-            adapter.name,
-            run_number,
-            adapter.model,
-            adapter.effort,
-            eval_number,
-        )
         out_path.parent.mkdir(parents=True, exist_ok=True)
         artifacts = RunArtifacts()
 
@@ -308,9 +389,33 @@ def run_evaluation(
         log.info("Result written to %s", out_path)
 
         return result
+    except docker.errors.DockerException as exc:
+        if docker_image_sha == "unknown" and sandbox is not None:
+            docker_image_sha = _safe_docker_image_sha(sandbox, adapter.image_tag)
+
+        _write_infrastructure_failure_result(
+            out_path=out_path,
+            task=task,
+            adapter=adapter,
+            run_id=run_id,
+            run_number=run_number,
+            timestamp=timestamp,
+            prompt_variant=prompt_variant,
+            prompt_content_sha=prompt_hash.sha256,
+            test_suite_sha=test_hash.sha256,
+            wall_clock_seconds=time.monotonic() - start_time,
+            docker_image_sha=docker_image_sha,
+            diagnostics=str(exc),
+            notes=_docker_failure_note(exc),
+        )
+        raise
 
     finally:
-        sandbox.cleanup()
+        if sandbox is not None:
+            try:
+                sandbox.cleanup()
+            except Exception:
+                log.warning("Failed to clean up Docker sandbox after run failure", exc_info=True)
         if workspace is not None:
             shutil.rmtree(workspace, ignore_errors=True)
         if extract_dir is not None:
