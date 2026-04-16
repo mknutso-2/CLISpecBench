@@ -7,6 +7,7 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 from docker import errors as docker_errors
+from requests import exceptions as requests_exceptions
 
 from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.harness.results import load_result
@@ -347,4 +348,67 @@ def test_build_error_uses_specific_infrastructure_failure_note(
     result = load_result(result_json)
     assert result.metadata.notes == (
         "infrastructure_failure: Docker image build failed before scoring completed"
+    )
+
+
+def test_request_exception_uses_specific_infrastructure_failure_note(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task = _stub_task(tmp_path)
+    adapter = _StubAdapter()
+    request_error = requests_exceptions.ConnectionError("connection reset")
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    class _Sandbox:
+        def image_exists(self, tag: str) -> bool:
+            raise request_error
+
+        def get_image_sha(self, tag: str) -> str:
+            return "unknown"
+
+        def cleanup(self) -> None:
+            return None
+
+    monkeypatch.setattr("swe_buildbench.harness.runner.DockerSandbox", _Sandbox)
+    monkeypatch.setattr(
+        "swe_buildbench.harness.runner.hash_prompt_content",
+        _fake_prompt_hash,
+    )
+    monkeypatch.setattr(
+        "swe_buildbench.harness.runner.hash_test_suite",
+        _fake_test_hash,
+    )
+    monkeypatch.setattr("swe_buildbench.harness.runner._git_sha", lambda: "abc1234")
+    monkeypatch.setattr("swe_buildbench.harness.runner._harness_version", lambda: "0.1.0")
+
+    def _prepare_workspace(task: TaskDefinition, prompt_variant: str | None) -> Path:
+        return _fake_workspace(task, prompt_variant, workspace)
+
+    monkeypatch.setattr(
+        "swe_buildbench.harness.runner.prepare_workspace",
+        _prepare_workspace,
+    )
+
+    with pytest.raises(requests_exceptions.ConnectionError):
+        run_evaluation(
+            task=task,
+            adapter=adapter,
+            run_number=5,
+            eval_number=8,
+            output_dir=tmp_path,
+        )
+
+    result_json = (
+        tmp_path
+        / "cncsim-full"
+        / "codex-cli"
+        / "gpt-5.3-codex_xhigh"
+        / "eval8"
+        / "run5"
+        / "result.json"
+    )
+    result = load_result(result_json)
+    assert result.metadata.notes == (
+        "infrastructure_failure: Docker request error before scoring completed"
     )

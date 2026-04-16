@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import socket
 import sys
 import time
 from dataclasses import dataclass, field
@@ -13,6 +14,8 @@ import docker
 import docker.errors
 from docker import DockerClient
 from docker.models.containers import Container
+from requests import exceptions as requests_exceptions
+from urllib3 import exceptions as urllib3_exceptions
 
 log = logging.getLogger(__name__)
 
@@ -43,6 +46,24 @@ def _docker_env_value(name: str) -> str:
 
 def _describe_docker_exception(exc: BaseException) -> str:
     return f"{type(exc).__name__}: {exc}"
+
+
+def _is_wait_timeout_exception(exc: Exception) -> bool:
+    if isinstance(exc, requests_exceptions.ReadTimeout):
+        return True
+    if not isinstance(exc, requests_exceptions.ConnectionError):
+        return False
+
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None:
+        if id(current) in seen:
+            break
+        seen.add(id(current))
+        if isinstance(current, (TimeoutError, socket.timeout, urllib3_exceptions.ReadTimeoutError)):
+            return True
+        current = current.__cause__ or current.__context__
+    return False
 
 
 def _resolve_docker_client() -> DockerClient:
@@ -228,8 +249,16 @@ class DockerSandbox:
         try:
             result = self._container.wait(timeout=timeout_seconds)
             exit_code: int | None = result.get("StatusCode")
-        except Exception:
-            # Timeout or connection error — kill the container
+        except Exception as exc:
+            if not _is_wait_timeout_exception(exc):
+                log.warning(
+                    "Unexpected Docker wait exception for container %s: %s",
+                    self._container.short_id,
+                    _describe_docker_exception(exc),
+                )
+                raise
+
+            # SDK wait timeout — kill the container and report a timeout.
             log.warning(
                 "Container %s exceeded timeout of %.0fs, killing",
                 self._container.short_id,

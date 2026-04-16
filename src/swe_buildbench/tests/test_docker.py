@@ -5,12 +5,15 @@ from __future__ import annotations
 
 import logging
 from types import SimpleNamespace
+from typing import Any, cast
 from unittest.mock import Mock
 
 import pytest
 from docker import errors as docker_errors
+from requests import exceptions as requests_exceptions
+from urllib3 import exceptions as urllib3_exceptions
 
-from swe_buildbench.harness.docker import ContainerConfig, _resolve_docker_client
+from swe_buildbench.harness.docker import ContainerConfig, DockerSandbox, _resolve_docker_client
 
 
 class TestContainerConfig:
@@ -154,3 +157,109 @@ class TestResolveDockerClient:
         message = str(exc_info.value)
         assert "DOCKER_HOST=<empty>" in message
         assert "DOCKER_CONTEXT=<empty>" in message
+
+
+class TestStartAndWait:
+    def test_wait_read_timeout_is_reported_as_timeout(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        container = SimpleNamespace(
+            short_id="abc123",
+            id="container-id",
+            start=Mock(),
+            wait=Mock(side_effect=requests_exceptions.ReadTimeout("timed out")),
+            kill=Mock(),
+        )
+        sandbox = object.__new__(DockerSandbox)
+        sandbox._container = cast(Any, container)
+
+        with caplog.at_level(logging.WARNING):
+            run = sandbox.start_and_wait(timeout_seconds=15)
+
+        assert run.exit_code is None
+        assert run.timed_out is True
+        assert run.container_id == "container-id"
+        container.start.assert_called_once_with()
+        container.wait.assert_called_once_with(timeout=15)
+        container.kill.assert_called_once_with()
+        assert "exceeded timeout of 15s" in caplog.text
+
+    def test_wait_connection_timeout_with_socket_cause_is_reported_as_timeout(self) -> None:
+        timeout_error = requests_exceptions.ConnectionError("timed out")
+        timeout_error.__cause__ = TimeoutError("timed out")
+        container = SimpleNamespace(
+            short_id="abc123",
+            id="container-id",
+            start=Mock(),
+            wait=Mock(side_effect=timeout_error),
+            kill=Mock(),
+        )
+        sandbox = object.__new__(DockerSandbox)
+        sandbox._container = cast(Any, container)
+
+        run = sandbox.start_and_wait(timeout_seconds=20)
+
+        assert run.exit_code is None
+        assert run.timed_out is True
+        container.kill.assert_called_once_with()
+
+    def test_wait_connection_error_with_urllib3_read_timeout_is_reported_as_timeout(
+        self
+    ) -> None:
+        timeout_error = requests_exceptions.ConnectionError("timed out")
+        timeout_error.__cause__ = urllib3_exceptions.ReadTimeoutError(
+            cast(Any, None),
+            cast(Any, None),
+            "timed out",
+        )
+        container = SimpleNamespace(
+            short_id="abc123",
+            id="container-id",
+            start=Mock(),
+            wait=Mock(side_effect=timeout_error),
+            kill=Mock(),
+        )
+        sandbox = object.__new__(DockerSandbox)
+        sandbox._container = cast(Any, container)
+
+        run = sandbox.start_and_wait(timeout_seconds=20)
+
+        assert run.exit_code is None
+        assert run.timed_out is True
+        container.kill.assert_called_once_with()
+
+    def test_wait_api_error_is_not_laundered_into_timeout(self) -> None:
+        api_error = docker_errors.APIError("daemon unavailable")
+        container = SimpleNamespace(
+            short_id="abc123",
+            id="container-id",
+            start=Mock(),
+            wait=Mock(side_effect=api_error),
+            kill=Mock(),
+        )
+        sandbox = object.__new__(DockerSandbox)
+        sandbox._container = cast(Any, container)
+
+        with pytest.raises(docker_errors.APIError) as exc_info:
+            sandbox.start_and_wait(timeout_seconds=30)
+
+        assert exc_info.value is api_error
+        container.kill.assert_not_called()
+
+    def test_wait_connection_error_without_timeout_chain_is_not_laundered(self) -> None:
+        connection_error = requests_exceptions.ConnectionError("connection reset")
+        container = SimpleNamespace(
+            short_id="abc123",
+            id="container-id",
+            start=Mock(),
+            wait=Mock(side_effect=connection_error),
+            kill=Mock(),
+        )
+        sandbox = object.__new__(DockerSandbox)
+        sandbox._container = cast(Any, container)
+
+        with pytest.raises(requests_exceptions.ConnectionError) as exc_info:
+            sandbox.start_and_wait(timeout_seconds=30)
+
+        assert exc_info.value is connection_error
+        container.kill.assert_not_called()

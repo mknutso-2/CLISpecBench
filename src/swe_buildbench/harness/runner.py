@@ -12,6 +12,7 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 
 import docker.errors
+from requests import exceptions as requests_exceptions
 
 from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.harness.docker import (
@@ -137,11 +138,13 @@ def _safe_docker_image_sha(sandbox: DockerSandbox, image_tag: str) -> str:
         return "unknown"
 
 
-def _docker_failure_note(exc: docker.errors.DockerException) -> str:
+def _docker_failure_note(exc: Exception) -> str:
     if isinstance(exc, docker.errors.BuildError):
         return "infrastructure_failure: Docker image build failed before scoring completed"
     if isinstance(exc, docker.errors.APIError):
         return "infrastructure_failure: Docker API error before scoring completed"
+    if isinstance(exc, requests_exceptions.RequestException):
+        return "infrastructure_failure: Docker request error before scoring completed"
     return "infrastructure_failure: Docker unavailable before scoring completed"
 
 
@@ -389,7 +392,7 @@ def run_evaluation(
         log.info("Result written to %s", out_path)
 
         return result
-    except docker.errors.DockerException as exc:
+    except (docker.errors.DockerException, requests_exceptions.RequestException) as exc:
         if docker_image_sha == "unknown" and sandbox is not None:
             docker_image_sha = _safe_docker_image_sha(sandbox, adapter.image_tag)
 
