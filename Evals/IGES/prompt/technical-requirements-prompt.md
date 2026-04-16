@@ -221,18 +221,12 @@ type Timestamp = {
   hour: number, minute: number, second: number
 };
 
-// IGES variant fields (DE fields 4, 5, 13): a positive integer encodes
-// a direct value, a negative integer encodes a DE pointer to the
-// absolute value.
-type LineFontVariant = { kind: "pattern", value: LineFontPattern }
-                     | { kind: "pointer", de: DEIndex };
-type LevelVariant    = { kind: "level",   value: number }
-                     | { kind: "pointer", de: DEIndex };
-type ColorVariant    = { kind: "color",   value: Color }
-                     | { kind: "pointer", de: DEIndex };
-
-type LineFontPattern = 0 | 1 | 2 | 3 | 4 | 5;  // §2.2.4.4 field 4
-type Color           = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;  // §2.2.4.4 field 13
+// IGES variant fields (DE fields 4, 5, 13) are serialized as raw signed
+// integers. Positive values encode direct values; negative values encode
+// DE pointers to the absolute value.
+type LineFontVariant = number;  // field 4
+type LevelVariant    = number;  // field 5
+type ColorVariant    = number;  // field 13
 ```
 
 All numeric fields are JSON `number`. Integers are emitted without a
@@ -280,18 +274,38 @@ type GlobalSection = {
   max_coordinate:       number,  // field 20 (default 0.0)
   author:               string,  // field 21 (default "")
   organization:         string,  // field 22 (default "")
-  spec_version:         SpecVersion,     // field 23 (default 3)
-  drafting_standard:    DraftingStandard, // field 24 (default 0)
+  spec_version:         SpecVersion,     // field 23 (default "v2_0")
+  drafting_std:         DraftingStandard, // field 24 (default "none")
   model_timestamp:      Timestamp | null, // field 25 (null = absent)
   app_protocol:         string   // field 26 (default "")
 };
 
-type Units = "inches" | "mm" | "see-field-15" | "feet" | "miles"
+type Units = "inches" | "millimeters" | "see_field_15" | "feet" | "miles"
            | "meters" | "kilometers" | "mils" | "microns"
            | "centimeters" | "microinches";
 
-type SpecVersion = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
-type DraftingStandard = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
+type SpecVersion =
+  | "v1_0"
+  | "ansi_1981"
+  | "v2_0"
+  | "v3_0"
+  | "asme_1987"
+  | "v4_0"
+  | "asme_1989"
+  | "v5_0"
+  | "v5_2"
+  | "v5_1"
+  | "v5_3";
+
+type DraftingStandard =
+  | "none"
+  | "iso"
+  | "afnor"
+  | "ansi"
+  | "bsi"
+  | "csa"
+  | "din"
+  | "jis";
 ```
 
 All defaults are applied per §3.1 of the specification. Fields that
@@ -317,7 +331,7 @@ type DirectoryEntry = {
   label_display:    DEIndex,          // field 8
   status:           StatusNumber,     // field 9  (4 sub-fields)
   line_weight:      number,           // field 12
-  color:            ColorVariant,     // field 13
+  color:            ColorVariant,     // field 13 (raw signed integer)
   param_line_count: number,           // field 14 (number of P-section lines)
   form:             number,           // field 15 (form number)
   entity_label:     string,           // field 18 (up to 8 chars)
@@ -325,10 +339,21 @@ type DirectoryEntry = {
 };
 
 type StatusNumber = {
-  blank:       0 | 1,              // 0=visible, 1=blanked
-  subordinate: 0 | 1 | 2 | 3,      // 0=indep, 1=physical-dep, 2=logical-dep, 3=both
-  entity_use:  0 | 1 | 2 | 3 | 4 | 5 | 6,
-  hierarchy:   0 | 1 | 2           // 0=global top-down, 1=global defer, 2=use property
+  blank: "visible" | "blanked",
+  subordinate:
+    | "independent"
+    | "physically_dependent"
+    | "logically_dependent"
+    | "both",
+  entity_use:
+    | "geometry"
+    | "annotation"
+    | "definition"
+    | "other"
+    | "logical_positional"
+    | "parametric_2d"
+    | "construction_geometry",
+  hierarchy: "global_top_down" | "global_defer" | "use_property"
 };
 ```
 

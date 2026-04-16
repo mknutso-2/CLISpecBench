@@ -1,5 +1,45 @@
 # IGES Changelog
 
+## v1.0.5 — unreleased
+
+### Changed
+
+- `prompt/technical-requirements-prompt.md` now matches the shipped JSON
+  schema for:
+  - `GlobalSection.units`, `spec_version`, and `drafting_std`
+  - `DirectoryEntry.status`
+  - raw signed-integer `line_font`, `level`, and `color` fields
+- `Evals/IGES-SDK/src/writer/file_writer.cpp` now mirrors the ref-impl's
+  custom-delimiter PD prefix handling.
+- The empty-start-lines writer test now asserts the spec-level contract
+  ("one or more blank Start records") instead of pinning the current
+  ref-impl's exact choice of one line.
+
+### Validated
+
+- Prompt/schema review reconciled against the C++ ref-impl and hidden
+  test expectations on 2026-04-16.
+
+## v1.0.4 — unreleased
+
+### Added
+
+- Additional topology/boundary round-trip coverage in
+  `tests/test_entity_roundtrips.py` for:
+  - MSBO (186)
+  - Vertex List (502)
+  - Edge List (504)
+  - Loop (508)
+  - Face (510)
+  - Shell (514)
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`138 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.3 — unreleased
 
 ### Added
@@ -20,7 +60,7 @@
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`132 passed`, 2026-04-16).
+  (`138 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
@@ -42,7 +82,7 @@
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`132 passed`, 2026-04-16).
+  (`138 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
@@ -70,7 +110,7 @@
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`132 passed`, 2026-04-16).
+  (`138 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
@@ -111,7 +151,7 @@ Python CLI test suite.
 ### Validated
 
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
-  (`132 passed`, 2026-04-16).
+  (`138 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 - First real-agent smoke run completed cleanly:

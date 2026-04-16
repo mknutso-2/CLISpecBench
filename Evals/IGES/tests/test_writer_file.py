@@ -68,7 +68,7 @@ def test_terminate_counts_match_written_sections(
     assert counts["P"] == len(grouped["P"])
 
 
-def test_empty_start_lines_produce_single_blank_start_record(
+def test_empty_start_lines_produce_one_or_more_blank_start_records(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = wrap_entities([])
@@ -76,8 +76,9 @@ def test_empty_start_lines_produce_single_blank_start_record(
     iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="blank-start")
 
     grouped = physical_lines_by_section(iges_path)
-    assert len(grouped["S"]) == 1
-    assert grouped["S"][0][:72].strip() == ""
+    assert len(grouped["S"]) >= 1
+    assert all(line[:72].strip() == "" for line in grouped["S"])
 
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name="blank-start")
-    assert parsed["start_lines"] == [""]
+    assert len(parsed["start_lines"]) >= 1
+    assert all(line == "" for line in parsed["start_lines"])

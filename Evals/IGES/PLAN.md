@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (132 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (138 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -180,7 +180,7 @@ prompt/
   - [ ] §4.46 Boolean Tree (180)
   - [ ] §4.47 Selected Component (182)
   - [ ] §4.48 Solid Assembly (184)
-  - [ ] §4.49 MSBO (186)
+  - [x] §4.49 MSBO (186) — covered in `test_entity_roundtrips.py`
   - [x] §4.50 Plane Surface (190) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [x] §4.51 Cylindrical Surface (192) — covered in
@@ -222,11 +222,11 @@ prompt/
   - [ ] §4.139 Nodal Load/Constraint (418)
   - [ ] §4.140 Network Subfigure Instance (420)
   - [ ] §4.142 Solid Instance (430)
-  - [ ] §4.143 Vertex List (502)
-  - [ ] §4.144 Edge List (504)
-  - [ ] §4.145 Loop (508)
-  - [ ] §4.146 Face (510)
-  - [ ] §4.147 Shell (514)
+  - [x] §4.143 Vertex List (502) — covered in `test_entity_roundtrips.py`
+  - [x] §4.144 Edge List (504) — covered in `test_entity_roundtrips.py`
+  - [x] §4.145 Loop (508) — covered in `test_entity_roundtrips.py`
+  - [x] §4.146 Face (510) — covered in `test_entity_roundtrips.py`
+  - [x] §4.147 Shell (514) — covered in `test_entity_roundtrips.py`
 - [ ] **Writer-specific tests**
   - [x] `test_writer_format.cpp` → `test_writer_format.py` (Hollerith,
         integer, real, column packing).

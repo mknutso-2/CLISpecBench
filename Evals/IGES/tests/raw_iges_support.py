@@ -68,7 +68,7 @@ def physical_lines_by_section(path: Path) -> dict[str, list[str]]:
 
 def parse_terminate_counts(line: str) -> Mapping[str, int]:
     """Parse the S/G/D/P counts from a Terminate-section physical record."""
-    match = re.fullmatch(r"S\s*(\d+)G\s*(\d+)D\s*(\d+)P\s*(\d+)", line[:32])
+    match = re.fullmatch(r"S[ ]*(\d+)G[ ]*(\d+)D[ ]*(\d+)P[ ]*(\d+)", line[:32])
     if match is None:
         raise ValueError(f"not a terminate record: {line!r}")
     return {

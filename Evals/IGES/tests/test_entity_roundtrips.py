@@ -527,3 +527,91 @@ def test_view_roundtrip(
     assert data["view_number"] == 7
     assert data["scale"] == pytest.approx(2.5)
     assert data["clip_planes"] == [0, 0, 0, 0, 0, 0]
+
+
+# §4.143 Vertex List (Type 502)
+def test_vertex_list_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "n": 2,
+        "vertices": [[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=502, data=payload,
+    )
+    assert data["n"] == 2
+    assert data["vertices"][1] == pytest.approx([1.0, 2.0, 3.0])
+
+
+# §4.144 Edge List (Type 504)
+def test_edge_list_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "n": 1,
+        "edges": [{"curve": 1, "svp": 3, "sv": 1, "tvp": 3, "tv": 2}],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=504, data=payload,
+    )
+    assert data == payload
+
+
+# §4.145 Loop (Type 508)
+def test_loop_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "n": 1,
+        "edge_uses": [{
+            "type": 0,
+            "edge": 1,
+            "ndx": 1,
+            "orientation": True,
+            "k": 1,
+            "param_curves": [{"isoparametric": False, "curve": 0}],
+        }],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=508, data=payload,
+    )
+    assert data == payload
+
+
+# §4.146 Face (Type 510)
+def test_face_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"surf": 1, "n": 1, "outer_loop_flag": True, "loops": [3]}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=510, data=payload,
+    )
+    assert data == payload
+
+
+# §4.147 Shell (Type 514)
+def test_shell_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"n": 1, "faces": [{"face": 1, "orientation": True}]}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=514, data=payload,
+    )
+    assert data == payload
+
+
+# §4.49 MSBO (Type 186)
+def test_msbo_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "shell": 1,
+        "sof": True,
+        "n": 1,
+        "voids": [{"shell": 3, "orientation": False}],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=186, data=payload,
+    )
+    assert data == payload
