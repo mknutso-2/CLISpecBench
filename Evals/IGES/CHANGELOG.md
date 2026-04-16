@@ -1,5 +1,25 @@
 # IGES Changelog
 
+## v1.0.12 — unreleased
+
+### Added
+
+- Dedicated CLI coverage in `tests/test_core_entities.py` for:
+  - Null / Circular Arc / Composite Curve (0 / 100 / 102)
+  - Point / Direction / Transformation Matrix (116 / 123 / 124)
+- Dedicated CLI coverage in `tests/test_structure_and_view_entities.py`
+  for:
+  - Subfigure Definition / Property / Drawing (308 / 406 / 404)
+  - Subfigure Instance / View (408 / 410)
+  - Rectangular Array / Circular Array (412 / 414)
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`211 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.11 — unreleased
 
 ### Added

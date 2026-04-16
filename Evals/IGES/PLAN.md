@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (182 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (211 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -123,19 +123,20 @@ prompt/
       invokable (mirror CNCSim's).
 - [x] **Pilot port: Line entity end-to-end** — `test_line_entity.py`,
       10 tests, all passing against the C++ ref-impl.
-- [ ] **File format / data type tests** (higher value — port first)
+- [x] **File format / data type tests** (higher value — port first)
   - [x] `test_2_2_2_*.cpp` → `test_data_types.py` (integer, real, string,
         pointer, logical).
   - [x] `test_2_2_3_*.cpp` → `test_free_format.py` (delimiters, free format).
   - [x] `test_2_2_4_*.cpp` → `test_sections.py` (Start/Global/DE/PD/Terminate).
-- [ ] **Per-entity tests** — 87 entity-level ports. Broad coverage
+- [x] **Per-entity tests** — 87 entity-level ports. Broad coverage
       (round-trip of `entity.data` for 14 entity types) now lives in
       `test_entity_roundtrips.py`; per-entity `§4.X` files below are still
       desirable for behavioural assertions beyond JSON round-tripping.
-  - [ ] §4.1 Null (0) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.3 Circular Arc (100) — covered in `test_entity_roundtrips.py`
+  - [x] §4.1 Null (0) — covered in `test_core_entities.py`
+  - [x] §4.3 Circular Arc (100) — covered in `test_core_entities.py`
         + `test_geometric_eval.py`
-  - [ ] §4.4 Composite Curve (102) — covered in `test_entity_roundtrips.py`
+  - [x] §4.4 Composite Curve (102) — covered in
+        `test_core_entities.py` + `test_geometric_eval.py`
   - [x] §4.5 Conic Arc / Copious Data (104 / 106) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [x] §4.12 Plane (108) — covered in `test_entity_roundtrips.py`
@@ -145,15 +146,16 @@ prompt/
         `test_spline_and_fea_entities.py`
   - [x] §4.15 Parametric Spline Surface (114) — covered in
         `test_spline_and_fea_entities.py`
-  - [ ] §4.16 Point (116) — covered in `test_entity_roundtrips.py`
+  - [x] §4.16 Point (116) — covered in `test_core_entities.py`
   - [x] §4.17 Ruled Surface (118) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [x] §4.18 Surface of Revolution (120) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
   - [x] §4.19 Tabulated Cylinder (122) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
-  - [ ] §4.20 Direction (123) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.21 Transformation Matrix (124) — covered in `test_entity_roundtrips.py`
+  - [x] §4.20 Direction (123) — covered in `test_core_entities.py`
+  - [x] §4.21 Transformation Matrix (124) — covered in
+        `test_core_entities.py`
   - [x] §4.22 Flash (125) — covered in `test_entity_roundtrips.py`
   - [x] §4.23 Rational B-Spline Curve (126) — covered in
         `test_spline_and_fea_entities.py`
@@ -251,17 +253,24 @@ prompt/
         `test_surface_boundary_entities.py`
   - [x] §4.91 Line Font Definition (304) — covered in
         `test_metadata_entities.py`
-  - [ ] §4.92 Subfigure Definition (308) — covered in `test_entity_roundtrips.py`
+  - [x] §4.92 Subfigure Definition (308) — covered in
+        `test_structure_and_view_entities.py`
   - [x] §4.93 Color Definition (314) — covered in
         `test_metadata_entities.py`
-  - [ ] §4.97 Property (406) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.131 Drawing (404) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.133 Subfigure Instance (408) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.134 View (410) — covered in `test_entity_roundtrips.py`
+  - [x] §4.97 Property (406) — covered in
+        `test_structure_and_view_entities.py`
+  - [x] §4.131 Drawing (404) — covered in
+        `test_structure_and_view_entities.py`
+  - [x] §4.133 Subfigure Instance (408) — covered in
+        `test_structure_and_view_entities.py`
+  - [x] §4.134 View (410) — covered in
+        `test_structure_and_view_entities.py`
   - [x] §4.135 External Reference (416) — covered in
         `test_surface_boundary_entities.py`
-  - [ ] §4.136 Rectangular Array (412) — covered in `test_defaulted_fields.py`
-  - [ ] §4.137 Circular Array (414) — covered in `test_entity_roundtrips.py`
+  - [x] §4.136 Rectangular Array (412) — covered in
+        `test_structure_and_view_entities.py` + `test_defaulted_fields.py`
+  - [x] §4.137 Circular Array (414) — covered in
+        `test_structure_and_view_entities.py`
   - [x] §4.139 Nodal Load/Constraint (418) — covered in
         `test_pointer_backed_fields.py`
   - [x] §4.140 Network Subfigure Instance (420) — covered in
@@ -273,7 +282,7 @@ prompt/
   - [x] §4.145 Loop (508) — covered in `test_entity_roundtrips.py`
   - [x] §4.146 Face (510) — covered in `test_entity_roundtrips.py`
   - [x] §4.147 Shell (514) — covered in `test_entity_roundtrips.py`
-- [ ] **Writer-specific tests**
+- [x] **Writer-specific tests**
   - [x] `test_writer_format.cpp` → `test_writer_format.py` (Hollerith,
         integer, real, column packing).
   - [x] `test_writer_global.cpp` → `test_writer_global.py`.
