@@ -1408,7 +1408,7 @@ function createSvgElement(tagName) {
 }
 
 async function loadRows() {
-  const response = await fetch(DATA_PATH);
+  const response = await fetch(`${DATA_PATH}?t=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Unable to load ${DATA_PATH}`);
   const text = await response.text();
   return parseCsv(text);
