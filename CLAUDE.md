@@ -155,6 +155,24 @@ with Files/LOC to judge whether the agent's claim is credible. A message that sa
 - **Use `python`, not `python3`**, for all shell commands. On this Windows system, `python3` is not available; `python` resolves to the correct interpreter.
 - **Do not assume the host `docker` CLI is usable from PowerShell.** On this Windows machine, `Get-Command docker` resolves to a zero-byte `C:\Windows\System32\docker` file, which broke ad hoc PowerShell pipeline usage in local testing, made `cmd /c docker ...` unreliable in local testing, and can trigger Windows "Pick an app to open docker" prompts. The harness itself talks to Docker through the Python Docker SDK (`src/swe_buildbench/harness/docker.py`), so `swe-buildbench run ...` is fine even when manual `docker` shell commands are not.
 - **Do not background eval runs via `Start-Process powershell ...` on this host.** That launch path opened visible external PowerShell windows during local testing. If you need a detached run, prefer a hidden `cmd.exe` wrapper or another non-windowed launcher; otherwise keep the eval in the current shell.
+- **Starting the WSL2 Docker daemon before eval runs.** The harness talks to Docker at `tcp://localhost:2375` (WSL2 Docker Engine, not Docker Desktop). Two gotchas bite repeatedly:
+  1. **WSL2 auto-shuts-down between `wsl --` invocations.** Each one-shot `wsl -d Ubuntu -- ...` command boots the VM, runs, then the VM exits seconds later — which stops systemd and kills dockerd along with it. The TCP listener briefly appears, then vanishes, and harness runs fail with `WinError 10061 "target machine actively refused it"` even though `service docker status` says "active".
+  2. **dockerd intentionally delays TCP bind by ~15s** when listening without TLS (deprecation warning: *"Startup is intentionally being slowed down to show this message"*). Probes in the first ~15s after a dockerd start see no listener.
+
+  Startup procedure that works from bash on Windows:
+  ```bash
+  # 1. Pin WSL up with a long-running process (run this backgrounded, keep it alive
+  #    for the whole eval session):
+  wsl -d Ubuntu -u root -- sleep 86400 &
+
+  # 2. Start dockerd as root (no sudo-TTY needed because -u root):
+  wsl -d Ubuntu -u root -- service docker start
+
+  # 3. Wait ~20s, then verify TCP is bound from Windows:
+  DOCKER_HOST=tcp://localhost:2375 uv run python -c \
+    "import docker; print(docker.DockerClient(base_url='tcp://localhost:2375').version()['ApiVersion'])"
+  ```
+  Only after the probe returns an API version (`1.54` or similar) should you launch `swe-buildbench run`. If the probe fails, check `wsl -d Ubuntu -u root -- ss -ltn | grep 2375` — if nothing listens, dockerd is still in the TLS-warning slowdown; wait and retry. If dockerd keeps restarting (new PID each check), the keep-alive sleep has died — relaunch it.
 
 ## Key docs
 
