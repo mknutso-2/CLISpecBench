@@ -55,6 +55,20 @@ Docker was a repeated pain point during harness development; see
 `AGENTS.md`), and composes with the harness's existing `pytest tmp_path`
 pattern used by CNCSim.
 
+Resolved contract decisions:
+
+- `eval` returns a `point` plus nullable `tangent` / `normal`; higher
+  derivatives are out of scope for the current harness contract.
+- The `eval` comparison policy uses a single global tolerance pair:
+  relative `1e-9`, absolute `1e-12` near zero.
+- `query --de <n>` on an out-of-range or even DE index is invalid input
+  (exit code `1`).
+- The shipped docs bundle uses the transcribed
+  `prompt/docs/iges-5-3-specification.md` only; the original PDF is not
+  shipped without an explicit license review.
+- `Evals/IGES-SDK/` remains in-repo as the upstream provenance snapshot
+  for generator scripts, Catch2 tests, and reference fixtures.
+
 ## 3. IGES-JSON schema design choices
 
 Canonical JSON schema (see `prompt/technical-requirements-prompt.md` §2)

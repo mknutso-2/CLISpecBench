@@ -38,9 +38,11 @@ iges roundtrip  --input <file.iges>  --output <out.iges>
 
 - `0` — success.
 - `1` — invalid input. Any input file that fails to parse, any malformed
-  JSON, any reference to a nonexistent DE index, any evaluation on a
-  non-parametric entity, any semantic validation failure described in the
-  IGES spec.
+  JSON, any invalid Directory Entry cross-reference (`view`,
+  `xform_matrix`, `label_display`), any negative entity type, any zero
+  `param_line_count` on a non-null entity, any non-positive required
+  Global numeric field such as `model_space_scale`, or any evaluation on
+  a non-parametric entity.
 - `2` — internal error in the tool itself (panic, out-of-memory,
   unexpected exception).
 
@@ -698,7 +700,7 @@ type RationalBSplineCurveData = {
   control_points: Vec3[],  // length = K+1
   v0: number,  // Starting parameter value
   v1: number,  // Ending parameter value
-  plane_normal: Vec3,  // Unit normal if planar (PROP1=1)
+  plane_normal: Vec3,  // Always present; unit normal if planar (PROP1=1), else zero vector
 };
 ```
 

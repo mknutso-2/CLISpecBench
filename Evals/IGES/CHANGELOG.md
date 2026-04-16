@@ -1,5 +1,39 @@
 # IGES Changelog
 
+## v1.0.13 — unreleased
+
+### Added
+
+- `tests/test_validation.py`, porting the SDK's structural-validation
+  surface to the CLI by asserting `iges parse` rejects:
+  - invalid `xform_matrix` and `view` DE references
+  - negative entity types
+  - zero `param_line_count` on non-null entities
+  - non-positive `model_space_scale`
+
+### Changed
+
+- `reference-implementation-cpp/src/main.cpp` now runs structural
+  validation after parsing and before `parse` / `query` / `eval` /
+  `roundtrip` proceed on invalid files.
+- `reference-implementation-cpp/src/model/validate.cpp` now emits
+  error-severity diagnostics for failing structural checks.
+- `prompt/technical-requirements-prompt.md` now describes the shipped
+  structural-validation surface precisely instead of overclaiming that
+  every entity-data DE pointer is validated at parse time.
+- Type `126` `plane_normal` is now documented as always-present, with a
+  zero vector for non-planar curves.
+- Tightened the new dedicated entity tests so Circular Arc uses a real
+  quarter-arc fixture and Composite Curve uses a spec-legal non-empty
+  constituent list.
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`219 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.12 — unreleased
 
 ### Added

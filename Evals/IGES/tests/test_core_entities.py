@@ -56,15 +56,17 @@ def test_circular_arc_roundtrips_full_circle_and_evaluates_in_zt_plane(
         "y1": 0.0,
         "x2": 1.0,
         "y2": 0.0,
-        "x3": 1.0,
-        "y3": 0.0,
+        "x3": 0.0,
+        "y3": 1.0,
     }
     roundtripped = _roundtrip_single(
         submission_command, tmp_path, entity_type=100, data=data,
     )
     assert roundtripped["zt"] == pytest.approx(7.5)
-    assert roundtripped["x2"] == pytest.approx(roundtripped["x3"])
-    assert roundtripped["y2"] == pytest.approx(roundtripped["y3"])
+    assert roundtripped["x2"] == pytest.approx(1.0)
+    assert roundtripped["y2"] == pytest.approx(0.0)
+    assert roundtripped["x3"] == pytest.approx(0.0)
+    assert roundtripped["y3"] == pytest.approx(1.0)
 
     iges_path = write_iges_from_json(
         submission_command,
@@ -79,16 +81,29 @@ def test_circular_arc_roundtrips_full_circle_and_evaluates_in_zt_plane(
     assert payload["point"] == pytest.approx([1.0, 0.0, 7.5], abs=1e-9)
 
 
-def test_composite_curve_roundtrips_empty_constituent_list(
+def test_composite_curve_roundtrips_two_constituents(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=102,
-        data={"constituents": []},
-    )
-    assert data == {"constituents": []}
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+        ),
+        make_entity(
+            de_index=3,
+            entity_type=110,
+            data={"start": [1.0, 0.0, 0.0], "terminate": [1.0, 1.0, 0.0]},
+        ),
+        make_entity(
+            de_index=5,
+            entity_type=102,
+            data={"constituents": [1, 3]},
+        ),
+    ])
+    reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = reparsed["entities"][2]["entity"]["data"]
+    assert data == {"constituents": [1, 3]}
 
 
 def test_point_roundtrips_display_symbol_pointer(

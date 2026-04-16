@@ -16,9 +16,9 @@ can reference section IDs.
 - [x] Register task IDs in `src/swe_buildbench/harness/task.py` `_KNOWN_TASKS`:
   - [x] `"iges": _RegisteredTask("Evals/IGES")`
   - [ ] (later) `iges-py`, `iges-js`, `iges-rs` once those ref-impls exist.
-- [ ] Decide disposition of the original `Evals/IGES-SDK/` directory once the
-      port completes (keep as snapshot vs. delete). Leave in place until the
-      port is green end-to-end.
+- [x] Keep the original `Evals/IGES-SDK/` directory as a checked-in
+      upstream snapshot. Its generator scripts, spec tests, and reference
+      fixtures remain the provenance for the ported eval.
 
 ## 1. CLI Contract
 
@@ -84,8 +84,8 @@ prompt/
 - [x] Confirm baseline-agent prompt usability with `claude-opus-4-6`
       via a real harness run (completed 2026-04-16 without auth,
       rate-limit, or context-exhaustion failure).
-- [ ] Decide whether to ship `IGES5-3.pdf` in `docs/` (license check) or
-      rely on the transcribed `.md` alone. Default: `.md` only.
+- [x] Ship the transcribed `.md` only; do not add `IGES5-3.pdf` without an
+      explicit license review.
 
 ## 4. Reference Implementation (C++)
 
@@ -104,7 +104,7 @@ prompt/
       Catch2, no library target). Mirror `Evals/CNCSim/reference-implementation-cpp/CMakeLists.txt`
       shape.
 - [x] Executable name matches `EVAL_CONFIG.preferred_executable_name="iges"`.
-- [x] Ref-impl passes the full Python test suite (211 tests, 2026-04-16).
+- [x] Ref-impl passes the full Python test suite (219 tests, 2026-04-16).
 
 ## 5. Tests (Catch2 → Python CLI)
 
@@ -303,8 +303,8 @@ prompt/
       random-bytes-input. Asserts `ok:false` + `error` field on the
       diagnostic envelope (spec_ref / line exact values left
       implementation-dependent).
-- [ ] **Validation**
-  - [ ] `test_validate.cpp` → `test_validation.py`.
+- [x] **Validation**
+  - [x] `test_validate.cpp` → `test_validation.py`.
 - [x] **Reference fixtures** — `test_reference_fixtures.py`, 6 tests,
       parses ex1/ex2/ex3 via `iges parse` and asserts entity counts +
       globals + per-type mix. Ported from
@@ -353,8 +353,9 @@ prompt/
 - [ ] `reference-implementation-js/` — JavaScript ref-impl, register
       `iges-js`.
 - [ ] `reference-implementation-rs/` — Rust ref-impl, register `iges-rs`.
-- [ ] Decide whether to split `iges-lite` back out if agents are scoring
-      near-zero on full (fallback plan only).
+- [x] Do not split `iges-lite` back out for now. The first real-agent
+      baseline (`43/93`) is low but not near-zero, so the full eval remains
+      viable without a fallback variant.
 
 ---
 
@@ -366,12 +367,14 @@ once resolved (and capture the decision in `IGES-Design.md`).
 <!-- Resolved: TypeScript-style for per-entity data, prose for CLI
      contract and envelope. See technical-requirements-prompt.md. -->
 
-- [ ] Whether to include `IGES5-3.pdf` in `docs/` (license review needed).
-- [ ] Final `eval` subcommand surface — just `{x,y,z}`, or also first/second
-      derivatives?
-- [ ] Tolerance policy — single global tolerance, or per-entity-type?
-- [ ] Whether `query --de <n>` on an out-of-range index is exit 1
-      (malformed input) or a distinct error class.
+- [x] `IGES5-3.pdf` stays out of the shipped docs bundle pending explicit
+      license review; the Markdown transcription is the canonical prompt doc.
+- [x] `eval` returns `point` plus nullable `tangent` / `normal`; higher
+      derivatives are out of scope for the current contract.
+- [x] Tolerance policy is a single global pair: relative `1e-9`, absolute
+      `1e-12` near zero.
+- [x] `query --de <n>` on an out-of-range or even DE index is exit `1`
+      invalid input.
 <!-- Resolved 2026-04-15: chose (b) — native per-entity parameters,
      documented in technical-requirements-prompt.md §1.6. See Codex
      review transcript codex-conversations/2026-04-15-08-47-iges-arc-t-convention.md

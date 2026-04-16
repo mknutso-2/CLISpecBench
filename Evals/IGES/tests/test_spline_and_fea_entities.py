@@ -176,6 +176,32 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
     assert x * x + y * y == pytest.approx(1.0, abs=1e-9)
 
 
+def test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    data = _roundtrip_single(
+        submission_command,
+        tmp_path,
+        entity_type=126,
+        data={
+            "K": 1,
+            "M": 1,
+            "prop1": 0,
+            "prop2": 0,
+            "prop3": 1,
+            "prop4": 0,
+            "knots": [0.0, 0.0, 1.0, 1.0],
+            "weights": [1.0, 1.0],
+            "control_points": [[0.0, 0.0, 0.0], [1.0, 0.0, 1.0]],
+            "v0": 0.0,
+            "v1": 1.0,
+            "plane_normal": [0.0, 0.0, 0.0],
+        },
+    )
+    assert data["prop1"] == 0
+    assert data["plane_normal"] == pytest.approx([0.0, 0.0, 0.0])
+
+
 def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:

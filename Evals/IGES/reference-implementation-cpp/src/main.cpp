@@ -19,6 +19,7 @@
 #include "writer/file_writer.hpp"
 #include "model/directory_entry.hpp"
 #include "model/global_section.hpp"
+#include "model/validate.hpp"
 
 #include "json/core_json.hpp"
 #include "json/model_json.hpp"
@@ -201,6 +202,24 @@ std::string rewrite_pd_delimiters(std::string_view pd_string,
     return out;
 }
 
+std::expected<iges::IgesFile, json> read_and_validate_iges(
+    std::string const& path
+) {
+    std::ifstream in(path, std::ios::binary);
+    if (!in) {
+        return std::unexpected(make_error("Cannot open input file: " + path, "§1"));
+    }
+    auto parsed = iges::read_iges_file(in);
+    if (!parsed) {
+        return std::unexpected(error_from_diagnostics(parsed.error()));
+    }
+    auto diags = iges::validate(*parsed);
+    if (!diags.empty()) {
+        return std::unexpected(error_from_diagnostics(diags));
+    }
+    return *parsed;
+}
+
 // ── Parse → canonical JSON ───────────────────────────────────
 
 // Build the canonical IGES-JSON document described in §2 from a parsed
@@ -296,17 +315,9 @@ int cmd_parse(Args const& a) {
         std::cerr << err.dump() << std::endl;
         return 1;
     }
-    std::ifstream in(a.input, std::ios::binary);
-    if (!in) {
-        auto err = make_error("Cannot open input file: " + a.input, "§1");
-        std::cerr << err.dump() << std::endl;
-        if (!a.output.empty()) write_json(a.output, err);
-        return 1;
-    }
-    auto parsed = iges::read_iges_file(in);
+    auto parsed = read_and_validate_iges(a.input);
     if (!parsed) {
-        auto err = error_from_diagnostics(parsed.error());
-        write_json(a.output, err);
+        write_json(a.output, parsed.error());
         return 1;
     }
     auto canonical = build_canonical_json(*parsed);
@@ -347,14 +358,9 @@ int cmd_roundtrip(Args const& a) {
         std::cerr << make_error("roundtrip requires --input and --output", "§1").dump() << std::endl;
         return 1;
     }
-    std::ifstream in(a.input, std::ios::binary);
-    if (!in) {
-        std::cerr << make_error("Cannot open input file: " + a.input, "§1").dump() << std::endl;
-        return 1;
-    }
-    auto parsed = iges::read_iges_file(in);
+    auto parsed = read_and_validate_iges(a.input);
     if (!parsed) {
-        std::cerr << error_from_diagnostics(parsed.error()).dump() << std::endl;
+        std::cerr << parsed.error().dump() << std::endl;
         return 1;
     }
     // Roundtrip at the raw-entity level — no re-parsing of PD data.
@@ -380,15 +386,9 @@ int cmd_query(Args const& a) {
         std::cerr << make_error("query requires --input, --output, --de", "§1").dump() << std::endl;
         return 1;
     }
-    std::ifstream in(a.input, std::ios::binary);
-    if (!in) {
-        std::cerr << make_error("Cannot open input file: " + a.input, "§1").dump() << std::endl;
-        return 1;
-    }
-    auto parsed = iges::read_iges_file(in);
+    auto parsed = read_and_validate_iges(a.input);
     if (!parsed) {
-        auto err = error_from_diagnostics(parsed.error());
-        write_json(a.output, err);
+        write_json(a.output, parsed.error());
         return 1;
     }
     auto pos = de_to_position(*a.de, parsed->entities.size());
@@ -431,14 +431,9 @@ int cmd_eval(Args const& a) {
         std::cerr << make_error("eval requires --input, --output, --de, --t", "§1").dump() << std::endl;
         return 1;
     }
-    std::ifstream in(a.input, std::ios::binary);
-    if (!in) {
-        std::cerr << make_error("Cannot open input file: " + a.input, "§1").dump() << std::endl;
-        return 1;
-    }
-    auto parsed = iges::read_iges_file(in);
+    auto parsed = read_and_validate_iges(a.input);
     if (!parsed) {
-        write_json(a.output, error_from_diagnostics(parsed.error()));
+        write_json(a.output, parsed.error());
         return 1;
     }
     auto pos = de_to_position(*a.de, parsed->entities.size());

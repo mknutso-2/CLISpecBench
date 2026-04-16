@@ -7,7 +7,7 @@
 namespace iges {
 
 static Diagnostic make_diag(SectionKind kind, std::string msg, std::string spec_ref) {
-    return Diagnostic{Diagnostic::Severity::Warning, 0, kind,
+    return Diagnostic{Diagnostic::Severity::Error, 0, kind,
                       std::move(msg), std::move(spec_ref)};
 }
 
