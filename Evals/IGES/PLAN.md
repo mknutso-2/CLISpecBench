@@ -164,10 +164,14 @@ prompt/
         `test_pointer_backed_fields.py`
   - [x] §4.30 Offset Surface (140) — covered in
         `test_entity_roundtrips.py` + `test_geometric_eval.py`
-  - [ ] §4.31 Boundary (141)
-  - [ ] §4.32 Curve on Parametric Surface (142)
-  - [ ] §4.33 Bounded Surface (143)
-  - [ ] §4.34 Trimmed Surface (144)
+  - [x] §4.31 Boundary (141) — covered in
+        `test_surface_boundary_entities.py`
+  - [x] §4.32 Curve on Parametric Surface (142) — covered in
+        `test_surface_boundary_entities.py`
+  - [x] §4.33 Bounded Surface (143) — covered in
+        `test_surface_boundary_entities.py`
+  - [x] §4.34 Trimmed Surface (144) — covered in
+        `test_surface_boundary_entities.py`
   - [x] §4.35 Nodal Results (146) — covered in
         `test_pointer_backed_fields.py`
   - [x] §4.36 Element Results (148) — covered in
@@ -237,7 +241,8 @@ prompt/
         `test_pointer_backed_fields.py` + `test_defaulted_fields.py`
   - [x] §4.79 Attribute Table Definition (322) — covered in
         `test_metadata_entities.py`
-  - [ ] §4.90 Associativity Instance (402)
+  - [x] §4.90 Associativity Instance (402) — covered in
+        `test_surface_boundary_entities.py`
   - [x] §4.91 Line Font Definition (304) — covered in
         `test_metadata_entities.py`
   - [ ] §4.92 Subfigure Definition (308) — covered in `test_entity_roundtrips.py`
@@ -247,7 +252,8 @@ prompt/
   - [ ] §4.131 Drawing (404) — covered in `test_entity_roundtrips.py`
   - [ ] §4.133 Subfigure Instance (408) — covered in `test_entity_roundtrips.py`
   - [ ] §4.134 View (410) — covered in `test_entity_roundtrips.py`
-  - [ ] §4.135 External Reference (416)
+  - [x] §4.135 External Reference (416) — covered in
+        `test_surface_boundary_entities.py`
   - [ ] §4.136 Rectangular Array (412) — covered in `test_defaulted_fields.py`
   - [ ] §4.137 Circular Array (414) — covered in `test_entity_roundtrips.py`
   - [x] §4.139 Nodal Load/Constraint (418) — covered in

@@ -1,5 +1,23 @@
 # IGES Changelog
 
+## v1.0.10 — unreleased
+
+### Added
+
+- CLI-level surface-boundary/reference coverage in
+  `tests/test_surface_boundary_entities.py` for:
+  - Boundary / Curve on Parametric Surface / Bounded Surface /
+    Trimmed Surface (141 / 142 / 143 / 144)
+  - Associativity Instance (402)
+  - External Reference (416, Forms 0 / 1 / 2)
+
+### Validated
+
+- `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
+  (`192 passed`, 2026-04-16).
+- `uv run ruff check` and `uv run pyright` pass repo-wide
+  (2026-04-16).
+
 ## v1.0.9 — unreleased
 
 ### Added
