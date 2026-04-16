@@ -782,6 +782,101 @@ def test_offset_surface_indicator_flips_global_normal_orientation(
     assert payload["point"] == pytest.approx([0.0, 1.5, 1.0], abs=1e-9)
 
 
+# §§4.50–4.54: Analytic surfaces.
+#
+# These surface types use the spec's native parameterizations directly.
+# For the right circular / spherical / toroidal families the CLI uses
+# degrees for angular parameters, matching the contract.
+def _analytic_surface_frame() -> list[dict[str, object]]:
+    return [
+        make_entity(de_index=1, entity_type=116, data={
+            "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
+        make_entity(de_index=3, entity_type=123, data={
+            "x": 0.0, "y": 0.0, "z": 1.0}),
+        make_entity(de_index=5, entity_type=123, data={
+            "x": 1.0, "y": 0.0, "z": 0.0}),
+    ]
+
+
+def test_plane_surface_eval_uses_reference_direction_basis(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(_analytic_surface_frame() + [
+        make_entity(de_index=7, entity_type=190, form=1, data={
+            "deloc": 1, "denrml": 3, "derefd": 5}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 7, 2.0, tmp_path, s=-1.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.0, -1.0, 0.0], abs=1e-9)
+
+
+def test_cylindrical_surface_eval_matches_spec_angles_and_axis(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(_analytic_surface_frame() + [
+        make_entity(de_index=7, entity_type=192, form=1, data={
+            "deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 7, 90.0, tmp_path, s=1.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.0, 2.0, 1.0], abs=1e-9)
+
+
+def test_conical_surface_eval_expands_radius_by_v_tan_angle(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(_analytic_surface_frame() + [
+        make_entity(de_index=7, entity_type=194, form=1, data={
+            "deloc": 1, "deaxis": 3, "radius": 2.0,
+            "sangle": 45.0, "derefd": 5}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 7, 90.0, tmp_path, s=1.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([0.0, 3.0, 1.0], abs=1e-9)
+
+
+def test_spherical_surface_eval_uses_latitude_and_longitude_degrees(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(_analytic_surface_frame() + [
+        make_entity(de_index=7, entity_type=196, form=1, data={
+            "deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 7, 90.0, tmp_path, s=30.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx(
+        [0.0, math.sqrt(3.0), 1.0], abs=1e-9,
+    )
+
+
+def test_toroidal_surface_eval_matches_major_and_minor_radii(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(_analytic_surface_frame() + [
+        make_entity(de_index=7, entity_type=198, form=1, data={
+            "deloc": 1, "deaxis": 3, "majrad": 5.0,
+            "minrad": 1.0, "derefd": 5}),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 7, 90.0, tmp_path, s=180.0,
+    )
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([-5.0, 0.0, 1.0], abs=1e-9)
+
+
 # §1 eval contract: non-parametric entity types must be rejected.
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path

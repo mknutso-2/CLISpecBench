@@ -1214,6 +1214,51 @@ evaluate_entity_dispatch(int type, int form, int xform_de,
             if (!r) return std::unexpected(r.error());
             return iges::apply_entity_transform(*r, xform_de, resolver);
         }
+        case 190: {
+            auto ent = data.get<iges::PlaneSurfaceEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface entity requires --s", "§1"});
+            auto r = iges::evaluate_plane_surface(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
+        }
+        case 192: {
+            auto ent = data.get<iges::CylindricalSurfaceEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface entity requires --s", "§1"});
+            auto r = iges::evaluate_cylindrical_surface(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
+        }
+        case 194: {
+            auto ent = data.get<iges::ConicalSurfaceEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ::Parameter,
+                "Surface entity requires --s", "§1"});
+            auto r = iges::evaluate_conical_surface(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
+        }
+        case 196: {
+            auto ent = data.get<iges::SphericalSurfaceEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface entity requires --s", "§1"});
+            auto r = iges::evaluate_spherical_surface(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
+        }
+        case 198: {
+            auto ent = data.get<iges::ToroidalSurfaceEntity>();
+            if (!s.has_value()) return std::unexpected(Diagnostic{
+                Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                "Surface entity requires --s", "§1"});
+            auto r = iges::evaluate_toroidal_surface(ent, t, *s, resolver);
+            if (!r) return std::unexpected(r.error());
+            return iges::apply_entity_transform(*r, xform_de, resolver);
+        }
         default:
             return std::unexpected(Diagnostic{
                 Diagnostic::Severity::Error, 0, SectionKind::Parameter,

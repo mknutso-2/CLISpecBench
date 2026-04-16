@@ -985,6 +985,193 @@ evaluate_surface_of_revolution(SurfaceOfRevolutionEntity const& ent,
 }
 
 std::expected<EvalResult, Diagnostic>
+evaluate_plane_surface(PlaneSurfaceEntity const& ent,
+                       Real t,
+                       Real s,
+                       EntityResolver const& resolver) {
+    if (ent.derefd.is_null()) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Plane Surface requires form 1 for parametric evaluation",
+            "§4.50"});
+    }
+    auto center = resolve_point_entity(
+        ent.deloc.value, "Plane Surface location", "§4.50", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto normal_raw = resolve_direction_entity(
+        ent.denrml.value, "Plane Surface normal", "§4.50", resolver);
+    if (!normal_raw) return std::unexpected(normal_raw.error());
+    auto z_axis = normalize_or_error(
+        *normal_raw, "Plane Surface normal must be non-zero", "§4.50");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        ent.derefd.value, "Plane Surface reference direction", "§4.50", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Plane Surface reference direction must not be parallel to the normal",
+        "§4.50");
+    if (!x_axis) return std::unexpected(x_axis.error());
+
+    EvalResult r;
+    r.point = *center + t * *x_axis + s * cross(*z_axis, *x_axis);
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_cylindrical_surface(CylindricalSurfaceEntity const& ent,
+                             Real t,
+                             Real s,
+                             EntityResolver const& resolver) {
+    if (ent.derefd.is_null()) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Cylindrical Surface requires form 1 for parametric evaluation",
+            "§4.51"});
+    }
+    auto center = resolve_point_entity(
+        ent.deloc.value, "Cylindrical Surface location", "§4.51", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto axis_raw = resolve_direction_entity(
+        ent.deaxis.value, "Cylindrical Surface axis", "§4.51", resolver);
+    if (!axis_raw) return std::unexpected(axis_raw.error());
+    auto z_axis = normalize_or_error(
+        *axis_raw, "Cylindrical Surface axis must be non-zero", "§4.51");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        ent.derefd.value, "Cylindrical Surface reference direction", "§4.51", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Cylindrical Surface reference direction must not be parallel to the axis",
+        "§4.51");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    Real u = t * 3.14159265358979323846 / 180.0;
+
+    EvalResult r;
+    r.point = *center + ent.radius * (std::cos(u) * *x_axis + std::sin(u) * y_axis) + s * *z_axis;
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_conical_surface(ConicalSurfaceEntity const& ent,
+                         Real t,
+                         Real s,
+                         EntityResolver const& resolver) {
+    if (ent.derefd.is_null()) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Conical Surface requires form 1 for parametric evaluation",
+            "§4.52"});
+    }
+    auto center = resolve_point_entity(
+        ent.deloc.value, "Conical Surface location", "§4.52", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto axis_raw = resolve_direction_entity(
+        ent.deaxis.value, "Conical Surface axis", "§4.52", resolver);
+    if (!axis_raw) return std::unexpected(axis_raw.error());
+    auto z_axis = normalize_or_error(
+        *axis_raw, "Conical Surface axis must be non-zero", "§4.52");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        ent.derefd.value, "Conical Surface reference direction", "§4.52", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Conical Surface reference direction must not be parallel to the axis",
+        "§4.52");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    Real u = t * 3.14159265358979323846 / 180.0;
+    Real radius = ent.radius + s * std::tan(ent.sangle * 3.14159265358979323846 / 180.0);
+
+    EvalResult r;
+    r.point = *center + radius * (std::cos(u) * *x_axis + std::sin(u) * y_axis) + s * *z_axis;
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_spherical_surface(SphericalSurfaceEntity const& ent,
+                           Real t,
+                           Real s,
+                           EntityResolver const& resolver) {
+    if (ent.deaxis.is_null() || ent.derefd.is_null()) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Spherical Surface requires form 1 for parametric evaluation",
+            "§4.53"});
+    }
+    auto center = resolve_point_entity(
+        ent.deloc.value, "Spherical Surface center", "§4.53", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto axis_raw = resolve_direction_entity(
+        ent.deaxis.value, "Spherical Surface axis", "§4.53", resolver);
+    if (!axis_raw) return std::unexpected(axis_raw.error());
+    auto z_axis = normalize_or_error(
+        *axis_raw, "Spherical Surface axis must be non-zero", "§4.53");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        ent.derefd.value, "Spherical Surface reference direction", "§4.53", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Spherical Surface reference direction must not be parallel to the axis",
+        "§4.53");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    Real u = t * 3.14159265358979323846 / 180.0;
+    Real v = s * 3.14159265358979323846 / 180.0;
+
+    EvalResult r;
+    r.point = *center + ent.radius * (
+        std::cos(v) * (std::cos(u) * *x_axis + std::sin(u) * y_axis)
+        + std::sin(v) * *z_axis
+    );
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
+evaluate_toroidal_surface(ToroidalSurfaceEntity const& ent,
+                          Real t,
+                          Real s,
+                          EntityResolver const& resolver) {
+    if (ent.derefd.is_null()) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Toroidal Surface requires form 1 for parametric evaluation",
+            "§4.54"});
+    }
+    auto center = resolve_point_entity(
+        ent.deloc.value, "Toroidal Surface center", "§4.54", resolver);
+    if (!center) return std::unexpected(center.error());
+    auto axis_raw = resolve_direction_entity(
+        ent.deaxis.value, "Toroidal Surface axis", "§4.54", resolver);
+    if (!axis_raw) return std::unexpected(axis_raw.error());
+    auto z_axis = normalize_or_error(
+        *axis_raw, "Toroidal Surface axis must be non-zero", "§4.54");
+    if (!z_axis) return std::unexpected(z_axis.error());
+    auto ref_dir = resolve_surface_reference_direction(
+        ent.derefd.value, "Toroidal Surface reference direction", "§4.54", resolver);
+    if (!ref_dir) return std::unexpected(ref_dir.error());
+    auto x_axis = build_surface_x_axis(
+        *ref_dir, *z_axis,
+        "Toroidal Surface reference direction must not be parallel to the axis",
+        "§4.54");
+    if (!x_axis) return std::unexpected(x_axis.error());
+    Vec3 y_axis = cross(*z_axis, *x_axis);
+    Real u = t * 3.14159265358979323846 / 180.0;
+    Real v = s * 3.14159265358979323846 / 180.0;
+
+    EvalResult r;
+    r.point = *center
+        + (ent.majrad + ent.minrad * std::cos(u))
+            * (std::cos(v) * *x_axis - std::sin(v) * y_axis)
+        + ent.minrad * std::sin(u) * *z_axis;
+    return r;
+}
+
+std::expected<EvalResult, Diagnostic>
 apply_entity_transform(EvalResult result,
                        int xform_de,
                        EntityResolver const& resolver) {

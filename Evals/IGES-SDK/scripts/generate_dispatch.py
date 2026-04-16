@@ -136,6 +136,11 @@ RESOLVER_USING: dict[int, tuple[str, str]] = {
     122: ("tabulated_cylinder", "surface"),
     130: ("offset_curve", "curve"),
     140: ("offset_surface", "surface"),
+    190: ("plane_surface", "surface"),
+    192: ("cylindrical_surface", "surface"),
+    194: ("conical_surface", "surface"),
+    196: ("spherical_surface", "surface"),
+    198: ("toroidal_surface", "surface"),
 }
 
 

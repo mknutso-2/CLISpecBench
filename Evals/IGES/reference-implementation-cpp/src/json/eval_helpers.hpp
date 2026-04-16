@@ -8,12 +8,17 @@
 // Circular Arc, B-Spline, etc.) stay inline in dispatch.cpp.
 
 #include "dispatch.hpp"
+#include "../entities/conical_surface_entity.hpp"
 #include "../entities/composite_curve_entity.hpp"
+#include "../entities/cylindrical_surface_entity.hpp"
 #include "../entities/offset_curve_entity.hpp"
 #include "../entities/offset_surface_entity.hpp"
+#include "../entities/plane_surface_entity.hpp"
 #include "../entities/ruled_surface_entity.hpp"
+#include "../entities/spherical_surface_entity.hpp"
 #include "../entities/surface_of_revolution_entity.hpp"
 #include "../entities/tabulated_cylinder_entity.hpp"
+#include "../entities/toroidal_surface_entity.hpp"
 #include <utility>
 
 namespace iges {
@@ -122,5 +127,35 @@ std::expected<EvalResult, Diagnostic>
 apply_entity_transform(EvalResult result,
                        int xform_de,
                        EntityResolver const& resolver);
+
+std::expected<EvalResult, Diagnostic>
+evaluate_plane_surface(PlaneSurfaceEntity const& ent,
+                       Real t,
+                       Real s,
+                       EntityResolver const& resolver);
+
+std::expected<EvalResult, Diagnostic>
+evaluate_cylindrical_surface(CylindricalSurfaceEntity const& ent,
+                             Real t,
+                             Real s,
+                             EntityResolver const& resolver);
+
+std::expected<EvalResult, Diagnostic>
+evaluate_conical_surface(ConicalSurfaceEntity const& ent,
+                         Real t,
+                         Real s,
+                         EntityResolver const& resolver);
+
+std::expected<EvalResult, Diagnostic>
+evaluate_spherical_surface(SphericalSurfaceEntity const& ent,
+                           Real t,
+                           Real s,
+                           EntityResolver const& resolver);
+
+std::expected<EvalResult, Diagnostic>
+evaluate_toroidal_surface(ToroidalSurfaceEntity const& ent,
+                          Real t,
+                          Real s,
+                          EntityResolver const& resolver);
 
 } // namespace iges
