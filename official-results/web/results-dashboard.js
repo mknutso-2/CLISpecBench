@@ -1635,7 +1635,7 @@ function normalizeEval(rawEval, resultLink, transcriptLink) {
   const evalName = String(rawEval || '').trim();
   const searchText = `${resultLink || ''} ${transcriptLink || ''}`.toLowerCase();
 
-  if (searchText.includes('cncsim-full')) return 'CNCSim';
+  if (/cncsim(?:-full)?(?:-(?:cpp|py|js|rs))?/.test(searchText)) return 'CNCSim';
   if (searchText.includes('iges')) return 'IGES';
   if (!evalName) return 'CNCSim';
   if (/^eval\d+$/i.test(evalName)) return 'CNCSim';
