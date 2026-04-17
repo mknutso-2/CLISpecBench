@@ -6,9 +6,12 @@ import json
 import logging
 import subprocess
 from pathlib import Path, PurePosixPath
-from typing import cast
+from typing import TYPE_CHECKING, cast
 
 from swe_buildbench.harness.results import Scores, TestOutcome, TestSummary
+
+if TYPE_CHECKING:
+    from swe_buildbench.harness.docker import ContainerConfig
 
 log = logging.getLogger(__name__)
 
@@ -107,7 +110,16 @@ def _run_hidden_tests_docker(
     timeout_seconds: float,
     language: str,
 ) -> tuple[list[TestOutcome], TestSummary]:
-    """Run tests inside a Docker container for cross-platform compatibility."""
+    """Run tests inside a Docker container for cross-platform compatibility.
+
+    Retries once on transient scorer failures. The observed failure mode
+    (sonnet py eval1/run2) was pytest exiting in ~0.4s with code 4
+    ("CLI usage error") and ``/tmp/report.json`` never created —
+    consistent with one of the copy_in operations not populating the
+    container's rootfs before CMD ran, likely under concurrent-container
+    load on the Windows↔WSL2 Docker bridge. The agent's source was fine
+    (a rescore on a fresh container produced a normal 226/542 result).
+    """
     from swe_buildbench.harness.docker import (
         ContainerConfig,
         DockerSandbox,
@@ -133,21 +145,79 @@ def _run_hidden_tests_docker(
         network_mode="none",
     )
 
-    sandbox = DockerSandbox()
+    # Build the base image once if needed (cheap to re-check across attempts).
+    sandbox_probe = DockerSandbox()
     try:
-        # Build the base image if needed
-        if not sandbox.image_exists(TEST_RUNNER_IMAGE):
+        if not sandbox_probe.image_exists(TEST_RUNNER_IMAGE):
             base_dockerfile = (
                 Path(__file__).resolve().parent.parent.parent.parent / "docker" / "base.Dockerfile"
             )
-            sandbox.build_image(base_dockerfile, TEST_RUNNER_IMAGE)
+            sandbox_probe.build_image(base_dockerfile, TEST_RUNNER_IMAGE)
+    finally:
+        sandbox_probe.cleanup()
 
+    max_attempts = 2
+    for attempt in range(1, max_attempts + 1):
+        exit_code, report_extracted, logs = _run_scorer_attempt(
+            config=config,
+            test_dir=test_dir,
+            submission_dir=submission_dir,
+            src_dir=src_dir,
+            report_path=report_path,
+            timeout_seconds=timeout_seconds,
+        )
+        # Success envelope: pytest 0 (all passed) or 1 (some failed) means
+        # it ran end-to-end and wrote the report. Anything else is an
+        # infrastructure-level failure worth retrying.
+        if report_extracted and exit_code in (0, 1):
+            break
+        _persist_failed_scorer_logs(report_path.parent, attempt, exit_code, logs)
+        if attempt < max_attempts:
+            log.warning(
+                "Scorer attempt %d failed (exit=%s, report=%s) — retrying",
+                attempt,
+                exit_code,
+                "present" if report_extracted else "missing",
+            )
+        else:
+            log.error(
+                "Scorer failed after %d attempts (last exit=%s, report=%s)",
+                max_attempts,
+                exit_code,
+                "present" if report_extracted else "missing",
+            )
+
+    return parse_json_report(report_path)
+
+
+def _run_scorer_attempt(
+    *,
+    config: ContainerConfig,
+    test_dir: Path,
+    submission_dir: Path,
+    src_dir: Path,
+    report_path: Path,
+    timeout_seconds: float,
+) -> tuple[int | None, bool, str]:
+    """Execute one scorer container attempt.
+
+    Returns ``(exit_code, report_extracted, container_logs)``. The caller
+    decides whether to retry based on the tuple.
+    """
+    from swe_buildbench.harness.docker import DockerSandbox
+
+    sandbox = DockerSandbox()
+    exit_code: int | None = None
+    logs = ""
+    report_extracted = False
+    try:
         sandbox.create(config)
         sandbox.copy_in(test_dir, _CONTAINER_TESTS)
         sandbox.copy_in(submission_dir, _CONTAINER_SUBMISSION)
         sandbox.copy_in(src_dir, _CONTAINER_SRC)
 
         run = sandbox.start_and_wait(timeout_seconds)
+        exit_code = run.exit_code
         log.info(
             "Test container finished: exit_code=%s wall=%.1fs",
             run.exit_code,
@@ -155,27 +225,46 @@ def _run_hidden_tests_docker(
         )
 
         try:
-            logs = sandbox.get_logs()
+            logs = sandbox.get_logs() or ""
             if logs:
                 log.debug("Test runner output:\n%s", logs[:3000])
         except Exception:
-            pass
+            log.debug("Failed to fetch scorer container logs", exc_info=True)
 
-        # Extract the JSON report
         try:
             extract_dir = report_path.parent
             sandbox.copy_out(_CONTAINER_REPORT, extract_dir)
-            # copy_out extracts into extract_dir with the archive name
             extracted = extract_dir / "report.json"
             if extracted.exists() and extracted != report_path:
                 extracted.rename(report_path)
+            report_extracted = report_path.is_file()
         except Exception:
             log.warning("Failed to extract test report from container", exc_info=True)
-
     finally:
         sandbox.cleanup()
 
-    return parse_json_report(report_path)
+    return exit_code, report_extracted, logs
+
+
+def _persist_failed_scorer_logs(
+    out_dir: Path, attempt: int, exit_code: int | None, logs: str
+) -> None:
+    """Write the test container's stdout/stderr next to result.json on failure.
+
+    Without this the only record of what pytest said is gone once the
+    container is cleaned up. Named per-attempt so retries don't stomp
+    each other.
+    """
+    try:
+        out_dir.mkdir(parents=True, exist_ok=True)
+        dest = out_dir / f"test-container.attempt{attempt}.log"
+        dest.write_text(
+            f"exit_code={exit_code}\n\n=== stdout+stderr ===\n{logs}",
+            encoding="utf-8",
+        )
+        log.info("Persisted scorer container logs to %s", dest)
+    except Exception:
+        log.debug("Failed to persist scorer container logs", exc_info=True)
 
 
 def parse_json_report(report_path: Path) -> tuple[list[TestOutcome], TestSummary]:
