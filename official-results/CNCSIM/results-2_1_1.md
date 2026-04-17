@@ -39,6 +39,7 @@ No v2.0.2 runs yet. See `results-2_0_1.md` for v2.0.1 results.
 | gpt-5.4 | xhigh | 2.1.1 | 423/542 (78.0%) | 57.5% | 3/3 | Complete (eval7); earlier evals 1-4 superseded by harness/timeout changes |
 | gpt-5.4-mini | xhigh | 2.1.1 | 248/542 (45.8%) | 27.9% | 3/3 | Complete (eval4); run 3 context-exhausted mid-scaffold (0/542) |
 | gpt-5.3-codex | xhigh | 2.1.0 | 265/542 (48.9%) | 48.3% | 2/3 | Run 1 scorer-timeout artifact (`0/0`) excluded |
+| gpt-5.3-codex-spark | xhigh | 2.1.1 | 0/542 (0.0%) | 0.0% | 3/3 | Complete; all 3 runs context-exhausted before any file written |
 | gpt-5.2-codex | xhigh | 2.0.2 | 419/542 (77.3%) | 58.0% | 3/3 | Complete |
 | gpt-5.2 | high | 2.1.0 | 412/542 (76.0%) | 65.4% | 3/3 | Complete |
 | gpt-5.1-codex-max | xhigh | 2.0.2 | 321/542 (59.2%) | 40.5% | 3/3 | Complete |
@@ -74,6 +75,16 @@ Run 3 token usage unavailable: context-exhausted during remote compact. Prior ev
 | 3 | 2.1.0 | 265/542 (48.9%) | 36.0 min | 8.2M | 82K | ~$3.12 | 50 | 3 | 4088 | [result](../../results/cncsim-full/codex-cli/gpt-5.3-codex_xhigh/eval2/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.3-codex_xhigh/eval2/run3/transcript.jsonl) | Claims complete; C++20 simulator in a three-file output tree. |
 
 Excluded: eval2/run1 completed but the old scorer timed out before `report.json` was written, leaving an invalid `0/0` artifact; do not count it in Best/Mean.
+
+#### gpt-5.3-codex-spark / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 0/542 (0.0%) | 3.6 min | ? | ? | - | 17 | 0 | 0 | [result](../../results/cncsim-full/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/transcript.jsonl) | Incomplete; context-exhausted right after planning. Said "I'm now implementing the simulator in `output/`..." and ran `mkdir -p output`, then the next remote-compact call exceeded the model's context window. 0 files written. |
+| 2 | 2.1.1 | 0/542 (0.0%) | 1.6 min | ? | ? | - | 29 | 0 | 0 | [result](../../results/cncsim-full/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/transcript.jsonl) | Incomplete; context-exhausted while still reading the spec ("I'll read that part next..."). Compaction call exceeded the context window. 0 files written. |
+| 3 | 2.1.1 | 0/542 (0.0%) | 5.2 min | ? | ? | - | 15 | 0 | 0 | [result](../../results/cncsim-full/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/transcript.jsonl) | Incomplete; context-exhausted mid-research ("Next I'm reading the canonical-motion and cycle sections..."). 0 files written. |
+
+All 3 runs ended in `context_exhausted` before any code was written, so token usage / cost are unavailable. The model's context window is too small to hold the CNCSim prompt + a few research turns.
 
 #### gpt-5.2-codex / xhigh
 
@@ -216,6 +227,7 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 |---|---|---|---|---|---|---|
 | gpt-5.4 | xhigh | 2.1.1 | 445/542 (82.1%) | 69.1% | 3/3 | Complete |
 | gpt-5.3-codex | xhigh | 2.1.0 | 442/542 (81.5%) | 80.3% | 3/3 | Complete |
+| gpt-5.3-codex-spark | xhigh | 2.1.1 | 0/542 (0.0%) | 0.0% | 3/3 | Complete; all 3 runs context-exhausted before any file written |
 | gpt-5.4-mini | xhigh | 2.1.1 | 346/542 (63.8%) | 36.2% | 3/3 | Complete; runs 1-2 burned 90-130 min each, run 3 context-exhausted before writing code |
 | gpt-5.2-codex | xhigh | 2.1.0 | 268/542 (49.4%) | 48.6% | 3/3 | Complete; runs 72-91 min each |
 | gpt-5.2 | high | 2.1.0 | 257/542 (47.4%) | 31.4% | 3/3 | Complete; run 2 context-exhausted after partial implementation |
@@ -239,6 +251,16 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 | 1 | 2.1.0 | 442/542 (81.5%) | 30.0 min | 19.5M | 85K | ~$4.85 | 88 | 5 | 2614 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex_xhigh/eval1/run1/transcript.jsonl) | Claims complete; full CLI scaffold with RS274 parsing, state execution, and trace generation. |
 | 2 | 2.1.0 | 433/542 (79.9%) | 29.3 min | 8.5M | 71K | ~$2.70 | 73 | 7 | 2651 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex_xhigh/eval1/run2/transcript.jsonl) | Claims complete; Node.js 22+ simulator with a multi-file output tree. |
 | 3 | 2.1.0 | 431/542 (79.5%) | 33.5 min | 11.3M | 86K | ~$3.42 | 71 | 1 | 2637 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex_xhigh/eval1/run3/transcript.jsonl) | Claims complete; single-file Node.js CLI simulator. |
+
+#### gpt-5.3-codex-spark / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 0/542 (0.0%) | 1.3 min | ? | ? | - | 19 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/transcript.jsonl) | Incomplete; context-exhausted while still mapping the spec ("I'm grabbing the error-condition section next..."). 0 files written. |
+| 2 | 2.1.1 | 0/542 (0.0%) | 2.6 min | ? | ? | - | 26 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/transcript.jsonl) | Incomplete; context-exhausted while still validating spec edge cases. 0 files written. |
+| 3 | 2.1.1 | 0/542 (0.0%) | 8.2 min | ? | ? | - | 31 | 0 | 0 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/transcript.jsonl) | Incomplete; context-exhausted via `max_output_tokens` mid-implementation. Said "I'm implementing the full CLI simulator now in `output/main.js`..." but never wrote the file. 0 files. |
+
+All 3 runs ended in `context_exhausted` (runs 1-2 ran out of input window, run 3 hit `max_output_tokens` while emitting the implementation). Token usage / cost unavailable.
 
 #### gpt-5.4-mini / xhigh
 
@@ -310,6 +332,7 @@ Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex mod
 |---|---|---|---|---|---|---|
 | gpt-5.4 | xhigh | 2.1.1 | 449/542 (82.8%) | 59.0% | 3/3 | Complete |
 | gpt-5.3-codex | xhigh | 2.1.1 | 460/542 (84.9%) | 69.6% | 3/3 | Complete |
+| gpt-5.3-codex-spark | xhigh | 2.1.1 | 0/542 (0.0%) | 0.0% | 3/3 | Complete; all 3 runs context-exhausted before any file written |
 | gpt-5.4-mini | xhigh | 2.1.1 | 402/542 (74.2%) | 24.7% | 3/3 | Complete; runs 1-2 context-exhausted before writing code (0/542 each); run 3 delivered |
 | gpt-5.2-codex | xhigh | 2.1.0 | 461/542 (85.1%) | 82.8% | 3/3 | Complete; runs 82-91 min each |
 | gpt-5.2 | high | 2.1.0 | 448/542 (82.7%) | 69.1% | 3/3 | Complete |
@@ -333,6 +356,16 @@ Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex mod
 | 1 | 2.1.1 | 409/542 (75.5%) | 52.8 min | 9.6M | 67K | ~$3.53 | 57 | 2 | 2519 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex_xhigh/eval1/run1/transcript.jsonl) | Claims complete ("Implemented."). |
 | 2 | 2.1.1 | 262/542 (48.3%) | 40.6 min | 12.7M | 89K | ~$3.73 | 82 | 1 | 2540 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex_xhigh/eval1/run2/transcript.jsonl) | Claims complete; full CLI simulator in `output/main.py`. |
 | 3 | 2.1.1 | 460/542 (84.9%) | 23.7 min | 6.7M | 45K | ~$2.28 | 49 | 1 | 2231 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex_xhigh/eval1/run3/transcript.jsonl) | Claims complete; single-file `main.py`. |
+
+#### gpt-5.3-codex-spark / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 0/542 (0.0%) | 3.9 min | ? | ? | - | 49 | 0 | 0 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/transcript.jsonl) | Incomplete; context-exhausted before producing any meaningful agent message (last message truncated to "I'm"). 0 files written. |
+| 2 | 2.1.1 | 0/542 (0.0%) | 1.5 min | ? | ? | - | 22 | 0 | 0 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/transcript.jsonl) | Incomplete; context-exhausted just as it announced the implementation phase ("I've mapped the RS274 semantics and will now implement a"). 0 files written. |
+| 3 | 2.1.1 | 0/542 (0.0%) | 2.7 min | ? | ? | - | 20 | 0 | 0 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/transcript.jsonl) | Incomplete; context-exhausted while still tightening defaults/diagnostics ("doing one more pass for default machine-mode values..."). 0 files written. |
+
+All 3 runs ended in `context_exhausted` before any code was written. Token usage / cost unavailable.
 
 #### gpt-5.4-mini / xhigh
 
@@ -422,6 +455,7 @@ eval_version=2.1.0; newer codex-cli entries (gpt-5.3-codex, gpt-5.4, gpt-5.4-min
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
 | gpt-5.3-codex | xhigh | 2.1.1 | 447/542 (82.5%) | 81.4% | 3/3 | Complete; all 3 runs within 2 points (80.1-82.5%) |
+| gpt-5.3-codex-spark | xhigh | 2.1.1 | 0/542 (0.0%) | 0.0% | 3/3 | Complete; all 3 runs context-exhausted before any file written |
 | gpt-5.4 | xhigh | 2.1.1 | 424/542 (78.2%) | 58.4% | 3/3 | Complete; run 2 best; runs 1+3 hovered near 48% despite longer wall |
 | gpt-5.4-mini | xhigh | 2.1.1 | 369/542 (68.1%) | 53.2% | 3/3 | Complete; tool-heavy (176-329 tool calls/run); runs 2+3 burned 35M+ input tokens each |
 | gpt-5.2-codex | xhigh | 2.1.0 | 438/542 (80.8%) | 56.6% | 3/3 | Complete; run 2 best; runs 1+3 spent 60-92 min each |
@@ -438,6 +472,16 @@ eval_version=2.1.0; newer codex-cli entries (gpt-5.3-codex, gpt-5.4, gpt-5.4-min
 | 1 | 2.1.1 | 434/542 (80.1%) | 65.7 min | 6.3M | 162K | ~$3.81 | 61 | 1 | 3932 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex_xhigh/eval1/run1/transcript.jsonl) | Claims complete; standard Cargo Rust project. |
 | 2 | 2.1.1 | 447/542 (82.5%) | 61.1 min | 9.0M | 123K | ~$3.65 | 94 | 1 | 3416 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex_xhigh/eval1/run2/transcript.jsonl) | Claims complete; standard Rust Cargo project under `output/`. |
 | 3 | 2.1.1 | 443/542 (81.7%) | 34.6 min | 6.4M | 71K | ~$2.54 | 41 | 1 | 3655 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex_xhigh/eval1/run3/transcript.jsonl) | Claims complete; standard Cargo project. |
+
+#### gpt-5.3-codex-spark / xhigh
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 0/542 (0.0%) | 5.1 min | ? | ? | - | 23 | 0 | 0 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run1/transcript.jsonl) | Incomplete; context-exhausted while still mining the spec appendices ("checking the remaining appendices..."). 0 files written. |
+| 2 | 2.1.1 | 0/542 (0.0%) | 5.6 min | ? | ? | - | 54 | 0 | 0 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run2/transcript.jsonl) | Incomplete; context-exhausted via `max_output_tokens` while emitting the simulator. Said "I've finished toolchain bootstrap and am now writing the full simulator implementation in `output/src/main.rs`..." but the response truncated. 0 files persisted. |
+| 3 | 2.1.1 | 0/542 (0.0%) | 3.0 min | ? | ? | - | 35 | 0 | 0 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.3-codex-spark_xhigh/eval1/run3/transcript.jsonl) | Incomplete; context-exhausted as the implementation pass started ("now I'm implementing the Rust simulator in `output/src/main.rs` in one pass..."). 0 files written. |
+
+All 3 runs ended in `context_exhausted` (run 1+3 ran out of input window, run 2 hit `max_output_tokens` mid-emission). Token usage / cost unavailable.
 
 #### gpt-5.4 / xhigh
 
