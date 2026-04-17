@@ -16,7 +16,7 @@ def _repo_root() -> Path:
 class TestTaskDefinitionLanguage:
     def test_definition_has_language_field(self) -> None:
         repo_root = _repo_root()
-        task = resolve_task(repo_root, "wordcount")
+        task = resolve_task(repo_root, "wordcount-cpp")
         assert isinstance(task, TaskDefinition)
         assert task.language == "cpp"
 
@@ -38,7 +38,7 @@ class TestPythonTaskRegistration:
 
     def test_wordcount_python_shares_base_and_technical_with_cpp(self) -> None:
         repo_root = _repo_root()
-        cpp = resolve_task(repo_root, "wordcount")
+        cpp = resolve_task(repo_root, "wordcount-cpp")
         py = resolve_task(repo_root, "wordcount-py")
 
         # Both share the same base prompt, technical prompt, and docs corpus.
@@ -53,7 +53,7 @@ class TestPythonTaskRegistration:
     def test_unknown_task_raises(self) -> None:
         repo_root = _repo_root()
         with pytest.raises(ValueError, match="Unknown task"):
-            resolve_task(repo_root, "wordcount-go")
+            resolve_task(repo_root, "wordcount")
 
 
 class TestRustTaskRegistration:

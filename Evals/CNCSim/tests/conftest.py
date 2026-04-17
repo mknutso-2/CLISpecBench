@@ -31,10 +31,12 @@ def pytest_configure(config: pytest.Config) -> None:
 
 EVAL_CONFIG = EvalConfig(
     task_name="cncsim",
-    default_reference_impl_subdir="Evals/CNCSim/reference-implementation-cpp",
-    py_reference_impl_subdir="Evals/CNCSim/reference-implementation-py",
-    js_reference_impl_subdir="Evals/CNCSim/reference-implementation-js",
-    rs_reference_impl_subdir="Evals/CNCSim/reference-implementation-rs",
+    reference_impl_subdirs={
+        "cpp": "Evals/CNCSim/reference-implementation-cpp",
+        "py": "Evals/CNCSim/reference-implementation-py",
+        "js": "Evals/CNCSim/reference-implementation-js",
+        "rs": "Evals/CNCSim/reference-implementation-rs",
+    },
     env_var="SWEBUILDBENCH_IMPLEMENTATION_ROOT",
     preferred_executable_name="cncsim",
 )

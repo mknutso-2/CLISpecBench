@@ -149,8 +149,8 @@ private `Evals/IGES-SDK/` library, trimmed to the five-subcommand CLI
 plus ADL-based nlohmann::json serializers for all 87 entities. It
 serves three roles:
 
-- **Build / test target.** `pytest Evals/IGES/tests` runs the hidden
-  suite against the ref-impl by default (see `conftest.py`).
+- **Build / test target.** `pytest Evals/IGES/tests --language=cpp` runs the hidden
+  suite against the C++ ref-impl (see `conftest.py`).
 - **Prompt extraction.** The entity structs are the source of truth
   for the canonical JSON schema (appendix A of the tech-requirements
   prompt); any schema change must originate in the ref-impl and

@@ -25,14 +25,14 @@ uv run pyright
 
 ```bash
 pytest path/to/test_file.py::test_name
-pytest Evals/CNCSim/tests
+pytest Evals/CNCSim/tests --language=cpp
 pytest Evals/WordCount/tests --language=py
-pytest Evals/WordCount/tests --implementation-root /path/to/agent-output
+pytest Evals/WordCount/tests --language=cpp --implementation-root /path/to/agent-output
 uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent"
 uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent"
 ```
 
-- Eval reference tests do not consume API tokens. Default reference variants generally need the host C++ toolchain unless you select a supported alternate language such as `--language=py`.
+- Eval reference tests do not consume API tokens. C++ reference variants generally need the host C++ toolchain unless you select a supported alternate language such as `--language=py`.
 - Pytest markers `docker` and `prompts_agent` are strict; unmarked harness tests must stay pure Python.
 - If Windows container tests cannot reach the daemon, retry with `DOCKER_HOST=tcp://localhost:2375`.
 

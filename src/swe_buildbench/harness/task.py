@@ -5,8 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_LANGUAGE = "cpp"
-
 
 @dataclass
 class ExtensionTask:
@@ -29,7 +27,7 @@ class TaskDefinition:
     technical_prompt_path: Path
     docs_dir: Path
     test_dir: Path
-    language: str = DEFAULT_LANGUAGE
+    language: str
     version: str = "0.0.0"
     build_script: Path | None = None
     sample_test_dir: Path | None = None
@@ -57,7 +55,7 @@ def load_task(
     task_root: Path,
     task_id: str,
     *,
-    language: str = DEFAULT_LANGUAGE,
+    language: str,
 ) -> TaskDefinition:
     """Load a task definition from the conventional directory layout.
 
@@ -65,8 +63,7 @@ def load_task(
 
         prompt/
           base-prompt.md
-          technical-requirements-prompt.md           # default (cpp)
-          technical-requirements-prompt-python.md    # optional, per language
+          technical-requirements-prompt.md           # shared across languages
           docs/
           variants/                                   (optional)
         tests/
@@ -122,23 +119,24 @@ def load_task(
 @dataclass(frozen=True, slots=True)
 class _RegisteredTask:
     subdir: str
-    language: str = DEFAULT_LANGUAGE
+    language: str
+
+
+def _register_language_tasks(
+    task_name: str,
+    subdir: str,
+    languages: tuple[str, ...],
+) -> dict[str, _RegisteredTask]:
+    return {
+        f"{task_name}-{language}": _RegisteredTask(subdir, language=language)
+        for language in languages
+    }
 
 
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
-    "cncsim-full": _RegisteredTask("Evals/CNCSim"),
-    "cncsim-lite": _RegisteredTask("Evals/CNCSim"),
-    "cncsim-full-py": _RegisteredTask("Evals/CNCSim", language="py"),
-    "cncsim-lite-py": _RegisteredTask("Evals/CNCSim", language="py"),
-    "cncsim-full-js": _RegisteredTask("Evals/CNCSim", language="js"),
-    "cncsim-lite-js": _RegisteredTask("Evals/CNCSim", language="js"),
-    "cncsim-full-rs": _RegisteredTask("Evals/CNCSim", language="rs"),
-    "cncsim-lite-rs": _RegisteredTask("Evals/CNCSim", language="rs"),
-    "wordcount": _RegisteredTask("Evals/WordCount"),
-    "wordcount-py": _RegisteredTask("Evals/WordCount", language="py"),
-    "wordcount-js": _RegisteredTask("Evals/WordCount", language="js"),
-    "wordcount-rs": _RegisteredTask("Evals/WordCount", language="rs"),
-    "iges": _RegisteredTask("Evals/IGES"),
+    **_register_language_tasks("cncsim", "Evals/CNCSim", ("cpp", "py", "js", "rs")),
+    **_register_language_tasks("wordcount", "Evals/WordCount", ("cpp", "py", "js", "rs")),
+    **_register_language_tasks("iges", "Evals/IGES", ("cpp",)),
 }
 
 

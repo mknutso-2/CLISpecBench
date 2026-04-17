@@ -7,26 +7,26 @@ These tests use `pytest` and are intended to target either:
 
 ## Usage
 
-Run against the default reference implementation path:
+Run against the configured C++ reference implementation path:
 
 ```powershell
-uv run pytest Evals/CNCSim/tests
+uv run pytest Evals/CNCSim/tests --language=cpp
 ```
 
 Run against an agent output directory:
 
 ```powershell
-uv run pytest Evals/CNCSim/tests --implementation-root C:\path\to\agent-output
+uv run pytest Evals/CNCSim/tests --language=cpp --implementation-root C:\path\to\agent-output
 ```
 
 Or point to a target with an environment variable:
 
 ```powershell
 $env:SWEBUILDBENCH_IMPLEMENTATION_ROOT = "C:\path\to\agent-output"
-uv run pytest Evals/CNCSim/tests
+uv run pytest Evals/CNCSim/tests --language=cpp
 ```
 
-If no buildable implementation exists at the default location, the build test is skipped with a clear message.
+If no buildable implementation exists at the configured reference path for the selected language, the build test is skipped with a clear message.
 
 When adding or changing tests, keep the agent-facing prompt sources aligned with what the tests
 assert:

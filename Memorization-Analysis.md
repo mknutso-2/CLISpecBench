@@ -141,8 +141,8 @@ training data. If memorization contributes, models should perform better in
 languages where more exemplars exist.
 
 **Method:**
-1. Run the same agent against `cncsim-full` (C++), `cncsim-full-py`,
-   `cncsim-full-js`.
+1. Run the same agent against `cncsim-cpp` (C++), `cncsim-py`,
+   `cncsim-js`.
 2. Control for the model's general language proficiency (measure via unrelated
    benchmarks).
 3. A delta that exceeds the general proficiency difference suggests
@@ -222,8 +222,8 @@ do.
    is mechanical — each modification has a known effect on outputs.
 3. **Fork the reference implementation:** Modify the Python ref impl (easiest
    to patch) to match RS274-Alt semantics. Use it to generate expected outputs.
-4. **Register as a new task:** `cncsim-alt` alongside `cncsim-full`.
-5. **Score interpretation:** An agent's score on `cncsim-alt` vs. `cncsim-full`
+4. **Register as a new task:** `cncsim-alt-cpp` alongside `cncsim-cpp`.
+5. **Score interpretation:** An agent's score on `cncsim-alt-cpp` vs. `cncsim-cpp`
    directly measures how much the standard semantics being in training data
    contributes. If scores are similar, the model is spec-driven. If
    `cncsim-alt` is much lower, memorization was helping.
@@ -328,6 +328,6 @@ memorization.
 4. **Establish a function-level baseline** (experiment 4.5) for the models
    you're scoring. This is cheap and provides context even if not conclusive.
 
-5. **Consider registering `cncsim-alt` scores separately** on any leaderboard,
-   with the delta (`cncsim-full` − `cncsim-alt`) reported as a memorization
+5. **Consider registering `cncsim-alt-cpp` scores separately** on any leaderboard,
+   with the delta (`cncsim-cpp` − `cncsim-alt-cpp`) reported as a memorization
    indicator.

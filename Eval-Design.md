@@ -6,17 +6,11 @@
 
 ---
 
-> **Note on CNCSim naming.** This document predates a planned rename. The
-> single CNCSim eval that exists today (`Evals/CNCSim/`, task IDs `cncsim-lite`
-> and `cncsim-full`) is what will become **CNCSim-Lite**: it tests the full
-> RS274 spec but scores only *final* machine state. **CNCSim-Heavy** is a
-> planned future eval that will extend the CLI contract with **inter-line
-> state semantics** (intermediate / trajectory state, not just endpoint), and
-> will be a strict superset of Lite. Until that work lands, references below
-> to "CNCSim-Lite" and "CNCSim-Full" both describe the current single eval;
-> the Lite/Full distinction in this doc reflects the older "scoped subset vs
-> full spec" framing and is being retired in favor of Lite-vs-Heavy. See
-> `Evals/CNCSim/README.md` for the current framing.
+> **Note on CNCSim naming.** The current harness exposes explicit language task
+> IDs such as `cncsim-cpp`, `cncsim-py`, `cncsim-js`, and `cncsim-rs` for the
+> single `Evals/CNCSim/` eval that exists today. The repository currently ships
+> one CNCSim eval with multiple language variants. See `Evals/CNCSim/README.md`
+> for the current framing.
 
 ## 1. Overview
 
@@ -47,7 +41,7 @@ These tracks measure different things. The agentic track is the primary one: it 
 
 **Contamination resistance by design.** Test cases are never published. The full test suite lives in a private repository. Tasks are chosen from domains where ground-truth implementations do not saturate model training data.
 
-**Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-full` vs `cncsim-full-py`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
+**Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-cpp` vs `cncsim-py`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
 
 **The meta-score is an aggregate, not an average.** The SWE-BuildBench score is the geometric mean of task scores, not the arithmetic mean. This penalizes models that score well on one task but fail on others — generalization matters.
 
@@ -149,7 +143,7 @@ See Section 6.
 
 ## Scope
 <Description of what the model is and is not expected to implement.
-Be explicit about what's in scope for CNCSim-Lite vs CNCSim-Full, etc.>
+Be explicit about what is and is not in scope.>
 
 ## Known Difficulty Areas
 <Optional: notes on parts of the spec that are commonly misimplemented.
@@ -347,15 +341,15 @@ The difference in correctness score between `base` and `with-tests` directly mea
 
 ```
 # Evaluate with base prompt (default — scores count toward leaderboard)
-swe-buildbench run --task cncsim-lite --agent claude-code
+swe-buildbench run --task cncsim-cpp --agent claude-code
 
 # Evaluate with a named variant (scores reported separately)
-swe-buildbench run --task cncsim-lite --agent claude-code --prompt-variant with-tests
-swe-buildbench run --task cncsim-lite --agent claude-code --prompt-variant with-guidelines
+swe-buildbench run --task cncsim-cpp --agent claude-code --prompt-variant with-tests
+swe-buildbench run --task cncsim-cpp --agent claude-code --prompt-variant with-guidelines
 
 # Evaluate with extension tasks (if the task defines them)
 # Extensions run automatically after base scoring unless --skip-extensions is passed
-swe-buildbench run --task cncsim-lite --agent claude-code --skip-extensions
+swe-buildbench run --task cncsim-cpp --agent claude-code --skip-extensions
 ```
 
 **Extension task execution flow.** When a task defines extension tasks and `--skip-extensions` is not passed, the harness proceeds as follows after base scoring: (1) the extension prompt is injected into the active agent session (agentic mode) or sent as a follow-up API call with the model's source files as context (model API mode); (2) the agent modifies its code; (3) the harness rebuilds and scores against the extension's hidden test suite; (4) if multiple extensions are defined, each builds on the state left by the previous one. Extension scores are reported alongside (but separate from) the base task score.
@@ -393,7 +387,7 @@ The artifact must write a single JSON object to `--output`. The top-level schema
 
 ```json
 {
-  "task_id": "cncsim-lite",
+  "task_id": "cncsim-cpp",
   "status": "ok",
   "result": { }
 }
@@ -452,7 +446,7 @@ All evaluations are run in Docker containers with pinned language versions. A mo
 
 Implementation language is a task-level configuration, not a framework requirement. The harness is language-agnostic — it builds the submission via a per-language build backend, then invokes the resulting command with the standard CLI contract.
 
-A single eval can be offered in multiple languages. The prompt, documentation corpus, and hidden test suite are shared across language variants; the only per-language assets are a short `language-requirements-<lang>.md` prompt (stored once in `Evals/_shared/`) and a per-eval `reference-implementation-<lang>/` directory that must pass the full hidden test suite. Each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-full`, `cncsim-full-py`).
+A single eval can be offered in multiple languages. The prompt, documentation corpus, and hidden test suite are shared across language variants; the only per-language assets are a short `language-requirements-<lang>.md` prompt (stored once in `Evals/_shared/`) and a per-eval `reference-implementation-<lang>/` directory that must pass the full hidden test suite. Each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-cpp`, `cncsim-py`).
 
 Each language requires a one-time setup cost:
 - A Docker image with pinned compiler/runtime versions
@@ -461,7 +455,7 @@ Each language requires a one-time setup cost:
 - A quality eval rubric in `quality-evals/<language>/`
 - A coverage measurement script in `coverage/<language>/`
 
-Once a language has these components, any new task in that language inherits them at no additional cost. The currently supported languages are C++20, Python 3.11+, JavaScript (Node.js 22+), and Rust (2021 edition).
+Once a language has these components, any new task in that language inherits them at no additional cost. The currently supported languages are C++20, Python 3.11+, JavaScript (Node.js 22+), and stable Rust (the shared prompt currently targets 2021 edition or later).
 
 ---
 
@@ -514,10 +508,9 @@ Three complementary strategies are employed:
 ## 11. Roadmap
 
 ### v1.0 — CNCSim Launch
-- [ ] CNCSim-Lite task: harness, prompt, 50+ hidden tests, sample tests
-- [ ] CNCSim-Full task: harness, prompt, 100+ hidden tests covering full spec
-- [ ] CNCSim-Lite extension tasks: arc plane selection (ext-01), coordinate offsets (ext-02) with hidden test suites
-- [ ] CNCSim-Full extension tasks: stock removal simulation (ext-01), Haas dialect (ext-02) with hidden test suites
+- [ ] CNCSim task: harness, prompt, hidden tests, sample tests
+- [ ] CNCSim current extensions: arc plane selection (ext-01), coordinate offsets (ext-02) with hidden test suites
+- [ ] CNCSim future extensions: stock removal simulation (ext-01), Haas dialect (ext-02) with hidden test suites
 - [ ] C++ quality eval: C++ Core Guidelines rubric (20–25 selected guidelines)
 - [ ] Docker sandbox images for agentic and model API modes
 - [ ] Scoring harness: correctness + coverage + quality + extension pipeline

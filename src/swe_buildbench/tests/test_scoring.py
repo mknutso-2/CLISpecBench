@@ -124,6 +124,7 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
+                language="cpp",
                 use_docker=False,
             )
 
@@ -156,7 +157,7 @@ class TestRunHiddenTests:
         cmd = mock_run.call_args[0][0]
         assert "--language=py" in cmd, f"Expected --language=py in command: {cmd}"
 
-    def test_omits_language_flag_for_default_cpp(self, tmp_path: Path) -> None:
+    def test_passes_cpp_language_flag_explicitly(self, tmp_path: Path) -> None:
         test_dir = tmp_path / "tests"
         test_dir.mkdir()
         submission_dir = tmp_path / "submission"
@@ -170,16 +171,12 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
+                language="cpp",
                 use_docker=False,
             )
 
         cmd = mock_run.call_args[0][0]
-        # Default language is cpp; the plugin's default is also cpp, so we
-        # don't need to pass anything explicitly. Either omitted entirely
-        # or explicitly --language=cpp is acceptable.
-        language_args = [arg for arg in cmd if arg.startswith("--language=")]
-        if language_args:
-            assert language_args == ["--language=cpp"]
+        assert "--language=cpp" in cmd, f"Expected --language=cpp in command: {cmd}"
 
     def test_does_not_pass_executable_flag(self, tmp_path: Path) -> None:
         test_dir = tmp_path / "tests"
@@ -195,6 +192,7 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
+                language="cpp",
                 use_docker=False,
             )
 
@@ -215,6 +213,7 @@ class TestRunHiddenTests:
                 test_dir=test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
+                language="cpp",
                 use_docker=False,
             )
 

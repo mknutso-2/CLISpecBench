@@ -2,7 +2,7 @@
 # Run a SWE-BuildBench eval across all models for one or more agents.
 #
 # Usage:
-#   ./scripts/run-model-sweep.sh --task wordcount [--agents claude-code,codex-cli,gemini-cli] [--runs 1]
+#   ./scripts/run-model-sweep.sh --task wordcount-cpp [--agents claude-code,codex-cli,gemini-cli] [--runs 1]
 #
 # Reads model lists from models/<agent>.txt (format: model,effort per line).
 # Results are written to results/<task>/<agent>/<model>/run-N.json.

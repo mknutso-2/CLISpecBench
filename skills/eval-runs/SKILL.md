@@ -19,7 +19,7 @@ Meta: This file is a breathing document. If you read it and find that any of the
 Example:
 
 ```bash
-DOCKER_HOST=tcp://localhost:2375 uv run swe-buildbench run --task cncsim-full --agent codex-cli --model gpt-5.2-codex --effort xhigh --runs 3
+DOCKER_HOST=tcp://localhost:2375 uv run swe-buildbench run --task cncsim-cpp --agent codex-cli --model gpt-5.2-codex --effort xhigh --runs 3
 ```
 
 - On this Windows host, do not background evals via `Start-Process powershell ...`; use a hidden `cmd.exe` wrapper instead.

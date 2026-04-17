@@ -6,11 +6,9 @@
 
 ---
 
-> **Note on CNCSim task IDs.** The `cncsim-lite` and `cncsim-full` task IDs
-> currently both resolve to `Evals/CNCSim/` and run the same tests — they are
-> aliases pending a planned split. The current eval will become CNCSim-Lite
-> (final-state scoring of full RS274). A future CNCSim-Heavy will add
-> inter-line state semantics to the CLI contract as a strict superset. See
+> **Note on CNCSim naming.** The current harness exposes explicit language task
+> IDs such as `cncsim-cpp`, `cncsim-py`, `cncsim-js`, and `cncsim-rs`. The
+> current repository ships a single `Evals/CNCSim/` eval. See
 > `Evals/CNCSim/README.md`.
 
 ## 1. Purpose
@@ -28,7 +26,7 @@ harness implementation: how those concepts become running code.
 ## 2. Goals
 
 1. **Run any supported agent against any task with a single command.**
-   `swe-buildbench run --task cncsim-full --agent claude-code`
+   `swe-buildbench run --task cncsim-cpp --agent claude-code`
 
 2. **Produce structured, machine-readable results** that capture per-test
    pass/fail, token usage, timing, and scoring — enabling cross-model and
@@ -413,8 +411,8 @@ inspection and programmatic aggregation.
   "schema_version": "1.0",
 
   "metadata": {
-    "run_id": "cncsim-full_claude-code_2026-03-31_run-1",
-    "task": "cncsim-full",
+    "run_id": "cncsim-cpp_claude-code_2026-03-31_run-1",
+    "task": "cncsim-cpp",
     "agent": "claude-code",
     "agent_version": "1.0.16",
     "prompt_variant": "base",
@@ -479,7 +477,7 @@ agent transcript and the complete source code directory.
 
 ```
 results/
-  cncsim-full/
+  cncsim-cpp/
     claude-code/
       run-1.json                 # Structured result (scores, tests, metadata)
       run-1-transcript.jsonl     # Full agent conversation/event log
@@ -530,7 +528,7 @@ For a given agent, find `node_id`s where `outcome` varies across runs.
 
 ```
 swe-buildbench run
-    --task <task-id>                   # Required: cncsim-lite, cncsim-full, ...
+    --task <task-id>                   # Required: cncsim-cpp, cncsim-py, wordcount-cpp, ...
     --agent <agent-name>               # Required: claude-code, codex-cli, gemini-cli, model-api
     --runs <N>                         # Default: 3 for agentic, 1 for model-api
     --prompt-variant <name>            # Default: base
@@ -552,22 +550,22 @@ swe-buildbench validate
 ### 9.1 Examples
 
 ```bash
-# Run Claude Code against CNCSim-Full, 3 runs, base prompt
-swe-buildbench run --task cncsim-full --agent claude-code \
+# Run Claude Code against CNCSim C++, 3 runs, base prompt
+swe-buildbench run --task cncsim-cpp --agent claude-code \
     --api-key-env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
 
-# Run Codex CLI against CNCSim-Lite with the "with-tests" prompt variant
-swe-buildbench run --task cncsim-lite --agent codex-cli \
+# Run Codex CLI against CNCSim C++ with the "with-tests" prompt variant
+swe-buildbench run --task cncsim-cpp --agent codex-cli \
     --prompt-variant with-tests \
     --api-key-env OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Run a model API evaluation (single run, no Docker)
-swe-buildbench run --task cncsim-lite --agent model-api \
+swe-buildbench run --task cncsim-cpp --agent model-api \
     --model claude-opus-4-6 --runs 1 \
     --api-key-env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
 
 # Compare results across agents for a task
-swe-buildbench results --task cncsim-full --compare
+swe-buildbench results --task cncsim-cpp --compare
 ```
 
 ---

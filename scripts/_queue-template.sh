@@ -33,8 +33,8 @@ MAX_CONCURRENT=2
 # Queue items, format: task|model|effort|label
 # `label` is used in the per-item log filename and in queue progress lines.
 queue=(
-  # "cncsim-full|gpt-5.4|xhigh|5.4-cpp"
-  # "cncsim-full-py|gpt-5.4|xhigh|5.4-py"
+  # "cncsim-cpp|gpt-5.4|xhigh|5.4-cpp"
+  # "cncsim-py|gpt-5.4|xhigh|5.4-py"
 )
 # ---------------------------------------------------------------------------
 

@@ -36,17 +36,18 @@ def run_hidden_tests(
     test_dir: Path,
     submission_dir: Path,
     report_path: Path,
+    *,
+    language: str,
     timeout_seconds: float = _DEFAULT_HIDDEN_TEST_TIMEOUT_SECONDS,
     use_docker: bool = True,
-    language: str = "cpp",
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run the hidden test suite against an agent's submission.
 
     The eval's conftest.py handles preparing the submission (building it
     when applicable) and discovering the runnable command via the shared
-    pytest plugin.  We pass ``--implementation-root`` pointing at the
-    agent's source directory and ``--language`` so the plugin selects the
-    right build backend.
+    pytest plugin. We pass ``--implementation-root`` pointing at the
+    agent's source directory plus an explicit ``--language`` so the plugin
+    selects the right build backend.
 
     When *use_docker* is True (the default), tests run inside a Linux
     container so the build environment matches what the agent targeted.

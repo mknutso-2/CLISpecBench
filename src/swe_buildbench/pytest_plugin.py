@@ -17,8 +17,10 @@ Usage inside an eval's ``conftest.py``::
 
     EVAL_CONFIG = EvalConfig(
         task_name="wordcount",
-        default_reference_impl_subdir="Evals/WordCount/reference-implementation-cpp",
-        py_reference_impl_subdir="Evals/WordCount/reference-implementation-py",
+        reference_impl_subdirs={
+            "cpp": "Evals/WordCount/reference-implementation-cpp",
+            "py": "Evals/WordCount/reference-implementation-py",
+        },
         env_var="SWEBUILDBENCH_WORDCOUNT_ROOT",
         preferred_executable_name="wordcount",
     )
@@ -61,12 +63,9 @@ class EvalConfig:
     """Per-eval configuration for the shared pytest fixtures."""
 
     task_name: str
-    default_reference_impl_subdir: str
+    reference_impl_subdirs: dict[str, str]
     env_var: str
     preferred_executable_name: str
-    py_reference_impl_subdir: str | None = None
-    js_reference_impl_subdir: str | None = None
-    rs_reference_impl_subdir: str | None = None
 
 
 def _load_eval_config(request: pytest.FixtureRequest) -> EvalConfig:
@@ -106,16 +105,17 @@ def pytest_addoption(parser: pytest.Parser) -> None:
         action="store",
         default=None,
         help=(
-            "Path to the implementation under test. Defaults to the eval's "
-            "reference implementation for the selected --language."
+            "Path to the implementation under test. When omitted, pytest uses "
+            "the eval's configured reference implementation for the selected "
+            "--language."
         ),
     )
     group.addoption(
         "--language",
         action="store",
-        default="cpp",
+        default=None,
         choices=list(SUPPORTED_LANGUAGES),
-        help="Target language for the implementation under test.",
+        help="Required target language for the implementation under test.",
     )
     group.addoption(
         "--build-timeout-seconds",
@@ -138,7 +138,13 @@ def repo_root() -> Path:
 
 @pytest.fixture(scope="session")
 def eval_language(request: pytest.FixtureRequest) -> str:
-    return cast(str, request.config.getoption("--language"))
+    language = cast(str | None, request.config.getoption("--language"))
+    if language is None:
+        raise pytest.UsageError(
+            "--language is required. Choose one of: "
+            + ", ".join(SUPPORTED_LANGUAGES)
+        )
+    return language
 
 
 @pytest.fixture(scope="session")
@@ -170,11 +176,11 @@ def language_target(
             explicit=True,
         )
     else:
-        subdir = _default_reference_impl_subdir(config, eval_language)
+        subdir = _reference_impl_subdir_for_language(config, eval_language)
         target = LanguageTarget(
             root=repo_root / subdir,
             language=eval_language,
-            origin=f"default {eval_language} reference implementation",
+            origin=f"configured {eval_language} reference implementation",
             explicit=False,
         )
 
@@ -192,31 +198,14 @@ def language_target(
     pytest.skip(message)
 
 
-def _default_reference_impl_subdir(config: EvalConfig, language: str) -> str:
-    if language == "cpp":
-        return config.default_reference_impl_subdir
-    if language == "py":
-        if config.py_reference_impl_subdir is None:
-            raise pytest.UsageError(
-                f"Task {config.task_name!r} has no Python reference implementation "
-                "configured. Set py_reference_impl_subdir in EVAL_CONFIG."
-            )
-        return config.py_reference_impl_subdir
-    if language == "js":
-        if config.js_reference_impl_subdir is None:
-            raise pytest.UsageError(
-                f"Task {config.task_name!r} has no JavaScript reference implementation "
-                "configured. Set js_reference_impl_subdir in EVAL_CONFIG."
-            )
-        return config.js_reference_impl_subdir
-    if language == "rs":
-        if config.rs_reference_impl_subdir is None:
-            raise pytest.UsageError(
-                f"Task {config.task_name!r} has no Rust reference implementation "
-                "configured. Set rs_reference_impl_subdir in EVAL_CONFIG."
-            )
-        return config.rs_reference_impl_subdir
-    raise pytest.UsageError(f"Unsupported language: {language}")
+def _reference_impl_subdir_for_language(config: EvalConfig, language: str) -> str:
+    try:
+        return config.reference_impl_subdirs[language]
+    except KeyError as exc:
+        raise pytest.UsageError(
+            f"Task {config.task_name!r} has no {language!r} reference implementation "
+            "configured. Add it to EvalConfig.reference_impl_subdirs."
+        ) from exc
 
 
 def _build_backend_for(language: str, config: EvalConfig) -> BuildBackend:

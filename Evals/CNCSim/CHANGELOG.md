@@ -23,14 +23,12 @@
 
 - **Rust reference implementation** (`reference-implementation-rs/`), a
   single-file port of the Python ref that passes all 542 tests. Enables
-  a new task variant `cncsim-full-rs` (and `cncsim-lite-rs`) so agents
-  can be evaluated on their ability to implement the CNCSim spec in
-  Rust. Uses `serde`/`serde_json` only (agents remain std-only per
-  `Evals/_shared/language-requirements-rs.md`).
-- **`cncsim-full-rs` / `cncsim-lite-rs` task registration** in
-  `src/swe_buildbench/harness/task.py`, plus `rs_reference_impl_subdir`
-  wired into `Evals/CNCSim/tests/conftest.py` so `--language=rs` runs
-  the Rust ref.
+  a new Rust task variant so agents can be evaluated on their ability to
+  implement the CNCSim spec in Rust. Uses `serde`/`serde_json` only
+  (agents remain std-only per `Evals/_shared/language-requirements-rs.md`).
+- **Rust task registration** in `src/swe_buildbench/harness/task.py`,
+  plus the Rust reference implementation wired into
+  `Evals/CNCSim/tests/conftest.py` so `--language=rs` runs the Rust ref.
 
 ## v2.0.2 — 2026-04-12
 

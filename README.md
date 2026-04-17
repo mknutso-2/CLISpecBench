@@ -9,13 +9,13 @@ submission through a language-agnostic CLI contract.
 
 ## Core Concepts
 
-The repo is easier to navigate if you separate four concepts:
+The repo is easier to navigate if you separate five concepts:
 
 | Concept | Meaning | Main locations |
 |---|---|---|
 | **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/swe_buildbench/agents/` and containerized from `docker/agents/` |
 | **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
-| **Task** | A harness-visible eval-language pair. This is what `swe-buildbench run --task ...` and `swe-buildbench validate --task ...` operate on. Examples: `wordcount`, `wordcount-rs`, `cncsim-full-js`. | Registered in `src/swe_buildbench/harness/task.py` |
+| **Task** | A harness-visible eval-language pair. This is what `swe-buildbench run --task ...` and `swe-buildbench validate --task ...` operate on. Examples: `wordcount-cpp`, `wordcount-rs`, `cncsim-js`. | Registered in `src/swe_buildbench/harness/task.py` |
 | **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/swe_buildbench/harness/`, `src/swe_buildbench/build/`, `src/swe_buildbench/cli.py` |
 | **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/swe_buildbench/tests/` |
 
@@ -170,9 +170,9 @@ Each eval task follows a standard pipeline:
 ## Running an Eval
 
 ```bash
-swe-buildbench run --task wordcount --agent claude-code
-swe-buildbench run --task cncsim-full --agent codex-cli
-swe-buildbench run --task iges --agent copilot-cli
+swe-buildbench run --task wordcount-cpp --agent claude-code
+swe-buildbench run --task cncsim-cpp --agent codex-cli
+swe-buildbench run --task iges-cpp --agent copilot-cli
 ```
 
 View results:
@@ -198,24 +198,24 @@ every PR; the fourth is a hand-run diagnostic for new-machine setup.
 Each task's hidden test suite, run against its reference implementation:
 
 ```bash
-pytest Evals/CNCSim/tests
-pytest Evals/IGES/tests
-pytest Evals/WordCount/tests
+pytest Evals/CNCSim/tests --language=cpp
+pytest Evals/IGES/tests --language=cpp
+pytest Evals/WordCount/tests --language=cpp
 ```
 
-Select a target language (when multiple reference implementations exist):
+Select a target language explicitly (when multiple reference implementations exist):
 
 ```bash
 pytest Evals/WordCount/tests --language=py
 pytest Evals/WordCount/tests --language=js
 pytest Evals/WordCount/tests --language=rs
-pytest Evals/WordCount/tests --language=cpp       # default
+pytest Evals/WordCount/tests --language=cpp
 ```
 
 Point tests at a different implementation (e.g. an agent's output):
 
 ```bash
-pytest Evals/WordCount/tests --implementation-root /path/to/agent-output
+pytest Evals/WordCount/tests --language=cpp --implementation-root /path/to/agent-output
 pytest Evals/WordCount/tests --language=py --implementation-root /path/to/py-output
 ```
 
@@ -365,7 +365,7 @@ Evals/MyTask/
     conftest.py                            # Imports shared fixtures + defines EVAL_CONFIG
     test_build.py                          # Verifies the submission is buildable/runnable
     test_*.py                              # Hidden test suite (language-agnostic)
-  reference-implementation-cpp/            # C++ reference (default language)
+  reference-implementation-cpp/            # C++ reference (optional per-eval)
     CMakeLists.txt
     src/
   reference-implementation-py/             # Python reference (optional per-eval)
@@ -404,21 +404,19 @@ minimal example.
 
 If the eval should be runnable through `swe-buildbench`, register one task ID
 per harness-visible `(eval, language)` pair in `src/swe_buildbench/harness/task.py`.
-The default language is `cpp`, and additional languages take an explicit
-`language=` kwarg:
+The current file uses `_register_language_tasks(...)`, and every registered
+language is explicit, including `cpp`:
 
 ```python
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
-    ...
-    "mytask": _RegisteredTask("Evals/MyTask"),
-    "mytask-py": _RegisteredTask("Evals/MyTask", language="py"),
+    **_register_language_tasks("mytask", "Evals/MyTask", ("cpp", "py")),
 }
 ```
 
 The reference implementation should pass all tests before committing. Verify:
 
 ```bash
-pytest Evals/MyTask/tests -v
+pytest Evals/MyTask/tests --language=cpp -v
 pytest Evals/MyTask/tests --language=py -v       # if a Python reference exists
 ```
 
@@ -476,9 +474,7 @@ an existing eval in a language the repo already knows how to build and run.
 2. **Update the eval's `conftest.py`** if you want
    `pytest Evals/<Task>/tests --language=<lang>` to find that reference
    implementation automatically when no `--implementation-root` is provided.
-   In `EVAL_CONFIG`, set the language-specific reference-implementation field
-   (for example `py_reference_impl_subdir`, `js_reference_impl_subdir`, or
-   `rs_reference_impl_subdir`).
+   In `EVAL_CONFIG`, add that language to `reference_impl_subdirs`.
 3. **Run the hidden test suite** against it until it passes cleanly:
    ```bash
    pytest Evals/<Task>/tests --language=<lang>
@@ -494,7 +490,7 @@ Important distinction:
   language support if `<lang>` is already supported by the harness.
 
 Also note that an eval can still be tested against a supported language even if
-it has no default reference implementation for that language. In that case,
+it has no configured reference implementation for that language. In that case,
 provide an explicit target with `--implementation-root` (or the eval-specific
 environment variable used by `EVAL_CONFIG`).
 
@@ -507,13 +503,11 @@ pair to be invokable through:
 - `swe-buildbench validate --task ...`
 
 Add an entry to `_KNOWN_TASKS` in `src/swe_buildbench/harness/task.py`. By
-convention, the default `cpp` task is unsuffixed and non-default languages use
-`-<lang>` suffixes:
+convention, every task ID is suffixed with `-<lang>`, including `-cpp`:
 
 ```python
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
-    "mytask": _RegisteredTask("Evals/MyTask"),
-    "mytask-py": _RegisteredTask("Evals/MyTask", language="py"),
+    **_register_language_tasks("mytask", "Evals/MyTask", ("cpp", "py")),
 }
 ```
 
@@ -534,7 +528,7 @@ Required touchpoints:
 3. Teach the shared pytest plugin about the language in
    `src/swe_buildbench/pytest_plugin.py`:
    - add it to `SUPPORTED_LANGUAGES`
-   - add default-reference lookup support in `_default_reference_impl_subdir()`
+   - add configured-reference lookup support in `_reference_impl_subdir_for_language()`
    - add backend selection support in `_build_backend_for()`
 4. Add any required toolchain/runtime support to the host/docs and, if needed,
    `docker/base.Dockerfile`.

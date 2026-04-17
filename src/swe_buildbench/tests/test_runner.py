@@ -64,7 +64,7 @@ class _StubAdapter(AgentAdapter):
 
 def _stub_task(root: Path) -> TaskDefinition:
     return TaskDefinition(
-        task_id="cncsim-full",
+        task_id="stubtask-cpp",
         root=root,
         base_prompt_path=root / "base.md",
         language_prompt_path=root / "lang.md",
@@ -138,7 +138,7 @@ def test_docker_init_failure_writes_minimal_result_then_reraises(
 
     result_json = (
         tmp_path
-        / "cncsim-full"
+        / "stubtask-cpp"
         / "codex-cli"
         / "gpt-5.3-codex_xhigh"
         / "eval7"
@@ -212,7 +212,7 @@ def test_docker_failure_after_sandbox_init_preserves_image_sha_in_result(
 
     result_json = (
         tmp_path
-        / "cncsim-full"
+        / "stubtask-cpp"
         / "codex-cli"
         / "gpt-5.3-codex_xhigh"
         / "eval3"
@@ -274,7 +274,7 @@ def test_docker_failure_result_falls_back_to_unknown_image_sha(
 
     result_json = (
         tmp_path
-        / "cncsim-full"
+        / "stubtask-cpp"
         / "codex-cli"
         / "gpt-5.3-codex_xhigh"
         / "eval5"
@@ -338,7 +338,7 @@ def test_build_error_uses_specific_infrastructure_failure_note(
 
     result_json = (
         tmp_path
-        / "cncsim-full"
+        / "stubtask-cpp"
         / "codex-cli"
         / "gpt-5.3-codex_xhigh"
         / "eval6"
@@ -401,7 +401,7 @@ def test_request_exception_uses_specific_infrastructure_failure_note(
 
     result_json = (
         tmp_path
-        / "cncsim-full"
+        / "stubtask-cpp"
         / "codex-cli"
         / "gpt-5.3-codex_xhigh"
         / "eval8"

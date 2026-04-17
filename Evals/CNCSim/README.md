@@ -4,16 +4,14 @@ CNC G-code interpreter eval for SWE-BuildBench. Agents receive the RS274/NGC
 specification and must produce a working simulator that parses G-code programs
 and outputs machine state.
 
-> **Status note.** Earlier drafts of this README described a planned split into
-> a **CNCSim-Lite** (final-state only) and a **CNCSim-Heavy** (inter-line state)
-> eval. That split has been deferred. As of version 2.0.0, CNCSim is a single
-> eval that covers both: the `--output` end-of-program snapshot from the 1.x
-> line *and* a new optional `--trace-output` motion trace that reports
-> inter-line state evolution. The 1.x contract is preserved via the git tag
-> `cncsim-pre-trace`; if a future fork into Lite/Heavy is warranted, that tag
-> marks the last commit of the 1.x baseline and can be copied into a new
-> `CNCSim-Lite/` eval directory. Both `cncsim-lite` and `cncsim-full` task IDs
-> in `_KNOWN_TASKS` continue to resolve to this directory.
+> **Status note.** Earlier drafts of this README described a possible split
+> between the end-of-program snapshot surface and the inter-line trace surface.
+> That split has been deferred. As of version 2.0.0, CNCSim is a single eval
+> that covers both: the `--output` end-of-program snapshot from the 1.x line
+> *and* a new optional `--trace-output` motion trace that reports inter-line
+> state evolution. The 1.x contract is preserved via the git tag
+> `cncsim-pre-trace`; if a future fork is warranted, that tag marks the last
+> commit of the 1.x baseline and can be copied into a new eval directory.
 
 ## Directory Structure
 
@@ -75,13 +73,13 @@ correct RS274 interpretation.
 Against the reference implementation:
 
 ```bash
-pytest Evals/CNCSim/tests -v
+pytest Evals/CNCSim/tests --language=cpp -v
 ```
 
 Against a different implementation:
 
 ```bash
-pytest Evals/CNCSim/tests --implementation-root /path/to/submission
+pytest Evals/CNCSim/tests --language=<lang> --implementation-root /path/to/submission
 ```
 
 The `--build-timeout-seconds` option (default 300) controls the CMake build
@@ -380,14 +378,14 @@ Hidden prompts injected after the base implementation is scored. The agent does
 not know they are coming. Extension prompts use the same non-developer persona
 as the base prompt, written as natural follow-up requests.
 
-**CNCSim-Lite extensions (current eval):**
+**Current extensions:**
 
 - **ext-01: Arc plane selection (G17/G18/G19)** -- Tests whether arc math is
   parameterized by plane or hardcoded to XY.
 - **ext-02: Coordinate system offsets (G54-G59)** -- Tests whether position
   tracking was abstracted beyond a single coordinate frame.
 
-**CNCSim-Heavy extensions (planned, alongside the Heavy eval itself):**
+**Possible future extensions:**
 
 - **ext-01: Stock removal simulation** -- Adds volumetric material tracking.
   Tests architectural extensibility.
