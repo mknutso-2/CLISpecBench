@@ -4,8 +4,8 @@ A benchmark suite for evaluating AI coding agents on documentation-driven
 implementation tasks. Agents receive a specification and domain docs, then must
 produce a working implementation that passes a hidden test suite. Tasks may
 expose one or more target languages; the harness currently supports C++,
-Python 3.11+, JavaScript on Node.js 22+, and Rust 2021, with a shared test
-suite verifying each submission through a language-agnostic CLI contract.
+Python, JavaScript, and Rust, with a shared test suite verifying each
+submission through a language-agnostic CLI contract.
 
 ## Repository Layout
 
@@ -30,12 +30,31 @@ Design docs:
 
 ## Requirements
 
-- **Python 3.11+** with [uv](https://docs.astral.sh/uv/) (or pip)
-- **CMake** and a C++23-capable compiler (gcc-14, clang, or MSVC)
-- **Docker Engine** in WSL2 (Windows) or native Docker (Linux/macOS)
-- **Node.js 22+** (installed in Docker images for CLI agents)
-- **Rust** stable toolchain via [rustup](https://rustup.rs/) — only required for
-  running Rust eval variants on the host (not yet bundled in Docker base image)
+Requirements depend on what you plan to do on the **host machine**:
+
+- **Always needed on the host**
+  - **Python 3.11+** with [uv](https://docs.astral.sh/uv/) (or pip) — needed to
+    install dependencies, run `swe-buildbench`, and run the pure-Python test suite.
+  - **Docker Engine** in WSL2 (Windows) or native Docker (Linux/macOS) — needed for
+    normal `swe-buildbench run` usage, container smoke tests, auth smoke tests, and
+    any workflow that uses the sandbox images.
+- **Needed on the host only for local reference-implementation workflows**
+  - **CMake + a C++ compiler** — needed if you run C++ reference implementations or
+    point tests at a local C++ submission with `--implementation-root`.
+    - **C++20** is the shared prompt/harness baseline and is sufficient for the current
+      `CNCSim` and `WordCount` C++ reference implementations.
+    - **C++23-capable compiler** is needed if you also want to build/run the current
+      `IGES` C++ reference implementation.
+  - **Node.js 22+** — needed only if you run JavaScript reference implementations on
+    the host, such as `pytest Evals/WordCount/tests --language=js` or
+    `pytest Evals/CNCSim/tests --language=js`.
+  - **Rust stable** via [rustup](https://rustup.rs/) — needed only if you run Rust
+    reference implementations on the host, such as
+    `pytest Evals/WordCount/tests --language=rs` or `pytest Evals/CNCSim/tests --language=rs`.
+    The repo's shared Rust prompt currently targets **Rust 2021 or later**.
+- **Bundled in the Docker images, so not required on the host just to run evals**
+  - **Node.js 22+** for the CLI-agent containers
+  - **Rust stable** in `docker/base.Dockerfile` for sandbox/test-runner `--language=rs` workflows
 
 ## Environment Setup
 
