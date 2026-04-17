@@ -11,6 +11,12 @@ const AXIS_OPTIONS = [
   { id: 'language', label: 'Language', axisOnly: true },
 ];
 
+const COLOR_MODE_OPTIONS = [
+  { id: 'pair', label: 'Agent / Model Pair' },
+  { id: 'language', label: 'Language' },
+  { id: 'agent', label: 'Agent' },
+];
+
 const METRICS = {
   percent: {
     label: 'Percent',
@@ -97,6 +103,7 @@ const AXIS_PADDING = {
   top: 12,
   bottom: 12,
 };
+const LANGUAGE_AXIS_X_PADDING = 24;
 const AXIS_TICK_SEGMENTS = 5;
 const AXIS_DOMAIN_PADDING_FRACTION = 0.06;
 const AXIS_DOMAIN_MIN_PADDING = 0.5;
@@ -119,6 +126,7 @@ const STATE = {
   selectedEval: '',
   xAxis: 'cost',
   yAxis: 'percent',
+  colorMode: 'pair',
 };
 
 const pairListEl = document.getElementById('pair-list');
@@ -126,6 +134,7 @@ const languageListEl = document.getElementById('language-list');
 const evalSelect = document.getElementById('eval-select');
 const xAxisSelect = document.getElementById('x-axis');
 const yAxisSelect = document.getElementById('y-axis');
+const colorModeSelect = document.getElementById('color-mode');
 const fileInputEl = document.getElementById('csv-file-input');
 const validationEl = document.getElementById('validation-message');
 const statusEl = document.getElementById('status');
@@ -136,7 +145,14 @@ const legendEl = document.getElementById('legend');
 const tooltip = document.getElementById('tooltip');
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!pairListEl || !languageListEl || !evalSelect || !xAxisSelect || !yAxisSelect) {
+  if (
+    !pairListEl ||
+    !languageListEl ||
+    !evalSelect ||
+    !xAxisSelect ||
+    !yAxisSelect ||
+    !colorModeSelect
+  ) {
     console.error('Dashboard initialization failed: expected UI elements are missing.');
     return;
   }
@@ -202,12 +218,14 @@ function initSelectionDefaults() {
   STATE.selectedEval = evals[0] || '';
   STATE.xAxis = 'cost';
   STATE.yAxis = 'percent';
+  STATE.colorMode = 'pair';
 }
 
 function buildControls() {
   renderPairList();
   renderLanguageList();
   renderEvalList();
+  renderColorModeSelector();
   updateAxisSelectors();
 }
 
@@ -248,10 +266,16 @@ function attachEvents() {
 
   xAxisSelect.addEventListener('change', () => {
     STATE.xAxis = xAxisSelect.value;
+    renderColorModeSelector();
     render();
   });
   yAxisSelect.addEventListener('change', () => {
     STATE.yAxis = yAxisSelect.value;
+    render();
+  });
+
+  colorModeSelect.addEventListener('change', () => {
+    STATE.colorMode = colorModeSelect.value;
     render();
   });
 }
@@ -330,6 +354,22 @@ function updateAxisSelectors() {
   yAxisSelect.value = STATE.yAxis;
 }
 
+function renderColorModeSelector() {
+  colorModeSelect.replaceChildren();
+  COLOR_MODE_OPTIONS.forEach((mode) => {
+    const option = document.createElement('option');
+    option.value = mode.id;
+    option.textContent = mode.label;
+    colorModeSelect.appendChild(option);
+  });
+
+  const selectedOption = colorModeSelect.querySelector(`option[value="${STATE.colorMode}"]`);
+  if (!selectedOption || selectedOption.disabled) {
+    STATE.colorMode = 'pair';
+  }
+  colorModeSelect.value = STATE.colorMode;
+}
+
 function render() {
   clearError();
   const validation = validateSelection();
@@ -338,8 +378,8 @@ function render() {
     return;
   }
 
-  const pairColorMap = getPairColorMap();
-  const points = buildPoints(pairColorMap);
+  const colorMap = getColorMap();
+  const points = buildPoints(colorMap);
   if (!points.length) {
     showNoData('No matching results for the current filters.');
     return;
@@ -347,17 +387,31 @@ function render() {
 
   legendEl.innerHTML = '';
   clearChart();
-  renderLegend(points, pairColorMap);
+  renderLegend(points, colorMap);
   renderPlot(points);
   chartEmpty.classList.add('hidden');
   validationEl.textContent = '';
 }
 
-function getPairColorMap() {
-  const pairOrder = Array.from(STATE.selectedPairs).sort();
+function getColorMap() {
+  let colorKeys = [];
+
+  if (STATE.colorMode === 'language') {
+    colorKeys = Array.from(STATE.selectedLanguages).sort();
+  } else if (STATE.colorMode === 'agent') {
+    const agentSet = new Set();
+    Array.from(STATE.selectedPairs).forEach((pairId) => {
+      const { agent } = splitPairId(pairId);
+      agentSet.add(agent || 'Unknown Agent');
+    });
+    colorKeys = Array.from(agentSet).sort();
+  } else {
+    colorKeys = Array.from(STATE.selectedPairs).sort();
+  }
+
   const map = new Map();
-  pairOrder.forEach((pairId, index) => {
-    map.set(pairId, PALETTE[index % PALETTE.length]);
+  colorKeys.forEach((colorKey, index) => {
+    map.set(colorKey, PALETTE[index % PALETTE.length]);
   });
   return map;
 }
@@ -391,7 +445,7 @@ function clearChart() {
   chartSvg.setAttribute('viewBox', '0 0 980 560');
 }
 
-function buildPoints(pairColorMap) {
+function buildPoints(colorMap) {
   const selectedLanguages = Array.from(STATE.selectedLanguages).sort();
   const rowsByPair = new Map();
 
@@ -408,31 +462,69 @@ function buildPoints(pairColorMap) {
   rowsByPairList.forEach((pairId, index) => {
     const rows = rowsByPair.get(pairId) || [];
     if (!rows.length) return;
-    const color = pairColorMap.get(pairId) || PALETTE[index % PALETTE.length];
+    const fallbackColor = PALETTE[index % PALETTE.length];
 
     if (STATE.xAxis === 'language') {
       selectedLanguages.forEach((language) => {
         const subset = rows.filter((r) => r.language === language);
+        const colorModeKey = getColorModeKey(pairId, language);
+        const color = colorMap.get(colorModeKey) || fallbackColor;
         const point = summarizePoint(pairId, color, subset, language, {
           xAxis: STATE.xAxis,
           yAxis: STATE.yAxis,
           xAsLanguage: true,
           xCategoryLabel: language,
         });
-        if (point) points.push(point);
+        if (point) {
+          point.colorModeKey = colorModeKey;
+          points.push(point);
+        }
+      });
+    } else if (STATE.colorMode === 'language') {
+      selectedLanguages.forEach((language) => {
+        const subset = rows.filter((r) => r.language === language);
+        const colorModeKey = getColorModeKey(pairId, language);
+        const color = colorMap.get(colorModeKey) || fallbackColor;
+        const point = summarizePoint(pairId, color, subset, language, {
+          xAxis: STATE.xAxis,
+          yAxis: STATE.yAxis,
+          xAsLanguage: false,
+          xCategoryLabel: language,
+        });
+        if (point) {
+          point.colorModeKey = colorModeKey;
+          points.push(point);
+        }
       });
     } else {
+      const allLanguageLabel = `All ${selectedLanguages.length} languages`;
+      const colorModeKey = getColorModeKey(pairId, allLanguageLabel);
+      const color = colorMap.get(colorModeKey) || fallbackColor;
       const point = summarizePoint(pairId, color, rows, null, {
         xAxis: STATE.xAxis,
         yAxis: STATE.yAxis,
         xAsLanguage: false,
-        xCategoryLabel: `All ${selectedLanguages.length} languages`,
+        xCategoryLabel: allLanguageLabel,
       });
-      if (point) points.push(point);
+      if (point) {
+        point.colorModeKey = colorModeKey;
+        points.push(point);
+      }
     }
   });
 
   return points;
+}
+
+function getColorModeKey(pairId, language) {
+  if (STATE.colorMode === 'language') {
+    return language || `All ${STATE.selectedLanguages.size} languages`;
+  }
+  if (STATE.colorMode === 'agent') {
+    const { agent } = splitPairId(pairId);
+    return agent || 'Unknown Agent';
+  }
+  return pairId;
 }
 
 function summarizePoint(pairId, color, rows, language, options) {
@@ -532,19 +624,38 @@ function stats(values) {
   };
 }
 
-function renderLegend(points, pairColorMap) {
-  const pairOrder = Array.from(new Set(points.map((point) => point.pairId)));
-  pairOrder.forEach((pairId, index) => {
-    const { agent, model } = splitPairId(pairId);
+function renderLegend(points, colorMap) {
+  const visibleColorKeys = new Set();
+  const visibleOrder = [];
+  points.forEach((point) => {
+    const colorKey = point.colorModeKey || getColorModeKey(point.pairId, point.language);
+    if (!visibleColorKeys.has(colorKey)) {
+      visibleColorKeys.add(colorKey);
+      visibleOrder.push(colorKey);
+    }
+  });
+
+  const mapOrder = Array.from(colorMap.keys()).filter((key) => visibleColorKeys.has(key));
+  const orderedKeys = mapOrder.length ? mapOrder : visibleOrder;
+
+  orderedKeys.forEach((key, index) => {
     const row = document.createElement('div');
     row.className = 'legend-item';
     const swatch = document.createElement('span');
     swatch.className = 'legend-color';
-    swatch.style.background = pairColorMap.get(pairId) || PALETTE[index % PALETTE.length];
+    swatch.style.background = colorMap.get(key) || PALETTE[index % PALETTE.length];
     row.appendChild(swatch);
-    row.appendChild(document.createTextNode(`${agent} / ${model}`));
+    row.appendChild(document.createTextNode(getColorModeLabel(key)));
     legendEl.appendChild(row);
   });
+}
+
+function getColorModeLabel(key) {
+  if (STATE.colorMode === 'agent') return key;
+  if (STATE.colorMode === 'language') return key;
+  const { agent, model } = splitPairId(key);
+  if (!agent && !model) return key;
+  return `${agent} / ${model}`;
 }
 
 function renderPlot(points) {
@@ -960,7 +1071,9 @@ function drawAxes({
   selectedLanguages,
 }) {
   const xAxisY = plotBottom;
-  const yAxisX = plotLeft;
+  const xAxisLeft = typeof xScale.axisLeft === 'number' ? xScale.axisLeft : plotLeft;
+  const xAxisRight = typeof xScale.axisRight === 'number' ? xScale.axisRight : plotRight;
+  const yAxisX = xAxisLeft;
   const yTicks = buildNiceAxisTicks(
     yDomain.min,
     yDomain.max,
@@ -978,8 +1091,8 @@ function drawAxes({
     const value = safeYTicks[i];
     const y = yScale(value);
     const line = createSvgElement('line');
-    line.setAttribute('x1', String(plotLeft));
-    line.setAttribute('x2', String(plotRight));
+    line.setAttribute('x1', String(xAxisLeft));
+    line.setAttribute('x2', String(xAxisRight));
     line.setAttribute('y1', String(y));
     line.setAttribute('y2', String(y));
     line.setAttribute('class', 'tick-line');
@@ -1015,8 +1128,8 @@ function drawAxes({
   chartSvg.appendChild(yAxisLine);
 
   const xAxisLine = createSvgElement('line');
-  xAxisLine.setAttribute('x1', String(plotLeft));
-  xAxisLine.setAttribute('x2', String(plotRight));
+  xAxisLine.setAttribute('x1', String(xAxisLeft));
+  xAxisLine.setAttribute('x2', String(xAxisRight));
   xAxisLine.setAttribute('y1', String(xAxisY));
   xAxisLine.setAttribute('y2', String(xAxisY));
   xAxisLine.setAttribute('class', 'axis-line');
@@ -1206,16 +1319,39 @@ function fixFloat(value) {
   return Number.parseFloat(value.toFixed(12));
 }
 
+function getLanguageAxisSpan(plotLeft, plotRight, selectedLanguages) {
+  const totalSpan = plotRight - plotLeft;
+  if (!selectedLanguages.length || selectedLanguages.length <= 1 || totalSpan <= 0) {
+    return { left: plotLeft, right: plotRight };
+  }
+
+  const left = plotLeft + LANGUAGE_AXIS_X_PADDING;
+  const right = plotRight - LANGUAGE_AXIS_X_PADDING;
+  if (right <= left) return { left: plotLeft, right: plotRight };
+
+  return { left, right };
+}
+
 function createXScale(domain, selectedLanguages, plotLeft, plotRight) {
   const left = plotLeft;
   const right = plotRight;
 
   if (STATE.xAxis === 'language') {
-    return (value) => {
+    const { left: paddedLeft, right: paddedRight } = getLanguageAxisSpan(plotLeft, plotRight, selectedLanguages);
+    const scale = (value) => {
       if (!selectedLanguages.length) return (left + right) / 2;
       if (selectedLanguages.length === 1) return (left + right) / 2;
-      return left + (value / (selectedLanguages.length - 1)) * (right - left);
+      if (paddedRight <= paddedLeft) return (left + right) / 2;
+
+      const clamped = Math.min(
+        Math.max(Number(value), 0),
+        selectedLanguages.length - 1,
+      );
+      return paddedLeft + (clamped / (selectedLanguages.length - 1)) * (paddedRight - paddedLeft);
     };
+    scale.axisLeft = paddedLeft;
+    scale.axisRight = paddedRight;
+    return scale;
   }
 
   return (value) => {
@@ -1303,7 +1439,10 @@ function buildTooltip(point) {
 
   const lines = [
     `<strong>${point.pairLabel || rowPairId(point.pairId)}</strong>`,
-    point.xAsLanguage && point.language ? `Language: ${point.language}` : null,
+    point.language &&
+    (STATE.colorMode === 'language' || point.xAsLanguage)
+      ? `Language: ${point.language}`
+      : null,
     languages.length > 1 ? `Languages: ${languages.join(', ')}` : null,
     runCountLabel,
     `${xMeta.label}: ${
