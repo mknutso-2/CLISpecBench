@@ -7,6 +7,24 @@ expose one or more target languages; the harness currently supports C++,
 Python, JavaScript, and Rust, with a shared test suite verifying each
 submission through a language-agnostic CLI contract.
 
+## Core Concepts
+
+The repo is easier to navigate if you separate four concepts:
+
+| Concept | Meaning | Main locations |
+|---|---|---|
+| **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/swe_buildbench/agents/` and containerized from `docker/agents/` |
+| **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
+| **Task** | A harness-visible eval-language pair. This is what `swe-buildbench run --task ...` and `swe-buildbench validate --task ...` operate on. Examples: `wordcount`, `wordcount-rs`, `cncsim-full-js`. | Registered in `src/swe_buildbench/harness/task.py` |
+| **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/swe_buildbench/harness/`, `src/swe_buildbench/build/`, `src/swe_buildbench/cli.py` |
+| **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/swe_buildbench/tests/` |
+
+Two useful distinctions:
+
+- A **coding agent** is the external product being benchmarked.
+- An **agent adapter** is this repo's wrapper for that coding agent: auth mounting,
+  Docker image selection, CLI invocation, and token/message extraction.
+
 ## Repository Layout
 
 ```
@@ -16,8 +34,13 @@ Evals/                   # Evaluation tasks (one directory per task)
   IGES/                  #   IGES CAD interchange parser/writer eval
   IGES-SDK/              #   Upstream IGES porting source tree
   WordCount/             #   Word frequency counter (toy eval for harness testing)
-src/swe_buildbench/      # Python package: harness, agent adapters, shared build utils
+src/swe_buildbench/      # Python package
+  agents/                #   One adapter module per coding agent
+  build/                 #   Multi-language submission build backends
+  harness/               #   Eval orchestration, Docker, scoring, results
+  tests/                 #   Harness/adapter/build tests
 docker/                  # Dockerfiles (base image + per-agent images)
+  agents/                #   One Dockerfile per CLI coding agent
 scripts/                 # Setup and utility scripts
 ```
 
@@ -125,7 +148,7 @@ harness and smoke tests.
 To verify auth works end-to-end inside containers, see the **Auth smoke
 tests** sub-section under [Running Tests](#running-tests).
 
-## How Evals Work
+## How the Harness Runs an Eval
 
 Each eval task follows a standard pipeline:
 
@@ -282,7 +305,50 @@ These are standalone diagnostics -- not part of `pytest` and not run by
 CI. They are the right place to look for the per-agent credential
 mounting strategy that the harness uses.
 
+## Adding a Coding Agent
+
+Adding a new coding agent is currently spread across a few touchpoints. The
+functionality is not fully centralized in one folder yet, so use this checklist.
+
+**Required touchpoints**
+
+1. **Add an adapter module** under `src/swe_buildbench/agents/` that subclasses
+   `AgentAdapter`. This is where invocation, credential mounts, token parsing,
+   telemetry paths, and allowed hosts live.
+2. **Add a Dockerfile** under `docker/agents/<agent-name>.Dockerfile` for the
+   container image that runs that agent.
+3. **Register the agent in the CLI** in `src/swe_buildbench/cli.py`:
+   - add it to `_get_adapter()`
+   - add it to the `--agent` choices for the `run` subcommand
+4. **Add adapter tests** in `src/swe_buildbench/tests/test_agents.py`.
+5. **Add container smoke coverage** in `src/swe_buildbench/tests/test_container_smoke.py`.
+6. **Add auth smoke coverage**:
+   - create `scripts/smoke-test-<agent>.sh`
+   - include it in `scripts/smoke-test-docker-auth.sh`
+7. **Update docs** if the setup or workflow differs from existing agents.
+
+**Helpful notes**
+
+- `scripts/build-docker-images.sh` auto-discovers Dockerfiles under `docker/agents/`,
+  so adding the Dockerfile is enough for that script to build the new image.
+- For CLI agents, credentials should be exposed through the adapter via
+  `credential_mounts()` and/or environment variables.
+- If the agent needs special network access, update the adapter's `allowed_hosts`.
+
 ## Adding a New Eval
+
+Adding a new eval is already more localized than adding a coding agent. Most of
+the work lives under `Evals/<Task>/`; the main repo-wide touchpoint is the task
+registry in `src/swe_buildbench/harness/task.py`.
+
+**Required touchpoints**
+
+1. **Create the eval directory** under `Evals/<Task>/`.
+2. **Add the prompt/docs/tests/reference implementation** under that directory.
+3. **If the eval should be invokable through the harness CLI**, register one or
+   more task IDs in `src/swe_buildbench/harness/task.py`.
+4. **Validate the reference implementation** by running the hidden test suite
+   against it before committing.
 
 Each eval lives in its own directory under `Evals/`. Required structure:
 
@@ -336,9 +402,10 @@ the `submission_command` fixture (a command sequence ready to splat into
 them language-agnostic. See `Evals/WordCount/tests/conftest.py` for a
 minimal example.
 
-Register the task in `src/swe_buildbench/harness/task.py`. Register one task
-ID per (eval, language) pair — the default language is `cpp`, and additional
-languages take an explicit `language=` kwarg:
+If the eval should be runnable through `swe-buildbench`, register one task ID
+per harness-visible `(eval, language)` pair in `src/swe_buildbench/harness/task.py`.
+The default language is `cpp`, and additional languages take an explicit
+`language=` kwarg:
 
 ```python
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
@@ -398,54 +465,84 @@ from the description.
   an existing one.
 - `docs/` contains reference material the agent can use (specs, standards, etc.).
 
-## Adding a Language Variant to an Existing Eval
+## Adding a Reference Implementation to an Existing Eval
 
-Once an eval has a working reference implementation in at least one language,
-adding a new language variant reuses the existing prompt, documentation corpus,
-and hidden test suite — only a new reference implementation and a task-registry
-entry are required.
-
-Prerequisites (one-time per language, across the whole repo):
-
-1. `Evals/_shared/language-requirements-<lang>.md` exists. If not, create it —
-   it should state the target language version, stdlib-only constraint,
-   build/invoke command template, and source layout / entry-point convention.
-2. `src/swe_buildbench/build/backends.py` has a `BuildBackend` implementation
-   for `<lang>` and `LanguageTarget.missing_requirements()` recognizes it.
-3. `docker/base.Dockerfile` installs the compiler/runtime.
-
-Per-eval steps to add a new language variant:
+This is an **eval-local** change. You are adding a reference implementation for
+an existing eval in a language the repo already knows how to build and run.
 
 1. **Write the reference implementation** at
    `Evals/<Task>/reference-implementation-<lang>/`. It must satisfy the CLI
    contract defined in that eval's `technical-requirements-prompt.md`.
-2. **Run the hidden test suite** against it until it passes cleanly:
+2. **Update the eval's `conftest.py`** if you want
+   `pytest Evals/<Task>/tests --language=<lang>` to find that reference
+   implementation automatically when no `--implementation-root` is provided.
+   In `EVAL_CONFIG`, set the language-specific reference-implementation field
+   (for example `py_reference_impl_subdir`, `js_reference_impl_subdir`, or
+   `rs_reference_impl_subdir`).
+3. **Run the hidden test suite** against it until it passes cleanly:
    ```bash
    pytest Evals/<Task>/tests --language=<lang>
    ```
-   The `--language=<lang>` flag tells the shared pytest plugin to build and
-   invoke the `reference-implementation-<lang>/` directory via the matching
-   `BuildBackend`. If any tests fail, the reference implementation is wrong
-   (or, rarely, the test is ambiguous — see AGENTS.md for the cross-validation
-   protocol).
-3. **Register a new task ID** in `src/swe_buildbench/harness/task.py` by
-   adding a `_RegisteredTask(..., language="<lang>")` entry alongside the
-   existing cpp one. By convention, suffix the task ID with `-<lang>` (e.g.
-   `cncsim-full` → `cncsim-full-py`).
-4. **Validate the registration**:
-   ```bash
-   swe-buildbench validate --task <task-id>-<lang>
-   ```
-   This prints the resolved base / language / technical prompt paths and
-   confirms the language prompt exists. The eval's `base-prompt.md`,
-   `technical-requirements-prompt.md`, `docs/`, and `tests/` are unchanged;
-   do not fork them per language.
+4. **Do not change prompts or tests just because the language changed.**
+   The hidden test suite is language-agnostic by construction.
 
-That's it — no test code, prompt edits, or CLI changes are needed. The
-hidden test suite is language-agnostic by construction (it calls the
-`submission_command` fixture rather than a concrete executable path), so the
-same tests that validated the cpp reference now validate the new language
-variant end-to-end.
+Important distinction:
+
+- Adding a reference implementation does **not** by itself create a new harness
+  task.
+- Adding a reference implementation also does **not** require new shared
+  language support if `<lang>` is already supported by the harness.
+
+Also note that an eval can still be tested against a supported language even if
+it has no default reference implementation for that language. In that case,
+provide an explicit target with `--implementation-root` (or the eval-specific
+environment variable used by `EVAL_CONFIG`).
+
+## Exposing an Eval-Language Pair as a Harness Task
+
+This is a **harness registration** change. Do this when you want an eval-language
+pair to be invokable through:
+
+- `swe-buildbench run --task ...`
+- `swe-buildbench validate --task ...`
+
+Add an entry to `_KNOWN_TASKS` in `src/swe_buildbench/harness/task.py`. By
+convention, the default `cpp` task is unsuffixed and non-default languages use
+`-<lang>` suffixes:
+
+```python
+_KNOWN_TASKS: dict[str, _RegisteredTask] = {
+    "mytask": _RegisteredTask("Evals/MyTask"),
+    "mytask-py": _RegisteredTask("Evals/MyTask", language="py"),
+}
+```
+
+This registration is about making a **task** visible to the harness CLI. It is
+separate from adding a reference implementation. Pytest can still exercise an
+explicit submission in a supported language via `--implementation-root` even if
+no harness task ID exists for that eval-language pair.
+
+## Adding a New Shared Evaluation Language
+
+This is a **repo-wide language-support** change. Do this only when the harness
+does not yet know how to build/run a language at all.
+
+Required touchpoints:
+
+1. Add a shared prompt at `Evals/_shared/language-requirements-<lang>.md`.
+2. Add build/runtime support in `src/swe_buildbench/build/backends.py`.
+3. Teach the shared pytest plugin about the language in
+   `src/swe_buildbench/pytest_plugin.py`:
+   - add it to `SUPPORTED_LANGUAGES`
+   - add default-reference lookup support in `_default_reference_impl_subdir()`
+   - add backend selection support in `_build_backend_for()`
+4. Add any required toolchain/runtime support to the host/docs and, if needed,
+   `docker/base.Dockerfile`.
+
+After that repo-wide support exists, you can separately choose whether to:
+
+- add reference implementations for specific evals in that language
+- expose specific eval-language pairs as harness tasks in `task.py`
 
 ## Linting and Formatting
 
