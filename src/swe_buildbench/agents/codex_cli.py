@@ -78,8 +78,29 @@ class CodexCLIAdapter(AgentAdapter):
     ) -> TokenUsage | None:
         """Parse token usage from the JSONL event stream.
 
-        Checks container logs first (the --json output is tee'd to stdout),
-        then falls back to the event log file.
+        Codex CLI only attaches ``usage`` to ``turn.completed`` events.
+        ``turn.failed`` (e.g. on context_exhausted / max_output_tokens
+        / remote-compact failure) carries no usage record, so runs that
+        die mid-turn return None here.
+
+        Do not try to recover token counts after a turn failure. The
+        signals that look promising are not actually comparable to the
+        ``reported`` cumulative-input metric:
+
+        - ``last_api_response_total_tokens=N`` in Codex's compact_remote
+          ERROR log is the size of the *most recent single API request*,
+          not the cumulative sum across all calls in the turn. For a
+          run with N tool-calls these differ by a factor of ~N/2 (each
+          call's input re-sends prior context).
+        - Byte-summing the visible event stream (prompt + tool outputs +
+          agent messages) misses the prompt itself, Codex's internal
+          system prompts and tool schemas, reasoning tokens, and the
+          API-call multiplication just mentioned. Measured against a
+          completed run this undercounts by 16-95x — useless as a proxy.
+
+        The qualitative signal (``metadata.notes = "context_exhausted"``)
+        is the meaningful information for failed runs; a fake token
+        count is worse than no token count.
         """
         sources: list[str] = []
         if container_logs:
