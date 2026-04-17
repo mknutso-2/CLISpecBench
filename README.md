@@ -2,16 +2,19 @@
 
 A benchmark suite for evaluating AI coding agents on documentation-driven
 implementation tasks. Agents receive a specification and domain docs, then must
-produce a working implementation that passes a hidden test suite. Each eval
-can be run in multiple target languages (currently C++20, Python 3.11+,
-JavaScript on Node.js 22+, and Rust 2021), with a shared test suite verifying the submission
-through a language-agnostic CLI contract.
+produce a working implementation that passes a hidden test suite. Tasks may
+expose one or more target languages; the harness currently supports C++,
+Python 3.11+, JavaScript on Node.js 22+, and Rust 2021, with a shared test
+suite verifying each submission through a language-agnostic CLI contract.
 
 ## Repository Layout
 
 ```
 Evals/                   # Evaluation tasks (one directory per task)
+  _shared/               #   Shared language-requirements prompts
   CNCSim/                #   CNC G-code interpreter (full benchmark task)
+  IGES/                  #   IGES CAD interchange parser/writer eval
+  IGES-SDK/              #   Upstream IGES porting source tree
   WordCount/             #   Word frequency counter (toy eval for harness testing)
 src/swe_buildbench/      # Python package: harness, agent adapters, shared build utils
 docker/                  # Dockerfiles (base image + per-agent images)
@@ -23,11 +26,12 @@ Design docs:
 - `Eval-Design.md` -- benchmark-level design (scoring, task anatomy, eval modes)
 - `Harness-Design.md` -- evaluation harness architecture and implementation
 - `Evals/CNCSim/README.md` -- CNCSim task design and test categories
+- `Evals/IGES/README.md` -- IGES eval design, scope, and contract notes
 
 ## Requirements
 
 - **Python 3.11+** with [uv](https://docs.astral.sh/uv/) (or pip)
-- **CMake** and a C++20 compiler (gcc-14, clang, or MSVC)
+- **CMake** and a C++23-capable compiler (gcc-14, clang, or MSVC)
 - **Docker Engine** in WSL2 (Windows) or native Docker (Linux/macOS)
 - **Node.js 22+** (installed in Docker images for CLI agents)
 - **Rust** stable toolchain via [rustup](https://rustup.rs/) — only required for
@@ -68,7 +72,8 @@ MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 ```
 
 This creates `swe-buildbench-base:latest` (Ubuntu 24.04, CMake, g++-14, pytest)
-and agent images (`swe-buildbench-claude-code`, `swe-buildbench-codex-cli`,
+and CLI agent images (`swe-buildbench-claude-code`,
+`swe-buildbench-codex-cli`, `swe-buildbench-copilot-cli`,
 `swe-buildbench-gemini-cli`) that extend it.
 
 ### 4. Authenticate CLI agents
@@ -79,18 +84,24 @@ container at runtime.
 
 - **Windows + WSL2 Docker** (the typical Windows setup): run the CLIs on
   Windows so credentials land in `C:\Users\<you>\.claude\`, `\.codex\`,
-  and `\.gemini\`. The harness translates these to `/mnt/c/Users/<you>/...`
-  for the WSL2 daemon. Authenticating inside WSL Ubuntu does **not** work
-  for this setup -- the harness never reads the WSL home.
+  `\.gemini\`, and `C:\Users\<you>\AppData\Roaming\GitHub CLI\hosts.yml`.
+  The harness translates these to `/mnt/c/Users/<you>/...` for the WSL2
+  daemon. Authenticating inside WSL Ubuntu does **not** work for this setup
+  -- the harness never reads the WSL home.
 - **Native Linux / macOS**: run the CLIs on the same host where you'll
   invoke `swe-buildbench`. Credentials in `~/.claude/`, `~/.codex/`,
-  `~/.gemini/` are mounted directly.
+  `~/.gemini/`, and `~/.config/gh/hosts.yml` are mounted directly.
 
 ```bash
 claude login          # Claude Code
 codex login           # Codex CLI
+gh auth login         # GitHub CLI token used by GitHub Copilot CLI
 gemini auth login     # Gemini CLI
 ```
+
+GitHub Copilot CLI can also consume `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or
+`GITHUB_TOKEN`, but `gh auth login` is the default host-auth path used by the
+harness and smoke tests.
 
 To verify auth works end-to-end inside containers, see the **Auth smoke
 tests** sub-section under [Running Tests](#running-tests).
@@ -119,6 +130,7 @@ Each eval task follows a standard pipeline:
 ```bash
 swe-buildbench run --task wordcount --agent claude-code
 swe-buildbench run --task cncsim-full --agent codex-cli
+swe-buildbench run --task iges --agent copilot-cli
 ```
 
 View results:
@@ -145,6 +157,7 @@ Each task's hidden test suite, run against its reference implementation:
 
 ```bash
 pytest Evals/CNCSim/tests
+pytest Evals/IGES/tests
 pytest Evals/WordCount/tests
 ```
 
@@ -152,6 +165,8 @@ Select a target language (when multiple reference implementations exist):
 
 ```bash
 pytest Evals/WordCount/tests --language=py
+pytest Evals/WordCount/tests --language=js
+pytest Evals/WordCount/tests --language=rs
 pytest Evals/WordCount/tests --language=cpp       # default
 ```
 
@@ -187,7 +202,7 @@ uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent"
 uv run pytest src/swe_buildbench/tests -m "not prompts_agent"
 ```
 
-The container tests require the base image and all three agent images to
+The container tests require the base image and all four CLI agent images to
 be built first. From a clean checkout:
 
 ```bash
@@ -227,18 +242,20 @@ MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 # 2. Log in to each CLI on the host (see "4. Authenticate CLI agents" above)
 claude login
 codex login
+gh auth login
 gemini auth login
 ```
 
 Then run the smoke tests:
 
 ```bash
-# All three agents in one go
+# All four agents in one go
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-docker-auth.sh
 
 # Or individually, for debugging
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
+MSYS_NO_PATHCONV=1 bash scripts/smoke-test-copilot.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
 ```
 
@@ -268,6 +285,9 @@ Evals/MyTask/
     src/
   reference-implementation-py/             # Python reference (optional per-eval)
     main.py
+  reference-implementation-js/             # JavaScript reference (optional per-eval)
+    package.json
+    src/
   reference-implementation-rs/             # Rust reference (optional per-eval)
     Cargo.toml
     src/main.rs
