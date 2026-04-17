@@ -18,7 +18,6 @@ import urllib.request
 import webbrowser
 from pathlib import Path
 
-
 DEFAULT_PORT = 8000
 DEFAULT_DASHBOARD = "results-dashboard.html"
 DASHBOARD_MARKER = "CNCSim XY Results Explorer"
@@ -79,7 +78,9 @@ def is_dashboard_running(base: str, dashboard: str) -> bool:
             if DASHBOARD_MARKER not in body:
                 return False
 
-        with urllib.request.urlopen(dashboard_url(base, EXPECTED_DATA_PATH), timeout=1.0) as data_response:
+        with urllib.request.urlopen(
+            dashboard_url(base, EXPECTED_DATA_PATH), timeout=1.0,
+        ) as data_response:
             if data_response.status != 200:
                 return False
             data_header = data_response.read(256).decode("utf-8", errors="ignore")
@@ -119,12 +120,7 @@ def wait_for_url(url: str, timeout_seconds: float = 3.0) -> bool:
     return False
 
 
-def find_port(
-    host: str,
-    requested_port: int,
-    dashboard: str,
-    max_ports: int,
-):
+def find_port(host: str, requested_port: int, dashboard: str, max_ports: int):
     for port in range(requested_port, requested_port + max_ports):
         base = f"http://{host}:{port}"
         if is_port_open(host, port):
@@ -147,7 +143,8 @@ def main() -> None:
 
     if status is None:
         print(
-            f"No free or matching server port found in range {requested_port}..{requested_port + args.max_ports - 1}.",
+            f"No free or matching server port found in range {requested_port}.."
+            f"{requested_port + args.max_ports - 1}.",
         )
         return
 
