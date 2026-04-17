@@ -53,17 +53,6 @@ Single test: `pytest path/to/test_file.py::test_name`. Pytest markers `docker` a
 - **Keep `__init__.py` minimal.** Do not re-export from package roots unless it is an intentional public API. Import from the defining module instead.
 - **Bump per-eval `VERSION` + `CHANGELOG.md` on any contract-affecting change.** Each `Evals/<Task>/` has a `VERSION` file (semver) and a `CHANGELOG.md`. Bump both whenever you change anything an agent or scoring run can observe: prompts, docs, tests, the harness contract, or reference implementations in a way that reflects a spec change. Patch bump for clarifications and bug fixes; minor for new behavior or expanded contract; major for breaking changes. Pure refactors that do not change observable behavior do not need a bump. See `README.md` -> "Versioning" for the full rule.
 
-## Cross-validation requirement
-
-- Before concluding any task and reporting completion, the agent must obtain adversarial cross-validation from a different AI system (see agent-specific sections below). Point the reviewer at the exact diff, commit, or files under review, and continue the review until the two agents agree that the changes have been cross-validated.
-- This cross-validation requirement also applies to analysis and synthesis tasks, not just code changes. If the reviewing agent produced findings and you plan to omit, downgrade, reject, or contradict any of them in your response to the user, first do a targeted follow-up review on those exact points.
-- When relaying cross-validation output, explicitly distinguish between:
-  - the full superset of findings that were raised
-  - the narrower consensus list you believe remains after reconciliation
-  - findings rejected as stale, incorrect, already covered, or unobservable under the current harness
-- If you and the reviewing agent do not agree, do not silently pick one opinion and move on. Create `ARGUMENT.md` at the repo root that records both positions, the relevant files or spec passages, and the unresolved disagreement.
-- If the reviewing agent is unavailable, rate-limited, or otherwise cannot complete the needed reconciliation round, create `ARGUMENT.md` before answering and say that the disagreement remains unresolved due to that limitation.
-
 ## Running evals
 
 ### Launching eval runs
