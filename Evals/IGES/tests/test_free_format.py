@@ -4,6 +4,8 @@
 # pyright: reportUnknownArgumentType=none
 from __future__ import annotations
 
+import json
+import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -157,6 +159,33 @@ def test_custom_delimiters_do_not_split_hollerith_text(
     assert global_section["record_delimiter"] == "#"
     assert global_section["product_id_sender"] == "a|b#c"
     assert global_section["file_name"] == "file|#"
+
+
+def test_prohibited_parameter_delimiter_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    """§2.2.3.1: digits, '+', '-', '.', 'D', 'E', 'H', space, and control
+    chars are prohibited as parameter / record delimiters. A Global section
+    declaring a digit as parameter delimiter must be rejected."""
+    # Hand-craft a Global payload using '9' as the parameter delimiter.
+    # build_global_payload() would encode fields using the custom delimiter,
+    # but the illegal-choice probe only needs field 1 to advertise it.
+    payload = "1H9,1H;,3Hfoo,3Hbar,3HSDK,3H1.0,32,38,6,308,15,,1.0,1,2HIN,1,0.01,15H20260416.120000,1.0E-6,1.0,3Husr,4Hsite,11,0,,;"
+    iges = tmp_path / "bad-delim.iges"
+    iges.write_bytes(make_empty_iges(payload).encode("latin-1"))
+    out = tmp_path / "bad-delim.json"
+
+    completed = subprocess.run(
+        [
+            *submission_command, "parse",
+            "--input", str(iges),
+            "--output", str(out),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+    payload_out = json.loads(out.read_text(encoding="utf-8"))
+    assert payload_out["ok"] is False
 
 
 def test_comment_after_parameter_record_delimiter_is_ignored(

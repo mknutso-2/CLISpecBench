@@ -133,6 +133,58 @@ def test_hollerith_strings_preserve_delimiters_spaces_and_empty_defaults(
     assert global_section["app_protocol"] == ""
 
 
+def test_control_character_in_start_section_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    """§2.2.4.2: Start lines 'shall not contain any ASCII control characters.'"""
+    fields = [
+        hollerith("product"),
+        hollerith("test.igs"),
+        hollerith("native"),
+        hollerith("v1.0"),
+        "32",
+        "38",
+        "6",
+        "308",
+        "15",
+        hollerith("product"),
+        "1.0",
+        "1",
+        hollerith("IN"),
+        "1",
+        "0.01",
+        hollerith("20260416.120000"),
+        "1.0E-6",
+        "1000.0",
+        hollerith("John"),
+        hollerith("Org"),
+        "11",
+        "0",
+        "",
+        "",
+    ]
+    iges_path = tmp_path / "bad-start.iges"
+    out_path = tmp_path / "bad-start.json"
+    iges_path.write_bytes(
+        make_empty_iges(
+            build_global_payload(fields),
+            start_lines=[f"A{chr(1)}B"],
+        ).encode("latin-1")
+    )
+
+    completed = subprocess.run(
+        [
+            *submission_command, "parse",
+            "--input", str(iges_path),
+            "--output", str(out_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["ok"] is False
+
+
 def test_control_character_in_hollerith_string_is_rejected(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
@@ -185,6 +237,90 @@ def test_control_character_in_hollerith_string_is_rejected(
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload["ok"] is False
     assert "error" in payload
+
+
+def test_spec_version_below_range_is_clamped_to_default(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    """§2.2.4.3.23: 'Postprocessors finding an unrecognized value less than 1
+    shall assign 3' (version 3 = spec v2_0)."""
+    fields = [
+        hollerith("product"),
+        hollerith("test.igs"),
+        hollerith("native"),
+        hollerith("v1.0"),
+        "32",
+        "38",
+        "6",
+        "308",
+        "15",
+        hollerith("product"),
+        "1.0",
+        "1",
+        hollerith("IN"),
+        "1",
+        "0.01",
+        hollerith("20260416.120000"),
+        "1.0E-6",
+        "1000.0",
+        hollerith("John"),
+        hollerith("Org"),
+        "0",  # field 23: unrecognized spec version (< 1)
+        "0",
+        "",
+        "",
+    ]
+    parsed = _parse_raw_document(
+        submission_command,
+        tmp_path,
+        make_empty_iges(build_global_payload(fields)),
+        name="spec-version-below",
+    )
+    global_section = parsed["global"]
+    assert isinstance(global_section, dict)
+    assert global_section["spec_version"] == "v2_0"
+
+
+def test_spec_version_above_range_is_clamped_to_v5_3(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    """§2.2.4.3.23: 'Postprocessors finding an unrecognized value greater
+    than 11 shall assign 11' (code 11 = v5_3)."""
+    fields = [
+        hollerith("product"),
+        hollerith("test.igs"),
+        hollerith("native"),
+        hollerith("v1.0"),
+        "32",
+        "38",
+        "6",
+        "308",
+        "15",
+        hollerith("product"),
+        "1.0",
+        "1",
+        hollerith("IN"),
+        "1",
+        "0.01",
+        hollerith("20260416.120000"),
+        "1.0E-6",
+        "1000.0",
+        hollerith("John"),
+        hollerith("Org"),
+        "20",  # field 23: unrecognized spec version (> 11)
+        "0",
+        "",
+        "",
+    ]
+    parsed = _parse_raw_document(
+        submission_command,
+        tmp_path,
+        make_empty_iges(build_global_payload(fields)),
+        name="spec-version-above",
+    )
+    global_section = parsed["global"]
+    assert isinstance(global_section, dict)
+    assert global_section["spec_version"] == "v5_3"
 
 
 def test_pointer_and_logical_values_roundtrip_through_entity_json(

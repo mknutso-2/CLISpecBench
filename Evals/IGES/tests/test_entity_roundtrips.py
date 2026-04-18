@@ -320,6 +320,17 @@ def test_plane_surface_roundtrip(
     assert data == payload
 
 
+# §4.50 Plane Surface (Type 190, form 0) — no reference direction
+def test_plane_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "denrml": 3, "derefd": 0}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=190, form=0, data=payload,
+    )
+    assert data == payload
+
+
 # §4.51 Cylindrical Surface (Type 192, form 1)
 def test_cylindrical_surface_roundtrip(
     submission_command: Sequence[str], tmp_path: Path
@@ -327,6 +338,17 @@ def test_cylindrical_surface_roundtrip(
     payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}
     data = _roundtrip_single(
         submission_command, tmp_path, entity_type=192, form=1, data=payload,
+    )
+    assert data == payload
+
+
+# §4.51 Cylindrical Surface (Type 192, form 0) — no reference direction
+def test_cylindrical_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 0}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=192, form=0, data=payload,
     )
     assert data == payload
 
@@ -352,6 +374,27 @@ def test_conical_surface_roundtrip(
     assert data["derefd"] == 5
 
 
+# §4.52 Conical Surface (Type 194, form 0) — no reference direction
+def test_conical_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "radius": 2.0,
+        "sangle": 0.5235987755982988,
+        "derefd": 0,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=194, form=0, data=payload,
+    )
+    assert data["deloc"] == 1
+    assert data["deaxis"] == 3
+    assert data["radius"] == pytest.approx(2.0)
+    assert data["sangle"] == pytest.approx(payload["sangle"])
+    assert data["derefd"] == 0
+
+
 # §4.53 Spherical Surface (Type 196, form 1)
 def test_spherical_surface_roundtrip(
     submission_command: Sequence[str], tmp_path: Path
@@ -359,6 +402,17 @@ def test_spherical_surface_roundtrip(
     payload = {"deloc": 1, "radius": 3.5, "deaxis": 3, "derefd": 5}
     data = _roundtrip_single(
         submission_command, tmp_path, entity_type=196, form=1, data=payload,
+    )
+    assert data == payload
+
+
+# §4.53 Spherical Surface (Type 196, form 0) — no axis or reference direction
+def test_spherical_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "radius": 3.5, "deaxis": 0, "derefd": 0}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=196, form=0, data=payload,
     )
     assert data == payload
 
@@ -376,6 +430,23 @@ def test_toroidal_surface_roundtrip(
     }
     data = _roundtrip_single(
         submission_command, tmp_path, entity_type=198, form=1, data=payload,
+    )
+    assert data == payload
+
+
+# §4.54 Toroidal Surface (Type 198, form 0) — no reference direction
+def test_toroidal_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "majrad": 6.0,
+        "minrad": 1.5,
+        "derefd": 0,
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=198, form=0, data=payload,
     )
     assert data == payload
 

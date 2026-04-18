@@ -66,13 +66,17 @@ def _make_valid_line_file(submission_command: Sequence[str], tmp_path: Path) -> 
     )
 
 
-def _make_valid_empty_iges(*, model_space_scale: str = "1.0") -> str:
+def _make_valid_empty_iges(
+    *,
+    model_space_scale: str = "1.0",
+    integer_bits: str = "32",
+) -> str:
     return make_empty_iges(build_global_payload([
         hollerith("test"),
         hollerith("test.igs"),
         hollerith("SDK"),
         hollerith("1.0"),
-        "32",
+        integer_bits,
         "38",
         "6",
         "308",
@@ -208,6 +212,23 @@ def test_parse_rejects_non_positive_model_space_scale(
     assert "model_space_scale" in payload["error"]
 
 
+def test_parse_rejects_non_positive_integer_bits(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2 + spec §2.2.4.3.7: integer_bits must be positive."""
+    iges_path = tmp_path / "bad-integer-bits.iges"
+    iges_path.write_text(
+        _make_valid_empty_iges(integer_bits="0"), encoding="latin-1"
+    )
+
+    out_path = tmp_path / "bad-integer-bits.json"
+    completed = _run_parse(submission_command, iges_path, out_path)
+    assert completed.returncode == 1
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["ok"] is False
+    assert "integer_bits" in payload["error"]
+
+
 def test_parse_accepts_valid_empty_file_with_no_entities(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:
@@ -219,3 +240,5 @@ def test_parse_accepts_valid_empty_file_with_no_entities(
     assert completed.returncode == 0
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload["entities"] == []
+
+

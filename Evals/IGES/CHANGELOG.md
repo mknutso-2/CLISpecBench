@@ -10,6 +10,12 @@
   - negative entity types
   - zero `param_line_count` on non-null entities
   - non-positive `model_space_scale`
+- `tests/test_error_envelope.py`, verifying the shipped diagnostic JSON
+  shape for `parse` / `query` / `eval` failures.
+- `tests/test_directory_entry.py`, covering the `DirectoryEntry`
+  contract directly rather than only `entity.data`.
+- `tests/test_entity_roundtrips.py` Form 0 roundtrips for analytic
+  surfaces `190 / 192 / 194 / 196 / 198`.
 
 ### Changed
 
@@ -21,14 +27,28 @@
 - `prompt/technical-requirements-prompt.md` now describes the shipped
   structural-validation surface precisely instead of overclaiming that
   every entity-data DE pointer is validated at parse time.
+- `prompt/technical-requirements-prompt.md` now matches the shipped CLI
+  behavior for `write` / `roundtrip` outputs, error-envelope shape, the
+  byte-idempotence fixed-point rule, unsupported-entity handling, and
+  the documented Type `122` / `130` / `140` evaluation conventions.
 - Type `126` `plane_normal` is now documented as always-present, with a
   zero vector for non-planar curves.
 - Tightened the new dedicated entity tests so Circular Arc uses a real
   quarter-arc fixture and Composite Curve uses a spec-legal non-empty
   constituent list.
+- Tightened malformed-input assertions to require exit code `1` for
+  invalid user input and added missing coverage for `label_display`,
+  even-DE rejection, Type `106` Form `63`, and the `eval` CLI shape
+  rules.
+- Removed duplicate or non-independent checks from overlapping suites,
+  including the line arc-length-from-endpoints assertion and the weaker
+  subset overlaps between the dedicated roundtrip files and the generic
+  entity roundtrip coverage.
 
 ### Validated
 
+- `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
+  (`228 passed`, 2026-04-17).
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
   (`219 passed`, 2026-04-16).
 - `uv run ruff check` and `uv run pyright` pass repo-wide
