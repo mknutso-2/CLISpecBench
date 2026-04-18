@@ -271,6 +271,23 @@ std::expected<std::string, json> canonical_json_to_iges(json const& j) {
         std::vector<std::string> start_lines = j.at("start_lines").get<std::vector<std::string>>();
         iges::GlobalSection global = j.at("global").get<iges::GlobalSection>();
 
+        // Structural validation on the write path (TR §1.2). The parse
+        // path runs `validate()` on the fully constructed IgesFile;
+        // the write path must apply the same Global field-positivity
+        // checks to its deserialized GlobalSection so that callers
+        // cannot produce an .iges file that `parse` would immediately
+        // reject. Entity-level checks (e.g., §3.2.5 non-zero arc
+        // length for Line) are applied per-entity in
+        // write_entity_dispatch via each entity's serializer.
+        {
+            iges::IgesFile global_only;
+            global_only.global = global;
+            auto global_diags = iges::validate(global_only);
+            if (!global_diags.empty()) {
+                return std::unexpected(error_from_diagnostics(global_diags));
+            }
+        }
+
         std::vector<iges::WritableEntity> entities;
         auto const& arr = j.at("entities");
         if (!arr.is_array()) {

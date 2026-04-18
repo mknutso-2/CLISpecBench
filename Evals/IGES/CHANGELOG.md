@@ -69,11 +69,23 @@
   `test_line_starting_at_origin` and updated to use a non-degenerate
   Line; the prior version relied on the (invalid) zero-length-Line
   behavior the ref-impl now rejects.
+- `reference-implementation-cpp/src/main.cpp::canonical_json_to_iges`
+  now runs Global-field validation on the write path, and
+  `json/dispatch.cpp::write_entity_dispatch` now rejects degenerate
+  Line entities before serializing. Without these checks, `iges write`
+  could produce an .iges file that `iges parse` would immediately
+  reject — a TR §1.2 contract violation.
+- `tests/test_validation.py::test_parse_rejects_zero_length_line` now
+  builds its malformed fixture by rewriting the PD record of a valid
+  Line file in raw bytes, instead of round-tripping degenerate JSON
+  through `iges write` (which now rejects the input).
+- `tests/test_validation.py` adds write-side rejection tests for
+  non-positive Global `min_resolution` and zero-length Line inputs.
 
 ### Validated
 
 - `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
-  (`252 passed`, 2026-04-18).
+  (`254 passed`, 2026-04-18).
 - `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
   (`228 passed`, 2026-04-17).
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally

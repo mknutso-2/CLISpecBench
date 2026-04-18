@@ -672,6 +672,18 @@ write_entity_dispatch(int type, int form, nlohmann::json const& data) {
         case 110: {
             auto ent = data.get<iges::LineEntity>();
             (void)form;
+            // §3.2.5: reject degenerate Line entities at write time so
+            // `iges write` cannot produce an .iges file that `iges parse`
+            // would immediately reject (TR §1.2).
+            if (ent.start.x == ent.terminate.x &&
+                ent.start.y == ent.terminate.y &&
+                ent.start.z == ent.terminate.z) {
+                return std::unexpected(Diagnostic{
+                    Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+                    "Line (Type 110) has coincident start and terminate points "
+                    "(zero arc length)",
+                    "§3.2.5"});
+            }
             return iges::write_line_entity(ent);
         }
         case 112: {

@@ -276,27 +276,96 @@ def test_parse_rejects_non_positive_required_global_field(
     assert field_name in payload["error"]
 
 
+def test_write_rejects_non_positive_global_field(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2: `iges write` must reject canonical JSON that encodes an
+    invalid Global section — specifically non-positive required numeric
+    fields (§2.2.4.3). This mirrors the parse-side check and ensures
+    `iges write` cannot produce a file `iges parse` would reject.
+
+    Error output for write/roundtrip goes to stderr (see TR §1.4 and the
+    ref-impl behavior), so we assert on exit code only.
+    """
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+        ),
+    ])
+    doc["global"]["min_resolution"] = 0.0
+    json_path = tmp_path / "bad-global.json"
+    iges_path = tmp_path / "bad-global.iges"
+    json_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            *submission_command, "write",
+            "--input", str(json_path),
+            "--output", str(iges_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+
+
+def test_write_rejects_zero_length_line(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """§3.2.5 symmetric enforcement: the write path must also reject
+    degenerate (zero-length) Line entities. Without this check, `iges
+    write` would produce an .iges file that `iges parse` rejects — a
+    contract violation per TR §1.2."""
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={
+                "start": [1.0, 2.0, 3.0],
+                "terminate": [1.0, 2.0, 3.0],
+            },
+        ),
+    ])
+    json_path = tmp_path / "bad-line.json"
+    iges_path = tmp_path / "bad-line.iges"
+    json_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            *submission_command, "write",
+            "--input", str(json_path),
+            "--output", str(iges_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+
+
 def test_parse_rejects_zero_length_line(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:
     """Spec §3.2.5: 'All curves shall have non-zero arc length.' A Line
     with coincident start and terminate points is degenerate and must be
-    rejected."""
-    iges_path = write_iges_from_json(
-        submission_command,
-        wrap_entities([
-            make_entity(
-                de_index=1,
-                entity_type=110,
-                data={
-                    "start": [1.0, 2.0, 3.0],
-                    "terminate": [1.0, 2.0, 3.0],
-                },
-            ),
-        ]),
-        tmp_path,
-        name="zero-length-line",
+    rejected.
+
+    The fixture is built by rewriting the PD record of a valid Line file
+    in raw bytes; we cannot round-trip a degenerate Line through
+    `iges write` because the writer also rejects zero-length Lines
+    (symmetric enforcement of the same §3.2.5 rule).
+    """
+    iges_path = _make_valid_line_file(submission_command, tmp_path)
+    lines = iges_path.read_text(encoding="latin-1").splitlines()
+    p_idx = next(
+        i for i, line in enumerate(lines)
+        if len(line) >= 73 and line[72] == "P"
     )
+    # Preserve columns 65-80 (DE back-pointer + P-section sequence
+    # number) and rewrite the free-format PD body so start == terminate.
+    suffix = lines[p_idx][64:]
+    body = "110,0.,0.,0.,0.,0.,0.;"
+    lines[p_idx] = body.ljust(64)[:64] + suffix
+    _write_lines(iges_path, lines)
 
     out_path = tmp_path / "zero-length-line.json"
     completed = _run_parse(submission_command, iges_path, out_path)
