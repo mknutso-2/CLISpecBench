@@ -4,6 +4,7 @@
 # pyright: reportUnknownArgumentType=none
 from __future__ import annotations
 
+import re
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -22,13 +23,39 @@ def test_global_strings_use_hollerith_encoding_in_g_section(
     assert "8HJane Doe" in g_body
 
 
-def test_real_values_in_parameter_records_include_decimal_points(
+_REAL_TOKEN_RE = re.compile(
+    # §2.2.2.2: a real literal must contain a decimal point or an
+    # exponent (not both optional). We accept the sign-integer-decimal-
+    # fractional-exponent union:
+    #   [±] (digits . [digits] | . digits | digits)  ( [DE] [±] digits )?
+    # with the constraint that decimal-point-or-exponent is present.
+    r"^[+-]?(?:"
+    r"\d+\.\d*|\.\d+|\d+\.|"          # forms containing a decimal point
+    r"\d+(?=[eEdD])"                  # integer form, must be followed by exponent
+    r")(?:[eEdD][+-]?\d+)?$"
+)
+
+
+def _iter_pd_value_tokens(p_body: str) -> list[str]:
+    # Strip the entity-type prefix and record terminator, then split on
+    # the parameter delimiter. Assumes default delimiters (`,` / `;`)
+    # and a single-line PD record; that matches the Line-only fixture
+    # used by the caller.
+    assert p_body.endswith(";"), p_body
+    body = p_body[:-1]
+    fields = body.split(",")
+    # Drop the entity-type prefix (first field, e.g. "110").
+    return fields[1:]
+
+
+def test_real_values_in_parameter_records_are_spec_legal(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    """§2.2.2.2: real literals must contain a decimal point or an
-    exponent. For integer-valued reals written to the PD section the
-    simplest form is "N." (e.g. "1."); some implementations prefer
-    "N.0" (e.g. "1.0"). Both are spec-compliant — accept either."""
+    """§2.2.2.2: a real literal must contain a decimal point or an
+    exponent. This test verifies each coordinate the Line writer emits
+    is both numerically correct AND matches one of the spec-legal real
+    encodings — not just the `"1."` / `"1.0"` form the reference impls
+    happen to prefer."""
     iges_path = write_iges_from_json(
         submission_command,
         single_line_document((1.0, 2.0, 3.0), (4.0, 5.0, 6.0)),
@@ -37,9 +64,16 @@ def test_real_values_in_parameter_records_include_decimal_points(
     )
 
     p_body = physical_lines_by_section(iges_path)["P"][0][:64].rstrip()
-    assert "1." in p_body
-    assert "2." in p_body
-    assert "6." in p_body
+    tokens = _iter_pd_value_tokens(p_body)
+    assert len(tokens) == 6, tokens
+    expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+    for tok, want in zip(tokens, expected):
+        assert _REAL_TOKEN_RE.match(tok), (
+            f"{tok!r} is not a spec-legal real literal (§2.2.2.2)"
+        )
+        # Allow the IGES D exponent for double precision.
+        got = float(tok.replace("D", "E").replace("d", "e"))
+        assert got == want, f"token {tok!r} decodes to {got}, expected {want}"
 
 
 def test_string_values_in_parameter_records_use_hollerith_encoding(

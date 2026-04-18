@@ -30,7 +30,9 @@ from typing import Any
 
 import pytest
 
-from iges_support import make_entity, semantic_roundtrip_json, wrap_entities
+from iges_support import (
+    make_entity, semantic_roundtrip_json, wrap_entities, write_iges_from_json,
+)
 
 
 def _roundtrip_single(
@@ -547,12 +549,15 @@ def test_property_roundtrip(
 
 
 # §4.97 Property — `kind: "bool"` FieldValues serialize as the Logical
-# type per §2.2.2.6 (0 or 1). Both true and false round-trip through the
-# PD stream. On parse, the reader may restore the value as boolean or as
-# the Logical's 0/1 integer form — accept either.
-def test_property_bool_values_roundtrip(
+# type per §2.2.2.6 (exactly the integer literals `0` or `1`, not the
+# real literals `0.0` or `1.0`). This test inspects the emitted PD
+# record to verify the wire encoding, since a JSON-only roundtrip would
+# tolerate `1.0`/`0.0` (Python treats `True == 1` and `False == 0`).
+def test_property_bool_values_serialize_as_logical(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
+    from raw_iges_support import physical_lines_by_section
+
     payload = {
         "np": 2,
         "values": [
@@ -560,12 +565,29 @@ def test_property_bool_values_roundtrip(
             {"kind": "bool", "value": False},
         ],
     }
-    data = _roundtrip_single(
-        submission_command, tmp_path, entity_type=406, data=payload,
+    doc = wrap_entities([
+        make_entity(de_index=1, entity_type=406, data=payload),
+    ])
+    iges_path = write_iges_from_json(
+        submission_command, doc, tmp_path, name="prop-bool",
     )
-    assert len(data["values"]) == 2
-    assert data["values"][0]["value"] in (True, 1)
-    assert data["values"][1]["value"] in (False, 0)
+
+    # Inspect the PD record: entity type prefix, then NP and the two
+    # logical values as separate comma-delimited fields.
+    p_body = physical_lines_by_section(iges_path)["P"][0][:64].rstrip()
+    # The record should contain the exact substring "406,2,1,0;" (entity
+    # type 406, NP = 2, true value, false value, record terminator) with
+    # no decimal points on the logicals.
+    assert p_body.startswith("406,")
+    body_after_np = p_body[len("406,2,"):]
+    # Strip trailing record delimiter so the split covers only values.
+    assert body_after_np.endswith(";")
+    value_fields = body_after_np[:-1].split(",")
+    assert value_fields == ["1", "0"], (
+        f"Property bool values must be emitted as the Logical literals "
+        f"'1' and '0' per §2.2.2.6, not as reals like '1.0'/'0.0' or "
+        f"anything else. Got fields: {value_fields!r}"
+    )
 
 
 # §4.131 Drawing (Type 404, form 0 = no angle per DrawingView)
