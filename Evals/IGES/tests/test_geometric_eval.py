@@ -26,6 +26,7 @@ import pytest
 from iges_support import (
     evaluate_entity,
     make_entity,
+    single_line_document,
     wrap_entities,
     write_iges_from_json,
 )
@@ -368,6 +369,40 @@ def test_copious_data_form12_3d_path_at_fractional_t(
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.25, tmp_path)
     assert payload["ok"] is True
     assert payload["point"] == pytest.approx([0.75, 0.0, 0.0], abs=1e-9)
+
+
+# §4.11 Form 63 (Simple Closed Planar Curve): parameterization is the
+# same as Form 11 per spec — t ∈ [0, N−1], linear segments between
+# consecutive tuples. TR §1.6 lists Form 63 as parametric alongside
+# Forms 11 / 12.
+def _copious_data_form63_document(
+    zt: float, points_2d: Sequence[tuple[float, float]]
+) -> dict[str, object]:
+    flat: list[float] = []
+    for x, y in points_2d:
+        flat.extend([x, y])
+    return wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=106,
+            form=63,
+            data={"ip": 1, "n": len(points_2d), "zt": zt, "data": flat},
+        ),
+    ])
+
+
+def test_copious_data_form63_midpoint_interpolates(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _copious_data_form63_document(
+        1.5, [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
+    )
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    # t = 0.5: halfway along first edge (0,0) → (4,0), so point is
+    # (2.0, 0.0, zt=1.5).
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([2.0, 0.0, 1.5], abs=1e-9)
 
 
 # §4.4: Composite Curve default parameterization.
@@ -1002,3 +1037,54 @@ def test_eval_on_non_parametric_entity_is_rejected(
     )
     assert payload["ok"] is False
     assert "error" in payload
+
+
+# TR §1.5 eval CLI-shape rules:
+# - curves: --t required, --s is invalid input
+# - surfaces: both --t and --s required
+# - curve success: normal is null
+# - surface success: tangent is null
+def test_curve_eval_with_s_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    completed, payload = evaluate_entity(
+        submission_command, iges_path, 1, 0.5, tmp_path, s=0.5, check=False,
+    )
+    assert completed.returncode == 1
+    assert payload["ok"] is False
+
+
+def test_surface_eval_without_s_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    completed, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.5, tmp_path, check=False,
+    )
+    assert completed.returncode == 1
+    assert payload["ok"] is False
+
+
+def test_curve_eval_success_has_null_normal(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 2.0, 3.0))
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
+    assert payload["ok"] is True
+    assert payload["normal"] is None
+
+
+def test_surface_eval_success_has_null_tangent(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command, iges_path, 5, 0.5, tmp_path, s=0.5,
+    )
+    assert payload["ok"] is True
+    assert payload["tangent"] is None

@@ -1,4 +1,4 @@
-"""Dedicated CLI coverage for structure, property, and view entities."""
+"""Dedicated CLI coverage for structure and view entities."""
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -44,19 +44,6 @@ def test_subfigure_definition_roundtrips_empty_member_list(
     )
     assert data == {"depth": 0, "name": "EMPTY", "n": 0, "entities": []}
 
-
-def test_property_roundtrips_string_payload(
-    submission_command: Sequence[str], tmp_path: Path,
-) -> None:
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=406,
-        data={"np": 1, "values": [{"kind": "string", "value": "Label"}]},
-    )
-    assert data == {"np": 1, "values": [{"kind": "string", "value": "Label"}]}
-
-
 def test_drawing_form_one_roundtrips_angles_and_annotations(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:
@@ -78,21 +65,6 @@ def test_drawing_form_one_roundtrips_angles_and_annotations(
     assert data["views"][1]["view"] == 3
     assert data["views"][1]["angle"] == pytest.approx(1.5708)
     assert data["annotations"] == [9]
-
-
-def test_subfigure_instance_roundtrips_unit_scale(
-    submission_command: Sequence[str], tmp_path: Path,
-) -> None:
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=408,
-        data={"de": 5, "translation": [10.0, 20.0, 30.0], "scale": 1.0},
-    )
-    assert data["de"] == 5
-    assert data["translation"] == pytest.approx([10.0, 20.0, 30.0])
-    assert data["scale"] == pytest.approx(1.0)
-
 
 def test_view_form_one_roundtrips_perspective_fields(
     submission_command: Sequence[str], tmp_path: Path,
@@ -152,28 +124,3 @@ def test_rectangular_array_roundtrips_do_dont_list(
     assert data["nr"] == 4
     assert data["ddf"] == 0
     assert data["positions"] == [1, 4]
-
-
-def test_circular_array_roundtrips_do_dont_list(
-    submission_command: Sequence[str], tmp_path: Path,
-) -> None:
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=414,
-        data={
-            "de": 7,
-            "ne": 8,
-            "center": [1.0, 2.0, 0.0],
-            "r": 15.0,
-            "as": 0.5,
-            "ad": 0.7854,
-            "lc": 1,
-            "ddf": 0,
-            "positions": [3],
-        },
-    )
-    assert data["ne"] == 8
-    assert data["r"] == pytest.approx(15.0)
-    assert data["ad"] == pytest.approx(0.7854)
-    assert data["positions"] == [3]

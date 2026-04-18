@@ -9,9 +9,11 @@ format defined below. The binary should be named `iges`.
 ## 1. CLI Contract
 
 The `iges` binary supports five subcommands. All subcommands take a final
-`--output <path>` flag and write a JSON file to that path on both success
-and error. No subcommand prints anything meaningful to stdout or stderr
-that the harness depends on; the output file is the sole result channel.
+`--output <path>` flag. For `parse`, `query`, and `eval`, `--output` is
+the JSON result file. For `write` and `roundtrip`, `--output` is the
+emitted `.iges` file path. The harness does not depend on stdout. On
+`write` or `roundtrip` failure, the diagnostic JSON object described in
+§1.4 is emitted on stderr and the `--output` path is left unwritten.
 
 ### 1.1 Subcommands
 
@@ -41,38 +43,40 @@ iges roundtrip  --input <file.iges>  --output <out.iges>
   JSON, any invalid Directory Entry cross-reference (`view`,
   `xform_matrix`, `label_display`), any negative entity type, any zero
   `param_line_count` on a non-null entity, any non-positive required
-  Global numeric field such as `model_space_scale`, or any evaluation on
+  Global numeric field such as `model_space_scale`, any unsupported
+  entity type outside the shipped 87-type catalog, or any evaluation on
   a non-parametric entity.
 - `2` — internal error in the tool itself (panic, out-of-memory,
   unexpected exception).
 
 ### 1.3 Success output
 
-On success, the output JSON for `parse`, `query`, `eval`, and `write`'s
-JSON echo (if any) conforms to the schemas in §2 / §1.5. For `write` and
-`roundtrip`, the primary output is the `.iges` file; the JSON at `--output`
-is a terse status object:
-
-```ts
-{
-  "ok": true,
-  "entity_count": number,    // number of entities written
-  "bytes_written": number,   // size of the output .iges file in bytes
-  "error": null
-}
-```
+On success, `parse` and `query` write JSON conforming to the schemas in
+§2, and `eval` writes JSON conforming to §1.5. On success, `write` and
+`roundtrip` emit only the `.iges` file at `--output`; the harness does
+not require or inspect any JSON success-status sidecar for those two
+subcommands.
 
 ### 1.4 Error output
 
-On failure, every subcommand writes a diagnostic JSON object to `--output`:
+On failure, `parse`, `query`, and `eval` write a diagnostic JSON object
+to `--output`. `write` and `roundtrip` emit the same JSON object on
+stderr and do not produce an `.iges` file at `--output`:
 
 ```ts
 {
   "ok": false,
   "error": string,             // human-readable error message
   "spec_ref": string | null,   // e.g. "§2.2.2.1", or null if not attributable
-  "line": number | null,       // 1-based input file line number, or null
-  "section": "S" | "G" | "D" | "P" | "T" | null,  // IGES section kind
+  "line": number,              // 1-based input file line number, or 0 if unknown
+  "section":
+    | "flag"
+    | "start"
+    | "global"
+    | "directory"
+    | "parameter"
+    | "terminate"
+    | "unknown",
   "diagnostics": Diagnostic[]  // full diagnostic list (may be empty)
 }
 
@@ -80,8 +84,15 @@ type Diagnostic = {
   severity: "info" | "warning" | "error",
   message: string,
   spec_ref: string | null,
-  line: number | null,
-  section: "S" | "G" | "D" | "P" | "T" | null
+  line: number,  // 1-based input file line number, or 0 if unknown
+  section:
+    | "flag"
+    | "start"
+    | "global"
+    | "directory"
+    | "parameter"
+    | "terminate"
+    | "unknown"
 }
 ```
 
@@ -151,9 +162,10 @@ the IGES 5.3 spec.
   parameter domain declared by the entity's `v0` / `v1` fields and its
   knot vector (§4.23).
 - Type `130` Offset Curve: `t ∈ [TT1, TT2]` using the base curve's
-  native parameter domain per §4.25. Hidden `eval` tests exercise only
-  `FLAG = 1` (uniform offset); implementations may support `FLAG` 2/3
-  but are not required to.
+  native parameter domain per §4.25. For this eval contract, hidden
+  tests exercise only `FLAG = 1` (uniform offset), and the vector
+  `(vx, vy, vz)` is used directly as the offset direction. Implementations
+  may support `FLAG` 2/3 but are not required to.
 
 **Surfaces**
 
@@ -166,12 +178,17 @@ the IGES 5.3 spec.
   parameter domain, `s ∈ [start_angle, terminate_angle]` in radians
   per §4.18.
 - Type `122` Tabulated Cylinder: `t` in the directrix's native
-  parameter domain, `s ∈ [0, 1]` along the generatrix direction per §4.19.
+  parameter domain, `s ∈ [0, 1]` along a fixed generatrix direction per
+  §4.19. The fixed direction is the vector from the directrix start point
+  to `terminate_point`; `s = 0` is the directrix point at parameter `t`
+  and `s = 1` adds that same vector.
 - Type `128` Rational B-Spline Surface: `(t, s)` lie in the native
   `(u, v)` parameter domain declared by the entity's `u0/u1/v0/v1` and
   its two knot vectors (§4.24).
 - Type `140` Offset Surface: `(t, s)` in the base surface's native
-  `(u, v)` parameter domain per §4.30.
+  `(u, v)` parameter domain per §4.30. The indicator vector selects
+  which global normal orientation is treated as positive; the evaluated
+  point is the base-surface point plus `d` times that oriented unit normal.
 - Types `190`/`192`/`194`/`196`/`198` Analytic Surfaces: `(t, s)` follow
   the native `(u, v)` parameterizations documented in §§4.50–4.54
   (e.g. Cylindrical `u ∈ [0°, 360°]` and `v ∈ (−∞, ∞)`). The CLI uses
@@ -394,8 +411,10 @@ Spherical/Toroidal Surface 190-198, Attribute Table Definition 322) have
 a union of per-form shapes; see the individual entries.
 
 When reading a file containing entity types outside this 87-entity
-catalog, emit a diagnostic at severity `warning` and preserve the raw
-PD string in `data.raw_pd: string` so round-trip is still possible.
+catalog, reject the file as invalid input with a severity `error`
+diagnostic. Implementations may preserve raw Parameter Data for such
+unsupported types as a tool-specific extension, but the harness does not
+require `data.raw_pd` and hidden tests do not exercise it.
 
 **[Entity data schemas appendix — see §A.]**
 
@@ -411,6 +430,10 @@ PD string in `data.raw_pd: string` so round-trip is still possible.
   integer fields exactly, real fields within relative `1e-12` / absolute
   `1e-15`, strings exactly (after Hollerith decoding), pointers exactly.
   Trailing-zero differences in real formatting are allowed.
+- After one successful `iges roundtrip` normalization pass, a second
+  `iges roundtrip` over the emitted file must be byte-identical to the
+  first pass output. Visible and hidden tests rely on this fixed-point
+  property to catch writer non-determinism.
 
 ---
 

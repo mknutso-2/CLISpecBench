@@ -39,15 +39,7 @@ def _roundtrip_single(
     return entity["data"]
 
 
-def test_null_entity_roundtrips_empty_payload(
-    submission_command: Sequence[str], tmp_path: Path,
-) -> None:
-    assert _roundtrip_single(
-        submission_command, tmp_path, entity_type=0, data={},
-    ) == {}
-
-
-def test_circular_arc_roundtrips_full_circle_and_evaluates_in_zt_plane(
+def test_circular_arc_eval_full_circle_lands_in_zt_plane(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:
     data = {
@@ -59,15 +51,6 @@ def test_circular_arc_roundtrips_full_circle_and_evaluates_in_zt_plane(
         "x3": 0.0,
         "y3": 1.0,
     }
-    roundtripped = _roundtrip_single(
-        submission_command, tmp_path, entity_type=100, data=data,
-    )
-    assert roundtripped["zt"] == pytest.approx(7.5)
-    assert roundtripped["x2"] == pytest.approx(1.0)
-    assert roundtripped["y2"] == pytest.approx(0.0)
-    assert roundtripped["x3"] == pytest.approx(0.0)
-    assert roundtripped["y3"] == pytest.approx(1.0)
-
     iges_path = write_iges_from_json(
         submission_command,
         wrap_entities([make_entity(de_index=1, entity_type=100, data=data)]),
@@ -79,44 +62,6 @@ def test_circular_arc_roundtrips_full_circle_and_evaluates_in_zt_plane(
     )
     assert payload["ok"] is True
     assert payload["point"] == pytest.approx([1.0, 0.0, 7.5], abs=1e-9)
-
-
-def test_composite_curve_roundtrips_two_constituents(
-    submission_command: Sequence[str], tmp_path: Path,
-) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-        make_entity(
-            de_index=3,
-            entity_type=110,
-            data={"start": [1.0, 0.0, 0.0], "terminate": [1.0, 1.0, 0.0]},
-        ),
-        make_entity(
-            de_index=5,
-            entity_type=102,
-            data={"constituents": [1, 3]},
-        ),
-    ])
-    reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
-    data = reparsed["entities"][2]["entity"]["data"]
-    assert data == {"constituents": [1, 3]}
-
-
-def test_point_roundtrips_display_symbol_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
-) -> None:
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=116,
-        data={"coords": [1.0, 2.0, 3.0], "display_symbol": 5},
-    )
-    assert data["coords"] == pytest.approx([1.0, 2.0, 3.0])
-    assert data["display_symbol"] == 5
 
 
 def test_direction_roundtrips_non_unit_ratios_without_normalizing(

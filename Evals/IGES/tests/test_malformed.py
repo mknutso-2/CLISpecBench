@@ -27,6 +27,8 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
+from iges_support import make_entity, wrap_entities, write_iges_from_json
+
 
 def _run_parse_expecting_failure(
     submission_command: Sequence[str],
@@ -90,7 +92,7 @@ def test_file_without_start_section_is_rejected(
     completed = _run_parse_expecting_failure(
         submission_command, iges, tmp_path / "out.json"
     )
-    assert completed.returncode != 0
+    assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
     assert payload["ok"] is False
     assert "error" in payload
@@ -105,7 +107,7 @@ def test_empty_file_is_rejected(
     completed = _run_parse_expecting_failure(
         submission_command, iges, tmp_path / "out.json"
     )
-    assert completed.returncode != 0
+    assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
     assert payload["ok"] is False
 
@@ -125,11 +127,11 @@ def test_truncated_file_is_rejected(
     completed = _run_parse_expecting_failure(
         submission_command, iges, tmp_path / "out.json"
     )
-    # Either rejects cleanly or partially recovers — but must not crash.
-    # If it reports success, the terminate section must still be treated
-    # as missing (all counts zero). If it reports failure, we expect a
-    # diagnostic. Either way, exit 0 or 1 is acceptable; exit 2 is not.
-    assert completed.returncode in (0, 1)
+    # TR §1.2: missing Terminate section is invalid input → exit 1.
+    assert completed.returncode == 1
+    payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
+    assert payload["ok"] is False
+    assert "error" in payload
 
 
 # MAL-10: valid minimal file with no entities parses cleanly.
@@ -166,8 +168,44 @@ def test_query_with_nonexistent_de_is_rejected(
     completed = subprocess.run(
         cmd, capture_output=True, check=False, text=True, timeout=30,
     )
-    # No such DE — must exit non-zero with a diagnostic, not crash.
-    assert completed.returncode != 0
+    # TR §1.2: out-of-range DE is invalid input → exit 1.
+    assert completed.returncode == 1
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["ok"] is False
+
+
+# TR §1.2: "query --de <n> on an out-of-range or even DE index is invalid
+# input (exit code 1)". The out-of-range case is covered above; this
+# exercises the even-DE branch against a file with enough entities that
+# DE 2 is not also out-of-range (it's the second physical line of the
+# first entity's DE record, not a standalone odd DE).
+def test_query_with_even_de_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+        ),
+        make_entity(
+            de_index=3,
+            entity_type=110,
+            data={"start": [1.0, 0.0, 0.0], "terminate": [2.0, 0.0, 0.0]},
+        ),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="even-de")
+    out = tmp_path / "query-even.json"
+    cmd = [
+        *submission_command, "query",
+        "--input", str(iges_path),
+        "--de", "2",
+        "--output", str(out),
+    ]
+    completed = subprocess.run(
+        cmd, capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["ok"] is False
 
@@ -181,6 +219,6 @@ def test_random_bytes_are_rejected(
     completed = _run_parse_expecting_failure(
         submission_command, iges, tmp_path / "out.json"
     )
-    assert completed.returncode != 0
+    assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
     assert payload["ok"] is False

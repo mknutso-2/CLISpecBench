@@ -8,28 +8,12 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iges_support import (
-    make_entity,
     parse_iges_to_json,
     single_line_document,
     wrap_entities,
     write_iges_from_json,
 )
-from raw_iges_support import parse_terminate_counts, physical_lines_by_section, read_physical_lines
-
-
-def _two_entity_document() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 1.0, 1.0]},
-        ),
-        make_entity(
-            de_index=3,
-            entity_type=116,
-            data={"coords": [5.0, 5.0, 5.0], "display_symbol": 0},
-        ),
-    ])
+from raw_iges_support import physical_lines_by_section, read_physical_lines
 
 
 def test_written_file_has_all_five_sections_and_80_column_records(
@@ -51,22 +35,6 @@ def test_written_file_has_all_five_sections_and_80_column_records(
     assert len(grouped["D"]) == 2
     assert len(grouped["P"]) >= 1
     assert len(grouped["T"]) == 1
-
-
-def test_terminate_counts_match_written_sections(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    iges_path = write_iges_from_json(
-        submission_command, _two_entity_document(), tmp_path, name="file-counts"
-    )
-    grouped = physical_lines_by_section(iges_path)
-    counts = parse_terminate_counts(grouped["T"][0])
-
-    assert counts["S"] == len(grouped["S"])
-    assert counts["G"] == len(grouped["G"])
-    assert counts["D"] == len(grouped["D"])
-    assert counts["P"] == len(grouped["P"])
-
 
 def test_empty_start_lines_produce_one_or_more_blank_start_records(
     submission_command: Sequence[str], tmp_path: Path

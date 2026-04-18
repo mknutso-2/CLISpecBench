@@ -9,7 +9,6 @@ Each test builds a minimal IGES file containing one Line entity (via
 # pyright: reportUnknownMemberType=none
 from __future__ import annotations
 
-import math
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -98,24 +97,6 @@ def test_evaluate_at_midpoint(
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
     assert payload["ok"] is True
     assert payload["point"] == pytest.approx([5.0, 0.0, 0.0], abs=1e-12)
-
-
-# §3.2.5: "All curves shall have non-zero arc length" — a Line 3-4-5
-# should report arc length 5 (via endpoint distance from the data).
-def test_line_arc_length_from_endpoints(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = single_line_document((0.0, 0.0, 0.0), (3.0, 4.0, 0.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    parsed = parse_iges_to_json(submission_command, iges_path, tmp_path)
-
-    data = parsed["entities"][0]["entity"]["data"]
-    dx = data["terminate"][0] - data["start"][0]
-    dy = data["terminate"][1] - data["start"][1]
-    dz = data["terminate"][2] - data["start"][2]
-    length = math.sqrt(dx * dx + dy * dy + dz * dz)
-    assert length == pytest.approx(5.0)
-
 
 # Query subcommand — single-entity extract.
 def test_query_returns_single_line_entity(

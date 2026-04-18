@@ -140,6 +140,25 @@ def test_parse_rejects_invalid_view_pointer(
     assert "view" in payload["error"]
 
 
+def test_parse_rejects_invalid_label_display_pointer(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2: label_display must be validated alongside view / xform_matrix."""
+    iges_path = _make_valid_line_file(submission_command, tmp_path)
+    lines = iges_path.read_text(encoding="latin-1").splitlines()
+    d1, _ = _directory_line_indexes(lines)
+    # Field 8 (Label Display) occupies cols 57-64 (0-indexed offset 56, width 8).
+    lines[d1] = _replace_field(lines[d1], 56, 8, "999")
+    _write_lines(iges_path, lines)
+
+    out_path = tmp_path / "invalid-label-display.json"
+    completed = _run_parse(submission_command, iges_path, out_path)
+    assert completed.returncode == 1
+    payload = json.loads(out_path.read_text(encoding="utf-8"))
+    assert payload["ok"] is False
+    assert "label_display" in payload["error"]
+
+
 def test_parse_rejects_negative_entity_type(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:

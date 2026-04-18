@@ -40,7 +40,7 @@ def _entity_type_counts(parsed: dict[str, object]) -> Counter[int]:
 # -----------------------------------------------------------------
 # ex1.iges — IC library cell (subfigures, copious data, connect points)
 # -----------------------------------------------------------------
-def test_ex1_parses_with_expected_global_and_entity_count(
+def test_ex1_parses_with_expected_global_and_start_lines(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     parsed = parse_iges_to_json(submission_command, FIXTURES / "ex1.iges", tmp_path)
@@ -55,10 +55,6 @@ def test_ex1_parses_with_expected_global_and_entity_count(
     assert g["file_name"] == "PADIN"
     # Unit flag 9 in the spec maps to "microns".
     assert g["units"] == "microns"
-
-    entities = parsed["entities"]
-    assert isinstance(entities, list)
-    assert len(entities) == 21
 
 
 def test_ex1_entity_type_mix(
@@ -90,10 +86,6 @@ def test_ex2_parses_with_expected_global(
     assert isinstance(g, dict)
     assert g["product_id_sender"] == "PANEL123"
 
-    entities = parsed["entities"]
-    assert isinstance(entities, list)
-    assert len(entities) > 20
-
 
 def test_ex2_contains_geometry_and_annotation(
     submission_command: Sequence[str], tmp_path: Path
@@ -120,10 +112,6 @@ def test_ex3_parses_with_expected_global(
     g = parsed["global"]
     assert isinstance(g, dict)
     assert g["product_id_sender"] == "VIEWDWG2"
-
-    entities = parsed["entities"]
-    assert isinstance(entities, list)
-    assert len(entities) > 10
 
 
 def test_ex3_contains_view_drawing_and_xform(

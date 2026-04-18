@@ -2,10 +2,10 @@
 
 Asserts that ``iges roundtrip`` on each reference fixture produces a
 file that re-parses successfully and yields the same parsed entity count.
-Byte-identical output is *not* expected — the writer normalizes
-defaulted Global delimiters and expands two-digit year timestamps
-(see PLAN.md → Known Issues 2026-04-14). Semantic equivalence is what
-we contract on.
+The first pass may normalize defaulted Global delimiters and expand
+two-digit year timestamps (see PLAN.md → Known Issues 2026-04-14), but
+once a file has been normalized, a second ``iges roundtrip`` pass must
+be byte-identical to the first.
 
 Ports ``Evals/IGES-SDK/tests/spec/test_file_roundtrip.cpp`` /
 ``test_writer_roundtrip*.cpp``.
