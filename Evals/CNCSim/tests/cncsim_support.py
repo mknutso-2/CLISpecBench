@@ -127,6 +127,15 @@ def _run_cncsim_and_read_outputs(
     return completed, payload, parameter_output
 
 
+# v3.0 candidate: the behavioral tests that call run_cncsim then do
+# `assert payload["error"] is None` (~180 sites across ~40 files) should move
+# the schema check into a single gate test and use `payload.get("error") is
+# None` in the behavioral assertions. Today a single conditional-emit bug in an
+# agent's JSON writer (missing `"error": null` on success) fails every one of
+# those tests with `KeyError: 'error'`, drowning the real behavioral signal —
+# e.g. sonnet-4-6 cpp eval2/run3 lost 259 tests to this single cascade
+# (see `official-results/CNCSIM/results-2_1_1.md` and `Eval-Design.md` §7.4).
+# Intentionally not changed before V3.0 to avoid mid-version test-suite churn.
 def run_cncsim(
     submission_command: Sequence[str],
     *,
