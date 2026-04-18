@@ -317,9 +317,8 @@ functionality is not fully centralized in one folder yet, so use this checklist.
    telemetry paths, and allowed hosts live.
 2. **Add a Dockerfile** under `docker/agents/<agent-name>.Dockerfile` for the
    container image that runs that agent.
-3. **Register the agent in the CLI** in `src/swe_buildbench/cli.py`:
-   - add it to `_get_adapter()`
-   - add it to the `--agent` choices for the `run` subcommand
+3. **Add a registry entry** in `src/swe_buildbench/agents/registry.py`. The
+   CLI's adapter resolution and `--agent` choices derive from that registry.
 4. **Add adapter tests** in `src/swe_buildbench/tests/test_agents.py`.
 5. **Add container smoke coverage** in `src/swe_buildbench/tests/test_container_smoke.py`.
 6. **Add auth smoke coverage**:

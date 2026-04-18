@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.agents.registry import get_agent_spec, list_agent_ids
 from swe_buildbench.harness.flakiness import compute_flakiness
 from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
 from swe_buildbench.harness.results import (
@@ -38,37 +39,12 @@ def _get_adapter(
     effort: str | None = None,
 ) -> AgentAdapter:
     """Resolve an agent name to an adapter instance."""
-    from collections.abc import Callable
-
-    from swe_buildbench.agents import claude_code, codex_cli, copilot_cli, gemini_cli, model_api
-
-    adapters: dict[str, Callable[[], AgentAdapter]] = {
-        "claude-code": lambda: claude_code.ClaudeCodeAdapter(
-            model=model,
-            effort=effort,
-        ),
-        "codex-cli": lambda: codex_cli.CodexCLIAdapter(
-            model=model,
-            effort=effort,
-        ),
-        "copilot-cli": lambda: copilot_cli.CopilotCLIAdapter(
-            model=model,
-            effort=effort,
-        ),
-        "gemini-cli": lambda: gemini_cli.GeminiCLIAdapter(
-            model=model,
-            effort=effort,
-        ),
-        "model-api": lambda: model_api.ModelAPIAdapter(
-            model=model or "claude-opus-4-6",
-        ),
-    }
-    factory = adapters.get(agent_name)
-    if factory is None:
-        available = ", ".join(sorted(adapters))
-        print(f"Unknown agent {agent_name!r}. Available: {available}", file=sys.stderr)
+    try:
+        spec = get_agent_spec(agent_name)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         sys.exit(1)
-    return factory()
+    return spec.create(model=model, effort=effort)
 
 
 # ---------------------------------------------------------------------------
@@ -607,7 +583,7 @@ def main(argv: list[str] | None = None) -> None:
     run_parser.add_argument(
         "--agent",
         required=True,
-        choices=["claude-code", "codex-cli", "copilot-cli", "gemini-cli", "model-api"],
+        choices=list_agent_ids(),
     )
     run_parser.add_argument("--runs", type=int, default=3)
     run_parser.add_argument("--prompt-variant", default=None)

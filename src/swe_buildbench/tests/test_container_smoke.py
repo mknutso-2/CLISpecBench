@@ -23,6 +23,7 @@ from pathlib import Path
 
 import pytest
 
+from swe_buildbench.agents.registry import AgentSpec, get_agent_spec, list_agent_specs
 from swe_buildbench.harness.docker import ContainerConfig, DockerSandbox
 
 # ---------------------------------------------------------------------------
@@ -30,10 +31,30 @@ from swe_buildbench.harness.docker import ContainerConfig, DockerSandbox
 # ---------------------------------------------------------------------------
 
 BASE_IMAGE = "swe-buildbench-base"
-CLAUDE_IMAGE = "swe-buildbench-claude-code"
-CODEX_IMAGE = "swe-buildbench-codex-cli"
-COPILOT_IMAGE = "swe-buildbench-copilot-cli"
-GEMINI_IMAGE = "swe-buildbench-gemini-cli"
+
+
+def _agent_image(agent_id: str) -> str:
+    image = get_agent_spec(agent_id).docker_image
+    if image is None:
+        raise ValueError(f"Agent {agent_id!r} does not define a container image")
+    return image
+
+
+CONTAINER_AGENT_SPECS = [
+    spec
+    for spec in list_agent_specs(include_non_container=False)
+    if spec.docker_image is not None and spec.version_command is not None
+]
+
+
+def _agent_spec_id(spec: AgentSpec) -> str:
+    return spec.agent_id
+
+
+CLAUDE_IMAGE = _agent_image("claude-code")
+CODEX_IMAGE = _agent_image("codex-cli")
+COPILOT_IMAGE = _agent_image("copilot-cli")
+GEMINI_IMAGE = _agent_image("gemini-cli")
 
 
 def _image_available(tag: str) -> bool:
@@ -250,26 +271,15 @@ class TestAgentCliInstalled:
     agent image was built correctly and the CLI binary is on PATH.
     """
 
-    @skip_no_claude_image
-    def test_claude_cli_version(self) -> None:
-        exit_code, logs = _run_in_container(CLAUDE_IMAGE, "claude --version")
-        assert exit_code == 0, f"claude --version failed: {logs}"
-        assert "claude" in logs.lower()
+    @pytest.mark.parametrize("spec", CONTAINER_AGENT_SPECS, ids=_agent_spec_id)
+    def test_agent_cli_version(self, spec: AgentSpec) -> None:
+        assert spec.docker_image is not None
+        assert spec.version_command is not None
+        if not _image_available(spec.docker_image):
+            pytest.skip(f"Docker image {spec.docker_image} not available")
 
-    @skip_no_codex_image
-    def test_codex_cli_version(self) -> None:
-        exit_code, logs = _run_in_container(CODEX_IMAGE, "codex --version")
-        assert exit_code == 0, f"codex --version failed: {logs}"
-
-    @skip_no_copilot_image
-    def test_copilot_cli_version(self) -> None:
-        exit_code, logs = _run_in_container(COPILOT_IMAGE, "copilot --version")
-        assert exit_code == 0, f"copilot --version failed: {logs}"
-
-    @skip_no_gemini_image
-    def test_gemini_cli_version(self) -> None:
-        exit_code, logs = _run_in_container(GEMINI_IMAGE, "gemini --version")
-        assert exit_code == 0, f"gemini --version failed: {logs}"
+        exit_code, logs = _run_in_container(spec.docker_image, spec.version_command)
+        assert exit_code == 0, f"{spec.version_command} failed: {logs}"
 
 
 # ---------------------------------------------------------------------------

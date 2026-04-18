@@ -5,10 +5,19 @@ from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
 
+import pytest
+
 from swe_buildbench.agents.claude_code import ClaudeCodeAdapter
 from swe_buildbench.agents.codex_cli import CodexCLIAdapter
 from swe_buildbench.agents.copilot_cli import CopilotCLIAdapter
 from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
+from swe_buildbench.agents.registry import AgentSpec, list_agent_specs
+
+CONTAINER_AGENT_SPECS = list_agent_specs(include_non_container=False)
+
+
+def _agent_spec_id(spec: AgentSpec) -> str:
+    return spec.agent_id
 
 
 class TestClaudeCodeCredentialMounts:
@@ -102,24 +111,13 @@ class TestCopilotCLICredentialMounts:
 
 
 class TestAgentVersions:
-    def test_claude_code_version_from_dockerfile(self) -> None:
-        adapter = ClaudeCodeAdapter()
-        assert adapter.version != "unknown"
-        # Should be a semver-like string
-        assert "." in adapter.version
-
-    def test_codex_cli_version_from_dockerfile(self) -> None:
-        adapter = CodexCLIAdapter()
-        assert adapter.version != "unknown"
-        assert "." in adapter.version
-
-    def test_gemini_cli_version_from_dockerfile(self) -> None:
-        adapter = GeminiCLIAdapter()
-        assert adapter.version != "unknown"
-        assert "." in adapter.version
-
-    def test_copilot_cli_version_from_dockerfile(self) -> None:
-        adapter = CopilotCLIAdapter()
+    @pytest.mark.parametrize(
+        "spec",
+        CONTAINER_AGENT_SPECS,
+        ids=_agent_spec_id,
+    )
+    def test_container_agent_version_from_dockerfile(self, spec: AgentSpec) -> None:
+        adapter = spec.create()
         assert adapter.version != "unknown"
         assert "." in adapter.version
 
