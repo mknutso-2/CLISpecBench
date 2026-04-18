@@ -440,6 +440,17 @@ All evaluations are run in Docker containers with pinned language versions. A mo
 - Raw per-test results (pass/fail + output diff on failure)
 - Aggregate scores per dimension
 
+### 7.4 Test Independence
+
+Tests should have independent failure modes. A test named for behavior X should only fail because of X. When many tests share a precondition — a schema assertion, a fixture that parses output, a preamble check — one bug there cascades into all of them, and the score stops measuring N independent capabilities and starts measuring one thing N times. The rule of thumb: **if a test fails, the failure should tell you something you didn't learn from the other tests failing.**
+
+Two patterns to apply when authoring an eval:
+
+- **Gate shared preconditions once.** Put schema/shape checks in one dedicated test (e.g. `test_output_schema.py`), not inside every behavioral test. If the gate fails, downstream behavioral tests still report independently — or are skipped with a single reason — rather than all piling onto the same root cause.
+- **Keep behavioral assertions tolerant of detail they are not testing.** Use `payload.get("error") is None` rather than `payload["error"] is None`, so a subtle schema slip (missing key vs. null value) does not crash a motion or state test before it reaches the assertion the test was actually meant to verify.
+
+Worked example: sonnet-4-6's CNCSim cpp run 3 (see `official-results/CNCSIM/results-2_1_1.md`) built cleanly and claimed complete, but the agent emitted the required `error` output field only when non-empty, missing the spec's `null` on success. Because 259 behavioral tests asserted `payload["error"] is None` at the top, that single ~5-LOC mistake failed every one of them with `KeyError: 'error'` — costing the run ~55% of the suite before any of its actual RS274 logic was probed. A schema gate plus `.get("error")` in behavioral tests would have localized the failure to one schema test and let the rest of the suite measure what it was named for.
+
 ---
 
 ## 8. Language Policy
