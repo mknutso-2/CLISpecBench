@@ -375,6 +375,11 @@ def test_copious_data_form12_3d_path_at_fractional_t(
 # same as Form 11 per spec — t ∈ [0, N−1], linear segments between
 # consecutive tuples. TR §1.6 lists Form 63 as parametric alongside
 # Forms 11 / 12.
+#
+# This test overlaps Form 11 on eval semantics but is retained to fence
+# the *form-dispatch* path: an implementation that hard-codes
+# `if form in (11, 12)` would pass every Form-11 test and fail only
+# here. Treat as form-coverage, not a semantic duplicate.
 def _copious_data_form63_document(
     zt: float, points_2d: Sequence[tuple[float, float]]
 ) -> dict[str, object]:

@@ -44,8 +44,10 @@ iges roundtrip  --input <file.iges>  --output <out.iges>
   `xform_matrix`, `label_display`), any negative entity type, any zero
   `param_line_count` on a non-null entity, any non-positive required
   Global numeric field such as `model_space_scale`, any unsupported
-  entity type outside the shipped 87-type catalog, or any evaluation on
-  a non-parametric entity.
+  entity type outside the shipped 87-type catalog, any Start-section
+  line containing an ASCII control character (§2.2.4.2), any Hollerith
+  string containing an ASCII control character (§2.2.2.3), or any
+  evaluation on a non-parametric entity.
 - `2` — internal error in the tool itself (panic, out-of-memory,
   unexpected exception).
 
@@ -189,6 +191,16 @@ the IGES 5.3 spec.
   `(u, v)` parameter domain per §4.30. The indicator vector selects
   which global normal orientation is treated as positive; the evaluated
   point is the base-surface point plus `d` times that oriented unit normal.
+  The indicator is compared against the base surface's natural normal at
+  a fixed reference parameter pair `(Um, Vm)`:
+  - Types 114, 128 (B-spline surfaces): `(Um, Vm)` is the midpoint of
+    the entity's own parameter domain.
+  - Types 118, 120, 122: `(Um, Vm)` is derived from the constituent
+    curve(s)' native spans (midpoint) per §4.30.
+  - Types 190, 192, 194, 196, 198 (analytic surfaces): `(Um, Vm) = (0, 0)`.
+    This is the spec's unbounded-domain formula — the harness applies
+    it to analytic surfaces regardless of whether `u` is nominally
+    bounded `[0°, 360°]`, matching the reference implementation.
 - Types `190`/`192`/`194`/`196`/`198` Analytic Surfaces: `(t, s)` follow
   the native `(u, v)` parameterizations documented in §§4.50–4.54
   (e.g. Cylindrical `u ∈ [0°, 360°]` and `v ∈ (−∞, ∞)`). The CLI uses
@@ -353,9 +365,14 @@ type DirectoryEntry = {
   color:            ColorVariant,     // field 13 (raw signed integer)
   param_line_count: number,           // field 14 (number of P-section lines)
   form:             number,           // field 15 (form number)
-  entity_label:     string,           // field 18 (up to 8 chars)
+  entity_label:     string,           // field 18 (up to 8 chars, trimmed)
   entity_subscript: number            // field 19
 };
+// entity_label round-trips as the trimmed form: the raw 8-col DE
+// field is right-justified with leading-space padding on write, and
+// the parser strips padding on parse so the canonical JSON carries
+// the user-meaningful label (e.g. "PART01"), not its column-padded
+// encoding ("  PART01"). See §2.2.4.4.18.
 
 type StatusNumber = {
   blank: "visible" | "blanked",
@@ -416,6 +433,26 @@ diagnostic. Implementations may preserve raw Parameter Data for such
 unsupported types as a tool-specific extension, but the harness does not
 require `data.raw_pd` and hidden tests do not exercise it.
 
+**Count-field redundancy.** Several entity schemas below include an
+explicit integer count field next to a variable-length array (e.g.
+`{n: number, items: DEIndex[]}`, `{nc: number, ..., positions:
+number[]}`). These pairs are redundant by construction:
+
+- **On `iges write`:** the writer must emit the array length as the
+  count field. If the canonical JSON arrives with a mismatched
+  `count` and `array.length`, the writer trusts `array.length`.
+- **On `iges parse`:** the parser uses the count read from the PD
+  stream to consume exactly that many elements. The output JSON
+  carries both fields populated consistently.
+
+This applies to (but is not limited to) `n` in Composite Curve (102),
+Vertex List (502), Edge List (504), Loop (508), Shell (514); `nc`/`nr`
+in Rectangular Array (412); `ne` in Circular Array (414); `np` in
+Property (406), Units Data (316); `ns` in General Note (212), New
+General Note (213); `k` in Boundary (141) sub-records and Loop (508)
+sub-records; and any other field labeled "number of ..." immediately
+preceding its corresponding array.
+
 **[Entity data schemas appendix — see §A.]**
 
 ---
@@ -453,6 +490,18 @@ re-derive them from the spec.
 - Directory Entry records are exactly two 80-column lines (160 columns
   total) per entity.
 - Hollerith strings are encoded `<N>H<...N chars...>`.
+- Global-section field 1 (parameter delimiter) and field 2 (record
+  delimiter) are always emitted as explicit 1-char Hollerith strings
+  (`1H,` and `1H;` for the defaults, or `1Hα` and `1Hβ` for custom
+  delimiters). Spec §2.2.3.1 allows four delimiter encodings; the
+  harness requires the always-explicit form (combination 2) so that
+  downstream tooling can read the delimiters without needing to
+  back-track on defaults.
+- Parsing the Global section: concatenate the body (cols 1-72) of
+  every G-line verbatim — do not strip trailing padding per line.
+  Only one trailing-whitespace strip is applied, to the concatenated
+  payload as a whole. A per-line strip corrupts Hollerith strings
+  whose content happens to end with a space at a G-line boundary.
 
 Details are in §2.2 of the specification.
 
@@ -1578,24 +1627,40 @@ type SubfigureInstanceData = {
 
 ### Type 410 — ViewEntity — form-dependent
 
+Form 0 and Form 1 have **mutually exclusive** parameter-data layouts.
+The canonical JSON merges both field sets into a single `ViewData`
+object for uniformity, but only the form-appropriate subset is
+carried on the wire:
+
+- **Form 0** (orthographic): serializes `view_number`, `scale`, and a
+  variable-length list of 6 `clip_planes` pointers. The perspective
+  fields (`view_plane_normal`, `view_reference_point`,
+  `center_of_projection`, `view_up_vector`, `view_plane_distance`,
+  `umin`/`umax`/`vmin`/`vmax`, `depth_clipping`, `wmin`/`wmax`) are
+  not written and are not read; they may be defaulted in
+  canonical JSON and will not round-trip for Form 0.
+- **Form 1** (perspective, §4.135): serializes `view_number`, `scale`,
+  and the perspective fields listed above. `clip_planes` is not
+  written and not read for Form 1.
+
 ```ts
 type ViewData = {
   form: number,
   view_number: number,
   scale: number,
-  clip_planes: DEIndex[],
-  view_plane_normal: Vec3,  // 3-5: VPNX, VPNY, VPNZ
-  view_reference_point: Vec3,  // 6-8: VRPX, VRPY, VRPZ
-  center_of_projection: Vec3,  // 9-11: CPX, CPY, CPZ
-  view_up_vector: Vec3,  // 12-14: VUPX, VUPY, VUPZ
-  view_plane_distance: number,  // 15: VPD
-  umin: number,  // 16: UMIN
-  umax: number,  // 17: UMAX
-  vmin: number,  // 18: VMIN
-  vmax: number,  // 19: VMAX
-  depth_clipping: number,  // 20: DCI
-  wmin: number,  // 21: WMIN
-  wmax: number,  // 22: WMAX
+  clip_planes: DEIndex[],  // Form 0 only; defaulted/ignored for Form 1
+  view_plane_normal: Vec3,  // 3-5: VPNX, VPNY, VPNZ (Form 1 only)
+  view_reference_point: Vec3,  // 6-8: VRPX, VRPY, VRPZ (Form 1 only)
+  center_of_projection: Vec3,  // 9-11: CPX, CPY, CPZ (Form 1 only)
+  view_up_vector: Vec3,  // 12-14: VUPX, VUPY, VUPZ (Form 1 only)
+  view_plane_distance: number,  // 15: VPD (Form 1 only)
+  umin: number,  // 16: UMIN (Form 1 only)
+  umax: number,  // 17: UMAX (Form 1 only)
+  vmin: number,  // 18: VMIN (Form 1 only)
+  vmax: number,  // 19: VMAX (Form 1 only)
+  depth_clipping: number,  // 20: DCI (Form 1 only)
+  wmin: number,  // 21: WMIN (Form 1 only)
+  wmax: number,  // 22: WMAX (Form 1 only)
 };
 ```
 

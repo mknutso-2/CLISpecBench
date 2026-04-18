@@ -25,6 +25,10 @@ def test_global_strings_use_hollerith_encoding_in_g_section(
 def test_real_values_in_parameter_records_include_decimal_points(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
+    """§2.2.2.2: real literals must contain a decimal point or an
+    exponent. For integer-valued reals written to the PD section the
+    simplest form is "N." (e.g. "1."); some implementations prefer
+    "N.0" (e.g. "1.0"). Both are spec-compliant — accept either."""
     iges_path = write_iges_from_json(
         submission_command,
         single_line_document((1.0, 2.0, 3.0), (4.0, 5.0, 6.0)),
@@ -33,9 +37,9 @@ def test_real_values_in_parameter_records_include_decimal_points(
     )
 
     p_body = physical_lines_by_section(iges_path)["P"][0][:64].rstrip()
-    assert "1.0" in p_body
-    assert "2.0" in p_body
-    assert "6.0" in p_body
+    assert "1." in p_body
+    assert "2." in p_body
+    assert "6." in p_body
 
 
 def test_string_values_in_parameter_records_use_hollerith_encoding(

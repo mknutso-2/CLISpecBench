@@ -546,6 +546,28 @@ def test_property_roundtrip(
     assert data["values"][2]["value"] == "LINWIDTH"
 
 
+# §4.97 Property — `kind: "bool"` FieldValues serialize as the Logical
+# type per §2.2.2.6 (0 or 1). Both true and false round-trip through the
+# PD stream. On parse, the reader may restore the value as boolean or as
+# the Logical's 0/1 integer form — accept either.
+def test_property_bool_values_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "np": 2,
+        "values": [
+            {"kind": "bool", "value": True},
+            {"kind": "bool", "value": False},
+        ],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=406, data=payload,
+    )
+    assert len(data["values"]) == 2
+    assert data["values"][0]["value"] in (True, 1)
+    assert data["values"][1]["value"] in (False, 0)
+
+
 # §4.131 Drawing (Type 404, form 0 = no angle per DrawingView)
 def test_drawing_roundtrip(
     submission_command: Sequence[str], tmp_path: Path
