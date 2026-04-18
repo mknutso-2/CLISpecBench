@@ -88,14 +88,20 @@
   Line file in raw bytes, instead of round-tripping degenerate JSON
   through `iges write` (which now rejects the input).
 - `tests/test_validation.py` adds write-side rejection tests for
-  non-positive Global `min_resolution`, zero-length Line, invalid
-  `xform_matrix` / `view` / `label_display` cross-references, and
-  negative entity types.
+  non-positive Global `min_resolution`, zero-length Line, and invalid
+  `xform_matrix` / `view` / `label_display` cross-references. A
+  prior `test_write_rejects_negative_entity_type` was removed: the
+  write path overwrites `DirectoryEntry.entity_type` from
+  `entity.type` per TR §2.4, so any negative type value is caught by
+  `write_entity_dispatch` returning "Unsupported entity type" before
+  validation runs. The validator's negative-entity-type branch is
+  live on the parse path (where raw DE values arrive unprocessed) and
+  kept in the shared helper for that reason.
 
 ### Validated
 
 - `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
-  (`258 passed`, 2026-04-18).
+  (`257 passed`, 2026-04-18).
 - `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
   (`228 passed`, 2026-04-17).
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally
