@@ -11,13 +11,23 @@ from swe_buildbench.agents.claude_code import ClaudeCodeAdapter
 from swe_buildbench.agents.codex_cli import CodexCLIAdapter
 from swe_buildbench.agents.copilot_cli import CopilotCLIAdapter
 from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
-from swe_buildbench.agents.registry import AgentSpec, list_agent_specs
+from swe_buildbench.agents.registry import AgentSpec, list_agent_specs, list_auth_smoke_scripts
 
 CONTAINER_AGENT_SPECS = list_agent_specs(include_non_container=False)
+REPO_ROOT = Path(__file__).resolve().parents[3]
 
 
 def _agent_spec_id(spec: AgentSpec) -> str:
     return spec.agent_id
+
+
+class TestAgentRegistry:
+    def test_auth_smoke_scripts_exist(self) -> None:
+        smoke_scripts = list_auth_smoke_scripts()
+        assert smoke_scripts
+        for script_path in smoke_scripts:
+            assert script_path.endswith(".sh")
+            assert (REPO_ROOT / script_path).is_file()
 
 
 class TestClaudeCodeCredentialMounts:

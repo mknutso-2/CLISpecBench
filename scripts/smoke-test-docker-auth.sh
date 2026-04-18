@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Smoke-test that CLI agents can authenticate inside Docker containers.
-# Runs each agent's individual smoke test and reports combined results.
+# Runs each agent's individual smoke test from the agent registry and reports
+# combined results.
 #
 # Prerequisites:
 #   - Docker Engine running in WSL2 (see install-docker-wsl.sh)
 #   - Logged in to each CLI on the Windows host
+#   - uv installed (used to read the agent registry)
 #
 # Run from Git Bash:
 #   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-docker-auth.sh
@@ -22,13 +24,25 @@
 # npm packages and makes an API call). Run individual scripts to debug.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+mapfile -t smoke_scripts < <(
+    cd "$REPO_ROOT" && uv run python scripts/list-auth-smoke-scripts.py
+)
+
+if [ "${#smoke_scripts[@]}" -eq 0 ]; then
+    echo "ERROR: No auth smoke scripts registered."
+    exit 1
+fi
 
 passed=0
 failed=0
 
-for agent in claude codex copilot gemini; do
+for rel_script in "${smoke_scripts[@]}"; do
+    agent="$(basename "$rel_script" .sh)"
+    agent="${agent#smoke-test-}"
     echo ""
-    if bash "$SCRIPT_DIR/smoke-test-${agent}.sh"; then
+    if bash "$REPO_ROOT/$rel_script"; then
         ((passed++))
     else
         echo "FAIL: ${agent}"

@@ -323,7 +323,7 @@ functionality is not fully centralized in one folder yet, so use this checklist.
 5. **Add container smoke coverage** in `src/swe_buildbench/tests/test_container_smoke.py`.
 6. **Add auth smoke coverage**:
    - create `scripts/smoke-test-<agent>.sh`
-   - include it in `scripts/smoke-test-docker-auth.sh`
+   - register that script in `src/swe_buildbench/agents/registry.py`
 7. **Update docs** if the setup or workflow differs from existing agents.
 
 **Helpful notes**

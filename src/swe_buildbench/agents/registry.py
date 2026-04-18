@@ -23,6 +23,7 @@ class AgentSpec:
     factory: AgentFactory
     docker_image: str | None = None
     version_command: str | None = None
+    auth_smoke_script: str | None = None
 
     def create(
         self,
@@ -48,24 +49,28 @@ _AGENT_SPECS: dict[str, AgentSpec] = {
         factory=lambda model, effort: ClaudeCodeAdapter(model=model, effort=effort),
         docker_image="swe-buildbench-claude-code",
         version_command="claude --version",
+        auth_smoke_script="scripts/smoke-test-claude.sh",
     ),
     "codex-cli": AgentSpec(
         agent_id="codex-cli",
         factory=lambda model, effort: CodexCLIAdapter(model=model, effort=effort),
         docker_image="swe-buildbench-codex-cli",
         version_command="codex --version",
+        auth_smoke_script="scripts/smoke-test-codex.sh",
     ),
     "copilot-cli": AgentSpec(
         agent_id="copilot-cli",
         factory=lambda model, effort: CopilotCLIAdapter(model=model, effort=effort),
         docker_image="swe-buildbench-copilot-cli",
         version_command="copilot --version",
+        auth_smoke_script="scripts/smoke-test-copilot.sh",
     ),
     "gemini-cli": AgentSpec(
         agent_id="gemini-cli",
         factory=lambda model, effort: GeminiCLIAdapter(model=model, effort=effort),
         docker_image="swe-buildbench-gemini-cli",
         version_command="gemini --version",
+        auth_smoke_script="scripts/smoke-test-gemini.sh",
     ),
     "model-api": AgentSpec(
         agent_id="model-api",
@@ -94,3 +99,12 @@ def list_agent_specs(*, include_non_container: bool = True) -> list[AgentSpec]:
     if include_non_container:
         return specs
     return [spec for spec in specs if spec.docker_image is not None]
+
+
+def list_auth_smoke_scripts() -> list[str]:
+    """Return repo-relative auth-smoke script paths in stable agent order."""
+    return [
+        spec.auth_smoke_script
+        for spec in list_agent_specs()
+        if spec.auth_smoke_script is not None
+    ]
