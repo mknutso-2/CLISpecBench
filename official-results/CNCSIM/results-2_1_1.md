@@ -14,11 +14,17 @@ behavior. This file is copied forward from `results-2_0_2.md` and adds an explic
 column. v2.1.1 rows appear under py and rs for the newer codex-cli models (gpt-5.3-codex,
 gpt-5.4, gpt-5.4-mini).
 
-**Only runs where the agent completed successfully (`exit_reason: "completed"`)
-appear in the tables.** Runs that errored, timed out, or were rate-limited are
-excluded and noted as needing reruns. Completed runs with invalid scorer artifacts
-are also excluded and called out inline. Best/Mean are computed only over the
-listed runs.
+**Inclusion rule.** A run is *included* in the per-run detail table and
+in Best/Mean when it either completed normally or failed on its own
+accord — i.e. the failure mode tells us something about the agent.
+Agent-self-inflicted zero-score runs (`context_exhausted`, `agent_error`,
+`build_failure`, `no_code_written`) count as 0 and are annotated so a
+reader sees what happened. A run is *excluded* (and flagged as needing
+a rerun) only when it hit a harness- or environment-level failure
+unrelated to the agent: Docker/daemon issues, auth failures, scorer
+container glitches (e.g. pytest exit 4 with missing `report.json`),
+rate limits imposed on the harness, or completed runs with invalid
+`0/0` scorer artifacts.
 
 Cost is `reported_cost_usd` from the agent CLI when available, otherwise
 `estimated_cost_usd` computed by the harness (marked with ~). Copilot CLI does
@@ -28,7 +34,19 @@ not report input tokens or cost.
 
 ### claude-code
 
-No v2.0.2 runs yet. See `results-2_0_1.md` for v2.0.1 results.
+| Model | Effort | Version | Best | Mean | Runs | Status |
+|---|---|---|---|---|---|---|
+| claude-sonnet-4-6 | high | 2.1.1 | 375/542 (69.2%) | 38.9% | 3/3 | Complete; wide single-prompt variance (375/191/67) |
+
+#### claude-sonnet-4-6 / high
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 375/542 (69.2%) | 65.6 min | 10.9M | 155K | $11.50 | 268 | 9 | 4392 | [result](../../results/cncsim-full/claude-code/claude-sonnet-4-6_high/eval2/run1/result.json) [transcript](../../results/cncsim-full/claude-code/claude-sonnet-4-6_high/eval2/run1/transcript.jsonl) | Claims complete; multi-file C++20 tree with `CMakeLists.txt` + simulator/parser/executor split; session-end summary of G28/G30 + nonmodal-G fixes. |
+| 2 | 2.1.1 | 191/542 (35.2%) | 39.8 min | 6.7M | 156K | $5.41 | 95 | 12 | 3665 | [result](../../results/cncsim-full/claude-code/claude-sonnet-4-6_high/eval2/run2/result.json) [transcript](../../results/cncsim-full/claude-code/claude-sonnet-4-6_high/eval2/run2/transcript.jsonl) | Claims complete; 12-file `output/` with a clean CMake build. |
+| 3 | 2.1.1 | 67/542 (12.4%) | 60.3 min | 3.2M | 221K | $5.27 | 46 | 10 | 3303 | [result](../../results/cncsim-full/claude-code/claude-sonnet-4-6_high/eval2/run3/result.json) [transcript](../../results/cncsim-full/claude-code/claude-sonnet-4-6_high/eval2/run3/transcript.jsonl) | Claims complete; includes G10 L2 / G92 coordinate-system worked example in the final report. |
+
+Runs 1-3 executed under the old `cncsim-full` task id (before the 2026-04-17 rename to `cncsim-cpp`); content hashes are identical.
 
 ---
 
@@ -221,6 +239,22 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 
 ## js
 
+### claude-code
+
+| Model | Effort | Version | Best | Mean | Runs | Status |
+|---|---|---|---|---|---|---|
+| claude-sonnet-4-6 | high | 2.1.1 | 430/542 (79.3%) | 65.3% | 3/3 | Complete |
+
+#### claude-sonnet-4-6 / high
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 430/542 (79.3%) | 38.6 min | 5.3M | 144K | $5.02 | 94 | 6 | 3427 | [result](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run1/result.json) [transcript](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run1/transcript.jsonl) | Claims complete; Node.js simulator split across 6 files; end-of-session bug-fix note (`hasG80` variable). |
+| 2 | 2.1.1 | 406/542 (74.9%) | 53.0 min | 5.9M | 212K | $6.34 | 73 | 6 | 2050 | [result](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run2/result.json) [transcript](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run2/transcript.jsonl) | Claims complete; 6-file output tree with block parser, tool/param file handling. |
+| 3 | 2.1.1 | 226/542 (41.7%) | 65.2 min | 7.4M | 203K | $8.47 | 115 | 6 | 3770 | [result](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run3/result.json) [transcript](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run3/transcript.jsonl) | Claims complete; 6-file CLI simulator with full file table in the final report. |
+
+---
+
 ### codex-cli
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
@@ -325,6 +359,26 @@ Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex mod
 | 3 | 2.0.2 | 166/542 (30.6%) | 13.0 min | 4.7M | 89K | ~$0.36 | 38 | 1 | 1089 | [result](../../results/cncsim-full-js/codex-cli/gpt-5.1-codex-mini/eval1/run3/result.json) [transcript](../../results/cncsim-full-js/codex-cli/gpt-5.1-codex-mini/eval1/run3/transcript.jsonl) | Claims complete; implemented full CLI, expression evaluator, tokenizer, and trace recorder. |
 
 ## py
+
+### claude-code
+
+| Model | Effort | Version | Best | Mean | Runs | Status |
+|---|---|---|---|---|---|---|
+| claude-sonnet-4-6 | high | 2.1.1 | 388/542 (71.6%) | 59.0% | 3/3 | Complete; run 2 originally scored `0/0` due to a transient scorer-container failure and was re-scored against the saved submission (see note) |
+
+#### claude-sonnet-4-6 / high
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 346/542 (63.8%) | 56.5 min | 6.7M | 200K | $6.43 | 88 | 5 | 2998 | [result](../../results/cncsim-full-py/claude-code/claude-sonnet-4-6_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/claude-code/claude-sonnet-4-6_high/eval1/run1/transcript.jsonl) | Claims complete; "simulator is complete and working," summary of file-level breakdown. |
+| 2 | 2.1.1 | 226/542 (41.7%) | 37.6 min | 7.1M | 145K | $5.67 | 83 | 7 | 3050 | [result](../../results/cncsim-full-py/claude-code/claude-sonnet-4-6_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/claude-code/claude-sonnet-4-6_high/eval1/run2/transcript.jsonl) | Claims complete; 7-file output with per-file size/purpose table. Originally scored `0/0` — see note below. |
+| 3 | 2.1.1 | 388/542 (71.6%) | 48.4 min | 12.3M | 98K | $12.51 | 277 | 5 | 3228 | [result](../../results/cncsim-full-py/claude-code/claude-sonnet-4-6_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/claude-code/claude-sonnet-4-6_high/eval1/run3/transcript.jsonl) | Claims complete; session-end summary describes `motion_kind` plumbing and final-state reporting. |
+
+Run 2 note: the original scorer container for run 2 exited with code 4 in 0.4s and never wrote `report.json`, yielding a transient `0/0` artifact. Pytest on the saved source on the host and in a fresh scorer container both collect and run all 542 tests cleanly. The score above (226/542) was produced by invoking `run_hidden_tests` against the preserved `source/` in the same Docker configuration the runner uses. Harness now retries once on this failure mode and persists `test-container.attempt<N>.log` for future diagnostics (see commit `78313e1`).
+
+Runs 1-3 executed under the old `cncsim-full-py` task id (before the 2026-04-17 rename to `cncsim-py`); content hashes are identical.
+
+---
 
 ### codex-cli
 
@@ -449,6 +503,22 @@ Excluded: eval1 runs 1-3 (all rate-limited — run 1 partial with 109/542 before
 
 Rust ref impl and the `cncsim-full-rs` variant were added in v2.1.0. Existing rows are
 eval_version=2.1.0; newer codex-cli entries (gpt-5.3-codex, gpt-5.4, gpt-5.4-mini) are 2.1.1.
+
+### claude-code
+
+| Model | Effort | Version | Best | Mean | Runs | Status |
+|---|---|---|---|---|---|---|
+| claude-sonnet-4-6 | high | 2.1.1 | 376/542 (69.4%) | 41.0% | 3/3 | Complete; run 2 agent_error — hit Claude Code's 32K-output-token-per-response cap mid-`Write`, counted as 0/542 (see note) |
+
+#### claude-sonnet-4-6 / high
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 376/542 (69.4%) | 53.3 min | 11.2M | 202K | $7.75 | 102 | 7 | 4775 | [result](../../results/cncsim-rs/claude-code/claude-sonnet-4-6_high/eval1/run1/result.json) [transcript](../../results/cncsim-rs/claude-code/claude-sonnet-4-6_high/eval1/run1/transcript.jsonl) | Claims complete; 7-file Cargo project; session-end summary of `src/interp.rs` use-path fixes. |
+| 2 | 2.1.1 | 0/542 (0.0%) | 29.7 min | 1.7M | 152K | $3.25 | 23 | 4 | 1115 | [result](../../results/cncsim-rs/claude-code/claude-sonnet-4-6_high/eval1/run2/result.json) [transcript](../../results/cncsim-rs/claude-code/claude-sonnet-4-6_high/eval1/run2/transcript.jsonl) | `agent_error`: Claude Code's API rejected the response with `"exceeded the 32000 output token maximum"`. Agent was mid-way through a single `Write` of the interpreter file (thinking log: _"This is a very large file. I'll write it in sections."_ — but tried to emit it monolithically). 4 files / 1115 LOC persisted before the crash; nothing builds. |
+| 3 | 2.1.1 | 290/542 (53.5%) | 45.4 min | 6.2M | 172K | $5.63 | 83 | 7 | 2943 | [result](../../results/cncsim-rs/claude-code/claude-sonnet-4-6_high/eval1/run3/result.json) [transcript](../../results/cncsim-rs/claude-code/claude-sonnet-4-6_high/eval1/run3/transcript.jsonl) | Claims complete; 7-file Cargo project; session-end verifies exit-code contract (0 success / 1 G-code error / 2 internal). |
+
+Run 2 note: this is the first observed occurrence of the Claude Code `CLAUDE_CODE_MAX_OUTPUT_TOKENS=32000` default cap across the entire dataset (grep over all `results/` confirms no prior hits). Other models break large files into smaller `Write` chunks (typically 3-5K chars each); sonnet-4-6 on Rust attempted a single monolithic `Write` of the interpreter and its own CLI's per-response cap rejected it. Counted as `0/542` per the inclusion rule: the failure is sonnet-4-6's own output-chunking strategy, not a harness issue. The cap was NOT raised for comparability with the other 11 sonnet-4-6 runs in this session and the rest of the dataset (all runs use Claude Code's default).
 
 ### codex-cli
 
