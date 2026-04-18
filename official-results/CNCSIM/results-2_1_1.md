@@ -255,6 +255,8 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 | 2 | 2.1.1 | 406/542 (74.9%) | 53.0 min | 5.9M | 212K | $6.34 | 73 | 6 | 2050 | [result](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run2/result.json) [transcript](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run2/transcript.jsonl) | Claims complete; 6-file output tree with block parser, tool/param file handling. |
 | 3 | 2.1.1 | 226/542 (41.7%) | 65.2 min | 7.4M | 203K | $8.47 | 115 | 6 | 3770 | [result](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run3/result.json) [transcript](../../results/cncsim-js/claude-code/claude-sonnet-4-6_high/eval1/run3/transcript.jsonl) | Claims complete; 6-file CLI simulator with full file table in the final report. |
 
+[Commentary on large variance](commentary/cncsim-js-claude-sonnet-4-6-high-variance.md)
+
 ---
 
 ### codex-cli
@@ -448,6 +450,8 @@ Runs 1-2 token usage unavailable: both context-exhausted during remote compact, 
 | 1 | 2.1.0 | 244/542 (45.0%) | 35.7 min | 11.2M | 102K | ~$3.49 | 63 | 11 | 2661 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.2_high/eval1/run1/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.2_high/eval1/run1/transcript.jsonl) | Claims complete; stdlib-only Python 3.11+ simulator. |
 | 2 | 2.1.0 | 432/542 (79.7%) | 46.8 min | 12.9M | 133K | ~$4.48 | 63 | 13 | 2889 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.2_high/eval1/run2/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.2_high/eval1/run2/transcript.jsonl) | Claims complete; stdlib-only Python simulator with `output/main.py` entrypoint. |
 | 3 | 2.1.0 | 448/542 (82.7%) | 58.4 min | 17.6M | 157K | ~$5.67 | 74 | 11 | 2822 | [result](../../results/cncsim-full-py/codex-cli/gpt-5.2_high/eval1/run3/result.json) [transcript](../../results/cncsim-full-py/codex-cli/gpt-5.2_high/eval1/run3/transcript.jsonl) | Claims complete; stdlib-only RS274/NGC simulator CLI. |
+
+[Commentary on large variance](commentary/cncsim-py-gpt-5.2-high-variance.md)
 
 #### gpt-5.1-codex-max / xhigh
 
