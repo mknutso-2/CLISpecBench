@@ -89,10 +89,53 @@ DiagList validate(IgesFile const& file) {
             "§2.2.4.3"));
     }
 
+    // §2.2.4.3 field 8: sp_magnitude should be > 0
+    if (file.global.sp_magnitude <= 0) {
+        diags.push_back(make_diag(SectionKind::Global,
+            "Global field 8 (sp_magnitude) is not positive",
+            "§2.2.4.3"));
+    }
+
+    // §2.2.4.3 field 9: sp_significance should be > 0
+    if (file.global.sp_significance <= 0) {
+        diags.push_back(make_diag(SectionKind::Global,
+            "Global field 9 (sp_significance) is not positive",
+            "§2.2.4.3"));
+    }
+
+    // §2.2.4.3 field 10: dp_magnitude should be > 0
+    if (file.global.dp_magnitude <= 0) {
+        diags.push_back(make_diag(SectionKind::Global,
+            "Global field 10 (dp_magnitude) is not positive",
+            "§2.2.4.3"));
+    }
+
+    // §2.2.4.3 field 11: dp_significance should be > 0
+    if (file.global.dp_significance <= 0) {
+        diags.push_back(make_diag(SectionKind::Global,
+            "Global field 11 (dp_significance) is not positive",
+            "§2.2.4.3"));
+    }
+
     // §2.2.4.3 field 13: model_space_scale should be > 0
     if (file.global.model_space_scale <= 0.0) {
         diags.push_back(make_diag(SectionKind::Global,
             "Global field 13 (model_space_scale) is not positive",
+            "§2.2.4.3"));
+    }
+
+    // §2.2.4.3 field 16: max_line_weight_grads shall be > 0
+    if (file.global.max_line_weight_grads <= 0) {
+        diags.push_back(make_diag(SectionKind::Global,
+            "Global field 16 (max_line_weight_grads) is not positive",
+            "§2.2.4.3"));
+    }
+
+    // §2.2.4.3 field 19: min_resolution is required, no default, and
+    // TR §1.2 lists it among the non-positive-is-invalid fields.
+    if (file.global.min_resolution <= 0.0) {
+        diags.push_back(make_diag(SectionKind::Global,
+            "Global field 19 (min_resolution) is not positive",
             "§2.2.4.3"));
     }
 

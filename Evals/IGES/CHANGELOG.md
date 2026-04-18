@@ -16,6 +16,17 @@
   contract directly rather than only `entity.data`.
 - `tests/test_entity_roundtrips.py` Form 0 roundtrips for analytic
   surfaces `190 / 192 / 194 / 196 / 198`.
+- `tests/test_entity_roundtrips.py` roundtrips for Type `110` Forms 1
+  (semi-bounded line) and 2 (unbounded line), Type `106` Form 11
+  (2D planar linear path), and Type `322` Forms 0 and 1 (Attribute
+  Table Definition without values, and with values but without display
+  pointers).
+- `tests/test_geometric_eval.py` Line Form 1 / Form 2 eval tests
+  covering the extended parameter domains (t > 1 and t < 0) documented
+  in TR §1.6.
+- `tests/test_validation.py` parameterized non-positive rejection for
+  Global fields 8 / 9 / 10 / 11 / 16 / 19, plus a dedicated rejection
+  test for degenerate zero-length Line entities (spec §3.2.5).
 
 ### Changed
 
@@ -44,9 +55,25 @@
   including the line arc-length-from-endpoints assertion and the weaker
   subset overlaps between the dedicated roundtrip files and the generic
   entity roundtrip coverage.
+- `reference-implementation-cpp/src/model/validate.cpp` now rejects
+  non-positive values for Global fields 8 / 9 / 10 / 11 / 16 / 19
+  (`sp_magnitude`, `sp_significance`, `dp_magnitude`, `dp_significance`,
+  `max_line_weight_grads`, `min_resolution`). Previously only fields
+  7 and 13 were validated; TR §1.2 calls for the same treatment across
+  all required positive Global numeric fields.
+- `reference-implementation-cpp/src/entities/line_entity.cpp` now
+  rejects degenerate Line entities whose start and terminate points
+  are coincident, enforcing spec §3.2.5 "All curves shall have non-zero
+  arc length."
+- Test `test_line_entity.py::test_line_at_origin` renamed to
+  `test_line_starting_at_origin` and updated to use a non-degenerate
+  Line; the prior version relied on the (invalid) zero-length-Line
+  behavior the ref-impl now rejects.
 
 ### Validated
 
+- `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
+  (`252 passed`, 2026-04-18).
 - `py -3 -m pytest Evals/IGES/tests --language=cpp` passes locally
   (`228 passed`, 2026-04-17).
 - `uv run pytest Evals/IGES/tests --language=cpp -q` passes locally

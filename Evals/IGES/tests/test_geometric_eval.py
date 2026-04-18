@@ -1088,3 +1088,41 @@ def test_surface_eval_success_has_null_tangent(
     )
     assert payload["ok"] is True
     assert payload["tangent"] is None
+
+
+# §4.13 Form 1 / Form 2 extended domains (TR §1.6). Form 0 clamps at
+# [0, 1]; Form 1 extends to [0, ∞); Form 2 extends to (−∞, ∞). The
+# evaluation formula is the same in all three — `P1 + t*(P2 - P1)` —
+# so t > 1 and t < 0 should linearly extrapolate past the endpoints.
+def test_line_form1_eval_beyond_terminate(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            form=1,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+        ),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 3.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([3.0, 0.0, 0.0], abs=1e-9)
+
+
+def test_line_form2_eval_before_start(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            form=2,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+        ),
+    ])
+    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, -2.0, tmp_path)
+    assert payload["ok"] is True
+    assert payload["point"] == pytest.approx([-2.0, 0.0, 0.0], abs=1e-9)

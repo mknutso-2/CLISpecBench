@@ -38,17 +38,18 @@ def test_parse_line_from_pd(
 
 
 # §4.13: "Each end point is specified relative to the definition space by
-# triple coordinates"
-def test_line_at_origin(
+# triple coordinates." Start at the origin, terminate elsewhere — §3.2.5
+# forbids zero-length curves, so both endpoints cannot be the origin.
+def test_line_starting_at_origin(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = single_line_document((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path)
 
     data = parsed["entities"][0]["entity"]["data"]
     assert data["start"] == [0.0, 0.0, 0.0]
-    assert data["terminate"] == [0.0, 0.0, 0.0]
+    assert data["terminate"] == [1.0, 0.0, 0.0]
 
 
 def test_line_with_negative_coordinates(

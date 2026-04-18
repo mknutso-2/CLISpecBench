@@ -69,6 +69,26 @@ Complete. Current validation status is recorded in the snapshot above.
 - [ ] `reference-implementation-rs/` — Rust ref-impl. Register
       `iges-rs`, wire the language-selection path, and make the
       implementation pass the IGES test suite.
+- [ ] Fuzz / pathological-input coverage — add a `hypothesis`-backed
+      property test that feeds random 80-column ASCII blobs to
+      `iges parse` and asserts the parser never exits 2 (internal
+      error). Requires adding `hypothesis` to the test dependency set
+      and tuning the generator for useful coverage. Deferred from the
+      Round 2 review as a separate infrastructure investment.
+
+Review-surfaced gaps intentionally left unresolved:
+
+- [ ] §2.2.3 numeric-field-boundary rule: "A numeric field shall end at
+      least one column prior to the last data column." No known failing
+      implementation pattern; defensive test only. Skip unless a concrete
+      regression surfaces.
+- [ ] Tangent / normal value checks for `iges eval`: TR §1.5 declares
+      these nullable with no value contract. Adding value assertions
+      would create a new contract rather than enforce an existing one;
+      revisit only if a stricter agent-grading contract is adopted.
+- [ ] Broader form coverage for Type 106 Forms 13/20/21/31-38/40 and
+      Type 402 Forms 3-19. Same parser/writer code paths as covered
+      forms; marginal signal is low.
 
 ---
 

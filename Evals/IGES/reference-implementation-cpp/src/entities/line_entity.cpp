@@ -36,6 +36,22 @@ parse_line_entity(ParamTokenizer& tok) {
     if (!z2) return std::unexpected(z2.error());
     e.terminate.z = *z2;
 
+    // §3.2.5: "All curves shall have non-zero arc length." For a Line
+    // this means start != terminate. Form 0 only; Forms 1 and 2 are
+    // semi-bounded / unbounded lines and their arc length is always
+    // infinite, so the points need only be distinct to define a
+    // direction. The same distinctness constraint applies in both
+    // cases, so the check is form-independent at parse time.
+    if (e.start.x == e.terminate.x &&
+        e.start.y == e.terminate.y &&
+        e.start.z == e.terminate.z) {
+        return std::unexpected(Diagnostic{
+            Diagnostic::Severity::Error, 0, SectionKind::Parameter,
+            "Line (Type 110) has coincident start and terminate points "
+            "(zero arc length)",
+            "§3.2.5"});
+    }
+
     return e;
 }
 

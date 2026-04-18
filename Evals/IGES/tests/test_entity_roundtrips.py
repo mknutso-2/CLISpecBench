@@ -687,3 +687,102 @@ def test_msbo_roundtrip(
         submission_command, tmp_path, entity_type=186, data=payload,
     )
     assert data == payload
+
+
+# §4.13 Line Entity Forms 1 (semi-bounded) and 2 (unbounded). The PD
+# layout matches Form 0 — six reals defining P1 and P2 — but the forms
+# extend the parameter domain to [0, ∞) and (−∞, ∞) respectively per
+# TR §1.6. The ref-impl writer does not special-case form, so this
+# test locks in the round-trip of the form number through the DE.
+def test_line_form1_semi_bounded_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=110, form=1, data=payload,
+    )
+    assert data == payload
+
+
+def test_line_form2_unbounded_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"start": [-1.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]}
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=110, form=2, data=payload,
+    )
+    assert data == payload
+
+
+# §4.7 Copious Data Form 11 (2D planar linear path). Existing coverage
+# (test_geometric_eval.py) exercises Form 11 via `iges eval`; this adds
+# the roundtrip surface.
+def test_copious_data_form11_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "ip": 1,
+        "n": 3,
+        "zt": 2.5,
+        "data": [0.0, 0.0, 1.0, 0.0, 1.0, 1.0],
+    }
+    data = _roundtrip_single(
+        submission_command, tmp_path, entity_type=106, form=11, data=payload,
+    )
+    assert data == payload
+
+
+# §4.79 Attribute Table Definition Form 0 (definitions only — no values,
+# no display pointers) and Form 1 (definitions + values, no display
+# pointers). Existing coverage (test_metadata_entities.py) exercises
+# Form 2 only.
+def test_attribute_table_definition_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    data = _roundtrip_single(
+        submission_command,
+        tmp_path,
+        entity_type=322,
+        form=0,
+        data={
+            "name": "DEF0",
+            "alt": 1,
+            "na": 2,
+            "attributes": [
+                {"at": 1, "avdt": 1, "avc": 0, "values": [], "display_ptrs": []},
+                {"at": 2, "avdt": 2, "avc": 0, "values": [], "display_ptrs": []},
+            ],
+        },
+    )
+    assert data["name"] == "DEF0"
+    assert data["na"] == 2
+    assert data["attributes"][1]["avdt"] == 2
+
+
+def test_attribute_table_definition_form_one_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    data = _roundtrip_single(
+        submission_command,
+        tmp_path,
+        entity_type=322,
+        form=1,
+        data={
+            "name": "F1TBL",
+            "alt": 1,
+            "na": 1,
+            "attributes": [{
+                "at": 3,
+                "avdt": 2,
+                "avc": 2,
+                "values": [
+                    {"kind": "real", "value": 1.5},
+                    {"kind": "real", "value": -0.25},
+                ],
+                "display_ptrs": [],
+            }],
+        },
+    )
+    assert data["name"] == "F1TBL"
+    assert data["attributes"][0]["values"][0] == {"kind": "real", "value": 1.5}
+    assert data["attributes"][0]["display_ptrs"] == []
