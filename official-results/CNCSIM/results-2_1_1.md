@@ -140,6 +140,8 @@ Prior eval (eval1): all 3 runs failed with `no_output` in 5s (startup issue).
 | 2 | 2.1.0 | 41/542 (7.6%) | 12.8 min | 4.6M | 71K | ~$1.41 | 43 | 8 | 1431 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run2/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run2/transcript.jsonl) | Claims complete despite low score; "syntactically correct RS274/NGC parser" but runtime behavior mostly broken (41/542). |
 | 3 | 2.1.0 | 197/542 (36.3%) | 16.9 min | 4.3M | 92K | ~$1.50 | 48 | 7 | 2015 | [result](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run3/result.json) [transcript](../../results/cncsim-full/codex-cli/gpt-5.1_high/eval1/run3/transcript.jsonl) | Claims complete; modular parser/simulator split across multiple files. |
 
+[Commentary on large variance](commentary/cncsim-cpp-gpt-5.1-high-variance.md)
+
 Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex models (gpt-5, gpt-5.1, gpt-5.2); costs shown are `estimated_cost_usd` from token counts × published per-MTok pricing. Captured before OpenAI deprecated these models.
 
 #### gpt-5 / high
@@ -576,6 +578,8 @@ All 3 runs ended in `context_exhausted` (run 1+3 ran out of input window, run 2 
 | 1 | 2.1.0 | 260/542 (48.0%) | 64.8 min | 13.4M | 192K | ~$5.52 | 104 | 1 | 2690 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.2-codex_xhigh/eval1/run1/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.2-codex_xhigh/eval1/run1/transcript.jsonl) | Claims complete; full CLI with RS274 modal handling, motion, probing, parameter/tool-table I/O. |
 | 2 | 2.1.0 | 438/542 (80.8%) | 78.3 min | 18.4M | 202K | ~$6.62 | 112 | 1 | 2929 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.2-codex_xhigh/eval1/run2/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.2-codex_xhigh/eval1/run2/transcript.jsonl) | Claims complete; noted RS274 alignment — G53 axis-word enforcement, coord-system-under-CRC blocking, G38.2 probe constraints, G87 XY-plane requirement, per-submotion error-segment indexing for G28/G30. |
 | 3 | 2.1.0 | 223/542 (41.1%) | 92.1 min | 25.4M | 262K | ~$8.83 | 138 | 1 | 3509 | [result](../../results/cncsim-full-rs/codex-cli/gpt-5.2-codex_xhigh/eval1/run3/result.json) [transcript](../../results/cncsim-full-rs/codex-cli/gpt-5.2-codex_xhigh/eval1/run3/transcript.jsonl) | Claims complete; standalone Rust std-only Cargo project with full CLI, parsing, motion (G0/G1/G2/G3), probing, G28/G30, G10/G92, canned cycles (G81–G89). |
+
+[Commentary on large variance](commentary/cncsim-rs-gpt-5.2-codex-high-variance.md)
 
 #### gpt-5.2 / high
 
