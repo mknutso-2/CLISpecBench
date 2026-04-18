@@ -271,23 +271,6 @@ std::expected<std::string, json> canonical_json_to_iges(json const& j) {
         std::vector<std::string> start_lines = j.at("start_lines").get<std::vector<std::string>>();
         iges::GlobalSection global = j.at("global").get<iges::GlobalSection>();
 
-        // Structural validation on the write path (TR §1.2). The parse
-        // path runs `validate()` on the fully constructed IgesFile;
-        // the write path must apply the same Global field-positivity
-        // checks to its deserialized GlobalSection so that callers
-        // cannot produce an .iges file that `parse` would immediately
-        // reject. Entity-level checks (e.g., §3.2.5 non-zero arc
-        // length for Line) are applied per-entity in
-        // write_entity_dispatch via each entity's serializer.
-        {
-            iges::IgesFile global_only;
-            global_only.global = global;
-            auto global_diags = iges::validate(global_only);
-            if (!global_diags.empty()) {
-                return std::unexpected(error_from_diagnostics(global_diags));
-            }
-        }
-
         std::vector<iges::WritableEntity> entities;
         auto const& arr = j.at("entities");
         if (!arr.is_array()) {
@@ -314,6 +297,33 @@ std::expected<std::string, json> canonical_json_to_iges(json const& j) {
             w.pd_string = rewrite_pd_delimiters(
                 *pd, global.param_delimiter, global.record_delimiter);
             entities.push_back(std::move(w));
+        }
+
+        // Structural validation on the write path (TR §1.2). Uses the
+        // `validate_write_input` variant which shares the entity-type
+        // sign and DE cross-reference checks (view, xform_matrix,
+        // label_display) with the parse path, plus the Global field
+        // positivity checks, but skips param_line_count and
+        // pd_string.empty() — those are re-derived / built by the
+        // writer and would trigger spurious rejections here. Symmetric
+        // enforcement ensures `iges write` cannot produce an .iges
+        // file that `iges parse` would immediately reject.
+        //
+        // WritableEntity and RawEntity are structurally identical
+        // ({DirectoryEntry, std::string}); copy fields into a
+        // validation stub to call the shared validator.
+        iges::IgesFile validation_stub;
+        validation_stub.global = global;
+        validation_stub.entities.reserve(entities.size());
+        for (auto const& w : entities) {
+            iges::RawEntity r;
+            r.de = w.de;
+            r.pd_string = w.pd_string;
+            validation_stub.entities.push_back(std::move(r));
+        }
+        auto diags = iges::validate_write_input(validation_stub);
+        if (!diags.empty()) {
+            return std::unexpected(error_from_diagnostics(diags));
         }
 
         return iges::write_iges_file(start_lines, global, entities);

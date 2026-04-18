@@ -310,6 +310,128 @@ def test_write_rejects_non_positive_global_field(
     assert completed.returncode == 1
 
 
+def test_write_rejects_invalid_xform_matrix_pointer(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2: the write path must reject DE cross-references that
+    point to non-existent entities, symmetric with the parse-side check.
+
+    A file emitted with a dangling xform_matrix pointer would be
+    rejected by `iges parse`, so `iges write` must refuse to produce it.
+    """
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            directory_entry_overrides={"xform_matrix": 999},
+        ),
+    ])
+    json_path = tmp_path / "bad-xform.json"
+    iges_path = tmp_path / "bad-xform.iges"
+    json_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            *submission_command, "write",
+            "--input", str(json_path),
+            "--output", str(iges_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+
+
+def test_write_rejects_invalid_view_pointer(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2: mirror of `test_write_rejects_invalid_xform_matrix_pointer`
+    for the view cross-reference."""
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            directory_entry_overrides={"view": 999},
+        ),
+    ])
+    json_path = tmp_path / "bad-view.json"
+    iges_path = tmp_path / "bad-view.iges"
+    json_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            *submission_command, "write",
+            "--input", str(json_path),
+            "--output", str(iges_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+
+
+def test_write_rejects_invalid_label_display_pointer(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2: mirror of the other write-side cross-reference tests for
+    label_display."""
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            directory_entry_overrides={"label_display": 999},
+        ),
+    ])
+    json_path = tmp_path / "bad-label-display.json"
+    iges_path = tmp_path / "bad-label-display.iges"
+    json_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            *submission_command, "write",
+            "--input", str(json_path),
+            "--output", str(iges_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+
+
+def test_write_rejects_negative_entity_type(
+    submission_command: Sequence[str], tmp_path: Path,
+) -> None:
+    """TR §1.2: negative entity types are invalid input on write too.
+    The entity.type field is populated from the JSON's entity.type
+    directly; the ref-impl's write path sets DE.entity_type from that
+    value before validation."""
+    doc = wrap_entities([
+        make_entity(
+            de_index=1,
+            entity_type=110,
+            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            directory_entry_overrides={"entity_type": -1},
+        ),
+    ])
+    # Force a negative type in the nested entity record too so the
+    # DE.entity_type = iges::EntityType{type} assignment in
+    # canonical_json_to_iges carries through a negative value.
+    doc["entities"][0]["entity"]["type"] = -1
+    json_path = tmp_path / "bad-type.json"
+    iges_path = tmp_path / "bad-type.iges"
+    json_path.write_text(json.dumps(doc), encoding="utf-8")
+
+    completed = subprocess.run(
+        [
+            *submission_command, "write",
+            "--input", str(json_path),
+            "--output", str(iges_path),
+        ],
+        capture_output=True, check=False, text=True, timeout=30,
+    )
+    assert completed.returncode == 1
+
+
 def test_write_rejects_zero_length_line(
     submission_command: Sequence[str], tmp_path: Path,
 ) -> None:
