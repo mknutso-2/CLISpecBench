@@ -11,6 +11,18 @@
   (`python main.py <arguments>`) which Ubuntu 24.04 otherwise breaks
   by shipping only `python3`. Test scoring is unaffected because
   `submission_command` already hard-resolves `/usr/bin/python3`.
+- **Harness: preserve `output/` wrapper at test-container staging.**
+  The scorer now mounts the agent's `output/` contents at
+  `/tmp/submission/output/` inside the test container instead of
+  flattening them to `/tmp/submission/`, matching the `output/main.py`
+  entry point promised by `Evals/_shared/language-requirements-py.md`.
+  No WordCount-specific failure was observed (typical submissions are
+  single-file), but this is the same staging path that broke multi-
+  module CNCSim and IGES Python submissions which encoded `output` as
+  their package name. Harness-only change in
+  `src/swe_buildbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
+  `src/swe_buildbench/harness/docker.py` (`copy_in` now auto-creates
+  intermediate dirs under `/tmp`); no eval files changed.
 
 ## v1.0.2 — 2026-04-12
 

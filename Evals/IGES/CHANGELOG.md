@@ -51,6 +51,20 @@
   even when their implementation was correct. Test scoring is
   unaffected because `submission_command` already hard-resolves
   `/usr/bin/python3` (see `src/swe_buildbench/build/backends.py:254`).
+- **Harness: preserve `output/` wrapper at test-container staging.**
+  The scorer now mounts the agent's `output/` contents at
+  `/tmp/submission/output/` inside the test container instead of
+  flattening them to `/tmp/submission/`, matching the `output/main.py`
+  entry point promised by `Evals/_shared/language-requirements-py.md`.
+  Observed in a 2026-04-19 gpt-5.4 `iges-py` run: the agent wrote
+  `main.py` with `from output.iges_errors import ...` and supporting
+  modules using `from .iges_common import ...`, succeeded in its own
+  smoke test from `/workspace/`, and died at test-time import with
+  `ModuleNotFoundError: No module named 'output'` — scoring 6/263.
+  Harness-only change in `src/swe_buildbench/harness/scoring.py`
+  (`_CONTAINER_SUBMISSION`) and `src/swe_buildbench/harness/docker.py`
+  (`copy_in` now auto-creates intermediate dirs under `/tmp`); no eval
+  files changed.
 
 ## v1.0.13 — 2026-04-18
 

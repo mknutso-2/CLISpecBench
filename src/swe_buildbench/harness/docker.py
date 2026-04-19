@@ -221,17 +221,34 @@ class DockerSandbox:
         return str(container.id)
 
     def copy_in(self, host_path: Path, container_path: PurePosixPath) -> None:
-        """Copy a file or directory from the host into the container."""
+        """Copy a file or directory from the host into the container.
+
+        Intermediate directories under ``/tmp`` are created automatically:
+        when ``container_path`` descends into ``/tmp`` we tar with a
+        ``/tmp``-relative arcname and extract at ``/tmp`` so tar itself
+        materializes any parents. Non-``/tmp`` destinations fall back to
+        extracting at ``container_path.parent``, which must already exist.
+        """
         if self._container is None:
             raise RuntimeError("No container created")
         import io
         import tarfile
 
+        tmp = PurePosixPath("/tmp")
+        try:
+            rel_to_tmp = container_path.relative_to(tmp)
+        except ValueError:
+            extract_at = str(container_path.parent)
+            arcname = container_path.name
+        else:
+            extract_at = str(tmp)
+            arcname = str(rel_to_tmp)
+
         buf = io.BytesIO()
         with tarfile.open(fileobj=buf, mode="w") as tar:
-            tar.add(str(host_path), arcname=container_path.name)
+            tar.add(str(host_path), arcname=arcname)
         buf.seek(0)
-        self._container.put_archive(str(container_path.parent), buf)  # pyright: ignore[reportUnknownMemberType]
+        self._container.put_archive(extract_at, buf)  # pyright: ignore[reportUnknownMemberType]
 
     def start_and_wait(self, timeout_seconds: float) -> ContainerRun:
         """Start the container and wait for it to finish or timeout.

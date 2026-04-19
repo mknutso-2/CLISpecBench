@@ -340,42 +340,6 @@ motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
 
-### Clarify python `output/` contract (shared language requirements)
-
-`Evals/_shared/language-requirements-py.md` currently tells the agent:
-
-> The program must be runnable as: `python main.py <arguments>`
->
-> Place all source files in the `output/` directory relative to your current
-> working directory. The entry point must be `output/main.py`.
-
-The two sentences together are satisfied by any code that runs when `main.py`
-is invoked from inside `output/`. They do not tell the agent that the harness
-extracts the **contents** of `output/` into a flat submission directory and
-then invokes `python3 <that-dir>/main.py`, with cwd set elsewhere. Code that
-depends on the wrapping directory being literally named `output/` (e.g.
-`from output.errors import ...` with `sys.path` including the parent, or
-package-style relative imports across sibling files with a populated
-`__init__.py`) passes the agent's own smoke test and then fails at test time
-with `ModuleNotFoundError`.
-
-Observed in a 2026-04-18 claude-opus-4-7 run: `cncsim-py` run 1 built
-successfully, claimed complete, and scored 4/542 because every test failed
-at `main.py` import. Fixing 6 relative imports, 3 `from output.xxx`
-imports, and removing an empty `__init__.py` brought the same source to
-354/542 (counterfactual 0.653, in family with runs 2–3 at 0.806 / 0.747).
-
-Proposed clarification: add a sentence to `language-requirements-py.md`
-(and the js/rs analogues if applicable) telling the agent that the `output/`
-directory is a submission convention only — at test time its contents are
-relocated and its name does not survive — so code must resolve imports
-from the script's own directory, not from a parent named `output`.
-
-This is documentation-only: no test behavior, harness contract, or
-reference implementation changes. When applied it is a patch bump
-(2.1.2 → 2.1.3). It is not applied yet; VERSION and content hashes are
-unchanged.
-
 ## v2.1.2 — unreleased
 
 ### Changed
@@ -390,6 +354,20 @@ unchanged.
   even when their implementation was correct. Test scoring is
   unaffected because `submission_command` already hard-resolves
   `/usr/bin/python3` (see `src/swe_buildbench/build/backends.py:254`).
+- **Harness: preserve `output/` wrapper at test-container staging.**
+  The scorer now mounts the agent's `output/` contents at
+  `/tmp/submission/output/` inside the test container instead of
+  flattening them to `/tmp/submission/`, matching the `output/main.py`
+  entry point promised by `Evals/_shared/language-requirements-py.md`.
+  Observed in a 2026-04-18 claude-opus-4-7 `cncsim-py` run: the agent
+  structured its code as a Python package named `output`
+  (`from output.errors import ...` with supporting modules using
+  `from .common import ...`), succeeded in its own smoke test from
+  `/workspace/`, and died at test-time import with `ModuleNotFoundError:
+  No module named 'output'` — scoring 4/542. Harness-only change in
+  `src/swe_buildbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
+  `src/swe_buildbench/harness/docker.py` (`copy_in` now auto-creates
+  intermediate dirs under `/tmp`); no eval files changed.
 
 ## v2.1.1 — 2026-04-15
 

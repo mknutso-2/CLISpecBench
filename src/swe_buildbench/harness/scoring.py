@@ -19,9 +19,13 @@ log = logging.getLogger(__name__)
 # has cmake, g++, python3, pytest, and pytest-json-report.
 TEST_RUNNER_IMAGE = "swe-buildbench-base"
 
-# Paths inside the test-runner container (directly under /tmp which always exists)
+# Paths inside the test-runner container (directly under /tmp which always exists).
+# _CONTAINER_SUBMISSION retains the ``output/`` wrapper from the agent workspace
+# so agents that write ``from output.foo import bar`` (or the language-equivalent)
+# resolve the same way at test time as they do in their dev environment. See the
+# CNCSim-py run 1 (Opus 4.7, 2026-04-18) incident for the motivation.
 _CONTAINER_TESTS = PurePosixPath("/tmp/tests")
-_CONTAINER_SUBMISSION = PurePosixPath("/tmp/submission")
+_CONTAINER_SUBMISSION = PurePosixPath("/tmp/submission/output")
 _CONTAINER_SRC = PurePosixPath("/tmp/src")
 _CONTAINER_REPORT = PurePosixPath("/tmp/report.json")
 _DEFAULT_HIDDEN_TEST_TIMEOUT_SECONDS = 1200.0
