@@ -1,6 +1,21 @@
 # IGES Changelog
 
-## v1.0.13 — unreleased
+## v1.0.14 — unreleased
+
+### Changed
+
+- **Container `python` symlink**: added `python-is-python3` to
+  `docker/base.Dockerfile` so the bare `python` command resolves to
+  `/usr/bin/python3` inside both agent and test containers. The shared
+  `Evals/_shared/language-requirements-py.md` prompt instructs agents
+  that `python main.py <arguments>` must work, but Ubuntu 24.04 ships
+  only `python3` by default — agents that smoke-tested with
+  `python output/main.py --help` got `command not found / exit 127`
+  even when their implementation was correct. Test scoring is
+  unaffected because `submission_command` already hard-resolves
+  `/usr/bin/python3` (see `src/swe_buildbench/build/backends.py:254`).
+
+## v1.0.13 — 2026-04-18
 
 ### Added
 

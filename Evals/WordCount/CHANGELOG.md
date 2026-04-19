@@ -1,5 +1,17 @@
 # WordCount Changelog
 
+## v1.0.3 — unreleased
+
+### Changed
+
+- **Container `python` symlink**: added `python-is-python3` to
+  `docker/base.Dockerfile` so the bare `python` command resolves to
+  `/usr/bin/python3` inside both agent and test containers. Matches the
+  contract documented in `Evals/_shared/language-requirements-py.md`
+  (`python main.py <arguments>`) which Ubuntu 24.04 otherwise breaks
+  by shipping only `python3`. Test scoring is unaffected because
+  `submission_command` already hard-resolves `/usr/bin/python3`.
+
 ## v1.0.2 — 2026-04-12
 
 - **Prompt: non-interactive instruction**: appended shared
