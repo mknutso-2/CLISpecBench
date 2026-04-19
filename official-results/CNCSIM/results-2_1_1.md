@@ -36,7 +36,18 @@ not report input tokens or cost.
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| claude-opus-4-7 | max | 2.1.1 | 422/542 (77.9%) | 73.6% | 3/3 | Complete |
 | claude-sonnet-4-6 | high | 2.1.1 | 375/542 (69.2%) | 38.9% | 3/3 | Complete; wide single-prompt variance (375/191/67) |
+
+#### claude-opus-4-7 / max
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 389/542 (71.8%) | 22.7 min | 4.8M | 102K | $21.05 | 54 | 6 | 3379 | [result](../../results/cncsim-cpp/claude-code/claude-opus-4-7_max/eval1/run1/result.json) [transcript](../../results/cncsim-cpp/claude-code/claude-opus-4-7_max/eval1/run1/transcript.jsonl) | Claims complete; builds and runs; end-of-session note describes a `planeIndex` forward-decl fix and a trace-step-zero infinite-loop fix in `samplesForLinear` / `samplesForArc`. |
+| 2 | 2.1.1 | 385/542 (71.0%) | 19.6 min | 6.5M | 74K | $20.51 | 65 | 13 | 4073 | [result](../../results/cncsim-cpp/claude-code/claude-opus-4-7_max/eval1/run2/result.json) [transcript](../../results/cncsim-cpp/claude-code/claude-opus-4-7_max/eval1/run2/transcript.jsonl) | Claims complete; 13-file C++20 tree under `output/src/` with per-module breakdown (types/state/parser/executor/trace). Asserts byte-for-byte match on spec Example 1. |
+| 3 | 2.1.1 | 422/542 (77.9%) | 22.5 min | 658K | 8K | $19.15 | 34 | 6 | 3548 | [result](../../results/cncsim-cpp/claude-code/claude-opus-4-7_max/eval1/run3/result.json) [transcript](../../results/cncsim-cpp/claude-code/claude-opus-4-7_max/eval1/run3/transcript.jsonl) | Claims complete; single ~1600-line `simulator.cpp` + `CMakeLists.txt`; confirms Example 1 output structure. |
+
+---
 
 #### claude-sonnet-4-6 / high
 
@@ -245,7 +256,18 @@ Prior eval (eval1): all 3 runs rate limited (free-tier quota exhaustion). These 
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| claude-opus-4-7 | max | 2.1.1 | 411/542 (75.8%) | 67.5% | 3/3 | Complete |
 | claude-sonnet-4-6 | high | 2.1.1 | 430/542 (79.3%) | 65.3% | 3/3 | Complete |
+
+#### claude-opus-4-7 / max
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 411/542 (75.8%) | 14.1 min | 707K | 10K | $16.91 | 62 | 8 | 2376 | [result](../../results/cncsim-js/claude-code/claude-opus-4-7_max/eval1/run1/result.json) [transcript](../../results/cncsim-js/claude-code/claude-opus-4-7_max/eval1/run1/transcript.jsonl) | Claims complete; 8-file `output/` (main / args / parser / groups / state / files / interpreter / trace). |
+| 2 | 2.1.1 | 348/542 (64.2%) | 30.1 min | 7.1M | 144K | $25.47 | 83 | 1 | 2100 | [result](../../results/cncsim-js/claude-code/claude-opus-4-7_max/eval1/run2/result.json) [transcript](../../results/cncsim-js/claude-code/claude-opus-4-7_max/eval1/run2/transcript.jsonl) | Claims complete; single-file ~2100-line implementation; session summary covers motion / arcs / canned cycles / trace stepping. |
+| 3 | 2.1.1 | 338/542 (62.4%) | 13.3 min | 1.4M | 11K | $15.31 | 46 | 5 | 2001 | [result](../../results/cncsim-js/claude-code/claude-opus-4-7_max/eval1/run3/result.json) [transcript](../../results/cncsim-js/claude-code/claude-opus-4-7_max/eval1/run3/transcript.jsonl) | Claims complete; 5 files / 2001 LOC, submission builds. Final message opens with a pre-emptive "this is not malware" defense of `interpreter.js` rather than a completion summary — see [CLI malware-reminder commentary](commentary/cncsim-claude-opus-4-7-cli-malware-reminder.md). |
+
+---
 
 #### claude-sonnet-4-6 / high
 
@@ -368,7 +390,20 @@ Note: ChatGPT-auth codex-cli does not emit `reported_cost_usd` for non-codex mod
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| claude-opus-4-7 | max | 2.1.1 | 437/542 (80.6%) | 73.5% | 3/3 | Complete; run 1 score is a counterfactual after a 9-line import rewrite applied off-harness — see note |
 | claude-sonnet-4-6 | high | 2.1.1 | 388/542 (71.6%) | 59.0% | 3/3 | Complete; run 2 originally scored `0/0` due to a transient scorer-container failure and was re-scored against the saved submission (see note) |
+
+#### claude-opus-4-7 / max
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1* | 2.1.1 | 354/542 (65.3%) | 14.1 min | 2.7M | 58K | $14.39 | 39 | 7 | 2660 | [result](../../results/cncsim-py/claude-code/claude-opus-4-7_max/eval1/run1/result.json) [transcript](../../results/cncsim-py/claude-code/claude-opus-4-7_max/eval1/run1/transcript.jsonl) | Claims complete. As-submitted the code scored 4/542: every harness invocation died at startup with `ModuleNotFoundError: No module named 'output'`. **Score reported here (354/542) is the counterfactual** after applying a 9-line off-harness fix to the saved `source/` (6 relative imports `from .X` → `from X`, 3 `from output.xxx` → bare, and deleting an empty `__init__.py`); the modified source was scored with the same pytest suite the harness runs. See Run 1 note below for why the original failure is being treated as an ambiguous-prompt outcome rather than an agent capability signal. |
+| 2 | 2.1.1 | 437/542 (80.6%) | 14.1 min | 1.1M | 9K | $17.44 | 65 | 7 | 2721 | [result](../../results/cncsim-py/claude-code/claude-opus-4-7_max/eval1/run2/result.json) [transcript](../../results/cncsim-py/claude-code/claude-opus-4-7_max/eval1/run2/transcript.jsonl) | Claims complete; 7-module `output/` (main / lexer / state / io_files / motion / interpreter / trace). Uses `sys.path.insert(0, os.path.dirname(__file__))` with sibling imports — robust to the `output/` flattening. |
+| 3 | 2.1.1 | 405/542 (74.7%) | 13.3 min | 2.2M | 56K | $13.35 | 26 | 4 | 2593 | [result](../../results/cncsim-py/claude-code/claude-opus-4-7_max/eval1/run3/result.json) [transcript](../../results/cncsim-py/claude-code/claude-opus-4-7_max/eval1/run3/transcript.jsonl) | Claims complete; parser / state / executor split with plain sibling imports (no `output.` prefix). |
+
+Run 1 note: `Evals/_shared/language-requirements-py.md` says the program must be runnable as `python main.py <arguments>` and in the next line that the entry point must be `output/main.py`. Both sentences are satisfied by code that only runs with `output/` on the path — and the as-submitted run 1 code *does* satisfy them in the agent's dev environment (`python main.py` from inside `/workspace/output/` succeeds and writes correct output). The prompt does not tell the agent that the harness extracts the contents of `output/` into a flat submission directory at test time, which is what breaks the imports. Because the root cause is a prompt ambiguity, not an agent capability defect, run 1's score is reported above as the counterfactual (`354/542`) rather than the as-submitted `4/542`, and marked with a `*`. The Best/Mean in the aggregate table use this counterfactual. Proposed prompt clarification is recorded in `Evals/CNCSim/CHANGELOG.md` under "Proposed (not yet applied)"; eval VERSION is unchanged (2.1.1).
+
+---
 
 #### claude-sonnet-4-6 / high
 
@@ -514,7 +549,20 @@ eval_version=2.1.0; newer codex-cli entries (gpt-5.3-codex, gpt-5.4, gpt-5.4-min
 
 | Model | Effort | Version | Best | Mean | Runs | Status |
 |---|---|---|---|---|---|---|
+| claude-opus-4-7 | max | 2.1.1 | 401/542 (74.0%) | 48.0% | 3/3 | Complete; run 2 self-refusal after a claude-code CLI–injected malware-analysis reminder (0/542 — see note; reminder appears in all 12 Opus 4.7 runs in this sweep, only run 2 escalated) |
 | claude-sonnet-4-6 | high | 2.1.1 | 376/542 (69.4%) | 41.0% | 3/3 | Complete; run 2 agent_error — hit Claude Code's 32K-output-token-per-response cap mid-`Write`, counted as 0/542 (see note) |
+
+#### claude-opus-4-7 / max
+
+| Run | Version | Score | Wall | Input | Output | Cost | Tools | Files | LOC | Links | Last Message |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | 2.1.1 | 401/542 (74.0%) | 27.5 min | 9.5M | 130K | $30.23 | 102 | 8 | 4134 | [result](../../results/cncsim-rs/claude-code/claude-opus-4-7_max/eval1/run1/result.json) [transcript](../../results/cncsim-rs/claude-code/claude-opus-4-7_max/eval1/run1/transcript.jsonl) | Claims complete; full Cargo project (8 modules, ~4134 LOC); session-end fix list covers G4 dwell, state-only block detection, and canned-cycle modal re-execution. |
+| 2 | 2.1.1 | 0/542 (0.0%) | 9.9 min | 1.4M | 47K | $8.65 | 15 | 4 | 840 | [result](../../results/cncsim-rs/claude-code/claude-opus-4-7_max/eval1/run2/result.json) [transcript](../../results/cncsim-rs/claude-code/claude-opus-4-7_max/eval1/run2/transcript.jsonl) | Incomplete — agent refusal triggered by a claude-code CLI–injected `<system-reminder>` about malware analysis that appears after every file-read tool result. Agent wrote a 4-file / 840-LOC scaffold, then stopped: _"I cannot continue implementing this code. The system reminder received with my file reads instructs me that I must refuse to improve or augment code."_ Build failed; counted as 0 in Best/Mean. Full analysis — including the verbatim injected reminder text, the agent's complete final message, cross-run injection counts, and the classification argument — is in [CLI malware-reminder commentary](commentary/cncsim-claude-opus-4-7-cli-malware-reminder.md). |
+| 3 | 2.1.1 | 380/542 (70.1%) | 18.7 min | 1.1M | 11K | $22.04 | 84 | 8 | 3895 | [result](../../results/cncsim-rs/claude-code/claude-opus-4-7_max/eval1/run3/result.json) [transcript](../../results/cncsim-rs/claude-code/claude-opus-4-7_max/eval1/run3/transcript.jsonl) | Claims complete; `Cargo.toml` with empty `[dependencies]` (stdlib only, edition 2021); `main.rs` + lexer/parser/interpreter/trace modules under `src/`. |
+
+Run 2 note: see [CLI malware-reminder commentary](commentary/cncsim-claude-opus-4-7-cli-malware-reminder.md) for the full write-up, including the verbatim injected `<system-reminder>`, the agent's complete final message, per-run injection counts across all 12 runs, cross-reference to js run 3 (same trigger, different response), and the argument for why this sits between the inclusion-rule categories.
+
+---
 
 #### claude-sonnet-4-6 / high
 

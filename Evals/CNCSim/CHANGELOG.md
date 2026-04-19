@@ -1,5 +1,43 @@
 # CNCSim Changelog
 
+## Proposed (not yet applied)
+
+### Clarify python `output/` contract (shared language requirements)
+
+`Evals/_shared/language-requirements-py.md` currently tells the agent:
+
+> The program must be runnable as: `python main.py <arguments>`
+>
+> Place all source files in the `output/` directory relative to your current
+> working directory. The entry point must be `output/main.py`.
+
+The two sentences together are satisfied by any code that runs when `main.py`
+is invoked from inside `output/`. They do not tell the agent that the harness
+extracts the **contents** of `output/` into a flat submission directory and
+then invokes `python3 <that-dir>/main.py`, with cwd set elsewhere. Code that
+depends on the wrapping directory being literally named `output/` (e.g.
+`from output.errors import ...` with `sys.path` including the parent, or
+package-style relative imports across sibling files with a populated
+`__init__.py`) passes the agent's own smoke test and then fails at test time
+with `ModuleNotFoundError`.
+
+Observed in a 2026-04-18 claude-opus-4-7 run: `cncsim-py` run 1 built
+successfully, claimed complete, and scored 4/542 because every test failed
+at `main.py` import. Fixing 6 relative imports, 3 `from output.xxx`
+imports, and removing an empty `__init__.py` brought the same source to
+354/542 (counterfactual 0.653, in family with runs 2–3 at 0.806 / 0.747).
+
+Proposed clarification: add a sentence to `language-requirements-py.md`
+(and the js/rs analogues if applicable) telling the agent that the `output/`
+directory is a submission convention only — at test time its contents are
+relocated and its name does not survive — so code must resolve imports
+from the script's own directory, not from a parent named `output`.
+
+This is documentation-only: no test behavior, harness contract, or
+reference implementation changes. When applied it is a patch bump
+(2.1.1 → 2.1.2). It is not applied yet; VERSION and content hashes are
+unchanged.
+
 ## v2.1.1 — 2026-04-15
 
 ### Fixed
