@@ -1190,6 +1190,9 @@ function renderPlot(points) {
       : 'point point-marker';
     pointCircle.setAttribute('class', pointClass);
     pointCircle.setAttribute('data-base-radius', String(baseRadius));
+    pointCircle.setAttribute('tabindex', '0');
+    pointCircle.setAttribute('role', 'img');
+    pointCircle.setAttribute('aria-label', buildMarkerAriaLabel(point));
     g.appendChild(pointCircle);
 
     const label = createSvgElement('text');
@@ -1208,19 +1211,24 @@ function renderPlot(points) {
     labelsLayer.appendChild(label);
     labelsLayer.appendChild(leader);
 
-    const onPointer = (event) => {
+    const showTooltipAt = (clientX, clientY) => {
       tooltip.style.display = 'block';
       tooltip.innerHTML = buildTooltip(point);
       const rect = chartSvg.getBoundingClientRect();
-      const tooltipX = event.clientX - rect.left + 12;
-      const tooltipY = event.clientY - rect.top + 12;
+      const tooltipX = clientX - rect.left + 12;
+      const tooltipY = clientY - rect.top + 12;
       const tooltipWidth = tooltip.offsetWidth || 280;
       const tooltipHeight = tooltip.offsetHeight || 160;
       tooltip.style.left = `${Math.max(8, Math.min(tooltipX, rect.width - tooltipWidth - 8))}px`;
       tooltip.style.top = `${Math.max(8, Math.min(tooltipY, rect.height - tooltipHeight - 8))}px`;
     };
+    const onPointer = (event) => showTooltipAt(event.clientX, event.clientY);
+    const markerCenter = () => {
+      const mRect = pointCircle.getBoundingClientRect();
+      return [mRect.left + mRect.width / 2, mRect.top + mRect.height / 2];
+    };
 
-    const onPointerEnter = (event) => {
+    const showMarker = () => {
       pointCircle.classList.add('active');
       pointCircle.setAttribute('r', String(hoverRadius));
       if (!isOnFrontier) {
@@ -1229,9 +1237,8 @@ function renderPlot(points) {
         label.setAttribute('text-anchor', 'start');
         label.setAttribute('visibility', 'visible');
       }
-      onPointer(event);
     };
-    const onPointerLeave = () => {
+    const hideMarker = () => {
       tooltip.style.display = 'none';
       pointCircle.classList.remove('active');
       pointCircle.setAttribute('r', pointCircle.getAttribute('data-base-radius') || String(baseRadius));
@@ -1239,9 +1246,23 @@ function renderPlot(points) {
         label.setAttribute('visibility', 'hidden');
       }
     };
+
+    const onPointerEnter = (event) => {
+      showMarker();
+      onPointer(event);
+    };
+    const onFocus = () => {
+      showMarker();
+      const [cx, cy] = markerCenter();
+      showTooltipAt(cx, cy);
+    };
     pointCircle.addEventListener('pointerenter', onPointerEnter);
     pointCircle.addEventListener('pointermove', onPointer);
-    pointCircle.addEventListener('pointerleave', onPointerLeave);
+    pointCircle.addEventListener('pointerleave', hideMarker);
+    pointCircle.addEventListener('focus', onFocus);
+    pointCircle.addEventListener('focusin', onFocus);
+    pointCircle.addEventListener('blur', hideMarker);
+    pointCircle.addEventListener('focusout', hideMarker);
 
     dataLayer.appendChild(g);
 
@@ -1890,6 +1911,18 @@ function formatSignificant(value, significantFigures = 3) {
     minimumSignificantDigits: significantFigures,
     maximumSignificantDigits: significantFigures,
   }).format(value);
+}
+
+function buildMarkerAriaLabel(point) {
+  const xMeta = getAxisMeta(point.xAxis);
+  const yMeta = getAxisMeta(point.yAxis);
+  const name = point.pairLabel || rowPairId(point.pairId);
+  const xPart =
+    point.xAxis === 'language'
+      ? `${xMeta.label} ${point.xCategoryLabel || ''}`
+      : `${xMeta.label} ${formatAxisValue(point.xAxis, point.xValue)}`;
+  const yPart = `${yMeta.label} ${formatAxisValue(point.yAxis, point.yValue)}`;
+  return `${name}. ${xPart}. ${yPart}.`;
 }
 
 function buildTooltip(point) {
