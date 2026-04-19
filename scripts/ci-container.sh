@@ -5,8 +5,11 @@
 
 set -euo pipefail
 
+echo "==> uv sync"
 uv sync
+echo "==> build docker images"
 # MSYS_NO_PATHCONV keeps Git Bash from mangling Docker volume paths on Windows;
 # harmless on Linux/macOS.
 MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
+echo "==> pytest (docker)"
 uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent" -v

@@ -4,5 +4,7 @@
 
 set -euo pipefail
 
+echo "==> uv sync"
 uv sync
+echo "==> pytest (unit)"
 uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent" -v

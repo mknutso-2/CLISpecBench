@@ -5,7 +5,12 @@
 set -euo pipefail
 
 here="$(dirname "$0")"
+
+echo "#### ci: lint ####"
 bash "$here/ci-lint.sh"
+echo "#### ci: unit ####"
 bash "$here/ci-unit.sh"
+echo "#### ci: container ####"
 bash "$here/ci-container.sh"
+echo "#### ci: eval ####"
 bash "$here/ci-eval.sh"

@@ -4,6 +4,9 @@
 
 set -euo pipefail
 
+echo "==> uv sync"
 uv sync
+echo "==> ruff"
 uv run ruff check
+echo "==> pyright (slow cold start)"
 uv run pyright
