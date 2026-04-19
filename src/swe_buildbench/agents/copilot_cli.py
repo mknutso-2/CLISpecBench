@@ -61,13 +61,15 @@ class CopilotCLIAdapter(AgentAdapter):
                     "No GitHub token found. Set COPILOT_GITHUB_TOKEN, "
                     "GH_TOKEN, or run 'gh auth login'."
                 )
-        # Enable OTel file export for token tracking.
+        # Enable OTel file export for token tracking. `setdefault` keeps any
+        # user-provided values while still enabling a default export path.
         # COPILOT_OTEL_ENABLED activates instrumentation (available since
         # v1.0.4).  COPILOT_OTEL_FILE_EXPORTER_PATH tells the CLI to write
         # metrics/traces as JSON-lines to a local file instead of requiring
         # an OTLP endpoint.
-        env["COPILOT_OTEL_ENABLED"] = "true"
-        env["COPILOT_OTEL_FILE_EXPORTER_PATH"] = OTEL_FILE_PATH
+        env.setdefault("COPILOT_OTEL_ENABLED", "true")
+        env.setdefault("COPILOT_OTEL_FILE_EXPORTER_PATH", OTEL_FILE_PATH)
+        env.setdefault("COPILOT_OTEL_EXPORTER_TYPE", "file")
         return env
 
     @property
@@ -186,6 +188,8 @@ def _parse_jsonl_usage(container_logs: str) -> TokenUsage | None:
     """
     output_tokens = 0
     input_tokens = 0
+    cache_read_tokens = 0
+    cache_creation_tokens = 0
     result_found = False
 
     for line in container_logs.splitlines():
@@ -209,7 +213,18 @@ def _parse_jsonl_usage(container_logs: str) -> TokenUsage | None:
                 usage = cast(dict[str, Any], raw_usage)
                 input_tokens += int(usage.get("input_tokens", 0))
                 output_tokens += int(usage.get("output_tokens", 0))
-
+                # Keep this permissive for evolving Copilot result schemas.
+                cache_read_tokens += int(
+                    usage.get("cache_read_input_tokens")
+                    or usage.get("cached_input_tokens")
+                    or usage.get("cache_read_tokens")
+                    or 0
+                )
+                cache_creation_tokens += int(
+                    usage.get("cache_creation_input_tokens")
+                    or usage.get("cache_write_input_tokens")
+                    or 0
+                )
     if not result_found:
         return None
 
@@ -219,13 +234,26 @@ def _parse_jsonl_usage(container_logs: str) -> TokenUsage | None:
     return TokenUsage(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        cache_read_input_tokens=cache_read_tokens or None,
+        cache_creation_input_tokens=cache_creation_tokens or None,
         tool_calls=_count_tool_calls(container_logs),
+        # Intentionally unset for Copilot CLI:
+        # `github.copilot.cost` is not treated as API-USD here.
+        reported_cost_usd=None,
     )
 
 
 def _count_tool_calls(container_logs: str) -> int:
-    """Count tool invocations in Copilot CLI JSONL event stream."""
-    count = 0
+    """Count tool invocations in Copilot CLI JSONL event stream.
+
+    Copilot has emitted multiple JSON output schemas:
+
+    - older: ``{"type":"tool_call", ...}``
+    - newer: ``tool.execution_start`` / ``tool.execution_complete`` with
+      ``data.toolCallId``.
+    """
+    count_legacy = 0
+    call_ids: set[str] = set()
     for line in container_logs.splitlines():
         line = line.strip()
         if not line:
@@ -234,9 +262,20 @@ def _count_tool_calls(container_logs: str) -> int:
             event = json.loads(line)
         except (json.JSONDecodeError, ValueError):
             continue
-        if event.get("type") == "tool_call":
-            count += 1
-    return count
+        event_type = event.get("type")
+        if event_type == "tool_call":
+            count_legacy += 1
+            continue
+        if event_type not in {"tool.execution_start", "tool.execution_complete"}:
+            continue
+        raw_data = event.get("data")
+        if not isinstance(raw_data, dict):
+            continue
+        data = cast(dict[str, Any], raw_data)
+        tool_call_id = data.get("toolCallId")
+        if isinstance(tool_call_id, str) and tool_call_id:
+            call_ids.add(tool_call_id)
+    return max(count_legacy, len(call_ids))
 
 
 def _parse_otel_file(otel_file: Path) -> TokenUsage | None:
@@ -247,8 +286,19 @@ def _parse_otel_file(otel_file: Path) -> TokenUsage | None:
     ``dataPoints`` carry cumulative histogram values.  The file may contain
     multiple snapshots; we take the last one (highest cumulative totals).
     """
-    input_tokens = 0
-    output_tokens = 0
+    metric_input_tokens = 0
+    metric_output_tokens = 0
+    metric_tool_calls = 0
+    span_tool_calls = 0
+
+    chat_input_tokens = 0
+    chat_output_tokens = 0
+    chat_cache_read_tokens = 0
+    chat_cache_creation_tokens = 0
+    invoke_input_tokens: int | None = None
+    invoke_output_tokens: int | None = None
+    invoke_cache_read_tokens: int | None = None
+    invoke_cache_creation_tokens: int | None = None
 
     try:
         for line in otel_file.read_text(encoding="utf-8").splitlines():
@@ -260,35 +310,300 @@ def _parse_otel_file(otel_file: Path) -> TokenUsage | None:
             except (json.JSONDecodeError, ValueError):
                 continue
 
-            if record.get("type") != "metric":
-                continue
-            if record.get("name") != "gen_ai.client.token.usage":
-                continue
-
-            for dp in record.get("dataPoints", []):
-                attrs = dp.get("attributes", {})
-                if not isinstance(attrs, dict):
+            for span in _extract_otel_spans(record):
+                attrs = _normalize_otel_attributes(span.get("attributes", {}))
+                operation = str(attrs.get("gen_ai.operation.name", ""))
+                if operation == "execute_tool":
+                    span_tool_calls += 1
                     continue
-                typed_attrs = cast(dict[str, Any], attrs)
-                token_type = str(typed_attrs.get("gen_ai.token.type", ""))
-                # Value may be a histogram dict ({"sum": N, ...}) or a scalar
-                raw_value = dp.get("value", 0)
-                if isinstance(raw_value, dict):
-                    typed_value = cast(dict[str, Any], raw_value)
-                    value = int(typed_value.get("sum", 0))
-                else:
-                    value = int(raw_value)
-                # Cumulative — last entry wins
-                if token_type == "input":
-                    input_tokens = value
-                elif token_type == "output":
-                    output_tokens = value
+                if operation == "chat":
+                    chat_input_tokens += _coerce_int(attrs.get("gen_ai.usage.input_tokens")) or 0
+                    chat_output_tokens += _coerce_int(attrs.get("gen_ai.usage.output_tokens")) or 0
+                    chat_cache_read_tokens += (
+                        _coerce_int(attrs.get("gen_ai.usage.cache_read.input_tokens")) or 0
+                    )
+                    chat_cache_creation_tokens += (
+                        _coerce_int(attrs.get("gen_ai.usage.cache_creation.input_tokens")) or 0
+                    )
+                    continue
+                if operation == "invoke_agent":
+                    invoke_input_tokens = _coerce_int(attrs.get("gen_ai.usage.input_tokens"))
+                    invoke_output_tokens = _coerce_int(attrs.get("gen_ai.usage.output_tokens"))
+                    invoke_cache_read_tokens = _coerce_int(
+                        attrs.get("gen_ai.usage.cache_read.input_tokens")
+                    )
+                    invoke_cache_creation_tokens = _coerce_int(
+                        attrs.get("gen_ai.usage.cache_creation.input_tokens")
+                    )
+
+            for metric in _extract_otel_metrics(record):
+                metric_name = str(metric.get("name", ""))
+                if metric_name == "gen_ai.client.token.usage":
+                    for dp in metric.get("dataPoints", []):
+                        attrs = _normalize_otel_attributes(dp.get("attributes", {}))
+                        token_type = str(attrs.get("gen_ai.token.type", ""))
+                        # Value may be a histogram dict ({"sum": N, ...}) or a scalar
+                        value = _metric_value(dp.get("value", 0))
+                        # Cumulative — last entry wins
+                        if token_type == "input":
+                            metric_input_tokens = value
+                        elif token_type == "output":
+                            metric_output_tokens = value
+                    continue
+
+                if metric_name == "github.copilot.tool.call.count":
+                    snapshot_calls = 0
+                    for dp in metric.get("dataPoints", []):
+                        typed_dp = cast(dict[str, Any], dp)
+                        snapshot_calls += _metric_value(typed_dp.get("value", 0))
+                    metric_tool_calls = max(metric_tool_calls, snapshot_calls)
     except (OSError, TypeError, AttributeError):
         log.warning("Failed to parse OTel file %s", otel_file, exc_info=True)
 
-    if input_tokens == 0 and output_tokens == 0:
+    # Prefer invoke_agent totals when present. They include full-session
+    # cumulative counters and avoid ambiguity around incremental snapshots.
+    if invoke_input_tokens is not None or invoke_output_tokens is not None:
+        input_tokens = invoke_input_tokens or 0
+        output_tokens = invoke_output_tokens or 0
+    elif metric_input_tokens > 0 or metric_output_tokens > 0:
+        input_tokens = metric_input_tokens
+        output_tokens = metric_output_tokens
+    else:
+        input_tokens = chat_input_tokens
+        output_tokens = chat_output_tokens
+
+    if invoke_cache_read_tokens is not None:
+        cache_read_tokens = invoke_cache_read_tokens
+    else:
+        cache_read_tokens = chat_cache_read_tokens
+
+    if invoke_cache_creation_tokens is not None:
+        cache_creation_tokens = invoke_cache_creation_tokens
+    else:
+        cache_creation_tokens = chat_cache_creation_tokens
+
+    if metric_tool_calls > 0:
+        tool_calls = metric_tool_calls
+    elif span_tool_calls > 0:
+        tool_calls = span_tool_calls
+    else:
+        tool_calls = None
+
+    if (
+        input_tokens == 0
+        and output_tokens == 0
+        and (cache_read_tokens or 0) == 0
+        and (cache_creation_tokens or 0) == 0
+    ):
         return None
-    return TokenUsage(input_tokens=input_tokens, output_tokens=output_tokens)
+    return TokenUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cache_read_input_tokens=cache_read_tokens or None,
+        cache_creation_input_tokens=cache_creation_tokens or None,
+        tool_calls=tool_calls,
+        # Intentionally unset for Copilot CLI:
+        # `github.copilot.cost` is a Copilot-side usage/billing unit and does
+        # not map cleanly to OpenAI API USD in this harness. We only report the
+        # comparable `estimated_cost_usd` derived from token counts + pricing.py.
+        reported_cost_usd=None,
+    )
+
+
+def _normalize_otel_attributes(attributes: Any) -> dict[str, Any]:
+    """Normalize OTel attributes into a dict.
+
+    The file exporter in some versions returns attributes as a dict, while
+    others return OpenTelemetry-style key-value arrays.
+    """
+    if isinstance(attributes, dict):
+        typed_attributes = cast(dict[str, Any], attributes)
+        return {str(k): v for k, v in typed_attributes.items()}
+    if isinstance(attributes, list):
+        normalized: dict[str, Any] = {}
+        typed_attributes = cast(list[Any], attributes)
+        for raw_attr in typed_attributes:
+            if not isinstance(raw_attr, dict):
+                continue
+            attr = cast(dict[str, Any], raw_attr)
+            key = attr.get("key")
+            value = attr.get("value")
+            if key is not None:
+                normalized[str(key)] = _normalize_otel_value(value)
+        return normalized
+    return {}
+
+
+def _normalize_otel_value(value: Any) -> Any:
+    """Normalize typed OTEL values into plain Python scalars/containers."""
+    if not isinstance(value, dict):
+        return value
+    typed_value = cast(dict[str, Any], value)
+    if "stringValue" in typed_value:
+        return typed_value.get("stringValue")
+    if "intValue" in typed_value:
+        return _coerce_int(typed_value.get("intValue"))
+    if "doubleValue" in typed_value:
+        return _coerce_float(typed_value.get("doubleValue"))
+    if "boolValue" in typed_value:
+        return bool(typed_value.get("boolValue"))
+    if "arrayValue" in typed_value:
+        array_value = typed_value.get("arrayValue")
+        raw_values: Any = []
+        if isinstance(array_value, dict):
+            array_value_d = cast(dict[str, Any], array_value)
+            raw_values = array_value_d.get("values", [])
+        if isinstance(raw_values, list):
+            typed_values = cast(list[Any], raw_values)
+            return [_normalize_otel_value(v) for v in typed_values]
+    return typed_value
+
+
+def _extract_otel_metrics(record: Any) -> list[dict[str, Any]]:
+    """Return metric objects from either flat and nested OTel JSON shapes."""
+    metrics: list[dict[str, Any]] = []
+    if not isinstance(record, dict):
+        return metrics
+    record_d = cast(dict[str, Any], record)
+
+    # Flat JSON lines for copilot OTel file export
+    if record_d.get("type") == "metric" and isinstance(record_d.get("dataPoints"), list):
+        metrics.append(record_d)
+
+    # OTLP-style resource metrics payload
+    resource_metrics = record_d.get("resourceMetrics")
+    if isinstance(resource_metrics, list):
+        for rm_raw in cast(list[Any], resource_metrics):
+            if not isinstance(rm_raw, dict):
+                continue
+            rm = cast(dict[str, Any], rm_raw)
+            scope_metrics = rm.get("scopeMetrics")
+            if not isinstance(scope_metrics, list):
+                continue
+            for sm_raw in cast(list[Any], scope_metrics):
+                if not isinstance(sm_raw, dict):
+                    continue
+                sm = cast(dict[str, Any], sm_raw)
+                nested_metrics = sm.get("metrics")
+                if not isinstance(nested_metrics, list):
+                    continue
+                for m_raw in cast(list[Any], nested_metrics):
+                    if isinstance(m_raw, dict):
+                        metrics.append(cast(dict[str, Any], m_raw))
+
+    # Copilot sometimes nests the metric directly under an event name.
+    for wrapped in (
+        "metric",
+        "otelMetric",
+        "metrics",
+    ):
+        payload = record_d.get(wrapped)
+        if isinstance(payload, list):
+            payload_list = cast(list[Any], payload)
+            metrics.extend(
+                [cast(dict[str, Any], m) for m in payload_list if isinstance(m, dict)]
+            )
+    return metrics
+
+
+def _extract_otel_spans(record: Any) -> list[dict[str, Any]]:
+    """Return span objects from flat and nested OTel JSON shapes."""
+    spans: list[dict[str, Any]] = []
+    if not isinstance(record, dict):
+        return spans
+    record_d = cast(dict[str, Any], record)
+
+    if record_d.get("type") == "span" and isinstance(record_d.get("attributes"), dict):
+        spans.append(record_d)
+
+    resource_spans = record_d.get("resourceSpans")
+    if isinstance(resource_spans, list):
+        for rs_raw in cast(list[Any], resource_spans):
+            if not isinstance(rs_raw, dict):
+                continue
+            rs = cast(dict[str, Any], rs_raw)
+            scope_spans = rs.get("scopeSpans")
+            if not isinstance(scope_spans, list):
+                continue
+            for ss_raw in cast(list[Any], scope_spans):
+                if not isinstance(ss_raw, dict):
+                    continue
+                ss = cast(dict[str, Any], ss_raw)
+                nested_spans = ss.get("spans")
+                if not isinstance(nested_spans, list):
+                    continue
+                for span_raw in cast(list[Any], nested_spans):
+                    if isinstance(span_raw, dict):
+                        spans.append(cast(dict[str, Any], span_raw))
+
+    for wrapped in (
+        "span",
+        "otelSpan",
+        "spans",
+    ):
+        payload = record_d.get(wrapped)
+        if isinstance(payload, dict):
+            spans.append(cast(dict[str, Any], payload))
+        elif isinstance(payload, list):
+            payload_list = cast(list[Any], payload)
+            spans.extend(
+                [cast(dict[str, Any], s) for s in payload_list if isinstance(s, dict)]
+            )
+    return spans
+
+
+def _metric_value(raw_value: Any) -> int:
+    """Extract a numeric value from OTEL metric datapoint values."""
+    if isinstance(raw_value, dict):
+        typed_value = cast(dict[str, Any], raw_value)
+        for key in ("sum", "asInt", "asDouble"):
+            value = _coerce_int(typed_value.get(key))
+            if value is not None:
+                return value
+        return 0
+    value = _coerce_int(raw_value)
+    return value if value is not None else 0
+
+
+def _coerce_int(value: Any) -> int | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        v = value.strip()
+        if not v:
+            return None
+        try:
+            return int(v)
+        except ValueError:
+            try:
+                return int(float(v))
+            except ValueError:
+                return None
+    return None
+
+
+def _coerce_float(value: Any) -> float | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return float(value)
+    if isinstance(value, (int, float)):
+        return float(value)
+    if isinstance(value, str):
+        v = value.strip()
+        if not v:
+            return None
+        try:
+            return float(v)
+        except ValueError:
+            return None
+    return None
 
 
 def _discover_gh_token() -> str | None:
