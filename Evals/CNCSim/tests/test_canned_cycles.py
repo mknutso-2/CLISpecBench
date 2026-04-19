@@ -284,6 +284,14 @@ REPEATED_CANNED_CYCLE_CASES: list[RepeatedCannedCycleCase] = [
 #   positions remain fixed for the repeats
 # - G98/G99 remain modal while a cycle stays active, so changing return mode on
 #   a later line changes that later line's clear-Z result
+#
+# PASS-RATE NOTE (2026-04-19): the g84/g86/g87 "restores the prior spindle
+# direction" parametrizations each pass at ~20–24%, and so do the two
+# `test_g88_restores_the_prior_spindle_direction_after_the_cycle` cases.
+# These are five test IDs for one underlying behavior: "track the
+# pre-cycle spindle direction and restore it after the cycle." Named per
+# cycle but dominated by one mechanism — see CHANGELOG "Proposed:
+# Additional independent-failure-mode cascades."
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -368,6 +376,13 @@ def test_application_tracks_initial_canned_cycle_behavior(
     ],
     ids=[case_id for case_id, _, _, _, _ in REPEATED_CANNED_CYCLE_CASES],
 )
+# PASS-RATE NOTE (2026-04-19): the g84 and g85 parametrizations each pass
+# at ~20%, and `test_application_tracks_initial_canned_cycle_behavior
+# [g81-reuses-sticky-r-and-z-on-following-line]` (56/255, 22%) is the
+# third member of the same cluster. Three test IDs for one behavior:
+# "retain R and the selected-plane depth word across consecutive blocks
+# of the same cycle." See CHANGELOG "Proposed: Additional independent-
+# failure-mode cascades."
 def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
     submission_command: tuple[str, ...],
     input_gcode: str,

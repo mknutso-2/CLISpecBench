@@ -349,6 +349,12 @@ def test_application_rejects_axis_offset_changes_while_cutter_compensation_is_ac
     """Check that G92.1/G92.2/G92.3 are rejected while CRC is active.
 
     Governing section: RS274 Appendix B.5, error 1.
+
+    PASS-RATE NOTE (2026-04-19): the three parametrizations each pass at
+    23%. They test one rule (axis-offset change while CRC on = error)
+    with three variants; a model that either fires or skips the error
+    once fails or passes all three. See CHANGELOG "Proposed: Additional
+    independent-failure-mode cascades."
     """
     run_cncsim_invalid_input(
         submission_command,

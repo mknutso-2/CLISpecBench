@@ -234,6 +234,14 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
 # "selected tool" case also relies on RS274 section 3.7.3 and section 3.6.3:
 # a T word only changes the selected tool, and the tool in the spindle does
 # not change until M6.
+#
+# PASS-RATE NOTE (2026-04-19): the x/y/z-probe-with/without-tlc and
+# x-probe-g91-g21-incremental-metric parametrizations pass at 6–19%.
+# Ten test IDs for one plumbing stack: probe-box parsing, unit
+# conversion of the box to active units, TLO application to the
+# controlled point, and parameter 5061–5066 write. A failure in any
+# shared step cascades across the whole family. See CHANGELOG
+# "Proposed: Additional independent-failure-mode cascades."
 @pytest.mark.parametrize(
     ("probe_box", "input_gcode", "expected_trip_parameters", "tool_table_content"),
     [

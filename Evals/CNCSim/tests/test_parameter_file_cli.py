@@ -62,6 +62,17 @@ def test_application_accepts_parameter_file_cli_arguments(
 # RS274 section 3.2.1 says the interpreter reads the parameter file when it
 # starts up, and section 3.3.2.2 says parameter values are read from the
 # numbered parameter slots.
+#
+# PASS-RATE NOTE (2026-04-19): the four tests in this file
+# (`initializes_coordinate_system_offsets_from_input_file`,
+# `initializes_g92_offsets_from_input_file`,
+# `uses_selected_coordinate_system_loaded_from_input_file`,
+# `uses_parameter_values_loaded_from_input_file`) all pass at 20–25%,
+# along with `test_g28_g30.py::*_loaded_from_input_parameter_file`
+# (~20%). Six tests named for distinct loaded-state semantics, all
+# depending on the same RS274 §3.2.1 parameter-file parser. A single
+# parser bug cascades across the set. See CHANGELOG "Proposed:
+# Additional independent-failure-mode cascades."
 def test_application_uses_parameter_values_loaded_from_input_file(
     submission_command: tuple[str, ...],
     tmp_path: Path,

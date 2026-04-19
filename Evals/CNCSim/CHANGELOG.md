@@ -172,6 +172,85 @@ treated as an explicit zero and serializes as 0 (not null), and that
 the null value is reserved for "no active CRC" (i.e., G40 mode or
 never turned on). Documentation-only; a patch bump.
 
+### Additional independent-failure-mode cascades (test independence audit)
+
+Sweep against the independent-failure-modes rule in
+`skills/eval-authoring/SKILL.md` turned up five cascade clusters beyond
+the CRC and D0 clusters already noted. In each, a single underlying
+bug scores N times across tests named for N apparently-distinct
+behaviors.
+
+| Cluster                                     | Tests                                                                                                                                                                | Shared mechanism                                                                    |
+|---------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------|
+| Canned-cycle spindle restore (~6)           | `test_application_tracks_initial_canned_cycle_behavior[g84|g86|g87(×2)]` + `test_g88_restores_the_prior_spindle_direction_after_the_cycle[×2]`                        | "Track pre-cycle spindle direction and restore after cycle" — one behavior.         |
+| Canned-cycle sticky R/Z (3)                 | `test_application_tracks_initial_canned_cycle_behavior[g81-reuses-sticky-r-and-z]`, `test_supported_canned_cycles_reuse_sticky_r_and_depth_words[g84|g85]`            | "Retain R and selected-plane depth word across consecutive blocks of same cycle."   |
+| Parameter-file CLI (~6)                     | `test_parameter_file_cli.py::*_initializes_*` (CS offsets, G92 offsets, CS selection, parameter values) + `test_g28_g30.py::*_loaded_from_input_parameter_file[×2]`   | RS274 §3.2.1 parameter-file parser. One parser bug cascades across all.             |
+| G92.x + CRC error (3)                       | `test_cutter_radius_compensation_errors.py::test_application_rejects_axis_offset_changes_while_cutter_compensation_is_active[g92-1|g92-2|g92-3]`                      | "§B.5 error: axis-offset change while CRC on" — one error-detection rule.           |
+| Probe trip parameter (~5)                   | `test_probing.py::test_application_reports_probe_trip_parameters[x|y|z-probe-with/without-tlc, g21 variants]`                                                         | Probe-box parse + unit conversion + TLO + 5061–5066 write. Shared plumbing.         |
+
+Each test in these clusters is named for a distinct behavior (a
+specific cycle, a specific loaded parameter, a specific G92 variant, a
+specific probe axis/config), but each cluster measures one underlying
+mechanism N times. Effect on scoring: implementations that miss the
+shared mechanism get N failures; the suite reports more signal about
+that one bug than about N independent behaviors.
+
+Proposed fixes (per cluster, in decreasing difficulty):
+
+- **Probe trip parameter family**: factor into one schema/plumbing test
+  + small per-axis behavioral tests that assume the plumbing works.
+- **Parameter-file CLI + G28/G30-from-file**: add a single
+  `test_parameter_file_parsing.py` that validates the parser against
+  RS274 §3.2.1 cases; downstream behavioral tests assume it works.
+- **G92.x + CRC error**: collapse the three parametrizations into one
+  with a note that G92.1/.2/.3 share the B.5 rule.
+- **Canned-cycle clusters**: keep as-is — the cycle variants genuinely
+  differ in sub-motion shape, and "restore spindle" is close enough to
+  independent per cycle to justify separate cases. Flag in a
+  PASS-RATE NOTE but don't restructure.
+
+Documentation-only; a patch bump when/if the restructurings are
+applied. Not applied yet.
+
+### Schema-tolerant assertions and a central schema-gate test
+
+The test suite has **178 direct `payload["..."]` subscripts** versus
+**1 `payload.get(...)`** across `Evals/CNCSim/tests/`, and there is no
+`test_output_schema.py` gate test. This is the exact anti-pattern
+`skills/eval-authoring/SKILL.md` §"Keep test failure modes
+independent" warns about and `Eval-Design.md` §7.4 documents (the
+sonnet-4-6 cpp run 3 incident where one schema slip cost 55% of the
+suite).
+
+Representative site ([test_canned_cycles.py:330](tests/test_canned_cycles.py:330)):
+
+```python
+assert payload["error"] is None
+assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == ...
+```
+
+If a submission omits `"error"` or `"active_modal_g_codes"`, every one
+of 549 tests raises `KeyError` instead of surfacing as a single
+schema failure.
+
+Proposed:
+
+1. Add `Evals/CNCSim/tests/test_output_schema.py` with a small number
+   of tests that assert the full shape of `--output` and `--trace-output`
+   payloads against a canonical minimal program. These are the only
+   tests that should hard-fail on schema shape.
+2. Sweep the ~178 behavioral assertions to tolerant access:
+   `payload.get("error")` instead of `payload["error"]`,
+   `payload.get("active_modal_g_codes", {}).get(group)` instead of
+   the chained subscript, etc. Assertions compare against expected
+   values, which naturally surface a missing key as a `None == <value>`
+   failure rather than an error outcome.
+
+This is a contract-affecting change (`test_suite_sha` moves and the
+error-vs-failure outcome distribution shifts for submissions with
+schema slips), so it requires a patch bump and CHANGELOG entry when
+applied. Not applied yet.
+
 ### Two M-code modal-group issues in the prompt
 
 Issue (a) and issue (b) are independent and have very different
