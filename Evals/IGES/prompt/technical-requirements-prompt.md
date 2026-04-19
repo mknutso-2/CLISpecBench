@@ -69,6 +69,25 @@ iges roundtrip  --input <file.iges>  --output <out.iges>
   value greater than 11 shall assign 11"). Clamping is a parse-time
   normalization, not an error — the parse succeeds and serializes
   the clamped value.
+
+  **Missing required IGES sections:** a file missing any of the five
+  sections (Start `S`, Global `G`, Directory `D`, Parameter `P`,
+  Terminate `T`) or with sections out of order is invalid input.
+
+  **`query` subcommand DE validation:** `query --de <n>` with `n` ≤ 0,
+  `n` even (DE sequence numbers are odd-valued per §2.4), or `n` not
+  present in the file's directory is invalid input on `query`.
+
+  **Error-message field identification:** the `error` field of the §1.4
+  diagnostic envelope must contain a substring identifying the
+  offending field or condition so that failures are
+  machine-distinguishable. Use the canonical-JSON field name for
+  Global-field and Directory-Entry errors: `"xform_matrix"`, `"view"`,
+  `"label_display"`, `"param_line_count"`, `"model_space_scale"`,
+  `"integer_bits"`, `"sp_magnitude"`, `"sp_significance"`,
+  `"dp_magnitude"`, `"dp_significance"`, `"max_line_weight_grads"`,
+  `"min_resolution"`. For non-field conditions, the substring
+  `"negative entity type"` identifies that specific failure.
 - `2` — internal error in the tool itself (panic, out-of-memory,
   unexpected exception).
 
@@ -523,6 +542,51 @@ re-derive them from the spec.
   Only one trailing-whitespace strip is applied, to the concatenated
   payload as a whole. A per-line strip corrupts Hollerith strings
   whose content happens to end with a space at a G-line boundary.
+- **Terminate section**: exactly one T-line. Columns 1-72 contain an
+  80-char field composed of four 8-column subfields giving the
+  physical-line counts of the preceding sections, formatted as
+  `S<nnnnnnn>G<nnnnnnn>D<nnnnnnn>P<nnnnnnn>` (section letter followed
+  by a right-justified 7-digit count). Columns 73-80 use the standard
+  section letter + sequence (`T      1`).
+- **Empty Start section**: when the canonical JSON `start_lines` is
+  an empty array, the writer still emits one blank S-line (72 spaces
+  in cols 1-72, then `S      1`). A file with zero S-lines is
+  invalid input.
+
+**Free-format parsing rules (§2.2.3):**
+
+- **Defaulted fields:** two consecutive delimiters in the Global or
+  Parameter section represent an absent field; the field assumes its
+  specified default. A trailing field absent before the record
+  delimiter is also defaulted. `1.0,,1.0,` is three fields: `1.0`,
+  default, `1.0`, (trailing empty field before the record delimiter
+  is also defaulted, so four fields total if the record delimiter
+  follows).
+- **Hollerith content is opaque to delimiter scanning.** `<N>H<...N
+  chars...>` reads exactly N bytes after the `H` regardless of any
+  delimiter characters (including custom delimiters) that appear
+  inside. The parser must not split Hollerith contents on the
+  delimiter.
+- **Prohibited delimiter characters** (Global fields 1 and 2): the
+  parameter and record delimiters may not be digits `0-9`, `+`, `-`,
+  `.`, `D`, `E`, `H`, space, or any ASCII control character (§2.2.3.1).
+  A Global section advertising a prohibited delimiter is invalid
+  input.
+- **Trailing characters after the record delimiter** in the same
+  physical line (before col 72) are tolerated and ignored. The parser
+  must not raise on `,...;  extra comment  ` — the record delimiter
+  `;` terminates the section.
+
+**Entity transformation matrix application order (§4):**
+
+For **every** entity type with a non-zero `xform_matrix` DE pointer
+(field 7), `iges eval` first computes the point / tangent / normal in
+the entity's own definition space using its native parameterization,
+then applies the transformation matrix's rotation (for vectors) and
+rotation-plus-translation (for points) as the final step. This
+ordering applies to every evaluated entity type — curves (100, 102,
+104, 106, 110, 112, 126, 130) and surfaces (114, 118, 120, 122, 128,
+140, 190, 192, 194, 196, 198) — not just Conic Arc (104).
 
 Details are in §2.2 of the specification.
 
@@ -557,9 +621,37 @@ Conventions:
   Font Definition), §4.61 (Ordinate Dimension), §4.63 (Radius Dimension),
   §4.134 (View), §4.50-§4.54 (parametric surface forms), and §4.79
   (Attribute Table Definition).
+- **Form-dependent unused-field roundtrip:** a subset of
+  form-dependent schemas (Types 218 Ordinate Dimension, 222 Radius
+  Dimension, 304 Line Font Definition, 410 View) carry an explicit
+  `form: number` field inside `data` in addition to the `form` on
+  the outer `Entity` object. When present, the two must agree.
+  Other form-dependent schemas (Types 190/192/194/196/198 analytic
+  surfaces, 322 Attribute Table Definition, 404 Drawing, 416
+  External Reference) select fields by the outer `Entity.form`
+  alone and do not re-encode `form` inside `data` — see Appendix A
+  for the per-type shape. In every form-dependent schema,
+  unused-form fields (e.g., `deord`/`desupp` on Ordinate Dimension
+  Form 0, `segments`/`bitmask` on Line Font Definition Form 1,
+  `derefd` on Form 0 analytic surfaces, perspective fields on View
+  Form 0) must be present in the canonical JSON with their
+  zero/empty/default values (number → `0`, boolean → `false`, array
+  → `[]`, string → `""`) and round-trip unchanged through
+  write/parse. The writer omits them from the emitted PD record (or
+  writes defaulted `,` fields); the parser restores them as the
+  zero/empty default on read-back. Agents may not omit unused-form
+  fields from the JSON shape.
 - Fields the writer may re-derive (DE sequence numbers, param_data_ptr,
   param_line_count) are not marked optional in these types — the schemas
   describe the fully-resolved post-parse shape per §2.3 and §2.4.
+- **Non-FieldValue boolean fields** (e.g., `outer_loop_flag` on Face
+  (510), `logical` flags on MSBO and Shell entities) serialize in the
+  PD record as the Logical wire form (`1` for true, `0` for false)
+  per §2.2.2.6, matching the bool-kind FieldValue convention.
+- **Direction entity (Type 123) and other ratio/direction fields do
+  not normalize.** Values like `{x: 1, y: 2, z: 3}` round-trip
+  verbatim — the parser must not normalize the direction vector to
+  unit length. The canonical JSON stores the raw ratios as written.
 
 ### Type 0 — NullEntity
 
@@ -614,7 +706,7 @@ type ConicArcData = {
 type CopiousDataData = {
   ip: number,  // interpretation flag: 1=2D, 2=3D, 3=3D+vector
   n: number,  // number of tuples
-  zt: number,  // common z displacement (IP=1 only)
+  zt: number,  // common z displacement (IP=1 only on the wire; present in JSON for every IP, default 0.0)
   data: number[],  // flat array: N*2, N*3, or N*6 values
 };
 ```

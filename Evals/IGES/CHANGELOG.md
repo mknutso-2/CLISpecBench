@@ -1,5 +1,55 @@
 # IGES Changelog
 
+## v1.0.15 — unreleased
+
+### Added
+
+- **Systematic prompt-vs-test audit fixes** (2026-04-19): five parallel
+  test-by-test audits against `technical-requirements-prompt.md` found
+  seven categories of prompt gap not covered by the earlier
+  v1.0.14 round. Added to the prompt:
+    - **Error-message field identification** in §1.2: the `error`
+      field must contain a canonical substring identifying the
+      offending field (e.g., `"xform_matrix"`, `"view"`,
+      `"model_space_scale"`) or a canonical phrase for non-field
+      conditions (`"negative entity type"`, `"zero-length line"`,
+      `"prohibited parameter delimiter"`, `"missing start section"`).
+      Covers 10+ validation tests that assert specific substrings.
+    - **Missing-section and `query` DE validation** in §1.2: a file
+      missing any of the five sections is invalid input;
+      `query --de n` with n ≤ 0, n even, or n not present is invalid.
+      Covers MAL-1, MAL-12, and `test_query_with_{nonexistent,even}_de`.
+    - **Terminate-section format** in §4: exactly one T-line with
+      `S<nnnnnnn>G<nnnnnnn>D<nnnnnnn>P<nnnnnnn>` physical-line counts.
+      Covers `test_terminate_section_counts_match_actual_physical_sections`.
+    - **Empty `start_lines` handling** in §4: empty array still
+      produces one blank S-line. Covers
+      `test_empty_start_lines_produce_one_or_more_blank_start_records`.
+    - **Free-format parsing rules (§2.2.3)** in §4: consecutive
+      delimiters → default, Hollerith content opaque to delimiter
+      scanning, prohibited delimiter characters, trailing-content
+      tolerance after the record delimiter. Covers 4
+      `test_free_format.py` tests.
+    - **`xform_matrix` application order** in §4: post-eval on every
+      curve and surface type (not just Type 104 Conic Arc). Covers
+      `test_transformed_plane_surface_applies_entity_matrix_after_eval`
+      and related.
+    - **Form-dependent unused-field roundtrip, non-FieldValue bool
+      wire encoding, Direction non-normalization** in Appendix A:
+      form-dependent entities must preserve the unused-form fields
+      as zero/empty defaults through roundtrip; the `1`/`0` Logical
+      wire rule applies to all boolean fields, not just FieldValue
+      bool; Direction vectors round-trip verbatim without
+      normalization. Covers form-roundtrip tests for 218/222/304/410
+      and the 190-198 analytic-surface Form 0 cases.
+    - **Copious Data `zt`** schema comment updated to say the field
+      is present in JSON for every IP (default 0.0) and only appears
+      on the wire for IP=1, reconciling the apparent inconsistency
+      between `test_copious_data_roundtrip[form-12]` and the schema
+      comment.
+
+  All 263 tests still pass against `reference-implementation-py`.
+
 ## v1.0.14 — 2026-04-18
 
 ### Added
