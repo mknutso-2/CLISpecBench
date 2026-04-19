@@ -157,6 +157,7 @@ const STATE = {
 };
 
 const pairListEl = document.getElementById('pair-list');
+const pairUnavailableHintEl = document.getElementById('pair-unavailable-hint');
 const pairSelectAllButton = document.getElementById('pair-select-all');
 const pairUnselectAllButton = document.getElementById('pair-unselect-all');
 const languageListEl = document.getElementById('language-list');
@@ -370,34 +371,37 @@ function renderPairList(canRenderPairById) {
   pairListEl.replaceChildren();
   const rowsByPair = getRowsByPairForCurrentSelection();
   const availabilityMap = canRenderPairById || getPairAvailability(rowsByPair);
+  const unavailableLabels = [];
   getPairs().forEach((pairId) => {
     const isSelectable = availabilityMap.get(pairId) ?? true;
     const { agent, model } = splitPairId(pairId);
+
+    if (!isSelectable) {
+      if (STATE.selectedPairs.has(pairId)) STATE.selectedPairs.delete(pairId);
+      unavailableLabels.push(`${agent} / ${model}`);
+      return;
+    }
+
     const row = document.createElement('label');
     const cb = document.createElement('input');
-    cb.disabled = !isSelectable;
     cb.type = 'checkbox';
     cb.dataset.group = 'pair';
     cb.value = pairId;
-    cb.checked = isSelectable && STATE.selectedPairs.has(pairId);
-
-    if (!isSelectable && STATE.selectedPairs.has(pairId)) {
-      STATE.selectedPairs.delete(pairId);
-    }
-
+    cb.checked = STATE.selectedPairs.has(pairId);
     row.appendChild(cb);
-    if (isSelectable) {
-      row.appendChild(document.createTextNode(`${agent} / ${model}`));
-    } else {
-      row.classList.add('pair-unavailable');
-      cb.title = `No ${STATE.xAxis}/${STATE.yAxis} data for the current filters.`;
-      const unavailableText = document.createElement('span');
-      unavailableText.className = 'pair-unavailable-label';
-      unavailableText.textContent = `${agent} / ${model} (no data)`;
-      row.appendChild(unavailableText);
-    }
+    row.appendChild(document.createTextNode(`${agent} / ${model}`));
     pairListEl.appendChild(row);
   });
+
+  if (pairUnavailableHintEl) {
+    if (unavailableLabels.length) {
+      const noun = unavailableLabels.length === 1 ? 'pair has' : 'pairs have';
+      pairUnavailableHintEl.textContent =
+        `${unavailableLabels.length} ${noun} no data for this view: ${unavailableLabels.join(', ')}.`;
+    } else {
+      pairUnavailableHintEl.textContent = '';
+    }
+  }
 
   return availabilityMap;
 }
