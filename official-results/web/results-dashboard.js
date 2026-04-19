@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const text = await file.text();
         const rows = parseCsv(text);
-        initializeDashboard(rows, file.name);
+        initializeDashboard(rows, file.name, { preserveView: true });
       } catch (error) {
         setError(`Could not parse ${file.name}: ${error.message}`);
       }
@@ -224,21 +224,32 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 });
 
-function initializeDashboard(rows, sourceName) {
+function initializeDashboard(rows, sourceName, { preserveView = false } = {}) {
   if (!rows.length) {
     throw new Error('No result rows were found in the CSV.');
   }
   STATE.rows = rows;
-  initSelectionDefaults();
+  initSelectionDefaults({ preserveView });
   buildControls();
   render();
   statusEl.textContent = `Loaded ${STATE.rows.length} runs from ${sourceName || DATA_PATH}.`;
   clearError();
 }
 
-function initSelectionDefaults() {
+function initSelectionDefaults({ preserveView = false } = {}) {
+  const previousView = preserveView
+    ? {
+        xAxis: STATE.xAxis,
+        yAxis: STATE.yAxis,
+        colorMode: STATE.colorMode,
+        reportType: STATE.reportType,
+        errorBarMode: STATE.errorBarMode,
+      }
+    : null;
+
   STATE.selectedPairs = new Set();
   STATE.selectedLanguages = new Set();
+  STATE.hiddenColorKeys = new Set();
   const pairs = getPairs();
   const languages = getLanguages();
   const evals = getEvals();
@@ -252,11 +263,20 @@ function initSelectionDefaults() {
   pairs.forEach((id) => STATE.selectedPairs.add(id));
   languages.forEach((lang) => STATE.selectedLanguages.add(lang));
   STATE.selectedEval = evals[0] || '';
-  STATE.xAxis = 'cost';
-  STATE.yAxis = 'percent';
-  STATE.colorMode = 'agent';
-  STATE.reportType = 'mean';
-  STATE.errorBarMode = getDefaultErrorBarMode();
+
+  if (previousView) {
+    STATE.xAxis = previousView.xAxis;
+    STATE.yAxis = previousView.yAxis;
+    STATE.colorMode = previousView.colorMode;
+    STATE.reportType = previousView.reportType;
+    STATE.errorBarMode = previousView.errorBarMode;
+  } else {
+    STATE.xAxis = 'cost';
+    STATE.yAxis = 'percent';
+    STATE.colorMode = 'agent';
+    STATE.reportType = 'mean';
+    STATE.errorBarMode = getDefaultErrorBarMode();
+  }
 }
 
 function buildControls() {
