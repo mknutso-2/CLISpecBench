@@ -8,5 +8,5 @@ echo "==> uv sync"
 uv sync
 echo "==> ruff"
 uv run ruff check
-echo "==> pyright (slow cold start)"
+echo "==> pyright"
 uv run pyright
