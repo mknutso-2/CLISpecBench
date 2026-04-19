@@ -7,6 +7,18 @@ Meta: This file is a breathing document. If you read it and find that any of the
 
 # Eval runs
 
+## Docker prerequisites
+
+- On Windows, use the WSL2 daemon (this is the repo-supported setup for this host).
+- Make sure Docker Engine is started in WSL and reachable from Windows:
+  - `wsl -d Ubuntu -- service docker status`
+  - If needed: `wsl -d Ubuntu -- sudo service docker start`
+  - `DOCKER_HOST=tcp://localhost:2375 docker version`
+- If the run cannot connect to Docker:
+  - restart Docker in WSL: `wsl -d Ubuntu -- sudo service docker restart`
+  - then re-run `DOCKER_HOST=tcp://localhost:2375 docker version`
+- Proceed with eval commands only after a successful daemon check.
+
 ## Launching runs
 
 - There is no timeout flag. Let agent sessions exit naturally; killing them early depresses scores and wastes compute.
