@@ -172,6 +172,70 @@ treated as an explicit zero and serializes as 0 (not null), and that
 the null value is reserved for "no active CRC" (i.e., G40 mode or
 never turned on). Documentation-only; a patch bump.
 
+### Two M-code modal-group issues in the prompt
+
+Issue (a) and issue (b) are independent and have very different
+expected impact.
+
+**(a) Typo in `technical-requirements-prompt.md` Example 1 (line 292).**
+The example shows:
+
+    "active_modal_m_codes": {"4": "M5", "...": "other default groups"}
+
+M5 is in modal group 7 (spindle turning) per RS274 Table 4
+(`RS274NGC.md` lines 1452–1454). Group 4 is the stopping group
+(M0/M1/M2/M30/M60). The fix is a three-character edit:
+`"4"` → `"7"`. Low impact — see below — but still a real bug the
+prompt should not ship with.
+
+**(b) Ambiguity in "modal group" semantics for one-shot M-codes.**
+RS274 Table 4 places M0/M1/M2/M30/M60 (stopping) in group 4 and M6
+(tool-change) in group 6. In context, "modal group" means at most one
+member may be active on a single line. For continuous-state codes
+(M3/M4/M5 spindle, M7/M8/M9 coolant, M48/M49 override) the word
+"modal" also reads naturally as persistent state: after M3 executes,
+the machine remains in spindle-CW until M5. For instantaneous actions
+(M0 stop, M6 tool-change), the spec never says whether the code
+remains the "active" member of its group after the action completes.
+The tests assume it does; models reasonably treat these as events
+without a persistent modal slot.
+
+Pass-rate signal across 255 runs, grouped by which modal group a test
+exercises:
+
+| Group          | M-codes covered   | Pass rate |
+|----------------|-------------------|-----------|
+| 4 (stopping)   | M0, M1, M60       | 18–22%    |
+| 6 (tool-chg)   | M6                | 20%       |
+| 7 (spindle)    | M5                | 42%       |
+| 8 (coolant)    | M7, M8, M9        | 34–41%    |
+| 9 (override)   | M49               | 36%       |
+
+The typo alone would predict the opposite of what we see: if agents
+followed `{"4": "M5"}` literally, `group-7-m5` would be the lowest
+pass rate. It is the highest. The 20 pp gap between the continuous-
+state groups (~40%) and the one-shot groups (~20%) is issue (b), not
+issue (a).
+
+17 tests directly assert on `active_modal_m_codes[<group>]`. About
+half sit in the low band; most of those would lift by ~20 percentage
+points if issue (b) were clarified.
+
+Proposed:
+
+- For (a): fix the typo. `"4": "M5"` → `"7": "M5"`.
+- For (b): add a sentence to `base-prompt.md` or
+  `technical-requirements-prompt.md` stating that every M-code from
+  RS274 Table 4 that appears in the input program remains the active
+  member of its modal group for the rest of the program (until
+  replaced by another member of the same group or reset by M2/M30),
+  including stopping codes and M6. This removes the ambiguity
+  without editing `RS274NGC.md`.
+
+Documentation-only; a patch bump. Not applied yet. Aggregate score
+impact is small (~0.3 pp of overall suite score), but issue (b) is the
+main driver of a persistent ~20 pp gap across ~8 tests.
+
 ### Clarify trace behavior when state-only transitions share a line with motion
 
 `test_trace_format.py::test_motion_plus_m2_same_line_final_entry_time`
