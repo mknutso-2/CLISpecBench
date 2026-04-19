@@ -6,6 +6,7 @@ const AXIS_OPTIONS = [
   { id: 'tokens_output', label: 'Tokens Output' },
   { id: 'tokens_total', label: 'Tokens Total' },
   { id: 'cost', label: 'Cost (USD)' },
+  { id: 'wall', label: 'Wall Clock Time' },
   { id: 'tools', label: 'Tools Used' },
   { id: 'loc', label: 'LOC' },
   { id: 'language', label: 'Language', axisOnly: true },
@@ -15,6 +16,19 @@ const COLOR_MODE_OPTIONS = [
   { id: 'pair', label: 'Agent / Model Pair' },
   { id: 'language', label: 'Language' },
   { id: 'agent', label: 'Agent' },
+];
+
+const REPORT_TYPE_OPTIONS = [
+  { id: 'worst', label: 'Worst' },
+  { id: 'best', label: 'Best' },
+  { id: 'median', label: 'Median' },
+  { id: 'mean', label: 'Mean' },
+];
+
+const ERROR_BAR_OPTIONS = [
+  { id: 'range', label: 'Range' },
+  { id: 'std', label: 'Std Dev.' },
+  { id: 'none', label: 'None' },
 ];
 
 const METRICS = {
@@ -63,6 +77,14 @@ const METRICS = {
     minClamp: 0,
     minTickStep: 0.01,
   },
+  wall: {
+    label: 'Wall Clock Time',
+    parse: (row) => row.wall_min,
+    formatMean: (value) => formatWallTime(value),
+    formatSummary: (s) => `${formatWallTime(s.mean)} (min ${formatWallTime(s.min)}, max ${formatWallTime(s.max)})`,
+    minClamp: 0,
+    minTickStep: 0.1,
+  },
   tools: {
     label: 'Tools Used',
     parse: (row) => row.tools,
@@ -93,6 +115,7 @@ const DETAIL_METRIC_IDS = [
   'tokens_output',
   'tokens_total',
   'cost',
+  'wall',
   'loc',
   'files',
 ];
@@ -127,13 +150,19 @@ const STATE = {
   xAxis: 'cost',
   yAxis: 'percent',
   colorMode: 'pair',
+  reportType: 'mean',
+  errorBarMode: 'std',
 };
 
 const pairListEl = document.getElementById('pair-list');
+const pairSelectAllButton = document.getElementById('pair-select-all');
+const pairUnselectAllButton = document.getElementById('pair-unselect-all');
 const languageListEl = document.getElementById('language-list');
 const evalSelect = document.getElementById('eval-select');
 const xAxisSelect = document.getElementById('x-axis');
 const yAxisSelect = document.getElementById('y-axis');
+const reportTypeSelect = document.getElementById('report-type');
+const errorBarsSelect = document.getElementById('error-bars');
 const colorModeSelect = document.getElementById('color-mode');
 const fileInputEl = document.getElementById('csv-file-input');
 const validationEl = document.getElementById('validation-message');
@@ -147,10 +176,14 @@ const tooltip = document.getElementById('tooltip');
 document.addEventListener('DOMContentLoaded', () => {
   if (
     !pairListEl ||
+    !pairSelectAllButton ||
+    !pairUnselectAllButton ||
     !languageListEl ||
     !evalSelect ||
     !xAxisSelect ||
     !yAxisSelect ||
+    !reportTypeSelect ||
+    !errorBarsSelect ||
     !colorModeSelect
   ) {
     console.error('Dashboard initialization failed: expected UI elements are missing.');
@@ -219,6 +252,8 @@ function initSelectionDefaults() {
   STATE.xAxis = 'cost';
   STATE.yAxis = 'percent';
   STATE.colorMode = 'pair';
+  STATE.reportType = 'mean';
+  STATE.errorBarMode = getDefaultErrorBarMode();
 }
 
 function buildControls() {
@@ -226,19 +261,44 @@ function buildControls() {
   renderLanguageList();
   renderEvalList();
   renderColorModeSelector();
+  renderReportTypeSelector();
+  renderErrorBarSelector();
   updateAxisSelectors();
 }
 
 function attachEvents() {
+  if (pairSelectAllButton) {
+    pairSelectAllButton.addEventListener('click', () => {
+      const allPairInputs = Array.from(pairListEl.querySelectorAll('input[data-group="pair"]'));
+      const selectablePairIds = allPairInputs.filter((input) => !input.disabled).map((input) => input.value);
+      STATE.selectedPairs = new Set(selectablePairIds);
+      allPairInputs.forEach((input) => {
+        input.checked = !input.disabled;
+      });
+      render();
+    });
+  }
+
+  if (pairUnselectAllButton) {
+    pairUnselectAllButton.addEventListener('click', () => {
+      STATE.selectedPairs = new Set();
+      const allPairInputs = Array.from(pairListEl.querySelectorAll('input[data-group="pair"]'));
+      allPairInputs.forEach((input) => {
+        input.checked = false;
+      });
+      render();
+    });
+  }
+
   pairListEl.addEventListener('change', () => {
     const selected = getCheckedValues(pairListEl, 'pair');
     STATE.selectedPairs = new Set(selected);
     if (STATE.selectedPairs.size === 0) {
-      const fallback = getPairs()[0];
+      const fallbackInput = Array.from(
+        pairListEl.querySelectorAll('input[data-group="pair"]:not([disabled])'),
+      )[0];
+      const fallback = fallbackInput?.value;
       if (fallback) STATE.selectedPairs.add(fallback);
-      const fallbackInput = Array.from(pairListEl.querySelectorAll('input[data-group="pair"]')).find(
-        (input) => input.value === fallback,
-      );
       if (fallbackInput) fallbackInput.checked = true;
     }
     render();
@@ -255,6 +315,7 @@ function attachEvents() {
       ).find((input) => input.value === fallback);
       if (fallbackInput) fallbackInput.checked = true;
     }
+    syncErrorBarModeWithDefaults();
     updateAxisSelectors();
     render();
   });
@@ -266,11 +327,20 @@ function attachEvents() {
 
   xAxisSelect.addEventListener('change', () => {
     STATE.xAxis = xAxisSelect.value;
+    syncErrorBarModeWithDefaults();
     renderColorModeSelector();
     render();
   });
   yAxisSelect.addEventListener('change', () => {
     STATE.yAxis = yAxisSelect.value;
+    render();
+  });
+  reportTypeSelect.addEventListener('change', () => {
+    STATE.reportType = normalizeReportType(reportTypeSelect.value);
+    render();
+  });
+  errorBarsSelect.addEventListener('change', () => {
+    STATE.errorBarMode = errorBarsSelect.value;
     render();
   });
 
@@ -280,20 +350,40 @@ function attachEvents() {
   });
 }
 
-function renderPairList() {
+function renderPairList(canRenderPairById) {
   pairListEl.replaceChildren();
+  const rowsByPair = getRowsByPairForCurrentSelection();
+  const availabilityMap = canRenderPairById || getPairAvailability(rowsByPair);
   getPairs().forEach((pairId) => {
+    const isSelectable = availabilityMap.get(pairId) ?? true;
     const { agent, model } = splitPairId(pairId);
     const row = document.createElement('label');
     const cb = document.createElement('input');
+    cb.disabled = !isSelectable;
     cb.type = 'checkbox';
     cb.dataset.group = 'pair';
     cb.value = pairId;
-    cb.checked = STATE.selectedPairs.has(pairId);
+    cb.checked = isSelectable && STATE.selectedPairs.has(pairId);
+
+    if (!isSelectable && STATE.selectedPairs.has(pairId)) {
+      STATE.selectedPairs.delete(pairId);
+    }
+
     row.appendChild(cb);
-    row.appendChild(document.createTextNode(`${agent} / ${model}`));
+    if (isSelectable) {
+      row.appendChild(document.createTextNode(`${agent} / ${model}`));
+    } else {
+      row.classList.add('pair-unavailable');
+      cb.title = `No ${STATE.xAxis}/${STATE.yAxis} data for the current filters.`;
+      const unavailableText = document.createElement('span');
+      unavailableText.className = 'pair-unavailable-label';
+      unavailableText.textContent = `${agent} / ${model} (no data)`;
+      row.appendChild(unavailableText);
+    }
     pairListEl.appendChild(row);
   });
+
+  return availabilityMap;
 }
 
 function renderLanguageList() {
@@ -370,6 +460,58 @@ function renderColorModeSelector() {
   colorModeSelect.value = STATE.colorMode;
 }
 
+function renderReportTypeSelector() {
+  const normalizedReportType = normalizeReportType(STATE.reportType);
+  STATE.reportType = normalizedReportType || 'mean';
+
+  reportTypeSelect.replaceChildren();
+  REPORT_TYPE_OPTIONS.forEach((type) => {
+    const option = document.createElement('option');
+    option.value = type.id;
+    option.textContent = type.label;
+    reportTypeSelect.appendChild(option);
+  });
+
+  const selectedOption = reportTypeSelect.querySelector(`option[value="${STATE.reportType}"]`);
+  if (!selectedOption) {
+    STATE.reportType = 'mean';
+  }
+  reportTypeSelect.value = STATE.reportType;
+}
+
+function renderErrorBarSelector() {
+  errorBarsSelect.replaceChildren();
+  ERROR_BAR_OPTIONS.forEach((type) => {
+    const option = document.createElement('option');
+    option.value = type.id;
+    option.textContent = type.label;
+    errorBarsSelect.appendChild(option);
+  });
+
+  const selectedOption = errorBarsSelect.querySelector(`option[value="${STATE.errorBarMode}"]`);
+  if (!selectedOption) {
+    STATE.errorBarMode = getDefaultErrorBarMode();
+  }
+  errorBarsSelect.value = STATE.errorBarMode;
+}
+
+function getDefaultErrorBarMode() {
+  if (STATE.selectedLanguages.size > 1 && STATE.xAxis !== 'language') {
+    return 'std';
+  }
+  return 'range';
+}
+
+function syncErrorBarModeWithDefaults() {
+  const defaultMode = getDefaultErrorBarMode();
+  if (STATE.errorBarMode === 'std' || STATE.errorBarMode === 'range') {
+    STATE.errorBarMode = defaultMode;
+    if (errorBarsSelect) {
+      errorBarsSelect.value = STATE.errorBarMode;
+    }
+  }
+}
+
 function render() {
   clearError();
   const validation = validateSelection();
@@ -379,7 +521,17 @@ function render() {
   }
 
   const colorMap = getColorMap();
-  const points = buildPoints(colorMap);
+  const rowsByPair = getRowsByPairForCurrentSelection();
+  const canRenderPairById = getPairAvailability(rowsByPair);
+  const selectedPairs = new Set();
+  STATE.selectedPairs.forEach((pairId) => {
+    if (canRenderPairById.get(pairId)) {
+      selectedPairs.add(pairId);
+    }
+  });
+  STATE.selectedPairs = selectedPairs;
+  renderPairList(canRenderPairById);
+  const points = buildPoints(colorMap, rowsByPair);
   if (!points.length) {
     showNoData('No matching results for the current filters.');
     return;
@@ -445,17 +597,12 @@ function clearChart() {
   chartSvg.setAttribute('viewBox', '0 0 980 560');
 }
 
-function buildPoints(colorMap) {
+function buildPoints(colorMap, rowsByPairOverride) {
   const selectedLanguages = Array.from(STATE.selectedLanguages).sort();
-  const rowsByPair = new Map();
-
-  STATE.rows.forEach((row) => {
-    if (row.eval !== STATE.selectedEval) return;
-    if (!STATE.selectedPairs.has(rowPairId(row))) return;
-    if (!STATE.selectedLanguages.has(row.language)) return;
-    if (!rowsByPair.has(rowPairId(row))) rowsByPair.set(rowPairId(row), []);
-    rowsByPair.get(rowPairId(row)).push(row);
-  });
+  const rowsByPair =
+    rowsByPairOverride && rowsByPairOverride.size !== undefined
+      ? rowsByPairOverride
+      : getRowsByPairForCurrentSelection();
 
   const points = [];
   const rowsByPairList = Array.from(STATE.selectedPairs);
@@ -516,6 +663,63 @@ function buildPoints(colorMap) {
   return points;
 }
 
+function getRowsByPairForCurrentSelection() {
+  const rowsByPair = new Map();
+
+  STATE.rows.forEach((row) => {
+    if (row.eval !== STATE.selectedEval) return;
+    if (!STATE.selectedLanguages.has(row.language)) return;
+    const pairId = rowPairId(row);
+    if (!rowsByPair.has(pairId)) rowsByPair.set(pairId, []);
+    rowsByPair.get(pairId).push(row);
+  });
+
+  return rowsByPair;
+}
+
+function getPairAvailability(rowsByPair) {
+  const selectedLanguages = Array.from(STATE.selectedLanguages).sort();
+  const availability = new Map();
+
+  getPairs().forEach((pairId) => {
+    const rows = rowsByPair.get(pairId) || [];
+    availability.set(pairId, canRenderPair(rows, selectedLanguages));
+  });
+
+  return availability;
+}
+
+function canRenderPair(rows, selectedLanguages) {
+  const xAxis = STATE.xAxis;
+  const yAxis = STATE.yAxis;
+
+  if (!rows.length) {
+    return false;
+  }
+
+  if (xAxis === 'language') {
+    return selectedLanguages.some((language) => {
+      const subset = rows.filter((row) => row.language === language);
+      if (!subset.length) return false;
+      const summary = summarizeMetric(subset, yAxis);
+      return summary.hasData;
+    });
+  }
+
+  if (STATE.colorMode === 'language') {
+    return selectedLanguages.some((language) => {
+      const subset = rows.filter((row) => row.language === language);
+      const xSummary = summarizeMetric(subset, xAxis);
+      const ySummary = summarizeMetric(subset, yAxis);
+      return xSummary.hasData && ySummary.hasData;
+    });
+  }
+
+  const xSummary = summarizeMetric(rows, xAxis);
+  const ySummary = summarizeMetric(rows, yAxis);
+  return xSummary.hasData && ySummary.hasData;
+}
+
 function getColorModeKey(pairId, language) {
   if (STATE.colorMode === 'language') {
     return language || `All ${STATE.selectedLanguages.size} languages`;
@@ -542,8 +746,8 @@ function summarizePoint(pairId, color, rows, language, options) {
     xAsLanguage: options.xAsLanguage,
     xSummary,
     ySummary,
-    xValue: xSummary.mean,
-    yValue: ySummary.mean,
+    xValue: getReportValue(xSummary, STATE.reportType),
+    yValue: getReportValue(ySummary, STATE.reportType),
     xCategoryLabel: options.xCategoryLabel,
     xAxis: options.xAxis,
     yAxis: options.yAxis,
@@ -554,9 +758,12 @@ function summarizeMetric(rows, metricId) {
   if (metricId === 'language') {
     return {
       hasData: true,
+      worst: 0,
       mean: 0,
       min: 0,
+      best: 0,
       max: 0,
+      median: 0,
       count: rows.length,
     };
   }
@@ -577,19 +784,32 @@ function summarizeMetric(rows, metricId) {
     const outStats = stats(output);
     const totalStats = stats(totals);
     if (!inStats || !outStats || !totalStats) return { hasData: false };
+
+    const totalSummary = applySummaryClamp(totalStats, minClamp);
+    const inputSummary = applySummaryClamp(inStats, minClamp);
+    const outputSummary = applySummaryClamp(outStats, minClamp);
     return {
       hasData: true,
       stacked: true,
-      count: totalStats.count,
-      mean: minClamp ? Math.max(totalStats.mean, minClamp) : totalStats.mean,
-      min: minClamp ? Math.max(totalStats.min, minClamp) : totalStats.min,
-      max: minClamp ? Math.max(totalStats.max, minClamp) : totalStats.max,
-      meanInput: minClamp ? Math.max(inStats.mean, minClamp) : inStats.mean,
-      minInput: minClamp ? Math.max(inStats.min, minClamp) : inStats.min,
-      maxInput: minClamp ? Math.max(inStats.max, minClamp) : inStats.max,
-      meanOutput: minClamp ? Math.max(outStats.mean, minClamp) : outStats.mean,
-      minOutput: minClamp ? Math.max(outStats.min, minClamp) : outStats.min,
-      maxOutput: minClamp ? Math.max(outStats.max, minClamp) : outStats.max,
+      count: totalSummary.count,
+      worst: totalSummary.worst,
+      mean: totalSummary.mean,
+      best: totalSummary.best,
+      min: totalSummary.min,
+      max: totalSummary.max,
+      median: totalSummary.median,
+      meanInput: inputSummary.mean,
+      minInput: inputSummary.min,
+      maxInput: inputSummary.max,
+      medianInput: inputSummary.median,
+      bestInput: inputSummary.best,
+      worstInput: inputSummary.worst,
+      meanOutput: outputSummary.mean,
+      minOutput: outputSummary.min,
+      maxOutput: outputSummary.max,
+      medianOutput: outputSummary.median,
+      bestOutput: outputSummary.best,
+      worstOutput: outputSummary.worst,
     };
   }
 
@@ -602,26 +822,101 @@ function summarizeMetric(rows, metricId) {
   if (!s) return { hasData: false };
   const minClamp = spec.minClamp;
   if (!Number.isFinite(minClamp)) return { ...s, hasData: true };
-  return {
-    ...s,
-    min: Math.max(s.min, minClamp),
-    max: Math.max(s.max, minClamp),
-    mean: Math.max(s.mean, minClamp),
-    hasData: true,
-  };
+  const clamped = applySummaryClamp(s, minClamp);
+  clamped.hasData = true;
+  return clamped;
 }
 
 function stats(values) {
   if (!values.length) return null;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+
+  const sortedValues = [...values].sort((a, b) => a - b);
+  const min = sortedValues[0];
+  const max = sortedValues[sortedValues.length - 1];
+  const mid = Math.floor(sortedValues.length / 2);
+  const median = sortedValues.length % 2 === 0
+    ? (sortedValues[mid - 1] + sortedValues[mid]) / 2
+    : sortedValues[mid];
+
   const total = values.reduce((acc, value) => acc + value, 0);
+  const mean = total / values.length;
+  const variance =
+    values.reduce((acc, value) => acc + Math.pow(value - mean, 2), 0) / values.length;
   return {
     min,
+    worst: min,
     max,
-    mean: total / values.length,
+    best: max,
+    median,
+    mean,
+    stdDev: Math.sqrt(variance),
     count: values.length,
   };
+}
+
+function applySummaryClamp(summary, minClamp) {
+  if (!summary || !Number.isFinite(minClamp)) return summary;
+  return {
+    ...summary,
+    min: Math.max(summary.min, minClamp),
+    mean: Math.max(summary.mean, minClamp),
+    max: Math.max(summary.max, minClamp),
+    median: Math.max(summary.median, minClamp),
+    worst: Math.max(summary.worst, minClamp),
+    best: Math.max(summary.best, minClamp),
+  };
+}
+
+function getReportTypeLabel(reportType) {
+  const normalizedReportType = normalizeReportType(reportType);
+  const label = REPORT_TYPE_OPTIONS.find((item) => item.id === normalizedReportType)?.label;
+  return label || (normalizedReportType === 'best'
+    ? 'Best'
+    : normalizedReportType === 'worst'
+      ? 'Worst'
+      : 'Mean');
+}
+
+function normalizeReportType(reportType) {
+  const normalized = String(reportType || '').trim().toLowerCase();
+  if (normalized === 'max' || normalized === 'maximum') return 'best';
+  if (normalized === 'min' || normalized === 'minimum') return 'worst';
+  if (normalized === 'avg' || normalized === 'average') return 'mean';
+  return normalized;
+}
+
+function getReportValue(summary, reportType) {
+  const normalizedReportType = normalizeReportType(reportType);
+  if (!summary || !summary.hasData) return NaN;
+  if (normalizedReportType === 'worst') return summary.worst;
+  if (normalizedReportType === 'best') return summary.best;
+  if (normalizedReportType === 'median') return summary.median;
+  return summary.mean;
+}
+
+function getErrorBarRange(summary, mode, reportType) {
+  if (!summary?.hasData) return null;
+  if (mode === 'none') return null;
+  if (mode === 'std') {
+    const center = getReportValue(summary, reportType);
+    if (
+      !Number.isFinite(center) ||
+      !Number.isFinite(summary.stdDev) ||
+      summary.stdDev <= 0
+    ) {
+      return null;
+    }
+    const min = Number.isFinite(summary.min)
+      ? Math.max(center - summary.stdDev, summary.min)
+      : center - summary.stdDev;
+    const max = Number.isFinite(summary.max)
+      ? Math.min(center + summary.stdDev, summary.max)
+      : center + summary.stdDev;
+    if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return null;
+    return { min, max };
+  }
+  if (summary.min === summary.max) return null;
+  return { min: summary.min, max: summary.max };
 }
 
 function renderLegend(points, colorMap) {
@@ -734,10 +1029,28 @@ function renderPlot(points) {
 
     const g = createSvgElement('g');
     g.setAttribute('transform', `translate(${x}, ${y})`);
+    const pointClearance = 4;
+    const obstacleRects = [];
+    const markerRadius = baseRadius + pointClearance;
+    obstacleRects.push({
+      x: x - markerRadius,
+      y: y - markerRadius,
+      width: markerRadius * 2,
+      height: markerRadius * 2,
+    });
 
-    if (!point.xAsLanguage && point.xSummary.min !== point.xSummary.max) {
-      const left = xScale(point.xSummary.min);
-      const right = xScale(point.xSummary.max);
+    const canShowErrorBars =
+      STATE.xAxis !== 'language' && STATE.errorBarMode !== 'none';
+    const xBarRange = canShowErrorBars
+      ? getErrorBarRange(point.xSummary, STATE.errorBarMode, STATE.reportType)
+      : null;
+    const yBarRange = canShowErrorBars
+      ? getErrorBarRange(point.ySummary, STATE.errorBarMode, STATE.reportType)
+      : null;
+
+    if (!point.xAsLanguage && xBarRange) {
+      const left = xScale(xBarRange.min);
+      const right = xScale(xBarRange.max);
       const rangeLine = createSvgElement('line');
       rangeLine.setAttribute('class', 'point-range-h');
       rangeLine.setAttribute('x1', String(left - x));
@@ -745,11 +1058,17 @@ function renderPlot(points) {
       rangeLine.setAttribute('y1', '0');
       rangeLine.setAttribute('y2', '0');
       g.appendChild(rangeLine);
+      obstacleRects.push({
+        x: Math.min(left, right),
+        y: y - 8,
+        width: Math.abs(right - left),
+        height: 16,
+      });
     }
 
-    if (point.ySummary.min !== point.ySummary.max) {
-      const top = yScale(point.ySummary.max);
-      const bottom = yScale(point.ySummary.min);
+    if (yBarRange) {
+      const top = yScale(yBarRange.max);
+      const bottom = yScale(yBarRange.min);
       const rangeLine = createSvgElement('line');
       rangeLine.setAttribute('class', 'point-range-v');
       rangeLine.setAttribute('x1', '0');
@@ -757,6 +1076,12 @@ function renderPlot(points) {
       rangeLine.setAttribute('y1', String(top - y));
       rangeLine.setAttribute('y2', String(bottom - y));
       g.appendChild(rangeLine);
+      obstacleRects.push({
+        x: x - 2,
+        y: Math.min(top, bottom),
+        width: 4,
+        height: Math.abs(bottom - top),
+      });
     }
 
     if (point.xSummary.stacked || point.ySummary.stacked) {
@@ -808,7 +1133,15 @@ function renderPlot(points) {
 
     dataLayer.appendChild(g);
 
-    markerLabels.push({ point, x, y, circle: pointCircle, label, leader });
+    markerLabels.push({
+      point,
+      x,
+      y,
+      circle: pointCircle,
+      label,
+      leader,
+      obstacleRects,
+    });
   });
 
   chartSvg.appendChild(dataLayer);
@@ -905,6 +1238,7 @@ function placePointLabels(markers, { width, height, margin }) {
 
   markers.forEach((marker) => {
     const { point, x, y, label, leader } = marker;
+    const obstacleRects = marker.obstacleRects || [];
     const baseRadius = Number.parseFloat(marker.circle.getAttribute('data-base-radius')) || 7;
     const text = point.pairLabel || rowPairId(point.pairId);
     label.textContent = text;
@@ -935,6 +1269,7 @@ function placePointLabels(markers, { width, height, margin }) {
       const inflated = inflateRect(bbox, padding);
       const overlaps = intersectsAnyRect(inflated, placedBoxes);
       if (overlaps) continue;
+      if (intersectsAnyRect(inflated, obstacleRects)) continue;
       if (rectIntersectsPoint(inflated, x, y, Math.max(baseRadius + pointClearance, pointClearance))) {
         continue;
       }
@@ -978,6 +1313,7 @@ function placePointLabels(markers, { width, height, margin }) {
 
         const inflated = inflateRect(clampedBbox, padding);
         if (intersectsAnyRect(inflated, placedBoxes)) continue;
+        if (intersectsAnyRect(inflated, obstacleRects)) continue;
         if (rectIntersectsPoint(inflated, x, y, baseRadius + pointClearance)) continue;
 
         placed = {
@@ -1384,6 +1720,7 @@ function formatAxisValue(axisId, value) {
   if (axisId === 'tokens_input' || axisId === 'tokens_output' || axisId === 'tokens_total') {
     return formatTokenCount(value);
   }
+  if (axisId === 'wall') return formatWallTime(value);
   if (axisId === 'tools' || axisId === 'loc') return formatCount(value);
   if (axisId === 'cost') return formatMoney(value);
   return String(value.toFixed(2));
@@ -1418,6 +1755,20 @@ function formatTokenCount(value) {
   return `${formatSignificant(value / 1000)}K`;
 }
 
+function formatWallTime(value) {
+  if (!Number.isFinite(value)) return 'n/a';
+  const totalMinutes = value;
+  const totalMinutesRounded = Math.max(0, Number(totalMinutes.toFixed(4)));
+  const totalSeconds = totalMinutesRounded * 60;
+  if (totalSeconds < 60) return `${formatSignificant(totalSeconds)}s`;
+
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.round(totalSeconds % 60);
+  if (!hours) return `${minutes}m ${seconds}s`;
+  return `${hours}h ${minutes}m ${seconds}s`;
+}
+
 function formatSignificant(value, significantFigures = 3) {
   if (!Number.isFinite(value)) return 'n/a';
   if (value === 0) return '0';
@@ -1436,6 +1787,9 @@ function buildTooltip(point) {
   const runCountLabel =
     xRunCount === yRunCount ? `Runs with metric data: ${xRunCount}` : `Runs with metric data: x=${xRunCount}, y=${yRunCount}`;
   const details = summarizePointDetails(point.rows || []);
+  const reportTypeLabel = getReportTypeLabel(STATE.reportType);
+  const formatAxisReportValue = (axisId, axisSummary) =>
+    formatAxisValue(axisId, getReportValue(axisSummary, STATE.reportType));
 
   const lines = [
     `<strong>${point.pairLabel || rowPairId(point.pairId)}</strong>`,
@@ -1445,12 +1799,10 @@ function buildTooltip(point) {
       : null,
     languages.length > 1 ? `Languages: ${languages.join(', ')}` : null,
     runCountLabel,
-    `${xMeta.label}: ${
-      point.xAxis === 'language'
-        ? point.xCategoryLabel
-        : xMeta.formatSummary(point.xSummary)
-    }`,
-    `${yMeta.label}: ${yMeta.formatSummary(point.ySummary)}`,
+    point.xAxis === 'language'
+      ? `${xMeta.label}: ${point.xCategoryLabel}`
+      : `${xMeta.label} (${reportTypeLabel}): ${formatAxisReportValue(point.xAxis, point.xSummary)}`,
+    `${yMeta.label} (${reportTypeLabel}): ${formatAxisReportValue(point.yAxis, point.ySummary)}`,
   ].filter(Boolean);
 
   if (point.xSummary.stacked || point.ySummary.stacked) {
