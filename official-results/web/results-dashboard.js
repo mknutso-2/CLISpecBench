@@ -433,10 +433,13 @@ function updateAxisSelectors() {
 
   xAxisSelect.replaceChildren();
   AXIS_OPTIONS.forEach((axis) => {
-    if (axis.axisOnly && !canUseLanguageAxis) return;
     const option = document.createElement('option');
     option.value = axis.id;
     option.textContent = axis.label;
+    if (axis.axisOnly && !canUseLanguageAxis) {
+      option.disabled = true;
+      option.textContent = `${axis.label} (select 2+ languages)`;
+    }
     xAxisSelect.appendChild(option);
   });
   if (STATE.xAxis === 'language' && !canUseLanguageAxis) {
