@@ -1961,9 +1961,19 @@ function buildTooltip(point) {
     }
   }
 
+  const tokensTotalCovered =
+    (point.xSummary.stacked && point.xAxis === 'tokens_total') ||
+    (point.ySummary.stacked && point.yAxis === 'tokens_total');
+
   DETAIL_METRIC_IDS.forEach((metricId) => {
     if (!details[metricId]?.hasData) return;
     if (metricId === point.xAxis || metricId === point.yAxis) return;
+    if (
+      tokensTotalCovered &&
+      (metricId === 'tokens_input' || metricId === 'tokens_output')
+    ) {
+      return;
+    }
     const meta = METRICS[metricId];
     lines.push(`${meta.label}: ${meta.formatSummary(details[metricId])}`);
   });
