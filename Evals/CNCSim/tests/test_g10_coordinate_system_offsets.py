@@ -148,6 +148,14 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
     expected_parameter_values: dict[str, float],
     tmp_path: Path,
 ) -> None:
+    # PASS-RATE NOTE (2026-04-18): the g21-to-g20 parametrization passed 5 /
+    # 255 attempts across all models (see CHANGELOG "Proposed"). Unlike the
+    # CRC cluster, the relevant contract is spec-clear (RS274 §4.3.3.3 and
+    # the harness serialization rule in technical-requirements-prompt.md).
+    # The low pass rate reflects implementation difficulty — models conflate
+    # stored-parameter units with serialized-offset units — rather than spec
+    # ambiguity. Kept as-is; no proposed change.
+    #
     # RS274 section 4.3.3.2 says the effective program-origin location should
     # not change when units change, while section 4.3.3.3 says stored
     # coordinate-system offsets are not numerically changed by a unit switch.

@@ -592,6 +592,14 @@ def test_motion_plus_m2_same_line_final_entry_time(
     """G1 X1 F60 M2 on a single line: the final entry's time must equal the
     motion's total duration (1 inch at 60 ipm = 1 s), not total_duration + epsilon.
     The M2 state deltas are folded into that final entry.
+
+    PASS-RATE NOTE (2026-04-18): 2 passes / 243 attempts across all models
+    (see CHANGELOG "Proposed"). technical-requirements-prompt.md describes
+    state-only-block entries (time == 0.0001) and motion-block stepping as
+    separate cases; the behavior when a state-only transition (M2) shares a
+    line with a motion block is a legitimately underspecified interaction.
+    Models reasonably emit either a folded final entry or a trailing
+    0.0001s epsilon entry; only the folded form passes here.
     """
     _, _, trace = run_cncsim_trace(
         submission_command,

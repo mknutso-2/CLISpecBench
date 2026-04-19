@@ -2,6 +2,105 @@
 
 ## Proposed (not yet applied)
 
+### Clarify cutter-radius-compensation (CRC) arc and first-move semantics
+
+Pass-rate analysis across ~255 runs (every model, every language variant,
+run via `scripts/per-test-pass-rate.py`) shows that 21 of the 23
+`test_cutter_radius_compensation.py` cases passed ≤5 times and 6 passed
+never:
+
+- **Arc endpoints (8 cases, 0 or 1 passes each)**: all of
+  `test_application_tracks_cutter_radius_compensated_arc_endpoints`
+  (g41/g42 × first-arc / subsequent-arc × center-format / radius-format).
+- **Entry-move straight line (4 cases, 1–4 passes)**:
+  `test_application_tracks_cutter_radius_compensated_spindle_center`
+  parametrizations `g41-first-straight-move-left`,
+  `g42-first-straight-move-right`, `g41-omitted-d-uses-tool-in-spindle`,
+  `g41-first-rapid-move-left`.
+- **Continuation / transition (9 cases, 1–2 passes each)**: the colinear-
+  follow-on, convex-corner, convex-90-degree, g40-follow-on,
+  g40-then-g42-restarts, and tool-change-while-comp-on parametrizations
+  of the same spindle-center test.
+
+The continuation failures are a cascade: every continuation test depends
+on the agent first computing the entry-move endpoint correctly, so a
+single side-selection flip (or first-move geometry mistake) scores N
+times across tests named for independent behaviors. This is the cascade
+pattern warned against in `skills/eval-authoring/SKILL.md`.
+
+Review of `RS274NGC.md` §B.6 and §3.5.3 against the test inputs identified
+four interpretive leaps that are required to reach the expected answers
+but are **not stated in the prose spec**:
+
+1. **§B.6 silently overrides §3.5.3.2's distance-mismatch error.** The
+   first-arc inputs place the tool at (7, 0) with the programmed arc
+   center at (0, 0) and end at (0, ±4) — current-to-center distance 7,
+   end-to-center distance 4. §3.5.3.2 says such a mismatch is a hard
+   error; §B.6 never says it's waived under CRC.
+2. **Radius-format first-arc is geometrically impossible under normal R
+   rules.** `G42 D1 G3 X0 Y4 R4` from (7, 0) has chord √65 ≈ 8.06 > 2r =
+   8, so no center exists. The tests assume R becomes the *auxiliary*
+   arc radius; §B.6 says "actual computations differ ... see 3.5.3" and
+   §3.5.3.1 says nothing about CRC.
+3. **"Current location" for I/J under CRC is undefined.** §3.5.3.2 says
+   I/J are offsets from "the current location." Under CRC the tool
+   center and programmed contour diverge. The continuation tests only
+   pass if I/J are read relative to the programmed contour.
+4. **G41/G42 side selection on a CCW arc is not stated.** Deciding that
+   G42 on CCW puts the tool on the outside (tool-center radius =
+   programmed + tool) requires reasoning from the tangent-direction
+   convention. §B.6 only says "on the appropriate side."
+
+Plus a chain cascade: continuation tests named for independent behaviors
+(convex corner, colinear follow-on, G40 transition) all fail when the
+agent gets the first move wrong, violating the independent-failure-modes
+rule in `skills/eval-authoring/SKILL.md`.
+
+Proposed options (not yet chosen):
+
+- **Option A — expand `technical-requirements-prompt.md` / `base-prompt.md`.**
+  Add a short "CRC arc entry and continuation rules" paragraph that spells
+  out (1)–(4) above, without editing `RS274NGC.md`. This preserves the
+  tests and measures implementation skill against a specified contract.
+- **Option B — remove or weaken the arc-endpoint tests.** Keep only the
+  straight-move first-move and continuation tests; drop the 8 arc cases.
+  Accept a lower suite size in exchange for tests that are derivable from
+  the spec alone.
+- **Option C — keep as-is.** Accept that these probe inference beyond the
+  prose spec and treat the eval's practical ceiling as ≈98.9% rather
+  than 100%.
+
+None of these is applied yet; VERSION, content hashes, and test behavior
+are unchanged. See the PASS-RATE NOTE comment blocks in
+`Evals/CNCSim/tests/test_cutter_radius_compensation.py` (above
+`CRC_ARC_CASES` and above the straight-move `@pytest.mark.parametrize`)
+for the in-code version of the same analysis.
+
+### Clarify trace behavior when state-only transitions share a line with motion
+
+`test_trace_format.py::test_motion_plus_m2_same_line_final_entry_time`
+passed only 2 / 243 times across all models. Input: `G1 X1 F60 M2` on a
+single line. The test requires the final trace entry's `time` to equal
+the motion duration (1.0 s), with the M2 modal deltas folded into that
+entry.
+
+`technical-requirements-prompt.md` describes state-only blocks as
+producing a single `time == 0.0001` epsilon entry and motion blocks as
+being stepped into sub-motion entries, but does not specify what happens
+when a state-only transition (M2 program-end) shares a line with a
+motion block. Models reasonably emit either:
+
+- A folded final entry whose `time` equals the motion duration and which
+  carries the M2 modal deltas (the test's expected form), or
+- A trailing `time == 0.0001` entry after the final motion step,
+  carrying just the M2 deltas.
+
+Both are defensible under the current prompt. Proposed clarification: add
+a sentence to the trace rules that says when a block contains both
+motion and state-only content, the state-only deltas fold into the
+block's final stepping entry rather than producing a separate epsilon
+entry. Documentation-only; would be a patch bump when applied.
+
 ### Clarify python `output/` contract (shared language requirements)
 
 `Evals/_shared/language-requirements-py.md` currently tells the agent:

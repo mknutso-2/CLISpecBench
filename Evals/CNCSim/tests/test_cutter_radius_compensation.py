@@ -45,6 +45,26 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 # Solving the two equations gives x = 3.2 and |y| = 2.4, so the two possible
 # compensated endpoints are (3.2, 2.4) and (3.2, -2.4). G41 selects the upper
 # one and G42 selects the lower one for this left-to-right move.
+#
+# PASS-RATE NOTE (2026-04-18): across ~255 runs spanning every model, the
+# "first-move" cases (g41/g42-first-straight-move-*, g41-omitted-d-uses-
+# tool-in-spindle, g41-first-rapid-move-left) and the continuation cases
+# (colinear-follow-on, convex-corner, convex-90-degree, g40-then-g42-restarts,
+# g40-follow-on-move-starts-from-current-spindle-center,
+# tool-change-while-comp-on-keeps-original-radius) each passed ≤5 times. Two
+# related causes (see CHANGELOG "Proposed"):
+#   - Entry-move ambiguity: §B.6 describes the tangent-circle construction
+#     in prose and Figure 7, but G41/G42 side selection ("on the appropriate
+#     side") and G0-as-first-move (not called out in §B.6) both require
+#     inference. g41-first-rapid-move-left additionally requires applying
+#     the B.6 construction to G0, which §B.6 does not explicitly cover.
+#   - Cascade: the continuation and G40-transition cases are behaviorally
+#     straightforward given §B.6's "keeps the tool tangent to the programmed
+#     path on the appropriate side" rule, but every one of them depends on
+#     first computing the entry-move endpoint correctly. A model that flips
+#     the side-selection convention once fails every dependent test, making
+#     these tests score the single entry-move mistake N times — the cascade
+#     pattern warned against in skills/eval-authoring/SKILL.md.
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -279,6 +299,28 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
 #   or the mirrored CW values (0, -7) and (-7, 0)
 # The same expected endpoints apply whether that auxiliary arc is programmed in
 # center format (I/J) or radius format (R).
+#
+# PASS-RATE NOTE (2026-04-18): across ~255 runs spanning every model, each of
+# these 8 cases had 0 or 1 passes. A review of the spec vs. the test inputs
+# identified four interpretive leaps required to reach the expected answers
+# that are not stated in the prose spec (see CHANGELOG "Proposed"):
+#   1. §B.6's auxiliary-arc rule must silently override §3.5.3.2's
+#      "distance from current point to center differs from distance to end
+#      point" error check. Inputs below have current-point (7,0) at radius 7
+#      and programmed endpoint (0,±4) at radius 4 — a 3-unit mismatch that
+#      §3.5.3.2 normally rejects.
+#   2. For the radius-format cases the programmed arc is geometrically
+#      impossible under the normal R rule (chord √65 ≈ 8.06 > 2r = 8). The
+#      tests assume R becomes the auxiliary-arc radius, but §B.6 never
+#      states this and §3.5.3.1 says nothing about CRC.
+#   3. Under CRC, I/J offset from the programmed contour point, not from
+#      the compensated tool center. §3.5.3.2 only says "the current
+#      location"; under CRC the two diverge.
+#   4. G41/G42 side selection on a CCW arc (G42 CCW ⇒ outside) must be
+#      inferred from the tangent-direction convention; §B.6 only says "on
+#      the appropriate side."
+# These are defensible choices the reference implementation encodes, but a
+# model working only from the prose docs cannot uniquely recover them.
 CRC_ARC_CASES = [
     # In preliminary testing, no model passes any of the 8 arc CRC cases below.
     # Appendix B.6 defines compensated arc geometry: the tool-center arc radius
