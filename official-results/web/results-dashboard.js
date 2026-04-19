@@ -348,6 +348,19 @@ function attachEvents() {
     STATE.colorMode = colorModeSelect.value;
     render();
   });
+
+  let resizeTimer = null;
+  const requestRerender = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (STATE.rows.length) render();
+    }, 120);
+  };
+  window.addEventListener('resize', requestRerender);
+  if (typeof ResizeObserver !== 'undefined') {
+    const chartObserver = new ResizeObserver(requestRerender);
+    chartObserver.observe(chartSvg);
+  }
 }
 
 function renderPairList(canRenderPairById) {
@@ -592,9 +605,17 @@ function showNoData(message) {
   validationEl.textContent = message;
 }
 
+function getChartSize() {
+  const rect = chartSvg.getBoundingClientRect();
+  const width = rect.width > 0 ? Math.round(rect.width) : 980;
+  const height = rect.height > 0 ? Math.round(rect.height) : 560;
+  return { width: Math.max(480, width), height: Math.max(320, height) };
+}
+
 function clearChart() {
   chartSvg.innerHTML = '';
-  chartSvg.setAttribute('viewBox', '0 0 980 560');
+  const { width, height } = getChartSize();
+  chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 }
 
 function buildPoints(colorMap, rowsByPairOverride) {
@@ -956,8 +977,8 @@ function getColorModeLabel(key) {
 function renderPlot(points) {
   chartEmpty.classList.add('hidden');
 
-  const width = 980;
-  const height = 560;
+  const { width, height } = getChartSize();
+  chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
   const margin = { top: 42, right: 34, bottom: 72, left: 88 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
