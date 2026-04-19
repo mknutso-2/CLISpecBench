@@ -340,7 +340,7 @@ motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
 
-## v2.1.2 — unreleased
+## v2.1.2 — 2026-04-18
 
 ### Changed
 

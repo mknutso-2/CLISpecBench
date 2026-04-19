@@ -1,6 +1,6 @@
 # IGES Changelog
 
-## v1.0.14 — unreleased
+## v1.0.14 — 2026-04-18
 
 ### Added
 
@@ -175,7 +175,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.12 — unreleased
+## v1.0.12 — 2026-04-16
 
 ### Added
 
@@ -195,7 +195,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.11 — unreleased
+## v1.0.11 — 2026-04-16
 
 ### Added
 
@@ -217,7 +217,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.10 — unreleased
+## v1.0.10 — 2026-04-16
 
 ### Added
 
@@ -235,7 +235,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.9 — unreleased
+## v1.0.9 — 2026-04-16
 
 ### Added
 

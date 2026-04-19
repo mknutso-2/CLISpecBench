@@ -30,6 +30,7 @@ Meta: This file is a breathing document. If you read it and find that any of the
 - Bump `Evals/<Task>/VERSION` and update `Evals/<Task>/CHANGELOG.md` for any contract-affecting change: prompts, docs, tests, harness contract, or reference implementation changes that alter observable behavior.
 - Use a patch bump for clarifications and bug fixes, a minor bump for new behavior or expanded contract, and a major bump for breaking changes.
 - Pure refactors that do not change observable behavior do not need a version bump.
+- When bumping `VERSION`, date the new `CHANGELOG.md` header with today's date (`## vX.Y.Z — YYYY-MM-DD`) in the same commit. Do not use `— unreleased` as a deferred-date marker: eval runs stamp `eval_version` from the `VERSION` file immediately, so there is no pre-release state worth encoding. Describe pending-but-unlanded work in a PR description or a TODO, not in a dated `CHANGELOG.md` header.
 
 ## Validation
 

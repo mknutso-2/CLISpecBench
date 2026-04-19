@@ -1,6 +1,6 @@
 # WordCount Changelog
 
-## v1.0.3 — unreleased
+## v1.0.3 — 2026-04-18
 
 ### Changed
 
