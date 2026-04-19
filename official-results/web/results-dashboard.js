@@ -253,7 +253,7 @@ function initSelectionDefaults() {
   STATE.selectedEval = evals[0] || '';
   STATE.xAxis = 'cost';
   STATE.yAxis = 'percent';
-  STATE.colorMode = 'pair';
+  STATE.colorMode = 'agent';
   STATE.reportType = 'mean';
   STATE.errorBarMode = getDefaultErrorBarMode();
 }
