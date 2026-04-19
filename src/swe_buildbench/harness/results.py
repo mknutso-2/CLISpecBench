@@ -56,6 +56,8 @@ class BuildResult:
 class TestOutcome:
     """Result of a single test case."""
 
+    __test__ = False
+
     node_id: str
     outcome: str  # "passed" | "failed" | "skipped" | "error"
     duration_seconds: float
@@ -65,6 +67,8 @@ class TestOutcome:
 @dataclass
 class TestSummary:
     """Aggregate counts across all tests."""
+
+    __test__ = False
 
     passed: int = 0
     failed: int = 0
