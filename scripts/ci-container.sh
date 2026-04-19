@@ -5,11 +5,13 @@
 
 set -euo pipefail
 
+# Disable MSYS automatic Unix→Windows path conversion so docker volume specs
+# aren't mangled on Git Bash. No-op on Linux/macOS.
+export MSYS_NO_PATHCONV=1
+
 echo "==> uv sync"
 uv sync
 echo "==> build docker images"
-# MSYS_NO_PATHCONV keeps Git Bash from mangling Docker volume paths on Windows;
-# harmless on Linux/macOS.
-MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
+bash scripts/build-docker-images.sh
 echo "==> pytest (docker)"
 uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent" -v
