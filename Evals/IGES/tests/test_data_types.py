@@ -182,7 +182,7 @@ def test_control_character_in_start_section_is_rejected(
     )
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
 
 
 def test_control_character_in_hollerith_string_is_rejected(
@@ -235,7 +235,7 @@ def test_control_character_in_hollerith_string_is_rejected(
 
     assert completed.returncode != 0
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
     assert "error" in payload
 
 

@@ -80,8 +80,8 @@ def test_parametric_spline_curve_roundtrips_and_evaluates(
     _, payload = evaluate_entity(
         submission_command, iges_path, 1, 0.5, tmp_path, name="spline-curve-eval",
     )
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([0.125, 0.0, 0.0], abs=1e-9)
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([0.125, 0.0, 0.0], abs=1e-9)
 
 
 def test_parametric_spline_surface_roundtrips_and_evaluates(
@@ -128,8 +128,8 @@ def test_parametric_spline_surface_roundtrips_and_evaluates(
         s=0.5,
         name="spline-surface-eval",
     )
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([0.5, 0.5, 0.25], abs=1e-9)
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([0.5, 0.5, 0.25], abs=1e-9)
 
 
 def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
@@ -169,8 +169,10 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
     _, payload = evaluate_entity(
         submission_command, iges_path, 1, 0.5, tmp_path, name="bspline-curve-eval",
     )
-    assert payload["ok"] is True
-    x, y, z = payload["point"]
+    assert payload.get("ok") is True
+    point = payload.get("point")
+    assert point is not None, "eval success must carry `point`"
+    x, y, z = point
     assert z == pytest.approx(0.0, abs=1e-9)
     assert x == pytest.approx(y, abs=1e-9)
     assert x * x + y * y == pytest.approx(1.0, abs=1e-9)
@@ -251,8 +253,8 @@ def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
         s=0.5,
         name="bspline-surface-eval",
     )
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([0.5, 0.5, 0.0], abs=1e-9)
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([0.5, 0.5, 0.0], abs=1e-9)
 
 
 def test_connect_point_roundtrips_full_metadata_fields(

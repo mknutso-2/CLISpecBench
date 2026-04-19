@@ -72,8 +72,8 @@ def test_evaluate_at_t_zero_yields_start_point(
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
 
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([1.0, 2.0, 3.0])
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([1.0, 2.0, 3.0])
 
 
 # §4.13: "... C(1) = P2"
@@ -84,8 +84,8 @@ def test_evaluate_at_t_one_yields_terminate_point(
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
 
     _, payload = evaluate_entity(submission_command, iges_path, 1, 1.0, tmp_path)
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([4.0, 5.0, 6.0])
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([4.0, 5.0, 6.0])
 
 
 # §4.13: "... C(0.5) = midpoint"
@@ -96,8 +96,8 @@ def test_evaluate_at_midpoint(
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
 
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([5.0, 0.0, 0.0], abs=1e-12)
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([5.0, 0.0, 0.0], abs=1e-12)
 
 # Query subcommand — single-entity extract.
 def test_query_returns_single_line_entity(

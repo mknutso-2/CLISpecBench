@@ -119,7 +119,7 @@ def test_parse_accepts_valid_file_with_no_validation_diagnostics(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 0
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert len(payload["entities"]) == 1
+    assert len(payload.get("entities")) == 1
 
 
 def test_parse_rejects_invalid_xform_matrix_pointer(
@@ -135,8 +135,8 @@ def test_parse_rejects_invalid_xform_matrix_pointer(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "xform_matrix" in payload["error"]
+    assert payload.get("ok") is False
+    assert "xform_matrix" in (payload.get("error") or "")
 
 
 def test_parse_rejects_invalid_view_pointer(
@@ -152,8 +152,8 @@ def test_parse_rejects_invalid_view_pointer(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "view" in payload["error"]
+    assert payload.get("ok") is False
+    assert "view" in (payload.get("error") or "")
 
 
 def test_parse_rejects_invalid_label_display_pointer(
@@ -171,8 +171,8 @@ def test_parse_rejects_invalid_label_display_pointer(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "label_display" in payload["error"]
+    assert payload.get("ok") is False
+    assert "label_display" in (payload.get("error") or "")
 
 
 def test_parse_rejects_negative_entity_type(
@@ -189,8 +189,8 @@ def test_parse_rejects_negative_entity_type(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "negative entity type" in payload["error"]
+    assert payload.get("ok") is False
+    assert "negative entity type" in (payload.get("error") or "")
 
 
 def test_parse_rejects_zero_param_line_count_for_non_null_entity(
@@ -206,8 +206,8 @@ def test_parse_rejects_zero_param_line_count_for_non_null_entity(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "param_line_count" in payload["error"]
+    assert payload.get("ok") is False
+    assert "param_line_count" in (payload.get("error") or "")
 
 
 def test_parse_rejects_non_positive_model_space_scale(
@@ -220,8 +220,8 @@ def test_parse_rejects_non_positive_model_space_scale(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "model_space_scale" in payload["error"]
+    assert payload.get("ok") is False
+    assert "model_space_scale" in (payload.get("error") or "")
 
 
 def test_parse_rejects_non_positive_integer_bits(
@@ -237,8 +237,8 @@ def test_parse_rejects_non_positive_integer_bits(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert "integer_bits" in payload["error"]
+    assert payload.get("ok") is False
+    assert "integer_bits" in (payload.get("error") or "")
 
 
 @pytest.mark.parametrize(
@@ -272,8 +272,8 @@ def test_parse_rejects_non_positive_required_global_field(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
-    assert field_name in payload["error"]
+    assert payload.get("ok") is False
+    assert field_name in (payload.get("error") or "")
 
 
 def test_write_rejects_non_positive_global_field(
@@ -459,7 +459,7 @@ def test_parse_rejects_zero_length_line(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
 
 
 def test_parse_accepts_valid_empty_file_with_no_entities(
@@ -472,6 +472,6 @@ def test_parse_accepts_valid_empty_file_with_no_entities(
     completed = _run_parse(submission_command, iges_path, out_path)
     assert completed.returncode == 0
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload["entities"] == []
+    assert payload.get("entities") == []
 
 

@@ -1567,7 +1567,7 @@ type AttributeEntry = {
   at: number,  // Attribute type number
   avdt: number,  // Attribute value data type (0-6)
   avc: number,  // Attribute value count
-  values: (number | string | DEIndex)[],  // AVC values (Forms 1, 2 only)
+  values: FieldValue[],  // AVC values (Forms 1, 2 only)
   display_ptrs: DEIndex[],  // AVC display template pointers (Form 2 only)
 };
 
@@ -1614,6 +1614,40 @@ type PropertyData = {
   values: FieldValue[]
 };
 ```
+
+#### `FieldValue` — tagged-union value carrier
+
+`FieldValue` is a discriminated union used wherever a parameter's data
+type varies by context (Property values, AttributeTableDefinition
+values, and any future entity that stores heterogeneous values).
+
+```ts
+type FieldValue =
+  | { kind: "int",       value: number }    // Integer (§2.2.2.1)
+  | { kind: "real",      value: number }    // Real (§2.2.2.2)
+  | { kind: "string",    value: string }    // Language String (§2.2.2.4)
+  | { kind: "bool",      value: boolean }   // Logical (§2.2.2.6)
+  | { kind: "pointer",   value: DEIndex }   // Pointer (§2.2.2.7)
+  | { kind: "defaulted", value: null };     // defaulted (§2.2.2.8)
+```
+
+Wire-format notes:
+
+- `kind: "bool"` is serialized using the Logical wire form (§2.2.2.6):
+  the literal integers `1` (true) or `0` (false). It is an error to
+  emit `1.0` / `0.0` or any other encoding for a bool-kind FieldValue.
+- `kind: "defaulted"` writes an empty field (nothing between
+  delimiters) per §2.2.2.8.
+- `kind: "pointer"` writes the DE index as an Integer per §2.2.2.7 and
+  is subject to DE cross-reference validation.
+
+Per-context kind restrictions:
+
+- `PropertyData.values` (Type 406) accepts the full union except
+  `pointer`. A property value carrying `kind: "pointer"` is an error.
+- `AttributeEntry.values` (Type 322 Forms 1/2) accepts only `int`,
+  `real`, `string`, and `pointer` — one kind per entry selected by the
+  entry's `avdt`. `bool` and `defaulted` do not appear here.
 
 ### Type 408 — SubfigureInstanceEntity
 

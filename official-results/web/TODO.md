@@ -6,8 +6,8 @@ Testing protocol: after each change, reload `http://127.0.0.1:8000/results-dashb
 
 ## Plan
 
-- [ ] 1. **Header cleanup** — drop "1) / 2) / …" wizard numbering; rename page title to "SWE-BuildBench Results Explorer".
-- [ ] 2. **Demote Data source** — move file input into a compact "Load local CSV…" control in the header; remove its own card.
+- [x] 1. **Header cleanup** — drop "1) / 2) / …" wizard numbering; rename page title to "SWE-BuildBench Results Explorer".
+- [x] 2. **Demote Data source** — move file input into a compact "Load local CSV…" control in the header; remove its own card.
 - [ ] 3. **Side-by-side layout** — controls on the left, chart sticky on the right; stack on narrow screens.
 - [ ] 4. **Make chart fill its container** — let SVG grow with viewport height; remove fixed 620px floor when room is available.
 - [ ] 5. **Rename "Percent" axis** — display "Pass rate (%)" where we currently show "Percent".

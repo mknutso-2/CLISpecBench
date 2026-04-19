@@ -2,8 +2,45 @@
 
 ## v1.0.14 — unreleased
 
+### Added
+
+- **`FieldValue` type definition in `technical-requirements-prompt.md`**:
+  the `FieldValue` tagged union (previously referenced by
+  `PropertyData.values` but never defined) is now specified with all six
+  kinds (`int`, `real`, `string`, `bool`, `pointer`, `defaulted`),
+  plus a per-context kinds table noting which entities accept which
+  kinds (Property excludes `pointer`; AttributeTableDefinition excludes
+  `bool` and `defaulted`). Wire-format notes call out that
+  `kind: "bool"` serializes using the Logical wire form (§2.2.2.6) as
+  the literal integers `1`/`0`, not as `1.0`/`0.0`. Pass-rate analysis
+  flagged `test_property_bool_values_serialize_as_logical` as a 0-pass
+  test driven by this gap; `test_property_roundtrip` and
+  `test_attribute_table_definition_form_one_roundtrip` shared the same
+  missing-union-definition cause.
+- **`AttributeEntry.values` type tightening**: retyped from
+  `(number | string | DEIndex)[]` to `FieldValue[]` to align with the
+  reference implementation's canonical tagged-union output (`readAttrValue`
+  always emits tagged values discriminated by AVDT). The ref impl's
+  `writeAttrValue` still accepts raw scalars as a compatibility shim,
+  but the canonical shape written by `parse` and read by `write` is
+  the tagged form — making that the declared contract.
+- **`tests/test_output_schema.py`**: new schema-gate test following
+  `skills/eval-authoring/SKILL.md`'s "single schema gate + tolerant
+  behavioral assertions" pattern. Asserts the required top-level
+  envelope keys on `iges parse` (success and error), `iges eval`, and
+  `iges query`. Downstream behavioral tests now use `.get()` for the
+  most cascade-prone fields so a schema slip surfaces as one schema
+  failure instead of hundreds of duplicated `KeyError`s.
+
 ### Changed
 
+- **Tolerant-access migration**: `payload["ok"]` / `payload["error"]` /
+  `payload["point"]` assertions across the test suite switched to
+  `payload.get(...)`. Impact: a submission that emits the wrong top-
+  level shape now cleanly fails `test_output_schema.py` once rather
+  than producing a `KeyError` cascade across behavioral tests. See
+  `Eval-Design.md` §7.4 for the worked example this pattern protects
+  against.
 - **Container `python` symlink**: added `python-is-python3` to
   `docker/base.Dockerfile` so the bare `python` command resolves to
   `/usr/bin/python3` inside both agent and test containers. The shared

@@ -60,8 +60,8 @@ def test_circular_arc_eval_full_circle_lands_in_zt_plane(
     _, payload = evaluate_entity(
         submission_command, iges_path, 1, 0.0, tmp_path, name="circular-arc-eval",
     )
-    assert payload["ok"] is True
-    assert payload["point"] == pytest.approx([1.0, 0.0, 7.5], abs=1e-9)
+    assert payload.get("ok") is True
+    assert payload.get("point") == pytest.approx([1.0, 0.0, 7.5], abs=1e-9)
 
 
 def test_direction_roundtrips_non_unit_ratios_without_normalizing(

@@ -94,7 +94,7 @@ def test_file_without_start_section_is_rejected(
     )
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
     assert "error" in payload
 
 
@@ -109,7 +109,7 @@ def test_empty_file_is_rejected(
     )
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
 
 
 # MAL-12: truncated file — no T section
@@ -130,7 +130,7 @@ def test_truncated_file_is_rejected(
     # TR §1.2: missing Terminate section is invalid input → exit 1.
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
     assert "error" in payload
 
 
@@ -149,7 +149,7 @@ def test_minimal_valid_file_parses(
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
     # We expect the canonical IGES-JSON envelope (not the error envelope).
     assert "entities" in payload
-    assert payload["entities"] == []
+    assert payload.get("entities") == []
 
 
 # MAL: query with out-of-range DE index
@@ -171,7 +171,7 @@ def test_query_with_nonexistent_de_is_rejected(
     # TR §1.2: out-of-range DE is invalid input → exit 1.
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
 
 
 # TR §1.2: "query --de <n> on an out-of-range or even DE index is invalid
@@ -207,7 +207,7 @@ def test_query_with_even_de_is_rejected(
     )
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
 
 
 # MAL: garbage file (not IGES at all)
@@ -221,4 +221,4 @@ def test_random_bytes_are_rejected(
     )
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload["ok"] is False
+    assert payload.get("ok") is False
