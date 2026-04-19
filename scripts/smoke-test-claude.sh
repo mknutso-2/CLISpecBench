@@ -11,7 +11,7 @@
 #                                  gets warning messages mixed into output)
 #
 # Run from Git Bash:
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
+#   bash scripts/smoke-test-claude.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

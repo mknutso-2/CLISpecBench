@@ -14,7 +14,7 @@
 #   - Connects to chatgpt.com (not api.openai.com).
 #
 # Run from Git Bash:
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
+#   bash scripts/smoke-test-codex.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

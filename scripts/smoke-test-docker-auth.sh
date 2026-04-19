@@ -9,16 +9,16 @@
 #   - uv installed (used to read the agent registry)
 #
 # Run from Git Bash:
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-docker-auth.sh
+#   bash scripts/smoke-test-docker-auth.sh
 #
 # Or from PowerShell / CMD:
 #   wsl -d Ubuntu -- bash /mnt/c/Git/SWE-BuildBench/scripts/smoke-test-docker-auth.sh
 #
 # Run a single agent:
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-copilot.sh
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
+#   bash scripts/smoke-test-claude.sh
+#   bash scripts/smoke-test-codex.sh
+#   bash scripts/smoke-test-copilot.sh
+#   bash scripts/smoke-test-gemini.sh
 #
 # Note: Running all three sequentially takes 3-5 minutes (each agent pulls
 # npm packages and makes an API call). Run individual scripts to debug.

@@ -17,7 +17,7 @@
 #   - Must seed projects.json with {"projects":{}} or CLI crashes.
 #
 # Run from Git Bash:
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
+#   bash scripts/smoke-test-gemini.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

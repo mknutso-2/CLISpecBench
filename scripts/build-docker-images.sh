@@ -6,16 +6,16 @@
 # so the base must be built first.
 #
 # Run from Git Bash:
-#   MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
+#   bash scripts/build-docker-images.sh
 #
 # Or from WSL:
 #   bash /mnt/c/Git/SWE-BuildBench/scripts/build-docker-images.sh
 #
 # Build only the base image:
-#   MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh base
+#   bash scripts/build-docker-images.sh base
 #
 # Build only one agent (base must already exist):
-#   MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh claude-code
+#   bash scripts/build-docker-images.sh claude-code
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

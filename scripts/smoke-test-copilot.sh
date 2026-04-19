@@ -10,7 +10,7 @@
 #   The harness injects this from the host's gh auth token.
 #
 # Run from Git Bash:
-#   MSYS_NO_PATHCONV=1 bash scripts/smoke-test-copilot.sh
+#   bash scripts/smoke-test-copilot.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
