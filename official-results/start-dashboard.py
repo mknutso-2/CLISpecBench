@@ -20,7 +20,7 @@ from pathlib import Path
 
 DEFAULT_PORT = 8000
 DEFAULT_DASHBOARD = "results-dashboard.html"
-DASHBOARD_MARKER = "CNCSim XY Results Explorer"
+DASHBOARD_MARKER = "SWE-BuildBench Results Explorer"
 EXPECTED_DATA_PATH = "results-2_1_1_runs.csv"
 EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id"}
 
