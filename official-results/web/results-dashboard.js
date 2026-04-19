@@ -655,8 +655,6 @@ function getChartSize() {
 
 function clearChart() {
   chartSvg.innerHTML = '';
-  const { width, height } = getChartSize();
-  chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
 }
 
 function buildPoints(colorMap, rowsByPairOverride) {
@@ -1502,8 +1500,8 @@ function placePointLabels(markers, { width, height, margin }) {
     leader.setAttribute('x2', String(endpoint.x));
     leader.setAttribute('y2', String(endpoint.y));
     leader.setAttribute('visibility', 'visible');
-        placedBoxes.push(placed.bbox);
-      });
+    placedBoxes.push(placed.bbox);
+  });
 }
 
 function getAnchorOffsetX(anchor, width) {
