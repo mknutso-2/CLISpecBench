@@ -90,6 +90,17 @@ def test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_inval
 
 
 # RS274 section 3.6.1 explicitly says M2 and M30 turn cutter compensation off.
+#
+# PASS-RATE NOTE (2026-04-18): M2 and M30 parametrizations each passed
+# 26 / 255 times across all models (see CHANGELOG "Proposed"). The
+# input starts with `G41 D0`, which inherits the D0 interpretation
+# ambiguity documented in
+# test_cutter_radius_compensation.py near the D0 cases: a model that
+# returns null for "active D number" when D0 is programmed fails the
+# D0-in-CRC tests AND this cascade test. This test is named for M2/M30
+# resetting CRC (spec-clear from §3.6.1), but failures here are
+# dominated by the upstream D0 interpretation — an independent-failure-
+# mode violation (skills/eval-authoring/SKILL.md).
 @pytest.mark.parametrize("program_end_code", PROGRAM_END_CODES)
 def test_application_turns_cutter_compensation_off_on_m2_and_m30(
     submission_command: tuple[str, ...],

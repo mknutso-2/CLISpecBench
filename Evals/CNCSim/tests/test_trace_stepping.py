@@ -592,9 +592,18 @@ def test_full_circle_arc_no_axis_words(
 ) -> None:
     """Center-format arc with no in-plane axis words → full circle.
 
-    RS274 §3.5.17.3: when no in-plane axis words are given, the endpoint
-    equals the start point, producing a full circle.  Same geometry as
-    test_full_circle_arc_duration but without explicit X/Y words.
+    Input: ``G2 I-1 J0`` with no X or Y word. Expected behavior: endpoint
+    equals start point, producing a full circle.
+
+    PASS-RATE NOTE (2026-04-18): 25 passes / 243 attempts across all
+    models (see CHANGELOG "Proposed"). This test contradicts the prose
+    spec: RS274 §3.5.3.2 explicitly lists "X and Y are both omitted" as
+    a hard error for G17 center-format arcs. A spec-conformant agent
+    rejects this input; the test assumes an unstated "when both in-plane
+    axis words are omitted, the endpoint equals the current point"
+    rule. (The previous docstring cited "§3.5.17.3", but §3.5.17 is
+    "Set Distance Mode — G90 and G91" and has no subsections relevant
+    to arcs.)
     """
     _, _, trace = run_cncsim_trace(
         submission_command,
@@ -1171,6 +1180,15 @@ def test_g87_back_boring_sub_motions(
     """G87 back boring: rapid to Z depth, feed up to R, rapid retract to clear.
 
     Sub-motion order is reversed vs. normal boring cycles.
+
+    PASS-RATE NOTE (2026-04-18): 16 passes / 243 attempts across all
+    models (see CHANGELOG "Proposed"). The input `G87 X1 Z-1 R0 F60`
+    omits I/J/K. RS274 §3.5.16.8 lists `I… J… K…` in the G87 prototype
+    but specifies no defaults and never explicitly says omission is an
+    error. CHANGELOG v1.0.1 already acknowledged this ambiguity by
+    removing the "error when I/J/K omitted" tests; this success test
+    inherits the same unresolved question and requires the agent to
+    assume I=J=K=0 (or equivalent) without prompt guidance.
     """
     setup = "G90\nG98\nG0 X0 Y0 Z2\n"
     _, _, trace = run_cncsim_trace(
@@ -1356,6 +1374,16 @@ def test_g88_boring_rapid_retract(
     """G88 (boring, manual retract) sub-motions: like G86 with spindle on.
 
     SM1: rapid XY, SM2: rapid to R, SM3: feed to Z, SM4: rapid retract.
+
+    PASS-RATE NOTE (2026-04-18): 21 passes / 243 attempts across all
+    models (see CHANGELOG "Proposed"). RS274 §3.5.16.9 step 4 says
+    "Stop the program so the operator can retract the spindle
+    manually" — incompatible with a non-interactive simulator. The
+    test adopts a simulator-specific convention (rapid retract to
+    initial Z, treating G88 "like G86 with spindle on"), but neither
+    `base-prompt.md` nor `technical-requirements-prompt.md` states this
+    convention. A spec-literal agent either errors out or leaves the
+    tool at Z=-1; this test rewards a specific unwritten interpretation.
     """
     tool_table = "POCKET FMS TLO DIAMETER\n\n1 1 0.0 0.0\n"
     setup = "T1\nM6\nM3\nG90\nG98\nG0 X0 Y0 Z1\n"

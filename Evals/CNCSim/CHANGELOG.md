@@ -76,6 +76,102 @@ are unchanged. See the PASS-RATE NOTE comment blocks in
 `CRC_ARC_CASES` and above the straight-move `@pytest.mark.parametrize`)
 for the in-code version of the same analysis.
 
+### Resolve full-circle arc inconsistency with §3.5.3.2
+
+`test_trace_stepping.py::test_full_circle_arc_no_axis_words` passed 25 /
+243 times across all models. The test runs `G2 I-1 J0` with no X or Y
+word and expects a full circle (endpoint = start point). RS274
+§3.5.3.2 explicitly lists "X and Y are both omitted" as a hard error
+for G17 center-format arcs (`RS274NGC.md` lines 1659–1660). The test's
+prior docstring cited "§3.5.17.3," but §3.5.17 is "Set Distance Mode —
+G90 and G91" and has no bearing on arcs. A spec-conformant agent
+rejects this input as an error and fails this test.
+
+Proposed options (not yet chosen):
+
+- **Option A — remove the test.** Drop `test_full_circle_arc_no_axis_words`.
+  Agents cannot be asked to rederive full-circle-when-axes-omitted from
+  the spec as given.
+- **Option B — document the simulator convention.** Add a sentence to
+  `base-prompt.md` or `technical-requirements-prompt.md` that under this
+  simulator, when both in-plane axis words are omitted on a center-format
+  arc, the endpoint equals the current point (full circle). This would
+  justify the test without editing `RS274NGC.md`.
+- **Option C — change the test input.** Replace `G2 I-1 J0` with
+  `G2 X1 Y0 I-1 J0` so it exercises full-circle timing/stepping with
+  explicit axes.
+
+Documentation-only under Options B and C; a test removal under Option A.
+Not applied yet.
+
+### Clarify G87 back-boring behavior when I/J/K are omitted
+
+`test_trace_stepping.py::test_g87_back_boring_sub_motions` passed 16 /
+243 times. The input `G87 X1 Z-1 R0 F60` omits I, J, and K. RS274
+§3.5.16.8 lists `I… J… K…` in the G87 prototype but specifies no
+defaults and does not explicitly say omission is an error.
+
+CHANGELOG v1.0.1 already acknowledged this ambiguity by removing the
+"error when I/J/K omitted" tests on the same grounds, but no
+clarification was added telling agents what G87 does in that case. This
+success test requires the agent to assume I = J = K = 0 (or some other
+simulator-chosen default) without any prompt guidance.
+
+Proposed clarification: add a sentence to `base-prompt.md` or
+`technical-requirements-prompt.md` specifying the default for omitted
+I/J/K on G87 (e.g., "I, J, and K default to 0 when omitted"). A clean
+patch bump; the reference implementation already encodes whatever
+default the test assumes.
+
+### Clarify G88 retract behavior in a non-interactive simulator
+
+`test_trace_stepping.py::test_g88_boring_rapid_retract` passed 21 / 243
+times. RS274 §3.5.16.9 step 4 says G88 must "Stop the program so the
+operator can retract the spindle manually" — incompatible with this
+simulator, which runs to completion without operator interaction. The
+test adopts a specific simulator convention (G88 behaves like G86 with
+the spindle left on: rapid retract to initial Z at the end), but no
+prompt file states this convention.
+
+Proposed clarification: add a sentence to
+`technical-requirements-prompt.md` saying that since this simulator is
+non-interactive, G88's "manual retract" step is performed as a rapid
+retract to initial Z (G98) or R (G99) — matching whatever convention
+the reference implementation encodes. Documentation-only.
+
+### Clarify `cutter_radius_compensation_number` semantics for D0
+
+Four tests share this issue:
+
+- `test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-d0-keeps-spindle-center-on-programmed-path]` (33 / 255)
+- `test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-d0-keeps-spindle-center-on-programmed-path]` (33 / 255)
+- `test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30[M2]` (26 / 255)
+- `test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30[M30]` (26 / 255)
+
+The D0 cases expect `cutter_radius_compensation_number == 0` (explicit
+zero) when `G41 D0` or `G42 D0` is active.
+`technical-requirements-prompt.md` says the field is "the active D
+number, or null if no explicit cutter radius compensation number is
+active." D0 fits both readings — "D=0 is explicit" and "D0 deactivates
+the CRC number" — and the prompt does not disambiguate. The two M2/M30
+tests use `G41 D0` as setup, so a model that picks the null reading
+fails both D0-in-CRC tests AND the program-end-reset cascade tests —
+the program-end-reset tests then score the upstream D0 interpretation
+mistake rather than M2/M30 behavior, violating the independent-failure-
+mode rule in `skills/eval-authoring/SKILL.md`.
+
+Secondary ambiguity: §B.6's first-move tangent-circle construction
+degenerates at radius 0 (the circle collapses to a point). The spec
+does not say whether D0 skips the construction and places the tool on
+the programmed contour, or applies the degenerate construction.
+
+Proposed clarification: amend the
+`technical-requirements-prompt.md` line defining
+`cutter_radius_compensation_number` to say explicitly that D0 is
+treated as an explicit zero and serializes as 0 (not null), and that
+the null value is reserved for "no active CRC" (i.e., G40 mode or
+never turned on). Documentation-only; a patch bump.
+
 ### Clarify trace behavior when state-only transitions share a line with motion
 
 `test_trace_format.py::test_motion_plus_m2_same_line_final_entry_time`
