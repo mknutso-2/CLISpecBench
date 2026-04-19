@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import json
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from iges_support import (
     make_entity,

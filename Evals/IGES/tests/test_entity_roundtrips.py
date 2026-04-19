@@ -31,7 +31,10 @@ from typing import Any
 import pytest
 
 from iges_support import (
-    make_entity, semantic_roundtrip_json, wrap_entities, write_iges_from_json,
+    make_entity,
+    semantic_roundtrip_json,
+    wrap_entities,
+    write_iges_from_json,
 )
 
 

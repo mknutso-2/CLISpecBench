@@ -20,8 +20,6 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-import pytest
-
 from iges_support import (
     make_entity,
     parse_iges_to_json,

@@ -170,7 +170,11 @@ def test_prohibited_parameter_delimiter_is_rejected(
     # Hand-craft a Global payload using '9' as the parameter delimiter.
     # build_global_payload() would encode fields using the custom delimiter,
     # but the illegal-choice probe only needs field 1 to advertise it.
-    payload = "1H9,1H;,3Hfoo,3Hbar,3HSDK,3H1.0,32,38,6,308,15,,1.0,1,2HIN,1,0.01,15H20260416.120000,1.0E-6,1.0,3Husr,4Hsite,11,0,,;"
+    payload = (
+        "1H9,1H;,3Hfoo,3Hbar,3HSDK,3H1.0,32,38,6,308,15,,"
+        "1.0,1,2HIN,1,0.01,15H20260416.120000,1.0E-6,1.0,"
+        "3Husr,4Hsite,11,0,,;"
+    )
     iges = tmp_path / "bad-delim.iges"
     iges.write_bytes(make_empty_iges(payload).encode("latin-1"))
     out = tmp_path / "bad-delim.json"

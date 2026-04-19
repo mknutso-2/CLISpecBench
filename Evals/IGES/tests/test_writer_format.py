@@ -67,7 +67,7 @@ def test_real_values_in_parameter_records_are_spec_legal(
     tokens = _iter_pd_value_tokens(p_body)
     assert len(tokens) == 6, tokens
     expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
-    for tok, want in zip(tokens, expected):
+    for tok, want in zip(tokens, expected, strict=True):
         assert _REAL_TOKEN_RE.match(tok), (
             f"{tok!r} is not a spec-legal real literal (§2.2.2.2)"
         )

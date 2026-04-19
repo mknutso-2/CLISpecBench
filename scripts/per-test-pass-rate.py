@@ -119,7 +119,7 @@ def main() -> None:
         file=sys.stderr,
     )
     print(f"Tests with zero successes: {zero_pass}", file=sys.stderr)
-    print(f"Exit-reason distribution across all runs scanned:", file=sys.stderr)
+    print("Exit-reason distribution across all runs scanned:", file=sys.stderr)
     for reason, count in sorted(exit_reason_counts.items(), key=lambda x: -x[1]):
         print(f"  {reason}: {count}", file=sys.stderr)
 
