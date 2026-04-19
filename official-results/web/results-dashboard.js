@@ -1,7 +1,7 @@
 const DATA_PATH = 'results-2_1_1_runs.csv';
 
 const AXIS_OPTIONS = [
-  { id: 'percent', label: 'Percent' },
+  { id: 'percent', label: 'Pass rate' },
   { id: 'tokens_input', label: 'Tokens Input' },
   { id: 'tokens_output', label: 'Tokens Output' },
   { id: 'tokens_total', label: 'Tokens Total' },
@@ -33,7 +33,7 @@ const ERROR_BAR_OPTIONS = [
 
 const METRICS = {
   percent: {
-    label: 'Percent',
+    label: 'Pass rate',
     parse: (row) => row.score_pct,
     formatMean: (value) => `${value.toFixed(1)}%`,
     formatSummary: (s) => `${s.mean.toFixed(1)}% (min ${s.min.toFixed(1)}%, max ${s.max.toFixed(1)}%)`,
