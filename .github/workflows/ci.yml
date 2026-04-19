@@ -12,17 +12,14 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.0.0
-      - run: uv sync
-      - run: uv run ruff check
-      - run: uv run pyright
+      - run: bash scripts/ci-lint.sh
 
   unit-tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.0.0
-      - run: uv sync
-      - run: uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent" -v
+      - run: bash scripts/ci-unit.sh
 
   container-tests:
     # Docker-backed smoke tests: builds the base image and each agent image,
@@ -37,12 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.0.0
-      - run: uv sync
-
-      - name: Build all Docker images (base + agents)
-        run: bash scripts/build-docker-images.sh
-
-      - run: uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent" -v
+      - run: bash scripts/ci-container.sh
 
   eval-tests:
     runs-on: ubuntu-latest
@@ -57,21 +49,4 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
 
-      - run: uv sync
-
-      - name: Reference tests - WordCount
-        run: uv run pytest Evals/WordCount/tests -v --language=cpp
-
-      - name: Reference tests - CNCSim (cpp)
-        # The cpp reference has known v2.0 feature gaps (motion trace and
-        # full-circle center-format arcs without in-plane axis words).
-        # Those tests are deselected here and exercised against the py
-        # reference in the step below.
-        run: >
-          uv run pytest Evals/CNCSim/tests -v
-          --language=cpp
-          -m "not trace"
-          -k "not full-circle-no-axis-words"
-
-      - name: Reference tests - CNCSim (py)
-        run: uv run pytest Evals/CNCSim/tests -v --language=py
+      - run: bash scripts/ci-eval.sh
