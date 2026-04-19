@@ -104,6 +104,20 @@ class AgentAdapter(ABC):
         return []
 
     @property
+    def canonical_transcript_container_dir(self) -> str | None:
+        """Container directory holding the agent CLI's own session transcript.
+
+        If set, the harness extracts this directory after the run, locates the
+        session JSONL inside, and saves it as ``transcript.canonical.jsonl``
+        alongside the result, plus a copy under ``~/<task-id>-eval/``.
+
+        Best-effort: failures are logged and do not fail the run.  Adapters
+        whose CLIs do not maintain an on-disk session file leave this as
+        ``None``.
+        """
+        return None
+
+    @property
     def allowed_hosts(self) -> list[str]:
         """Network hosts the container is allowed to reach.
 

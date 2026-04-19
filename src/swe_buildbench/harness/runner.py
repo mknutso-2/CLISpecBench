@@ -265,6 +265,18 @@ def run_evaluation(
             except Exception:
                 log.debug("Telemetry path %s not found in container", tpath)
 
+        # Also pull the agent CLI's on-disk canonical session transcript, if
+        # the adapter exposes one.  Best-effort; never fails the run.
+        canonical_src_dir = adapter.canonical_transcript_container_dir
+        if canonical_src_dir is not None:
+            try:
+                sandbox.copy_out(PurePosixPath(canonical_src_dir), extract_dir)
+            except Exception:
+                log.debug(
+                    "Canonical transcript path %s not found in container",
+                    canonical_src_dir,
+                )
+
         token_usage: TokenUsage | None = None
         try:
             token_usage = adapter.parse_token_usage(extract_dir, container_logs)
@@ -390,6 +402,60 @@ def run_evaluation(
                 dest = out_path.parent / tfile.name
                 shutil.copy2(tfile, dest)
                 log.debug("Saved telemetry file %s", dest)
+
+        # Save the agent CLI's on-disk canonical session transcript (if we
+        # extracted one).  Two destinations:
+        #   1. <run-dir>/transcript.canonical.jsonl — alongside the
+        #      stream-json transcript.jsonl, for reviewers and third-party
+        #      viewers that expect canonical shape.
+        #   2. ~/.claude/projects/<run-id>/<original-session-filename>.jsonl —
+        #      sits under the same root claude-code uses for its own sessions,
+        #      so any tool that scans ~/.claude/projects/ (e.g.
+        #      claude-code-transcripts) discovers our runs automatically.
+        #      The agent CLI's own session filename is preserved
+        #      (e.g. <session-uuid>.jsonl).
+        if canonical_src_dir is not None:
+            canonical_root = extract_dir / PurePosixPath(canonical_src_dir).name
+            session_files = sorted(canonical_root.rglob("*.jsonl"))
+            if session_files:
+                # Pick the largest file in case the dir contains multiple
+                # session shards (only one is expected per run).
+                src = max(session_files, key=lambda p: p.stat().st_size)
+                run_dest = out_path.parent / "transcript.canonical.jsonl"
+                try:
+                    shutil.copy2(src, run_dest)
+                    log.debug("Saved canonical transcript %s", run_dest)
+                except Exception:
+                    log.warning(
+                        "Failed to write canonical transcript to run dir",
+                        exc_info=True,
+                    )
+                # Include the eval directory in the folder name.  ``run_id``
+                # alone collides across re-runs because it omits the
+                # auto-incremented eval number — two ``--runs 1`` invocations
+                # of the same task/agent/model on the same day produce
+                # identical run_ids but distinct ``eval<N>/`` paths.
+                eval_dir_name = out_path.parent.parent.name  # e.g. "eval2"
+                home_dest_dir = (
+                    Path.home() / ".claude" / "projects" / f"{run_id}_{eval_dir_name}"
+                )
+                home_dest = home_dest_dir / src.name
+                try:
+                    home_dest_dir.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, home_dest)
+                    log.debug("Saved canonical transcript copy %s", home_dest)
+                except Exception:
+                    log.warning(
+                        "Failed to write canonical transcript to ~/.claude/projects/%s_%s/",
+                        run_id,
+                        eval_dir_name,
+                        exc_info=True,
+                    )
+            else:
+                log.debug(
+                    "No canonical session JSONL found under extracted %s",
+                    canonical_root,
+                )
 
         # Save agent source code and compute stats
         source_stats = compute_source_stats(submission_dir, task.language)

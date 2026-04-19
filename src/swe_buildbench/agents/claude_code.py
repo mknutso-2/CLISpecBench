@@ -125,6 +125,16 @@ class ClaudeCodeAdapter(AgentAdapter):
         return [OTEL_COLLECTOR_DIR]
 
     @property
+    def canonical_transcript_container_dir(self) -> str | None:
+        # Claude Code persists each session as a JSONL under
+        # ~/.claude/projects/<munged-cwd>/<session-id>.jsonl even in
+        # --print headless mode.  Capturing it gives us the on-disk
+        # canonical-format transcript (with the initial prompt as a
+        # replayable user message and isCompactSummary flags) in addition
+        # to the stream-json we already collect from stdout.
+        return "/home/agent/.claude/projects"
+
+    @property
     def allowed_hosts(self) -> list[str]:
         return ["api.anthropic.com"]
 
