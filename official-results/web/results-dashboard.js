@@ -153,6 +153,7 @@ const STATE = {
   colorMode: 'pair',
   reportType: 'mean',
   errorBarMode: 'std',
+  hiddenColorKeys: new Set(),
 };
 
 const pairListEl = document.getElementById('pair-list');
@@ -347,6 +348,7 @@ function attachEvents() {
 
   colorModeSelect.addEventListener('change', () => {
     STATE.colorMode = colorModeSelect.value;
+    STATE.hiddenColorKeys.clear();
     render();
   });
 
@@ -551,10 +553,21 @@ function render() {
     return;
   }
 
+  const visiblePoints = points.filter(
+    (p) => !STATE.hiddenColorKeys.has(p.colorModeKey),
+  );
+
   legendEl.innerHTML = '';
   clearChart();
   renderLegend(points, colorMap);
-  renderPlot(points);
+  if (!visiblePoints.length) {
+    chartEmpty.textContent =
+      'All series in this view are hidden. Click a legend entry to re-enable one.';
+    chartEmpty.classList.remove('hidden');
+    validationEl.textContent = '';
+    return;
+  }
+  renderPlot(visiblePoints);
   chartEmpty.classList.add('hidden');
   validationEl.textContent = '';
 }
@@ -956,13 +969,31 @@ function renderLegend(points, colorMap) {
   const orderedKeys = mapOrder.length ? mapOrder : visibleOrder;
 
   orderedKeys.forEach((key, index) => {
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
     row.className = 'legend-item';
+    const hidden = STATE.hiddenColorKeys.has(key);
+    if (hidden) row.classList.add('legend-item-hidden');
+    row.setAttribute(
+      'aria-pressed',
+      hidden ? 'true' : 'false',
+    );
+    row.title = hidden
+      ? 'Click to show this series'
+      : 'Click to hide this series';
     const swatch = document.createElement('span');
     swatch.className = 'legend-color';
     swatch.style.background = colorMap.get(key) || PALETTE[index % PALETTE.length];
     row.appendChild(swatch);
     row.appendChild(document.createTextNode(getColorModeLabel(key)));
+    row.addEventListener('click', () => {
+      if (STATE.hiddenColorKeys.has(key)) {
+        STATE.hiddenColorKeys.delete(key);
+      } else {
+        STATE.hiddenColorKeys.add(key);
+      }
+      render();
+    });
     legendEl.appendChild(row);
   });
 }
