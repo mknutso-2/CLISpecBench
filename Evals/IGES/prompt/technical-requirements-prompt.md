@@ -70,9 +70,11 @@ iges roundtrip  --input <file.iges>  --output <out.iges>
   normalization, not an error — the parse succeeds and serializes
   the clamped value.
 
-  **Missing required IGES sections:** a file missing any of the five
-  sections (Start `S`, Global `G`, Directory `D`, Parameter `P`,
-  Terminate `T`) or with sections out of order is invalid input.
+  **Missing required IGES sections:** a file missing the Start (`S`),
+  Global (`G`), or Terminate (`T`) section is invalid input on `parse`.
+  Directory (`D`) and Parameter (`P`) sections may be empty for a file
+  with zero entities but must be structurally present as zero-length
+  groups.
 
   **`query` subcommand DE validation:** `query --de <n>` with `n` ≤ 0,
   `n` even (DE sequence numbers are odd-valued per §2.4), or `n` not
@@ -542,9 +544,11 @@ re-derive them from the spec.
   Only one trailing-whitespace strip is applied, to the concatenated
   payload as a whole. A per-line strip corrupts Hollerith strings
   whose content happens to end with a space at a G-line boundary.
-- **Terminate section**: exactly one T-line. Columns 1-72 contain an
-  80-char field composed of four 8-column subfields giving the
-  physical-line counts of the preceding sections, formatted as
+- **Terminate section**: the writer emits exactly one T-line (the
+  parser does not reject files with multiple T-lines, but a conforming
+  writer always produces one). Columns 1-72 contain an 80-char field
+  composed of four 8-column subfields giving the physical-line counts
+  of the preceding sections, formatted as
   `S<nnnnnnn>G<nnnnnnn>D<nnnnnnn>P<nnnnnnn>` (section letter followed
   by a right-justified 7-digit count). Columns 73-80 use the standard
   section letter + sequence (`T      1`).
@@ -570,8 +574,10 @@ re-derive them from the spec.
 - **Prohibited delimiter characters** (Global fields 1 and 2): the
   parameter and record delimiters may not be digits `0-9`, `+`, `-`,
   `.`, `D`, `E`, `H`, space, or any ASCII control character (§2.2.3.1).
-  A Global section advertising a prohibited delimiter is invalid
-  input.
+  A Global section advertising a prohibited delimiter must cause
+  `parse` to exit 1 (either via a dedicated prohibited-char check or
+  via incidental parse failure when the would-be delimiter is still
+  read as a value character).
 - **Trailing characters after the record delimiter** in the same
   physical line (before col 72) are tolerated and ignored. The parser
   must not raise on `,...;  extra comment  ` — the record delimiter
