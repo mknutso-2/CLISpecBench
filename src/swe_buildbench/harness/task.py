@@ -136,7 +136,7 @@ def _register_language_tasks(
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     **_register_language_tasks("cncsim", "Evals/CNCSim", ("cpp", "py", "js", "rs")),
     **_register_language_tasks("wordcount", "Evals/WordCount", ("cpp", "py", "js", "rs")),
-    **_register_language_tasks("iges", "Evals/IGES", ("cpp", "js")),
+    **_register_language_tasks("iges", "Evals/IGES", ("cpp", "js", "py", "rs")),
 }
 
 
