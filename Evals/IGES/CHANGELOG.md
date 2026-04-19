@@ -31,6 +31,29 @@
   `iges query`. Downstream behavioral tests now use `.get()` for the
   most cascade-prone fields so a schema slip surfaces as one schema
   failure instead of hundreds of duplicated `KeyError`s.
+- **Enumerated structural-validation rules in
+  `technical-requirements-prompt.md` §1.2**: replaced the ambiguous
+  "any non-positive required Global numeric field such as
+  `model_space_scale`" with an explicit list of the eight fields
+  (7 `integer_bits`, 8 `sp_magnitude`, 9 `sp_significance`,
+  10 `dp_magnitude`, 11 `dp_significance`, 13 `model_space_scale`,
+  16 `max_line_weight_grads`, 19 `min_resolution`). Added explicit
+  rules for degenerate Line entities (zero arc length per §3.2.5)
+  and `spec_version` out-of-range clamping (§2.2.4.3.23). Cross-
+  comparison of Opus 4.6 and GPT-5.4 IGES runs showed that 14 tests
+  failed for both models, of which 11 traced directly to these three
+  prompt gaps:
+    - 7 `test_parse_rejects_non_positive_*` parametrizations that
+      exercise fields 8/9/10/11/16/19 (plus `integer_bits`)
+    - `test_parse_rejects_negative_entity_type` (covered by explicit
+      "any negative entity type" already)
+    - `test_parse_rejects_zero_length_line` +
+      `test_write_rejects_zero_length_line`
+    - `test_spec_version_above_range_is_clamped_to_v5_3`
+  The remaining 3 both-fail tests are spec-clear but
+  implementation-heavy (offset surfaces over cone/sphere/torus
+  require correct `(Um, Vm) = (0, 0)` handling per §4.30, already
+  documented at lines 190-203).
 
 ### Changed
 

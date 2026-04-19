@@ -42,12 +42,33 @@ iges roundtrip  --input <file.iges>  --output <out.iges>
 - `1` — invalid input. Any input file that fails to parse, any malformed
   JSON, any invalid Directory Entry cross-reference (`view`,
   `xform_matrix`, `label_display`), any negative entity type, any zero
-  `param_line_count` on a non-null entity, any non-positive required
-  Global numeric field such as `model_space_scale`, any unsupported
-  entity type outside the shipped 87-type catalog, any Start-section
-  line containing an ASCII control character (§2.2.4.2), any Hollerith
-  string containing an ASCII control character (§2.2.2.3), or any
-  evaluation on a non-parametric entity.
+  `param_line_count` on a non-null entity, any unsupported entity type
+  outside the shipped 87-type catalog, any Start-section line containing
+  an ASCII control character (§2.2.4.2), any Hollerith string containing
+  an ASCII control character (§2.2.2.3), any evaluation on a
+  non-parametric entity, or any of the Global-field / entity-level
+  structural-validation failures enumerated below.
+
+  **Non-positive required Global numeric fields (all must be > 0):**
+  field 7 `integer_bits`, field 8 `sp_magnitude`,
+  field 9 `sp_significance`, field 10 `dp_magnitude`,
+  field 11 `dp_significance`, field 13 `model_space_scale`,
+  field 16 `max_line_weight_grads`, field 19 `min_resolution`. A zero
+  or negative value in any of these fields is invalid input on both
+  `parse` and `write`.
+
+  **Degenerate curve / surface entities:** a Line entity (Type 110)
+  with `start == terminate` has zero arc length and must be rejected
+  per IGES 5.3 §3.2.5 ("All curves shall have non-zero arc length") on
+  both `parse` and `write`.
+
+  **`spec_version` out-of-range clamping (Global field 23):** values
+  below the enumerated range default to `v2_0`; values greater than
+  the highest enumerated code (`v5_3`, code 11) are clamped to
+  `v5_3` per §2.2.4.3.23 ("Postprocessors finding an unrecognized
+  value greater than 11 shall assign 11"). Clamping is a parse-time
+  normalization, not an error — the parse succeeds and serializes
+  the clamped value.
 - `2` — internal error in the tool itself (panic, out-of-memory,
   unexpected exception).
 
