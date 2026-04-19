@@ -41,6 +41,7 @@ const METRICS = {
     forceMin: 0,
     forceMax: 100,
     minClamp: 0,
+    higherIsBetter: true,
   },
   tokens_input: {
     label: 'Tokens Input',
@@ -974,6 +975,43 @@ function getColorModeLabel(key) {
   return `${agent} / ${model}`;
 }
 
+function drawFrontierConnector(points, frontierSet, xScale, yScale, layer) {
+  if (frontierSet.size < 2) return;
+  if (STATE.xAxis === 'language') return;
+  const sorted = Array.from(frontierSet).slice().sort((a, b) => a.xValue - b.xValue);
+  const coords = sorted
+    .filter((p) => Number.isFinite(p.xValue) && Number.isFinite(p.yValue))
+    .map((p) => `${xScale(p.xValue)},${yScale(p.yValue)}`);
+  if (coords.length < 2) return;
+  const line = createSvgElement('polyline');
+  line.setAttribute('class', 'frontier-line');
+  line.setAttribute('points', coords.join(' '));
+  line.setAttribute('fill', 'none');
+  layer.appendChild(line);
+}
+
+function computeParetoFrontier(points, xAxis, yAxis) {
+  const frontier = new Set();
+  if (xAxis === 'language') return frontier;
+  const xDir = METRICS[xAxis]?.higherIsBetter ? 1 : -1;
+  const yDir = METRICS[yAxis]?.higherIsBetter ? 1 : -1;
+  const valid = points.filter(
+    (p) => Number.isFinite(p.xValue) && Number.isFinite(p.yValue),
+  );
+  valid.forEach((p) => {
+    const dominated = valid.some((q) => {
+      if (q === p) return false;
+      const xBE = q.xValue * xDir >= p.xValue * xDir;
+      const yBE = q.yValue * yDir >= p.yValue * yDir;
+      const xSB = q.xValue * xDir > p.xValue * xDir;
+      const ySB = q.yValue * yDir > p.yValue * yDir;
+      return xBE && yBE && (xSB || ySB);
+    });
+    if (!dominated) frontier.add(p);
+  });
+  return frontier;
+}
+
 function renderPlot(points) {
   chartEmpty.classList.add('hidden');
 
@@ -1039,7 +1077,11 @@ function renderPlot(points) {
   labelsLayer.setAttribute('class', 'labels-layer');
   const markerLabels = [];
 
+  const frontierSet = computeParetoFrontier(points, STATE.xAxis, STATE.yAxis);
+  drawFrontierConnector(points, frontierSet, xScale, yScale, dataLayer);
+
   points.forEach((point) => {
+    const isOnFrontier = frontierSet.has(point);
     const baseRadius = 7.3;
     const hoverRadius = 8.8;
 
@@ -1112,14 +1154,23 @@ function renderPlot(points) {
     const pointCircle = createSvgElement('circle');
     pointCircle.setAttribute('r', String(baseRadius));
     pointCircle.setAttribute('fill', point.color);
-    pointCircle.setAttribute('class', 'point point-marker');
+    const pointClass = isOnFrontier
+      ? 'point point-marker point-frontier'
+      : 'point point-marker';
+    pointCircle.setAttribute('class', pointClass);
     pointCircle.setAttribute('data-base-radius', String(baseRadius));
     g.appendChild(pointCircle);
 
     const label = createSvgElement('text');
-    label.setAttribute('class', 'point-label');
+    const labelClass = isOnFrontier
+      ? 'point-label point-label-frontier'
+      : 'point-label point-label-hover';
+    label.setAttribute('class', labelClass);
     label.setAttribute('pointer-events', 'none');
     label.textContent = point.pairLabel || rowPairId(point.pairId);
+    if (!isOnFrontier) {
+      label.setAttribute('visibility', 'hidden');
+    }
     const leader = createSvgElement('line');
     leader.setAttribute('class', 'point-leader');
     leader.setAttribute('visibility', 'hidden');
@@ -1141,12 +1192,21 @@ function renderPlot(points) {
     const onPointerEnter = (event) => {
       pointCircle.classList.add('active');
       pointCircle.setAttribute('r', String(hoverRadius));
+      if (!isOnFrontier) {
+        label.setAttribute('x', String(x + baseRadius + 6));
+        label.setAttribute('y', String(y - baseRadius - 4));
+        label.setAttribute('text-anchor', 'start');
+        label.setAttribute('visibility', 'visible');
+      }
       onPointer(event);
     };
     const onPointerLeave = () => {
       tooltip.style.display = 'none';
       pointCircle.classList.remove('active');
       pointCircle.setAttribute('r', pointCircle.getAttribute('data-base-radius') || String(baseRadius));
+      if (!isOnFrontier) {
+        label.setAttribute('visibility', 'hidden');
+      }
     };
     pointCircle.addEventListener('pointerenter', onPointerEnter);
     pointCircle.addEventListener('pointermove', onPointer);
@@ -1154,15 +1214,17 @@ function renderPlot(points) {
 
     dataLayer.appendChild(g);
 
-    markerLabels.push({
-      point,
-      x,
-      y,
-      circle: pointCircle,
-      label,
-      leader,
-      obstacleRects,
-    });
+    if (isOnFrontier) {
+      markerLabels.push({
+        point,
+        x,
+        y,
+        circle: pointCircle,
+        label,
+        leader,
+        obstacleRects,
+      });
+    }
   });
 
   chartSvg.appendChild(dataLayer);
