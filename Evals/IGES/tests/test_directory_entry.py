@@ -22,8 +22,9 @@ Spec refs: §2.2.4.4 and TR §2.4.
 # pyright: reportUnknownArgumentType=none
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Any
 
 from iges_support import (
     make_entity,
@@ -35,8 +36,8 @@ from iges_support import (
 def _roundtrip_one_line_with_de_overrides(
     submission_command: Sequence[str],
     tmp_path: Path,
-    overrides: dict[str, object],
-) -> dict[str, object]:
+    overrides: Mapping[str, Any],
+) -> dict[str, Any]:
     """Build a doc with a single Line + DE overrides, roundtrip, return that DE."""
     doc = wrap_entities([
         make_entity(
