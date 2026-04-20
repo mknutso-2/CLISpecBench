@@ -1,6 +1,6 @@
 """RS274/NGC G-code interpreter — Python reference implementation.
 
-Implements a single-pass interpreter for the SWE-BuildBench RS274 eval.
+Implements a single-pass interpreter for the CLISpecBench RS274 eval.
 Reads a G-code program plus optional tool/parameter files and emits a JSON
 description of the final machine state.
 

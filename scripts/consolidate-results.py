@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Consolidate SWE-BuildBench result JSON files into a CSV summary."""
+"""Consolidate CLISpecBench result JSON files into a CSV summary."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from pathlib import Path
 # Allow running from repo root without install
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from swe_buildbench.harness.results import load_result
+from clispecbench.harness.results import load_result
 
 
 def main() -> None:

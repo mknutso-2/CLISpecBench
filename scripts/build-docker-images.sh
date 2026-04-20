@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# Build all Docker images for SWE-BuildBench.
+# Build all Docker images for CLISpecBench.
 #
-# Builds the base image first (swe-buildbench-base:latest), then each
-# agent image on top of it. Agent Dockerfiles use FROM swe-buildbench-base:latest,
+# Builds the base image first (clispecbench-base:latest), then each
+# agent image on top of it. Agent Dockerfiles use FROM clispecbench-base:latest,
 # so the base must be built first.
 #
 # Run from Git Bash:
 #   bash scripts/build-docker-images.sh
 #
 # Or from WSL:
-#   bash /mnt/c/Git/SWE-BuildBench/scripts/build-docker-images.sh
+#   bash /mnt/c/Git/CLISpecBench/scripts/build-docker-images.sh
 #
 # Build only the base image:
 #   bash scripts/build-docker-images.sh base
@@ -32,15 +32,15 @@ if [ -n "${MSYSTEM:-}" ] && [ ! -d "/mnt/c/Users" ]; then
 fi
 
 build_base() {
-    echo "--- Building: swe-buildbench-base ---"
-    $DOCKER_CMD build -t swe-buildbench-base:latest -f "$REPO_ROOT/docker/base.Dockerfile" "$REPO_ROOT/docker"
+    echo "--- Building: clispecbench-base ---"
+    $DOCKER_CMD build -t clispecbench-base:latest -f "$REPO_ROOT/docker/base.Dockerfile" "$REPO_ROOT/docker"
 }
 
 build_agent() {
     local agent="$1"
     local dockerfile="$REPO_ROOT/docker/agents/${agent}.Dockerfile"
-    echo "--- Building: swe-buildbench-${agent} ---"
-    $DOCKER_CMD build -t "swe-buildbench-${agent}:latest" -f "$dockerfile" "$REPO_ROOT/docker"
+    echo "--- Building: clispecbench-${agent} ---"
+    $DOCKER_CMD build -t "clispecbench-${agent}:latest" -f "$dockerfile" "$REPO_ROOT/docker"
 }
 
 # Check which Dockerfiles exist (use local path for file checks from Git Bash)

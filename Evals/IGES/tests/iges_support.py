@@ -58,7 +58,7 @@ def default_global() -> dict[str, Any]:
         "min_resolution": 0.001,
         "max_coordinate": 1000.0,
         "author": "pytest",
-        "organization": "swe-buildbench",
+        "organization": "clispecbench",
         "spec_version": "v5_3",
         "drafting_std": "none",
         "model_timestamp": None,

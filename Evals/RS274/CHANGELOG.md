@@ -369,7 +369,7 @@ entry. Documentation-only; would be a patch bump when applied.
   `python output/main.py --help` got `command not found / exit 127`
   even when their implementation was correct. Test scoring is
   unaffected because `submission_command` already hard-resolves
-  `/usr/bin/python3` (see `src/swe_buildbench/build/backends.py:254`).
+  `/usr/bin/python3` (see `src/clispecbench/build/backends.py:254`).
 - **Harness: preserve `output/` wrapper at test-container staging.**
   The scorer now mounts the agent's `output/` contents at
   `/tmp/submission/output/` inside the test container instead of
@@ -381,8 +381,8 @@ entry. Documentation-only; would be a patch bump when applied.
   `from .common import ...`), succeeded in its own smoke test from
   `/workspace/`, and died at test-time import with `ModuleNotFoundError:
   No module named 'output'` — scoring 4/542. Harness-only change in
-  `src/swe_buildbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
-  `src/swe_buildbench/harness/docker.py` (`copy_in` now auto-creates
+  `src/clispecbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
+  `src/clispecbench/harness/docker.py` (`copy_in` now auto-creates
   intermediate dirs under `/tmp`); no eval files changed.
 
 ## v2.1.1 — 2026-04-15
@@ -411,7 +411,7 @@ entry. Documentation-only; would be a patch bump when applied.
   a new Rust task variant so agents can be evaluated on their ability to
   implement the RS274 spec in Rust. Uses `serde`/`serde_json` only
   (agents remain std-only per `Evals/_shared/language-requirements-rs.md`).
-- **Rust task registration** in `src/swe_buildbench/harness/task.py`,
+- **Rust task registration** in `src/clispecbench/harness/task.py`,
   plus the Rust reference implementation wired into
   `Evals/RS274/tests/conftest.py` so `--language=rs` runs the Rust ref.
 

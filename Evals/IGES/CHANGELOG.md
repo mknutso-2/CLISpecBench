@@ -123,7 +123,7 @@
   `python output/main.py --help` got `command not found / exit 127`
   even when their implementation was correct. Test scoring is
   unaffected because `submission_command` already hard-resolves
-  `/usr/bin/python3` (see `src/swe_buildbench/build/backends.py:254`).
+  `/usr/bin/python3` (see `src/clispecbench/build/backends.py:254`).
 - **Harness: preserve `output/` wrapper at test-container staging.**
   The scorer now mounts the agent's `output/` contents at
   `/tmp/submission/output/` inside the test container instead of
@@ -134,8 +134,8 @@
   modules using `from .iges_common import ...`, succeeded in its own
   smoke test from `/workspace/`, and died at test-time import with
   `ModuleNotFoundError: No module named 'output'` — scoring 6/263.
-  Harness-only change in `src/swe_buildbench/harness/scoring.py`
-  (`_CONTAINER_SUBMISSION`) and `src/swe_buildbench/harness/docker.py`
+  Harness-only change in `src/clispecbench/harness/scoring.py`
+  (`_CONTAINER_SUBMISSION`) and `src/clispecbench/harness/docker.py`
   (`copy_in` now auto-creates intermediate dirs under `/tmp`); no eval
   files changed.
 
@@ -545,7 +545,7 @@ Python CLI test suite.
 
 ### Added
 
-- `iges` task registration in `src/swe_buildbench/harness/task.py`.
+- `iges` task registration in `src/clispecbench/harness/task.py`.
 - Full IGES prompt bundle:
   - `prompt/base-prompt.md`
   - `prompt/technical-requirements-prompt.md`

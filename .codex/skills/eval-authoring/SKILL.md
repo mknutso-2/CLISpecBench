@@ -1,19 +1,19 @@
 ---
 name: eval-authoring
-description: Add or modify SWE-BuildBench evals. Use when changing eval prompts, docs, tests, reference implementations, task registration, or per-eval version and changelog state, or when creating a new eval directory.
+description: Add or modify CLISpecBench evals. Use when changing eval prompts, docs, tests, reference implementations, task registration, or per-eval version and changelog state, or when creating a new eval directory.
 ---
 
 Meta: This file is a breathing document. If you read it and find that any of the following guidance is out of date or you find a way to do any of the following in a strictly better or more efficient way, please update it.
 
 # Eval authoring
 
-- Use this skill for any change under `Evals/` or `src/swe_buildbench/harness/task.py` that affects eval behavior or registration.
+- Use this skill for any change under `Evals/` or `src/clispecbench/harness/task.py` that affects eval behavior or registration.
 
 ## Eval structure
 
 - Each eval is organized around `prompt/`, `tests/`, and one or more `reference-implementation-<lang>/` directories.
-- Each eval `conftest.py` defines `EVAL_CONFIG`; tests should use the shared `submission_command` fixture exposed by `src/swe_buildbench/pytest_plugin.py`.
-- New tasks must be registered in `src/swe_buildbench/harness/task.py` via `_KNOWN_TASKS`.
+- Each eval `conftest.py` defines `EVAL_CONFIG`; tests should use the shared `submission_command` fixture exposed by `src/clispecbench/pytest_plugin.py`.
+- New tasks must be registered in `src/clispecbench/harness/task.py` via `_KNOWN_TASKS`.
 - New evals should include at least `Evals/<Name>/{prompt,tests,reference-implementation-cpp}/` unless there is a concrete reason to use a different reference-language layout.
 
 ## Authoring rules

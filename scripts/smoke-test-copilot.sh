@@ -27,6 +27,6 @@ echo "--- Testing: Copilot CLI ---"
 $DOCKER_CMD run --rm \
     -e "COPILOT_GITHUB_TOKEN=$GH_TOKEN" \
     -w /workspace \
-    swe-buildbench-copilot-cli:latest \
+    clispecbench-copilot-cli:latest \
     bash -c "copilot -p 'respond with just the word hello' --yolo --silent"
 echo "PASS: Copilot CLI"

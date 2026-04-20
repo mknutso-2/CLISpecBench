@@ -6,7 +6,7 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
-from swe_buildbench.pytest_plugin import (
+from clispecbench.pytest_plugin import (
     EvalConfig,
     build_timeout_seconds,
     eval_language,

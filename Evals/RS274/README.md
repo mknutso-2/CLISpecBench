@@ -1,6 +1,6 @@
 # RS274
 
-CNC G-code interpreter eval for SWE-BuildBench. Agents receive the RS274/NGC
+CNC G-code interpreter eval for CLISpecBench. Agents receive the RS274/NGC
 specification and must produce a working simulator that parses G-code programs
 and outputs machine state.
 

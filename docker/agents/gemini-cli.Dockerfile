@@ -1,4 +1,4 @@
-FROM swe-buildbench-base:latest
+FROM clispecbench-base:latest
 
 # Install Gemini CLI (https://www.npmjs.com/package/@google/gemini-cli)
 # Pin version for reproducibility — update when running new evaluations

@@ -1,4 +1,4 @@
-# SWE-BuildBench Evaluation Harness — Design Document
+# CLISpecBench Evaluation Harness — Design Document
 
 **Author:** Matthew G. Knutson
 **Status:** Draft
@@ -14,7 +14,7 @@
 ## 1. Purpose
 
 This document describes the evaluation harness: the software that invokes AI
-coding agents against SWE-BuildBench tasks, captures their output, builds it,
+coding agents against CLISpecBench tasks, captures their output, builds it,
 runs the hidden test suite, and records structured results.
 
 It is a companion to `Eval-Design.md`, which defines the benchmark's
@@ -26,7 +26,7 @@ implementation: how those concepts become running code.
 ## 2. Goals
 
 1. **Run any supported agent against any task with a single command.**
-   `swe-buildbench run --task rs274-cpp --agent claude-code`
+   `clispecbench run --task rs274-cpp --agent claude-code`
 
 2. **Produce structured, machine-readable results** that capture per-test
    pass/fail, token usage, timing, and scoring — enabling cross-model and
@@ -44,7 +44,7 @@ implementation: how those concepts become running code.
 
 ```
 ┌──────────────────────────────────────────────────────┐
-│  swe-buildbench CLI                                  │
+│  clispecbench CLI                                  │
 │                                                      │
 │  run --task <id> --agent <name> [--runs N] ...       │
 └──────────┬───────────────────────────────────────────┘
@@ -87,9 +87,9 @@ implementation: how those concepts become running code.
 ## 4. Directory Layout
 
 ```
-src/swe_buildbench/
+src/clispecbench/
   __init__.py
-  cli.py                        # CLI entry point (swe-buildbench command)
+  cli.py                        # CLI entry point (clispecbench command)
 
   harness/
     __init__.py
@@ -261,7 +261,7 @@ WORKDIR /workspace
 
 ```dockerfile
 # docker/agents/claude-code.Dockerfile
-FROM swe-buildbench-base:latest
+FROM clispecbench-base:latest
 
 RUN npm install -g @anthropic-ai/claude-code@<pinned-version>
 
@@ -516,7 +516,7 @@ For a given agent, find `node_id`s where `outcome` varies across runs.
 ## 9. CLI Interface
 
 ```
-swe-buildbench run
+clispecbench run
     --task <task-id>                   # Required: rs274-cpp, rs274-py, wordcount-cpp, ...
     --agent <agent-name>               # Required: claude-code, codex-cli, copilot-cli, gemini-cli
     --runs <N>                         # Default: 3
@@ -526,13 +526,13 @@ swe-buildbench run
     --model <model-id>                 # Override the default model for the chosen agent (e.g. claude-opus-4-6)
     --api-key-env <VAR=value>          # Repeatable: inject secrets into container
 
-swe-buildbench results
+clispecbench results
     --task <task-id>                   # Filter by task
     --agent <agent-name>               # Filter by agent
     --format table|json|csv            # Output format
     --compare                          # Side-by-side comparison across agents
 
-swe-buildbench validate
+clispecbench validate
     --task <task-id>                   # Validate task structure and harness
 ```
 
@@ -540,16 +540,16 @@ swe-buildbench validate
 
 ```bash
 # Run Claude Code against RS274 C++, 3 runs, base prompt
-swe-buildbench run --task rs274-cpp --agent claude-code \
+clispecbench run --task rs274-cpp --agent claude-code \
     --api-key-env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
 
 # Run Codex CLI against RS274 C++ with the "with-tests" prompt variant
-swe-buildbench run --task rs274-cpp --agent codex-cli \
+clispecbench run --task rs274-cpp --agent codex-cli \
     --prompt-variant with-tests \
     --api-key-env OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Compare results across agents for a task
-swe-buildbench results --task rs274-cpp --compare
+clispecbench results --task rs274-cpp --compare
 ```
 
 ---

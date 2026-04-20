@@ -24,6 +24,6 @@ echo "--- Testing: Codex CLI ---"
 $DOCKER_CMD run --rm \
     -v "${WIN_HOME}/.codex/auth.json:/root/.codex/auth.json:ro" \
     -w /workspace \
-    swe-buildbench-codex-cli:latest \
+    clispecbench-codex-cli:latest \
     bash -c "git init /workspace > /dev/null 2>&1 && codex exec 'respond with just the word hello'"
 echo "PASS: Codex CLI"

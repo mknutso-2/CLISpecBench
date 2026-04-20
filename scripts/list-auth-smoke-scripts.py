@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from swe_buildbench.agents.registry import list_auth_smoke_scripts
+from clispecbench.agents.registry import list_auth_smoke_scripts
 
 
 def main() -> None:

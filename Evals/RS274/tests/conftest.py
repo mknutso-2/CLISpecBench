@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from swe_buildbench.pytest_plugin import (
+from clispecbench.pytest_plugin import (
     EvalConfig,
     build_timeout_seconds,
     eval_language,

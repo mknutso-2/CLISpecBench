@@ -21,6 +21,6 @@ echo "--- Testing: Claude Code ---"
 $DOCKER_CMD run --rm \
     -v "${WIN_HOME}/.claude:/root/.claude:ro" \
     -v "${WIN_HOME}/.claude.json:/root/.claude.json:ro" \
-    swe-buildbench-claude-code:latest \
+    clispecbench-claude-code:latest \
     claude --print 'respond with just the word hello'
 echo "PASS: Claude Code"

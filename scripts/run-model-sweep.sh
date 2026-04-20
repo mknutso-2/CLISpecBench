@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run a SWE-BuildBench eval across all models for one or more agents.
+# Run a CLISpecBench eval across all models for one or more agents.
 #
 # Usage:
 #   ./scripts/run-model-sweep.sh --task wordcount-cpp [--agents claude-code,codex-cli,gemini-cli] [--runs 1]
@@ -40,7 +40,7 @@ done
 
 IFS=',' read -ra AGENT_LIST <<< "$AGENTS"
 
-echo "=== SWE-BuildBench Model Sweep ==="
+echo "=== CLISpecBench Model Sweep ==="
 echo "Task:    $TASK"
 echo "Agents:  ${AGENT_LIST[*]}"
 echo "Runs:    $RUNS"
@@ -77,7 +77,7 @@ for AGENT in "${AGENT_LIST[@]}"; do
         echo ">>> Running: $AGENT / $MODEL (effort=${EFFORT:-none})"
 
         # Build the command
-        CMD=(uv run swe-buildbench run
+        CMD=(uv run clispecbench run
             --task "$TASK"
             --agent "$AGENT"
             --model "$MODEL"

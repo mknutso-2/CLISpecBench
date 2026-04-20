@@ -12,7 +12,7 @@
 #   bash scripts/smoke-test-docker-auth.sh
 #
 # Or from PowerShell / CMD:
-#   wsl -d Ubuntu -- bash /mnt/c/Git/SWE-BuildBench/scripts/smoke-test-docker-auth.sh
+#   wsl -d Ubuntu -- bash /mnt/c/Git/CLISpecBench/scripts/smoke-test-docker-auth.sh
 #
 # Run a single agent:
 #   bash scripts/smoke-test-claude.sh

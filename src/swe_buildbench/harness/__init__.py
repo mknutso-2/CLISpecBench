@@ -1,1 +1,0 @@
-"""SWE-BuildBench evaluation harness."""

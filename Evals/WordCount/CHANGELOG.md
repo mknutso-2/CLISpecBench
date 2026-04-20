@@ -20,8 +20,8 @@
   single-file), but this is the same staging path that broke multi-
   module RS274 and IGES Python submissions which encoded `output` as
   their package name. Harness-only change in
-  `src/swe_buildbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
-  `src/swe_buildbench/harness/docker.py` (`copy_in` now auto-creates
+  `src/clispecbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
+  `src/clispecbench/harness/docker.py` (`copy_in` now auto-creates
   intermediate dirs under `/tmp`); no eval files changed.
 
 ## v1.0.2 — 2026-04-12

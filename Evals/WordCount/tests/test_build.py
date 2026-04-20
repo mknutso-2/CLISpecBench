@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import subprocess
 
-from swe_buildbench.build import PreparedSubmission
+from clispecbench.build import PreparedSubmission
 
 
 def test_payload_builds_successfully(prepared_submission: PreparedSubmission) -> None:

@@ -1,4 +1,4 @@
-# SWE-BuildBench — Design Document
+# CLISpecBench — Design Document
 
 **Author:** Matthew G. Knutson
 **Status:** Draft
@@ -14,17 +14,23 @@
 
 ## 1. Overview
 
-SWE-BuildBench is a benchmark suite for evaluating **AI coding agents** on **documentation-driven system implementation** tasks. Each task gives the agent a curated documentation corpus — which may be a single specification document or a realistic collection of related documents — and asks it to produce a fully functional, compilable/runnable implementation, with no access to the hidden test suite used to score it.
+CLISpecBench is a benchmark suite for evaluating **AI coding agents** on **documentation-driven system implementation** tasks. Each task gives the agent a curated documentation corpus — which may be a single specification document or a realistic collection of related documents — and asks it to produce a fully functional, compilable/runnable implementation, with no access to the hidden test suite used to score it.
 
-The central question SWE-BuildBench asks is:
+The central question CLISpecBench asks is:
 
 > *Given only a real-world documentation corpus, can an AI coding agent extract requirements, design a system architecture, implement it correctly across multiple files, and write meaningful tests for its own output?*
 
-This differs from existing coding benchmarks in a fundamental way. HumanEval and its descendants test function completion. SWE-bench tests bug-fixing in existing codebases. SWE-BuildBench tests the full upstream engineering loop: document comprehension, system design, multi-file implementation, and self-verification — the things engineers actually do.
+This differs from existing coding benchmarks in a fundamental way. HumanEval and its descendants test function completion. SWE-bench tests bug-fixing in existing codebases. CLISpecBench tests the full upstream engineering loop: document comprehension, system design, multi-file implementation, and self-verification — the things engineers actually do.
 
-**On the name.** "SWE" follows the convention established by SWE-bench and signals that this is a full software engineering benchmark — not a code completion or patch task. "Build" is the operative word: every SWE-BuildBench task asks an agent to construct a working system from scratch, given only a documentation corpus. This distinguishes it from a companion benchmark we anticipate in the future — **SWE-ModifyBench** — which will ask agents to correctly modify or extend an existing codebase given change requirements. "Bench" signals a formal, reusable, leaderboard-worthy artifact intended for citation and longitudinal comparison.
+**On the name.** "CLI" foregrounds the core abstraction of the benchmark: every
+task asks the agent to build a command-line application that can be exercised
+through a shared harness contract, regardless of implementation language.
+"Spec" reflects the source of truth the agent receives — a dense specification
+or closely related documentation corpus defining the CLI application's required
+behavior. "Bench" signals a formal, reusable benchmark intended for citation,
+leaderboards, and longitudinal comparison.
 
-SWE-BuildBench evaluates coding agent CLIs — tools such as Claude Code, Codex CLI, and Gemini CLI — that have access to a file system, terminal, compiler, and the ability to iterate on their own output. This mirrors how engineers actually use these tools and is where the interesting capability signal lives: whether the agent can extract requirements from documentation, design a multi-file system, implement it, and verify its own work without supervision.
+CLISpecBench evaluates coding agent CLIs — tools such as Claude Code, Codex CLI, and Gemini CLI — that have access to a file system, terminal, compiler, and the ability to iterate on their own output. This mirrors how engineers actually use these tools and is where the interesting capability signal lives: whether the agent can extract requirements from documentation, design a multi-file system, implement it, and verify its own work without supervision.
 
 ---
 
@@ -38,7 +44,7 @@ SWE-BuildBench evaluates coding agent CLIs — tools such as Claude Code, Codex 
 
 **Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `rs274-cpp` vs `rs274-py`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
 
-**The meta-score is an aggregate, not an average.** The SWE-BuildBench score is the geometric mean of task scores, not the arithmetic mean. This penalizes models that score well on one task but fail on others — generalization matters.
+**The meta-score is an aggregate, not an average.** The CLISpecBench score is the geometric mean of task scores, not the arithmetic mean. This penalizes models that score well on one task but fail on others — generalization matters.
 
 **Non-developer base prompt.** The base prompt is written from the perspective of a domain expert who is not a software developer — someone who knows exactly what they want to build but has no software engineering background. They would not think to specify test coverage, code quality standards, architectural patterns, or implementation strategy, just as they would not specify which sorting algorithm to use. The only exceptions are the three items the evaluation harness physically requires: implementation language, CLI flags, and output JSON schema. These are included with a brief framing note ("for technical compatibility, please use C++20 and produce output in the following format") that signals infrastructure constraint rather than engineering guidance. Everything else — whether to write tests, which architecture to choose, how to handle errors, what quality standards to follow — is left entirely to the agent's judgment. This framing serves two purposes: it measures genuine agent autonomy rather than instruction-following ability, and it emulates a realistic and increasingly common usage pattern where domain experts use coding agents to build real systems without software engineering backgrounds. Prompt variants that add developer-level guidance ("write a test for each discrete feature," "follow C++ Core Guidelines") are evaluated separately and never included in the base leaderboard — their value is measuring how much that guidance helps.
 
@@ -46,7 +52,7 @@ SWE-BuildBench evaluates coding agent CLIs — tools such as Claude Code, Codex 
 
 ## 3. Task Anatomy
 
-Every SWE-BuildBench task consists of two parts with different visibility.
+Every CLISpecBench task consists of two parts with different visibility.
 
 ### 3.1 Public (lives in the main repository)
 
@@ -147,7 +153,7 @@ Populated after initial evaluation runs.>
 
 ## 4. Scoring Model
 
-Each task produces three component scores, each in [0, 1]. The task score is a weighted sum. The SWE-BuildBench meta-score is the geometric mean across all tasks a model has been evaluated on.
+Each task produces three component scores, each in [0, 1]. The task score is a weighted sum. The CLISpecBench meta-score is the geometric mean across all tasks a model has been evaluated on.
 
 ### 4.1 Correctness Score
 
@@ -228,10 +234,10 @@ task_score = (correctness_weight * correctness)
 
 Default weights: correctness 0.6, self-test coverage 0.2, code quality 0.2. Weights are defined per task in TASK.md and may vary if a task has different scoring priorities.
 
-### 4.6 SWE-BuildBench Meta-Score
+### 4.6 CLISpecBench Meta-Score
 
 ```
-swe_buildbench_score = geometric_mean(task_score_1, task_score_2, ..., task_score_n)
+clispecbench_score = geometric_mean(task_score_1, task_score_2, ..., task_score_n)
 ```
 
 Geometric mean is used rather than arithmetic mean because a model that excels at one task but fails another represents worse generalization than one that scores moderately across all tasks. The geometric mean penalizes zero or near-zero scores more severely.
@@ -304,15 +310,15 @@ The difference in correctness score between `base` and `with-tests` directly mea
 
 ```
 # Evaluate with base prompt (default — scores count toward leaderboard)
-swe-buildbench run --task rs274-cpp --agent claude-code
+clispecbench run --task rs274-cpp --agent claude-code
 
 # Evaluate with a named variant (scores reported separately)
-swe-buildbench run --task rs274-cpp --agent claude-code --prompt-variant with-tests
-swe-buildbench run --task rs274-cpp --agent claude-code --prompt-variant with-guidelines
+clispecbench run --task rs274-cpp --agent claude-code --prompt-variant with-tests
+clispecbench run --task rs274-cpp --agent claude-code --prompt-variant with-guidelines
 
 # Evaluate with extension tasks (if the task defines them)
 # Extensions run automatically after base scoring unless --skip-extensions is passed
-swe-buildbench run --task rs274-cpp --agent claude-code --skip-extensions
+clispecbench run --task rs274-cpp --agent claude-code --skip-extensions
 ```
 
 **Extension task execution flow.** When a task defines extension tasks and `--skip-extensions` is not passed, the harness proceeds as follows after base scoring: (1) the extension prompt is injected into the active agent session so the agent retains context of the code it just wrote; (2) the agent modifies its code; (3) the harness rebuilds and scores against the extension's hidden test suite; (4) if multiple extensions are defined, each builds on the state left by the previous one. Extension scores are reported alongside (but separate from) the base task score.
@@ -332,7 +338,7 @@ swe-buildbench run --task rs274-cpp --agent claude-code --skip-extensions
 
 ## 6. CLI Contract (Submission Interface)
 
-All SWE-BuildBench tasks share a standardized command-line interface. This is what enables the harness to be language-agnostic — it invokes the compiled artifact the same way regardless of implementation language.
+All CLISpecBench tasks share a standardized command-line interface. This is what enables the harness to be language-agnostic — it invokes the compiled artifact the same way regardless of implementation language.
 
 ### 6.1 Required Flags
 
@@ -423,7 +429,7 @@ A single eval can be offered in multiple languages. The prompt, documentation co
 
 Each language requires a one-time setup cost:
 - A Docker image with pinned compiler/runtime versions
-- A build backend in `swe_buildbench.build` (e.g. `CMakeBackend`, `PythonBackend`)
+- A build backend in `clispecbench.build` (e.g. `CMakeBackend`, `PythonBackend`)
 - A shared `Evals/_shared/language-requirements-<lang>.md` prompt
 - A quality eval rubric in `quality-evals/<language>/`
 - A coverage measurement script in `coverage/<language>/`
@@ -440,7 +446,7 @@ Contributors follow this process:
 
 1. Copy `task-template/` and fill in `TASK.md`, `prompt-template.md`, and `harness/`
 2. Write at least 20 sample tests (public) and 50 full tests (private)
-3. Run `swe-buildbench validate <task-dir>` locally to verify the harness is well-formed
+3. Run `clispecbench validate <task-dir>` locally to verify the harness is well-formed
 4. Open a pull request with the public assets only
 5. Submit the full test suite to the maintainer separately for inclusion in the private repo
 
@@ -456,7 +462,7 @@ Acceptance criteria:
 
 ### 9.2 Contributor Incentives
 
-Accepted task contributors are credited as **task maintainers** in the repository and on the leaderboard. Task maintainers receive free evaluations of all submitted agents against their task. If SWE-BuildBench is cited in papers or model cards, contributors are acknowledged in those citations.
+Accepted task contributors are credited as **task maintainers** in the repository and on the leaderboard. Task maintainers receive free evaluations of all submitted agents against their task. If CLISpecBench is cited in papers or model cards, contributors are acknowledged in those citations.
 
 ### 9.3 Agent Submission
 
@@ -494,7 +500,7 @@ Three complementary strategies are employed:
 ### v1.1 — Second Task
 - [ ] CommonMark parser task (most likely candidate: 600+ embedded spec tests, good structural fit)
 - [ ] CommonMark extension tasks (e.g., add GFM table support, add footnotes)
-- [ ] First SWE-BuildBench meta-score reported
+- [ ] First CLISpecBench meta-score reported
 - [ ] Geometric mean aggregation in leaderboard
 
 ### v2.0 — Framework Maturity

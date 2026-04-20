@@ -29,7 +29,7 @@ $DOCKER_CMD run --rm \
     -v "${WIN_HOME}/.gemini/google_accounts.json:/tmp/gemini-auth/google_accounts.json:ro" \
     -v "${WIN_HOME}/.gemini/settings.json:/tmp/gemini-auth/settings.json:ro" \
     -w /workspace \
-    swe-buildbench-gemini-cli:latest \
+    clispecbench-gemini-cli:latest \
     bash -c '
         mkdir -p /root/.gemini
         cp /tmp/gemini-auth/* /root/.gemini/

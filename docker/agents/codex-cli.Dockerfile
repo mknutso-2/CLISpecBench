@@ -1,4 +1,4 @@
-FROM swe-buildbench-base:latest
+FROM clispecbench-base:latest
 
 # Install Codex CLI (https://www.npmjs.com/package/@openai/codex)
 # Pin version for reproducibility — update when running new evaluations

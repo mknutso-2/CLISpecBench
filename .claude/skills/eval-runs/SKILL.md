@@ -24,21 +24,21 @@ Meta: This file is a breathing document. If you read it and find that any of the
 - There is no timeout flag. Let agent sessions exit naturally; killing them early depresses scores and wastes compute.
 - The harness has a 24-hour safety backstop for hung containers; treat that as an emergency stop, not a normal control.
 - Prefer detached runs over blocking the shell. Monitor `progress.txt` in the eval directory as runs complete, and also check container status when you need to tell whether work is still active.
-- Use `swe-buildbench run ...` if the console script is available; otherwise use `uv run swe-buildbench run ...`.
-- Use `swe-buildbench results` or `uv run swe-buildbench results` to inspect aggregate run output after completion.
+- Use `clispecbench run ...` if the console script is available; otherwise use `uv run clispecbench run ...`.
+- Use `clispecbench results` or `uv run clispecbench results` to inspect aggregate run output after completion.
 - On Windows + WSL2 Docker, authenticate `claude`, `codex`, and `gemini` on Windows, not inside WSL. Credential paths under `C:\Users\<you>\.claude`, `.codex`, and `.gemini` are translated to `/mnt/c/...` for the WSL daemon; `scripts/smoke-test-*.sh` is the source of truth for the mount strategy.
 
 Example:
 
 ```bash
-DOCKER_HOST=tcp://localhost:2375 uv run swe-buildbench run --task rs274-cpp --agent codex-cli --model gpt-5.2-codex --effort xhigh --runs 3
+DOCKER_HOST=tcp://localhost:2375 uv run clispecbench run --task rs274-cpp --agent codex-cli --model gpt-5.2-codex --effort xhigh --runs 3
 ```
 
 - On this Windows host, do not background evals via `Start-Process powershell ...`; use a hidden `cmd.exe` wrapper instead.
 - Tested detached launcher pattern on this host:
 
 ```powershell
-Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\SWE-BuildBench && DOCKER_HOST=tcp://localhost:2375 && uv run swe-buildbench run --task <task> --agent <agent> --model <model> [optional flags] 1>"<out.log>" 2>"<err.log>"'
+Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\CLISpecBench && DOCKER_HOST=tcp://localhost:2375 && uv run clispecbench run --task <task> --agent <agent> --model <model> [optional flags] 1>"<out.log>" 2>"<err.log>"'
 ```
 
 - Do not rely on raw `docker` from PowerShell on this host; the harness uses the Python Docker SDK.

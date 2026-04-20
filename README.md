@@ -1,4 +1,4 @@
-# SWE-BuildBench
+# CLISpecBench
 
 A benchmark suite for evaluating AI coding agents on documentation-driven
 implementation tasks. Agents receive a specification and domain docs, then must
@@ -13,11 +13,11 @@ The repo is easier to navigate if you separate five concepts:
 
 | Concept | Meaning | Main locations |
 |---|---|---|
-| **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/swe_buildbench/agents/` and containerized from `docker/agents/` |
+| **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/clispecbench/agents/` and containerized from `docker/agents/` |
 | **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
-| **Task** | A harness-visible eval-language pair. This is what `swe-buildbench run --task ...` and `swe-buildbench validate --task ...` operate on. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/swe_buildbench/harness/task.py` |
-| **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/swe_buildbench/harness/`, `src/swe_buildbench/build/`, `src/swe_buildbench/cli.py` |
-| **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/swe_buildbench/tests/` |
+| **Task** | A harness-visible eval-language pair. This is what `clispecbench run --task ...` and `clispecbench validate --task ...` operate on. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
+| **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/clispecbench/harness/`, `src/clispecbench/build/`, `src/clispecbench/cli.py` |
+| **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/clispecbench/tests/` |
 
 Two useful distinctions:
 
@@ -34,7 +34,7 @@ Evals/                   # Evaluation tasks (one directory per task)
   IGES/                  #   IGES CAD interchange parser/writer eval
   IGES-SDK/              #   Upstream IGES porting source tree
   WordCount/             #   Word frequency counter (toy eval for harness testing)
-src/swe_buildbench/      # Python package
+src/clispecbench/      # Python package
   agents/                #   One adapter module per coding agent
   build/                 #   Multi-language submission build backends
   harness/               #   Eval orchestration, Docker, scoring, results
@@ -57,9 +57,9 @@ Requirements depend on what you plan to do on the **host machine**:
 
 - **Always needed on the host**
   - **Python 3.11+** with [uv](https://docs.astral.sh/uv/) (or pip) — needed to
-    install dependencies, run `swe-buildbench`, and run the pure-Python test suite.
+    install dependencies, run `clispecbench`, and run the pure-Python test suite.
   - **Docker Engine** in WSL2 (Windows) or native Docker (Linux/macOS) — needed for
-    normal `swe-buildbench run` usage, container smoke tests, auth smoke tests, and
+    normal `clispecbench run` usage, container smoke tests, auth smoke tests, and
     any workflow that uses the sandbox images.
 - **Needed on the host only for local reference-implementation workflows**
   - **CMake + a C++ compiler** — needed if you run C++ reference implementations or
@@ -94,7 +94,7 @@ This only needs to be done once per machine -- Docker persists across reboots.
 
 ```bash
 wsl -d Ubuntu
-bash /mnt/c/Git/SWE-BuildBench/scripts/install-docker-wsl.sh
+bash /mnt/c/Git/CLISpecBench/scripts/install-docker-wsl.sh
 ```
 
 After install, add your user to the docker group and restart WSL:
@@ -113,10 +113,10 @@ Build the base image and per-agent images:
 MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 ```
 
-This creates `swe-buildbench-base:latest` (Ubuntu 24.04, CMake, g++-14, pytest)
-and CLI agent images (`swe-buildbench-claude-code`,
-`swe-buildbench-codex-cli`, `swe-buildbench-copilot-cli`,
-`swe-buildbench-gemini-cli`) that extend it.
+This creates `clispecbench-base:latest` (Ubuntu 24.04, CMake, g++-14, pytest)
+and CLI agent images (`clispecbench-claude-code`,
+`clispecbench-codex-cli`, `clispecbench-copilot-cli`,
+`clispecbench-gemini-cli`) that extend it.
 
 ### 4. Authenticate CLI agents
 
@@ -131,7 +131,7 @@ container at runtime.
   daemon. Authenticating inside WSL Ubuntu does **not** work for this setup
   -- the harness never reads the WSL home.
 - **Native Linux / macOS**: run the CLIs on the same host where you'll
-  invoke `swe-buildbench`. Credentials in `~/.claude/`, `~/.codex/`,
+  invoke `clispecbench`. Credentials in `~/.claude/`, `~/.codex/`,
   `~/.gemini/`, and `~/.config/gh/hosts.yml` are mounted directly.
 
 ```bash
@@ -170,15 +170,15 @@ Each eval task follows a standard pipeline:
 ## Running an Eval
 
 ```bash
-swe-buildbench run --task wordcount-cpp --agent claude-code
-swe-buildbench run --task rs274-cpp --agent codex-cli
-swe-buildbench run --task iges-cpp --agent copilot-cli
+clispecbench run --task wordcount-cpp --agent claude-code
+clispecbench run --task rs274-cpp --agent codex-cli
+clispecbench run --task iges-cpp --agent copilot-cli
 ```
 
 View results:
 
 ```bash
-swe-buildbench results
+clispecbench results
 ```
 
 ## Running Tests
@@ -189,8 +189,8 @@ every PR; the fourth is a hand-run diagnostic for new-machine setup.
 | Category                                                  | Location                                       | Runner   | Cost                | Prereqs                              |
 |-----------------------------------------------------------|------------------------------------------------|----------|---------------------|--------------------------------------|
 | [**Eval reference tests**](#eval-reference-tests)         | `Evals/<task>/tests/`                          | `pytest` | No API cost         | C++ toolchain                        |
-| [**Harness unit tests**](#harness-tests)                  | `src/swe_buildbench/tests/` (unmarked)         | `pytest` | No API cost         | `uv sync`                            |
-| [**Container smoke tests**](#harness-tests)               | `src/swe_buildbench/tests/` (`docker` marker)  | `pytest` | No API cost         | Docker daemon + built images         |
+| [**Harness unit tests**](#harness-tests)                  | `src/clispecbench/tests/` (unmarked)         | `pytest` | No API cost         | `uv sync`                            |
+| [**Container smoke tests**](#harness-tests)               | `src/clispecbench/tests/` (`docker` marker)  | `pytest` | No API cost         | Docker daemon + built images         |
 | [**Auth smoke tests**](#auth-smoke-tests)                 | `scripts/smoke-test-*.sh`                      | bash     | ~pennies of tokens  | Docker + agent creds + built images  |
 
 ### Eval reference tests
@@ -221,7 +221,7 @@ pytest Evals/WordCount/tests --language=py --implementation-root /path/to/py-out
 
 ### Harness tests
 
-The harness has its own pytest suite under `src/swe_buildbench/tests/`.
+The harness has its own pytest suite under `src/clispecbench/tests/`.
 Tests are tagged with markers so you can pick a subset:
 
 | Marker          | Meaning                                                      |
@@ -234,14 +234,14 @@ Typical filters (mirror what CI runs):
 
 ```bash
 # Fast unit tests only -- CI's `unit-tests` job
-uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent"
+uv run pytest src/clispecbench/tests -m "not docker and not prompts_agent"
 
 # Container smoke tests -- CI's `container-tests` job
 # (requires built images -- see "Build Docker images" in Environment Setup)
-uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent"
+uv run pytest src/clispecbench/tests -m "docker and not prompts_agent"
 
 # Everything that doesn't cost API tokens
-uv run pytest src/swe_buildbench/tests -m "not prompts_agent"
+uv run pytest src/clispecbench/tests -m "not prompts_agent"
 ```
 
 The container tests require the base image and all four CLI agent images to
@@ -260,7 +260,7 @@ find the WSL2 daemon. If a `docker`-marked test fails with
 `Cannot connect to Docker daemon`, set `DOCKER_HOST` explicitly:
 
 ```bash
-DOCKER_HOST=tcp://localhost:2375 uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent"
+DOCKER_HOST=tcp://localhost:2375 uv run pytest src/clispecbench/tests -m "docker and not prompts_agent"
 ```
 
 This points the harness at the TCP listener that
@@ -312,18 +312,18 @@ functionality is not fully centralized in one folder yet, so use this checklist.
 
 **Required touchpoints**
 
-1. **Add an adapter module** under `src/swe_buildbench/agents/` that subclasses
+1. **Add an adapter module** under `src/clispecbench/agents/` that subclasses
    `AgentAdapter`. This is where invocation, credential mounts, token parsing,
    telemetry paths, and allowed hosts live.
 2. **Add a Dockerfile** under `docker/agents/<agent-name>.Dockerfile` for the
    container image that runs that agent.
-3. **Add a registry entry** in `src/swe_buildbench/agents/registry.py`. The
+3. **Add a registry entry** in `src/clispecbench/agents/registry.py`. The
    CLI's adapter resolution and `--agent` choices derive from that registry.
-4. **Add adapter tests** in `src/swe_buildbench/tests/test_agents.py`.
-5. **Add container smoke coverage** in `src/swe_buildbench/tests/test_container_smoke.py`.
+4. **Add adapter tests** in `src/clispecbench/tests/test_agents.py`.
+5. **Add container smoke coverage** in `src/clispecbench/tests/test_container_smoke.py`.
 6. **Add auth smoke coverage**:
    - create `scripts/smoke-test-<agent>.sh`
-   - register that script in `src/swe_buildbench/agents/registry.py`
+   - register that script in `src/clispecbench/agents/registry.py`
 7. **Update docs** if the setup or workflow differs from existing agents.
 
 **Helpful notes**
@@ -338,14 +338,14 @@ functionality is not fully centralized in one folder yet, so use this checklist.
 
 Adding a new eval is already more localized than adding a coding agent. Most of
 the work lives under `Evals/<Task>/`; the main repo-wide touchpoint is the task
-registry in `src/swe_buildbench/harness/task.py`.
+registry in `src/clispecbench/harness/task.py`.
 
 **Required touchpoints**
 
 1. **Create the eval directory** under `Evals/<Task>/`.
 2. **Add the prompt/docs/tests/reference implementation** under that directory.
 3. **If the eval should be invokable through the harness CLI**, register one or
-   more task IDs in `src/swe_buildbench/harness/task.py`.
+   more task IDs in `src/clispecbench/harness/task.py`.
 4. **Validate the reference implementation** by running the hidden test suite
    against it before committing.
 
@@ -394,15 +394,15 @@ At prompt assembly time the harness concatenates
 so each eval only needs to write the eval-specific parts.
 
 Each eval's `conftest.py` re-exports fixtures from
-`swe_buildbench.pytest_plugin` and declares an `EVAL_CONFIG` object
+`clispecbench.pytest_plugin` and declares an `EVAL_CONFIG` object
 naming the task and its reference-implementation layout. Tests request
 the `submission_command` fixture (a command sequence ready to splat into
 `subprocess.run`) rather than a concrete executable path, which keeps
 them language-agnostic. See `Evals/WordCount/tests/conftest.py` for a
 minimal example.
 
-If the eval should be runnable through `swe-buildbench`, register one task ID
-per harness-visible `(eval, language)` pair in `src/swe_buildbench/harness/task.py`.
+If the eval should be runnable through `clispecbench`, register one task ID
+per harness-visible `(eval, language)` pair in `src/clispecbench/harness/task.py`.
 The current file uses `_register_language_tasks(...)`, and every registered
 language is explicit, including `cpp`:
 
@@ -498,10 +498,10 @@ environment variable used by `EVAL_CONFIG`).
 This is a **harness registration** change. Do this when you want an eval-language
 pair to be invokable through:
 
-- `swe-buildbench run --task ...`
-- `swe-buildbench validate --task ...`
+- `clispecbench run --task ...`
+- `clispecbench validate --task ...`
 
-Add an entry to `_KNOWN_TASKS` in `src/swe_buildbench/harness/task.py`. By
+Add an entry to `_KNOWN_TASKS` in `src/clispecbench/harness/task.py`. By
 convention, every task ID is suffixed with `-<lang>`, including `-cpp`:
 
 ```python
@@ -523,9 +523,9 @@ does not yet know how to build/run a language at all.
 Required touchpoints:
 
 1. Add a shared prompt at `Evals/_shared/language-requirements-<lang>.md`.
-2. Add build/runtime support in `src/swe_buildbench/build/backends.py`.
+2. Add build/runtime support in `src/clispecbench/build/backends.py`.
 3. Teach the shared pytest plugin about the language in
-   `src/swe_buildbench/pytest_plugin.py`:
+   `src/clispecbench/pytest_plugin.py`:
    - add it to `SUPPORTED_LANGUAGES`
    - add configured-reference lookup support in `_reference_impl_subdir_for_language()`
    - add backend selection support in `_build_backend_for()`

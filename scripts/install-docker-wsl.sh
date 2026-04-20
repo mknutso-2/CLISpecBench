@@ -4,7 +4,7 @@
 #
 # Run from a WSL terminal (not Git Bash — sudo needs a TTY for the password):
 #   wsl -d Ubuntu
-#   bash /mnt/c/Git/SWE-BuildBench/scripts/install-docker-wsl.sh
+#   bash /mnt/c/Git/CLISpecBench/scripts/install-docker-wsl.sh
 #
 # After the script finishes, run the post-install steps printed at the end.
 set -euo pipefail

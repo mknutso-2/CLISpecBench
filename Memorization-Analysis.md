@@ -1,4 +1,4 @@
-# Memorization Analysis — RS274 and SWE-BuildBench
+# Memorization Analysis — RS274 and CLISpecBench
 
 **Status:** Draft  
 **Last Updated:** April 2026
@@ -244,7 +244,7 @@ RS274-Alt is itself susceptible to memorization once published. Mitigations:
 
 MirrorCode's four named benchmark programs are `choose`, `cal`, `gotree`, and
 `Pkl`. We evaluated whether any have documentation thorough enough to support
-SWE-BuildBench-style spec-driven testing (where the spec alone, not a reference
+CLISpecBench-style spec-driven testing (where the spec alone, not a reference
 binary, defines correct behavior).
 
 ### 6.1 Assessment
@@ -262,7 +262,7 @@ None of MirrorCode's named programs have RS274-quality specification documents.
 This is by design — MirrorCode's methodology uses **the reference binary as the
 spec** (black-box, execute-only access), which sidesteps the need for written
 specifications entirely. Their approach measures "can you clone this program's
-behavior?" while SWE-BuildBench measures "can you read and implement this
+behavior?" while CLISpecBench measures "can you read and implement this
 document?"
 
 These are complementary but different capabilities. A model that scores well on
@@ -296,7 +296,7 @@ For contamination resistance, the most promising candidates are those where:
 
 ## 7. Relationship to MirrorCode's Methodology
 
-| Dimension | MirrorCode | SWE-BuildBench (RS274) |
+| Dimension | MirrorCode | CLISpecBench (RS274) |
 |-----------|-----------|------------------------|
 | Input to agent | Execute-only binary + docs | Spec document only (no binary) |
 | What's measured | "Can you clone this behavior?" | "Can you read and implement this?" |

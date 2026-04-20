@@ -14,4 +14,4 @@ uv sync
 echo "==> build docker images"
 bash scripts/build-docker-images.sh
 echo "==> pytest (docker)"
-uv run pytest src/swe_buildbench/tests -m "docker and not prompts_agent" -v
+uv run pytest src/clispecbench/tests -m "docker and not prompts_agent" -v

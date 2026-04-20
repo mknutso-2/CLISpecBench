@@ -1,6 +1,6 @@
 # IGES
 
-IGES 5.3 file format eval for SWE-BuildBench. Agents receive the IGES 5.3
+IGES 5.3 file format eval for CLISpecBench. Agents receive the IGES 5.3
 specification and must produce a working tool that can parse, query, evaluate,
 and write conforming IGES files — the 80-column fixed-format CAD interchange
 format used across mechanical CAD systems since 1980.

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Self-serializing queue template for batched swe-buildbench runs.
+# Self-serializing queue template for batched clispecbench runs.
 #
 # This file is a TEMPLATE, not a runnable queue. Workflow:
 #
@@ -8,7 +8,7 @@
 #      stays out of git automatically.)
 #   2. Edit the copy: set AGENT, fill the `queue=( ... )` array with the
 #      task|model|effort|label items you want to run.
-#   3. Launch in the background. Each `swe-buildbench run` is itself
+#   3. Launch in the background. Each `clispecbench run` is itself
 #      backgrounded inside the loop so the queue advances as soon as a slot
 #      frees; the wrapper waits for all children before exiting:
 #
@@ -17,7 +17,7 @@
 #      Per-item logs land at logs/queue_${label}.log .
 #   4. When the queue completes, delete the copy:  rm scripts/_queue-<your-tag>.sh
 #
-# Concurrency: the queue waits until fewer than MAX_CONCURRENT swe-buildbench
+# Concurrency: the queue waits until fewer than MAX_CONCURRENT clispecbench
 # containers are running before launching the next item. Default is 2.
 #
 # Prerequisites: WSL2 dockerd reachable at tcp://localhost:2375 (see
@@ -45,7 +45,7 @@ count_active() {
 import docker
 try:
     c = docker.DockerClient(base_url='tcp://localhost:2375')
-    cs = [x for x in c.containers.list() if 'swe-buildbench' in x.attrs['Config']['Image']]
+    cs = [x for x in c.containers.list() if 'clispecbench' in x.attrs['Config']['Image']]
     print(len(cs))
 except Exception:
     print(99)
@@ -73,7 +73,7 @@ for item in "${queue[@]}"; do
   wait_for_slot
   echo "[$(date -Iseconds)] QUEUE: launching $label (task=$task model=$model effort=$effort agent=$AGENT)"
   (
-    uv run swe-buildbench run \
+    uv run clispecbench run \
       --task "$task" \
       --agent "$AGENT" \
       --model "$model" \

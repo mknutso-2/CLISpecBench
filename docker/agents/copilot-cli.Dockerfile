@@ -1,4 +1,4 @@
-FROM swe-buildbench-base:latest
+FROM clispecbench-base:latest
 
 # Install GitHub Copilot CLI (https://www.npmjs.com/package/@github/copilot)
 # Pin version for reproducibility — update when running new evaluations
