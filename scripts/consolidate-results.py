@@ -17,12 +17,8 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Consolidate results into CSV")
-    parser.add_argument(
-        "--results-dir", default="results", help="Root results directory"
-    )
-    parser.add_argument(
-        "--output", "-o", default=None, help="Output CSV path (default: stdout)"
-    )
+    parser.add_argument("--results-dir", default="results", help="Root results directory")
+    parser.add_argument("--output", "-o", default=None, help="Output CSV path (default: stdout)")
     parser.add_argument("--task", default=None, help="Filter by task")
     args = parser.parse_args()
 
@@ -42,61 +38,61 @@ def main() -> None:
         if args.task and r.metadata.task != args.task:
             continue
 
-        rows.append({
-            "task": r.metadata.task,
-            "agent": r.metadata.agent,
-            "agent_version": r.metadata.agent_version,
-            "model": r.metadata.model or "default",
-            "effort": r.metadata.effort or "",
-            "run": r.metadata.run_number,
-            "exit_reason": r.metadata.exit_reason,
-            "passed": r.test_summary.passed,
-            "total": r.test_summary.total,
-            "pass_rate": (
-                f"{r.test_summary.passed / r.test_summary.total:.1%}"
-                if r.test_summary.total > 0
-                else "n/a"
-            ),
-            "task_score": (
-                f"{r.scores.task_score:.3f}"
-                if r.scores.task_score is not None
-                else ""
-            ),
-            "input_tokens": r.token_usage.input_tokens if r.token_usage else "",
-            "output_tokens": r.token_usage.output_tokens if r.token_usage else "",
-            "cache_read_tokens": (
-                r.token_usage.cache_read_input_tokens
-                if r.token_usage and r.token_usage.cache_read_input_tokens
-                else ""
-            ),
-            "cache_write_tokens": (
-                r.token_usage.cache_creation_input_tokens
-                if r.token_usage and r.token_usage.cache_creation_input_tokens
-                else ""
-            ),
-            "total_tokens": (
-                r.token_usage.total_tokens if r.token_usage else ""
-            ),
-            "tool_calls": (
-                r.token_usage.tool_calls
-                if r.token_usage and r.token_usage.tool_calls
-                else ""
-            ),
-            "reported_cost": (
-                f"{r.token_usage.reported_cost_usd:.4f}"
-                if r.token_usage and r.token_usage.reported_cost_usd
-                else ""
-            ),
-            "estimated_cost": (
-                f"{r.token_usage.estimated_cost_usd:.4f}"
-                if r.token_usage and r.token_usage.estimated_cost_usd
-                else ""
-            ),
-            "wall_clock_s": f"{r.metadata.wall_clock_seconds:.1f}",
-            "build_ok": r.build.success,
-            "surgery": r.surgery or "",
-            "notes": r.metadata.notes or "",
-        })
+        rows.append(
+            {
+                "task": r.metadata.task,
+                "agent": r.metadata.agent,
+                "agent_version": r.metadata.agent_version,
+                "model": r.metadata.model or "default",
+                "effort": r.metadata.effort or "",
+                "run": r.metadata.run_number,
+                "exit_reason": r.metadata.exit_reason,
+                "passed": r.test_summary.passed,
+                "total": r.test_summary.total,
+                "pass_rate": (
+                    f"{r.test_summary.passed / r.test_summary.total:.1%}"
+                    if r.test_summary.total > 0
+                    else "n/a"
+                ),
+                "task_score": (
+                    f"{r.scores.task_score:.3f}" if r.scores.task_score is not None else ""
+                ),
+                "input_tokens": r.token_usage.input_tokens if r.token_usage else "",
+                "output_tokens": r.token_usage.output_tokens if r.token_usage else "",
+                "cache_read_tokens": (
+                    r.token_usage.cache_read_input_tokens
+                    if r.token_usage and r.token_usage.cache_read_input_tokens
+                    else ""
+                ),
+                "cache_write_tokens": (
+                    r.token_usage.cache_creation_input_tokens
+                    if r.token_usage and r.token_usage.cache_creation_input_tokens
+                    else ""
+                ),
+                "total_tokens": (r.token_usage.total_tokens if r.token_usage else ""),
+                "tool_calls": (
+                    r.token_usage.tool_calls if r.token_usage and r.token_usage.tool_calls else ""
+                ),
+                "benchmark_cost": (
+                    f"{r.benchmark_cost_usd:.4f}" if r.benchmark_cost_usd is not None else ""
+                ),
+                "benchmark_cost_source": r.benchmark_cost_source or "",
+                "reported_cost": (
+                    f"{r.token_usage.reported_cost_usd:.4f}"
+                    if r.token_usage and r.token_usage.reported_cost_usd
+                    else ""
+                ),
+                "estimated_cost": (
+                    f"{r.token_usage.estimated_cost_usd:.4f}"
+                    if r.token_usage and r.token_usage.estimated_cost_usd
+                    else ""
+                ),
+                "wall_clock_s": f"{r.metadata.wall_clock_seconds:.1f}",
+                "build_ok": r.build.success,
+                "surgery": r.surgery or "",
+                "notes": r.metadata.notes or "",
+            }
+        )
 
     if not rows:
         print("No results found.", file=sys.stderr)

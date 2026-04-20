@@ -152,3 +152,22 @@ class AgentAdapter(ABC):
         (may be long); callers truncate for storage.
         """
         return None
+
+    def estimate_cost(self, token_usage: TokenUsage) -> float | None:
+        """Estimate benchmark cost for this run from normalized token usage."""
+        if token_usage.estimated_cost_usd is not None:
+            return token_usage.estimated_cost_usd
+        if token_usage.cost_estimate_blocked_reason is not None:
+            return None
+        if self.model is None:
+            return None
+
+        from swe_buildbench.harness.pricing import estimate_cost
+
+        return estimate_cost(
+            self.model,
+            token_usage.input_tokens,
+            token_usage.output_tokens,
+            token_usage.cache_read_input_tokens or 0,
+            token_usage.cache_creation_input_tokens or 0,
+        )

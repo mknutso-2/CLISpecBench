@@ -43,10 +43,7 @@ class TestEstimateCost:
         )
         assert cost is not None
         expected = (
-            100_000 * 1.0 / 1e6
-            + 700_000 * 0.10 / 1e6
-            + 200_000 * 2.0 / 1e6
-            + 50_000 * 5.0 / 1e6
+            100_000 * 1.0 / 1e6 + 700_000 * 0.10 / 1e6 + 200_000 * 2.0 / 1e6 + 50_000 * 5.0 / 1e6
         )
         assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
 
@@ -62,10 +59,25 @@ class TestEstimateCost:
         )
         assert cost is not None
         expected = (
-            360 * 1.0 / 1e6           # uncached input
-            + 3542369 * 0.10 / 1e6    # cache read
-            + 109733 * 2.0 / 1e6      # cache write (1h ephemeral)
-            + 63559 * 5.0 / 1e6       # output
+            360 * 1.0 / 1e6  # uncached input
+            + 3542369 * 0.10 / 1e6  # cache read
+            + 109733 * 2.0 / 1e6  # cache write (1h ephemeral)
+            + 63559 * 5.0 / 1e6  # output
+        )
+        assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
+
+    def test_opus_4_7_real_run_model_usage(self) -> None:
+        """Verify estimate against the Opus 4.7 modelUsage breakdown."""
+        cost = estimate_cost(
+            "claude-opus-4-7",
+            input_tokens=1859 + 322004 + 4606340,  # uncached + cache write + cache read
+            output_tokens=107653,
+            cache_read_input_tokens=4606340,
+            cache_creation_input_tokens=322004,
+        )
+        assert cost is not None
+        expected = (
+            1859 * 5.0 / 1e6 + 4606340 * 0.50 / 1e6 + 322004 * 10.0 / 1e6 + 107653 * 25.0 / 1e6
         )
         assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
 
@@ -95,23 +107,33 @@ class TestEstimateCost:
 class TestPricingTableCompleteness:
     def test_all_claude_models_present(self) -> None:
         for model in (
-            "claude-opus-4-6", "claude-sonnet-4-6",
-            "claude-opus-4-5-20251101", "claude-sonnet-4-5-20250929",
+            "claude-opus-4-7",
+            "claude-opus-4-6",
+            "claude-sonnet-4-6",
+            "claude-opus-4-5-20251101",
+            "claude-sonnet-4-5-20250929",
             "claude-haiku-4-5-20251001",
         ):
             assert model in ALL_PRICING, f"Missing pricing for {model}"
 
     def test_all_openai_models_present(self) -> None:
         for model in (
-            "gpt-5.4", "gpt-5.4-mini", "gpt-5.3-codex",
-            "gpt-5.2-codex", "gpt-5.2",
-            "gpt-5.1-codex-max", "gpt-5.1-codex-mini",
+            "gpt-5.4",
+            "gpt-5.4-mini",
+            "gpt-5.3-codex",
+            "gpt-5.2-codex",
+            "gpt-5.2",
+            "gpt-5.1-codex-max",
+            "gpt-5.1-codex-mini",
         ):
             assert model in ALL_PRICING, f"Missing pricing for {model}"
 
     def test_all_gemini_models_present(self) -> None:
         for model in (
-            "gemini-3.1-pro-preview", "gemini-3-flash-preview",
-            "gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.5-flash-lite",
+            "gemini-3.1-pro-preview",
+            "gemini-3-flash-preview",
+            "gemini-2.5-pro",
+            "gemini-2.5-flash",
+            "gemini-2.5-flash-lite",
         ):
             assert model in ALL_PRICING, f"Missing pricing for {model}"

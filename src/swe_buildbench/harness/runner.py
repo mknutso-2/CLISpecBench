@@ -15,6 +15,7 @@ import docker.errors
 from requests import exceptions as requests_exceptions
 
 from swe_buildbench.agents.base import AgentAdapter
+from swe_buildbench.agents.registry import get_agent_spec
 from swe_buildbench.harness.docker import (
     CONTAINER_OUTPUT,
     CONTAINER_PROMPT,
@@ -109,6 +110,7 @@ def _write_infrastructure_failure_result(
         model=adapter.model,
         effort=adapter.effort,
         notes=notes,
+        benchmark_cost_preference=_benchmark_cost_preference(adapter.name),
         prompt_content_sha=prompt_content_sha,
         test_suite_sha=test_suite_sha,
     )
@@ -146,6 +148,13 @@ def _docker_failure_note(exc: Exception) -> str:
     if isinstance(exc, requests_exceptions.RequestException):
         return "infrastructure_failure: Docker request error before scoring completed"
     return "infrastructure_failure: Docker unavailable before scoring completed"
+
+
+def _benchmark_cost_preference(agent_id: str) -> str | None:
+    try:
+        return get_agent_spec(agent_id).benchmark_cost_preference
+    except ValueError:
+        return None
 
 
 def run_evaluation(
@@ -283,17 +292,8 @@ def run_evaluation(
         except Exception:
             log.warning("Failed to parse token usage", exc_info=True)
 
-        # Always estimate cost from token counts + published pricing
-        if token_usage is not None and adapter.model:
-            from swe_buildbench.harness.pricing import estimate_cost
-
-            token_usage.estimated_cost_usd = estimate_cost(
-                adapter.model,
-                token_usage.input_tokens,
-                token_usage.output_tokens,
-                token_usage.cache_read_input_tokens or 0,
-                token_usage.cache_creation_input_tokens or 0,
-            )
+        if token_usage is not None:
+            token_usage.estimated_cost_usd = adapter.estimate_cost(token_usage)
 
         # --- 6. Run hidden tests ---
         # The eval's conftest.py handles preparing the submission (build for
@@ -382,6 +382,7 @@ def run_evaluation(
             exit_reason=exit_reason,
             model=adapter.model,
             effort=adapter.effort,
+            benchmark_cost_preference=_benchmark_cost_preference(adapter.name),
             prompt_content_sha=prompt_hash.sha256,
             test_suite_sha=test_hash.sha256,
             agent_last_message=agent_last_message,
@@ -436,9 +437,7 @@ def run_evaluation(
                 # of the same task/agent/model on the same day produce
                 # identical run_ids but distinct ``eval<N>/`` paths.
                 eval_dir_name = out_path.parent.parent.name  # e.g. "eval2"
-                home_dest_dir = (
-                    Path.home() / ".claude" / "projects" / f"{run_id}_{eval_dir_name}"
-                )
+                home_dest_dir = Path.home() / ".claude" / "projects" / f"{run_id}_{eval_dir_name}"
                 home_dest = home_dest_dir / src.name
                 try:
                     home_dest_dir.mkdir(parents=True, exist_ok=True)

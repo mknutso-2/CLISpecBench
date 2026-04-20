@@ -12,7 +12,26 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "1.0"
+SCHEMA_VERSION = "1.1"
+_VALID_BENCHMARK_COST_PREFERENCES = frozenset({"reported", "estimated"})
+
+
+def _benchmark_cost_preference(agent: str, stored_preference: str | None) -> str:
+    if stored_preference in _VALID_BENCHMARK_COST_PREFERENCES:
+        return stored_preference
+    if stored_preference is not None:
+        log.warning(
+            "Unknown benchmark_cost_preference %r for agent %s; falling back to registry",
+            stored_preference,
+            agent,
+        )
+
+    from swe_buildbench.agents.registry import get_agent_spec
+
+    try:
+        return get_agent_spec(agent).benchmark_cost_preference
+    except ValueError:
+        return "reported"
 
 
 @dataclass
@@ -35,8 +54,12 @@ class TokenUsage:
     cache_read_input_tokens: int | None = None
     cache_creation_input_tokens: int | None = None
     tool_calls: int | None = None
-    reported_cost_usd: float | None = None   # Native cost from agent CLI (e.g. Claude Code)
+    reported_cost_usd: float | None = None  # Raw CLI-reported cost; may itself be a local estimate
     estimated_cost_usd: float | None = None  # Calculated from token counts + published pricing
+    # Why a generic model-level estimate should not be attempted even when
+    # ``estimated_cost_usd`` is missing. For example, Claude's mixed-model
+    # ``modelUsage`` can aggregate token counts from multiple priced models.
+    cost_estimate_blocked_reason: str | None = None
 
     @property
     def total_tokens(self) -> int:
@@ -158,6 +181,7 @@ class RunMetadata:
     model: str | None = None
     effort: str | None = None
     notes: str | None = None
+    benchmark_cost_preference: str | None = None
     # Content hashes — machine-checkable backstop for the manual
     # `eval_version` bump. ``prompt_content_sha`` covers the assembled
     # prompt + docs (what the agent sees); ``test_suite_sha`` covers the
@@ -186,6 +210,43 @@ class RunResult:
     @property
     def schema_version(self) -> str:
         return SCHEMA_VERSION
+
+    @property
+    def benchmark_cost_usd(self) -> float | None:
+        """Cost to use for benchmark reporting and cross-agent comparisons.
+
+        Agents can register ``estimated`` as the preferred benchmark-cost
+        source when their CLI-reported cost is only a local estimate. If the
+        preferred source is unavailable, fall back to the other source so cost
+        does not disappear entirely from summaries.
+        """
+        if self.token_usage is None:
+            return None
+        preference = _benchmark_cost_preference(
+            self.metadata.agent,
+            self.metadata.benchmark_cost_preference,
+        )
+        if preference == "estimated" and self.token_usage.estimated_cost_usd is not None:
+            return self.token_usage.estimated_cost_usd
+        if self.token_usage.reported_cost_usd is not None:
+            return self.token_usage.reported_cost_usd
+        return self.token_usage.estimated_cost_usd
+
+    @property
+    def benchmark_cost_source(self) -> str | None:
+        if self.token_usage is None:
+            return None
+        preference = _benchmark_cost_preference(
+            self.metadata.agent,
+            self.metadata.benchmark_cost_preference,
+        )
+        if preference == "estimated" and self.token_usage.estimated_cost_usd is not None:
+            return "estimated"
+        if self.token_usage.reported_cost_usd is not None:
+            return "reported"
+        if self.token_usage.estimated_cost_usd is not None:
+            return "estimated"
+        return None
 
     def to_dict(self) -> dict[str, object]:
         d: dict[str, object] = {"schema_version": self.schema_version}
@@ -317,9 +378,7 @@ class EvalLock:
                     os.kill(old_pid, 0)  # signal 0 = check existence
                 except OSError:
                     # Process is dead — stale lock
-                    log.warning(
-                        "Removing stale lock %s (pid %d is dead)", lock_path, old_pid
-                    )
+                    log.warning("Removing stale lock %s (pid %d is dead)", lock_path, old_pid)
                     lock_path.unlink(missing_ok=True)
                 else:
                     raise SystemExit(
@@ -384,6 +443,7 @@ def load_result(path: Path) -> RunResult:
     meta = data["metadata"]
     meta.setdefault("eval_version", "unknown")
     meta.setdefault("harness_version", "unknown")
+    meta.setdefault("benchmark_cost_preference", None)
     meta.setdefault("prompt_content_sha", "unknown")
     meta.setdefault("test_suite_sha", "unknown")
     meta.setdefault("agent_last_message", None)
@@ -401,6 +461,7 @@ def load_result(path: Path) -> RunResult:
             tool_calls=data["token_usage"].get("tool_calls"),
             reported_cost_usd=data["token_usage"].get("reported_cost_usd"),
             estimated_cost_usd=data["token_usage"].get("estimated_cost_usd"),
+            cost_estimate_blocked_reason=data["token_usage"].get("cost_estimate_blocked_reason"),
         )
         if data.get("token_usage")
         else None

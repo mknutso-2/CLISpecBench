@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path, PurePosixPath
 
 import pytest
@@ -11,7 +12,12 @@ from swe_buildbench.agents.claude_code import ClaudeCodeAdapter
 from swe_buildbench.agents.codex_cli import CodexCLIAdapter
 from swe_buildbench.agents.copilot_cli import CopilotCLIAdapter
 from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
-from swe_buildbench.agents.registry import AgentSpec, list_agent_specs, list_auth_smoke_scripts
+from swe_buildbench.agents.registry import (
+    AgentSpec,
+    get_agent_spec,
+    list_agent_specs,
+    list_auth_smoke_scripts,
+)
 
 CONTAINER_AGENT_SPECS = list_agent_specs(include_non_container=False)
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -28,6 +34,10 @@ class TestAgentRegistry:
         for script_path in smoke_scripts:
             assert script_path.endswith(".sh")
             assert (REPO_ROOT / script_path).is_file()
+
+    def test_benchmark_cost_preference_is_registered(self) -> None:
+        assert get_agent_spec("claude-code").benchmark_cost_preference == "estimated"
+        assert get_agent_spec("codex-cli").benchmark_cost_preference == "reported"
 
 
 class TestClaudeCodeCredentialMounts:
@@ -221,3 +231,171 @@ class TestTelemetryPaths:
     def test_copilot_has_otel_path(self) -> None:
         adapter = CopilotCLIAdapter()
         assert any("copilot-otel" in p for p in adapter.telemetry_paths)
+
+
+class TestClaudeCodeTokenUsage:
+    def test_parse_token_usage_prefers_model_usage(self, tmp_path: Path) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-opus-4-7")
+        result_event = {
+            "type": "result",
+            "total_cost_usd": 21.04894500000001,
+            "usage": {
+                "input_tokens": 76,
+                "cache_creation_input_tokens": 306436,
+                "cache_read_input_tokens": 4461375,
+                "output_tokens": 101769,
+            },
+            "modelUsage": {
+                "claude-opus-4-7": {
+                    "inputTokens": 1859,
+                    "outputTokens": 107653,
+                    "cacheReadInputTokens": 4606340,
+                    "cacheCreationInputTokens": 322004,
+                    "costUSD": 21.04894500000001,
+                }
+            },
+        }
+
+        usage = adapter.parse_token_usage(tmp_path, json.dumps(result_event))
+
+        assert usage is not None
+        assert usage.input_tokens == 1859 + 4606340 + 322004
+        assert usage.output_tokens == 107653
+        assert usage.cache_read_input_tokens == 4606340
+        assert usage.cache_creation_input_tokens == 322004
+        assert usage.estimated_cost_usd == pytest.approx(8.22383)
+        assert usage.cost_estimate_blocked_reason is None
+        assert usage.reported_cost_usd == pytest.approx(21.048945)
+
+    def test_parse_token_usage_aggregates_multi_model_usage(self, tmp_path: Path) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-opus-4-7")
+        result_event = {
+            "type": "result",
+            "total_cost_usd": 12.34,
+            "usage": {
+                "input_tokens": 10,
+                "cache_creation_input_tokens": 20,
+                "cache_read_input_tokens": 30,
+                "output_tokens": 40,
+            },
+            "modelUsage": {
+                "claude-opus-4-7": {
+                    "inputTokens": 100,
+                    "outputTokens": 200,
+                    "cacheReadInputTokens": 300,
+                    "cacheCreationInputTokens": 400,
+                },
+                "claude-sonnet-4-6": {
+                    "inputTokens": 11,
+                    "outputTokens": 22,
+                    "cacheReadInputTokens": 33,
+                    "cacheCreationInputTokens": 44,
+                },
+            },
+        }
+
+        usage = adapter.parse_token_usage(tmp_path, json.dumps(result_event))
+
+        assert usage is not None
+        assert usage.input_tokens == 888
+        assert usage.output_tokens == 222
+        assert usage.cache_read_input_tokens == 333
+        assert usage.cache_creation_input_tokens == 444
+        assert usage.estimated_cost_usd == pytest.approx(0.010287)
+        assert usage.cost_estimate_blocked_reason is None
+        assert usage.reported_cost_usd == pytest.approx(12.34)
+
+    def test_estimate_cost_skips_generic_fallback_for_unpriced_model_usage(
+        self, tmp_path: Path
+    ) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-opus-4-7")
+        result_event = {
+            "type": "result",
+            "total_cost_usd": 9.87,
+            "modelUsage": {
+                "claude-opus-4-7": {
+                    "inputTokens": 100,
+                    "outputTokens": 200,
+                    "cacheReadInputTokens": 300,
+                    "cacheCreationInputTokens": 400,
+                },
+                "claude-unknown-future-model": {
+                    "inputTokens": 10,
+                    "outputTokens": 20,
+                    "cacheReadInputTokens": 30,
+                    "cacheCreationInputTokens": 40,
+                },
+            },
+        }
+
+        usage = adapter.parse_token_usage(tmp_path, json.dumps(result_event))
+
+        assert usage is not None
+        assert usage.estimated_cost_usd is None
+        assert usage.cost_estimate_blocked_reason == "unpriced_model_usage"
+        assert adapter.estimate_cost(usage) is None
+
+    def test_estimate_cost_is_not_order_dependent_across_parse_calls(self, tmp_path: Path) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-opus-4-7")
+        model_usage_event = {
+            "type": "result",
+            "total_cost_usd": 9.87,
+            "modelUsage": {
+                "claude-opus-4-7": {
+                    "inputTokens": 100,
+                    "outputTokens": 200,
+                    "cacheReadInputTokens": 300,
+                    "cacheCreationInputTokens": 400,
+                },
+                "claude-unknown-future-model": {
+                    "inputTokens": 10,
+                    "outputTokens": 20,
+                    "cacheReadInputTokens": 30,
+                    "cacheCreationInputTokens": 40,
+                },
+            },
+        }
+        top_level_usage_event = {
+            "type": "result",
+            "total_cost_usd": 1.23,
+            "usage": {
+                "input_tokens": 100,
+                "cache_creation_input_tokens": 200,
+                "cache_read_input_tokens": 300,
+                "output_tokens": 400,
+            },
+        }
+
+        blocked_usage = adapter.parse_token_usage(tmp_path, json.dumps(model_usage_event))
+        estimated_usage = adapter.parse_token_usage(tmp_path, json.dumps(top_level_usage_event))
+
+        assert blocked_usage is not None
+        assert blocked_usage.cost_estimate_blocked_reason == "unpriced_model_usage"
+        assert adapter.estimate_cost(blocked_usage) is None
+        assert estimated_usage is not None
+        assert estimated_usage.cost_estimate_blocked_reason is None
+        assert adapter.estimate_cost(estimated_usage) == pytest.approx(0.01265)
+
+    def test_parse_token_usage_falls_back_to_top_level_usage(self, tmp_path: Path) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-opus-4-7")
+        result_event = {
+            "type": "result",
+            "total_cost_usd": 1.23,
+            "usage": {
+                "input_tokens": 100,
+                "cache_creation_input_tokens": 200,
+                "cache_read_input_tokens": 300,
+                "output_tokens": 400,
+            },
+        }
+
+        usage = adapter.parse_token_usage(tmp_path, json.dumps(result_event))
+
+        assert usage is not None
+        assert usage.input_tokens == 600
+        assert usage.output_tokens == 400
+        assert usage.cache_read_input_tokens == 300
+        assert usage.cache_creation_input_tokens == 200
+        assert usage.estimated_cost_usd is None
+        assert usage.cost_estimate_blocked_reason is None
+        assert usage.reported_cost_usd == pytest.approx(1.23)

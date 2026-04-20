@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Literal
 
 from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.agents.claude_code import ClaudeCodeAdapter
@@ -13,6 +14,7 @@ from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
 from swe_buildbench.agents.model_api import ModelAPIAdapter
 
 AgentFactory = Callable[[str | None, str | None], AgentAdapter]
+BenchmarkCostPreference = Literal["reported", "estimated"]
 
 
 @dataclass(frozen=True)
@@ -24,6 +26,7 @@ class AgentSpec:
     docker_image: str | None = None
     version_command: str | None = None
     auth_smoke_script: str | None = None
+    benchmark_cost_preference: BenchmarkCostPreference = "reported"
 
     def create(
         self,
@@ -50,6 +53,7 @@ _AGENT_SPECS: dict[str, AgentSpec] = {
         docker_image="swe-buildbench-claude-code",
         version_command="claude --version",
         auth_smoke_script="scripts/smoke-test-claude.sh",
+        benchmark_cost_preference="estimated",
     ),
     "codex-cli": AgentSpec(
         agent_id="codex-cli",
@@ -104,7 +108,5 @@ def list_agent_specs(*, include_non_container: bool = True) -> list[AgentSpec]:
 def list_auth_smoke_scripts() -> list[str]:
     """Return repo-relative auth-smoke script paths in stable agent order."""
     return [
-        spec.auth_smoke_script
-        for spec in list_agent_specs()
-        if spec.auth_smoke_script is not None
+        spec.auth_smoke_script for spec in list_agent_specs() if spec.auth_smoke_script is not None
     ]

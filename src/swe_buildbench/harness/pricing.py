@@ -6,30 +6,43 @@ change their pricing or new models are added.
 Known discrepancy (Claude Code)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 Claude Code's ``total_cost_usd`` (captured as ``reported_cost_usd``) is
-typically ~10% higher than what we calculate from token counts and
-published per-MTok rates (``estimated_cost_usd``).  For example, a
-Haiku 4.5 run reported $0.9803 vs our estimate of $0.8919.
+not authoritative billing data. Anthropic documents it as a client-side
+estimate computed from a bundled price table, and we have seen it diverge
+from published API pricing in more than one way.
 
-We have not been able to fully account for this gap.  Possible causes
-investigated:
+Historically we observed runs where Claude Code reported roughly 10%
+higher cost than what we calculated from token counts and published
+per-MTok rates. For example, a Haiku 4.5 run reported $0.9803 vs our
+estimate of $0.8919. Possible causes investigated:
 
 - **Data residency / regional routing premium (most likely).**
   Anthropic applies a 1.1x multiplier for region-locked inference.
   $0.8919 × 1.1 = $0.9811, which matches the reported cost within
-  $0.001.  The transcript shows ``inference_geo: ""`` (empty, meaning
+  $0.001. The transcript shows ``inference_geo: ""`` (empty, meaning
   no explicit preference), but default routing may still incur the
-  premium.  See https://docs.anthropic.com/en/docs/about-claude/pricing.
-- **5-min vs 1-hr cache write tiers.**  Anthropic charges 1.25x for
-  5-min and 2x for 1-hr ephemeral cache writes.  We assume 1-hr
-  (the ``cache_creation.ephemeral_1h_input_tokens`` sub-field confirms
-  this for the run we checked), but a mix of tiers in other runs
-  could widen or narrow the gap.
+  premium. See https://platform.claude.com/docs/en/about-claude/pricing.
+- **5-min vs 1-hr cache write tiers.** Anthropic charges 1.25x for
+  5-min and 2x for 1-hr ephemeral cache writes. We assume 1-hr when
+  transcript fields confirm it, but a mix of tiers could widen or
+  narrow the gap.
 - **Extended thinking tokens** are billed but only a summary is
-  surfaced in the usage object.  Not applicable to Haiku 4.5 (no
-  thinking support), but will affect Opus/Sonnet estimates.
-- **Tool-use system prompt overhead** (~346 tokens injected per API
-  call) is billed but may not appear in the session-level token
-  summary.
+  surfaced in the usage object. Not applicable to Haiku 4.5 (no
+  thinking support), but it affects Opus/Sonnet estimates.
+- **Tool-use system prompt overhead** is billed but may not appear in
+  the session-level token summary.
+
+We have also seen much larger divergences when Claude Code appears to
+use stale bundled model pricing. For example, an Opus 4.7 run's
+``modelUsage`` token counts priced at Anthropic's published Opus 4.7
+rates come out to about $8.22, while Claude Code reported $21.05,
+which is within about a tenth of a cent of applying older Claude 3
+Opus-style rates ($15 / MTok input, $75 / MTok output, $1.50 / MTok
+cache read, and $18.75 / MTok 5-minute cache writes).
+
+For benchmark reporting, prefer ``estimated_cost_usd`` from transcript
+token counts + this file's pricing table. Even that value remains an
+approximation when transcripts omit billed categories or cache-tier
+details.
 
 See also: https://github.com/anthropics/claude-code/issues/26762
 """
@@ -43,52 +56,69 @@ from dataclasses import dataclass
 class ModelPricing:
     """Per-million-token prices for a single model."""
 
-    input: float          # $/MTok for uncached input
-    output: float         # $/MTok for output
-    cached_input: float   # $/MTok for cache-hit (read) input
-    cache_write: float    # $/MTok for cache creation/write (0 if same as input)
+    input: float  # $/MTok for uncached input
+    output: float  # $/MTok for output
+    cached_input: float  # $/MTok for cache-hit (read) input
+    cache_write: float  # $/MTok for cache creation/write (0 if same as input)
 
 
 # ---------------------------------------------------------------------------
-# Pricing tables — last verified 2026-04-02
+# Pricing tables
+# Anthropic rows last verified 2026-04-19
+# OpenAI and Google rows last verified 2026-04-02
 # ---------------------------------------------------------------------------
 
 # Anthropic Claude
-# https://docs.anthropic.com/en/docs/about-claude/pricing
+# https://platform.claude.com/docs/en/about-claude/pricing
 # cache_write = 1h ephemeral cache creation rate (2x base input)
 ANTHROPIC_PRICING: dict[str, ModelPricing] = {
-    "claude-opus-4-6":             ModelPricing(input=5.00,  output=25.00, cached_input=0.50,  cache_write=10.00),  # noqa: E501
-    "claude-sonnet-4-6":           ModelPricing(input=3.00,  output=15.00, cached_input=0.30,  cache_write=6.00),   # noqa: E501
-    "claude-opus-4-5-20251101":    ModelPricing(input=5.00,  output=25.00, cached_input=0.50,  cache_write=10.00),  # noqa: E501
-    "claude-sonnet-4-5-20250929":  ModelPricing(input=3.00,  output=15.00, cached_input=0.30,  cache_write=6.00),   # noqa: E501
-    "claude-haiku-4-5-20251001":   ModelPricing(input=1.00,  output=5.00,  cached_input=0.10,  cache_write=2.00),   # noqa: E501
+    "claude-opus-4-7": ModelPricing(input=5.00, output=25.00, cached_input=0.50, cache_write=10.00),  # noqa: E501
+    "claude-opus-4-6": ModelPricing(input=5.00, output=25.00, cached_input=0.50, cache_write=10.00),  # noqa: E501
+    "claude-sonnet-4-6": ModelPricing(
+        input=3.00, output=15.00, cached_input=0.30, cache_write=6.00
+    ),  # noqa: E501
+    "claude-opus-4-5-20251101": ModelPricing(
+        input=5.00, output=25.00, cached_input=0.50, cache_write=10.00
+    ),  # noqa: E501
+    "claude-sonnet-4-5-20250929": ModelPricing(
+        input=3.00, output=15.00, cached_input=0.30, cache_write=6.00
+    ),  # noqa: E501
+    "claude-haiku-4-5-20251001": ModelPricing(
+        input=1.00, output=5.00, cached_input=0.10, cache_write=2.00
+    ),  # noqa: E501
 }
 
 # OpenAI GPT / Codex
 # https://openai.com/api/pricing/
 # cache_write = 0 (Codex CLI doesn't report cache creation tokens)
 OPENAI_PRICING: dict[str, ModelPricing] = {
-    "gpt-5.4":             ModelPricing(input=2.50,  output=15.00, cached_input=0.25,  cache_write=0),  # noqa: E501
-    "gpt-5.4-mini":        ModelPricing(input=0.75,  output=4.50,  cached_input=0.075, cache_write=0),  # noqa: E501
-    "gpt-5-mini":          ModelPricing(input=0.25,  output=2.00,  cached_input=0.025, cache_write=0),  # noqa: E501
-    "gpt-5.3-codex":       ModelPricing(input=1.75,  output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
-    "gpt-5.2-codex":       ModelPricing(input=1.75,  output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
-    "gpt-5.2":             ModelPricing(input=1.75,  output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
-    "gpt-5.1-codex-max":   ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
-    "gpt-5.1-codex-mini":  ModelPricing(input=0.25,  output=2.00,  cached_input=0.025, cache_write=0),  # noqa: E501
-    "gpt-5.1":             ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
-    "gpt-5":               ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
+    "gpt-5.4": ModelPricing(input=2.50, output=15.00, cached_input=0.25, cache_write=0),  # noqa: E501
+    "gpt-5.4-mini": ModelPricing(input=0.75, output=4.50, cached_input=0.075, cache_write=0),  # noqa: E501
+    "gpt-5-mini": ModelPricing(input=0.25, output=2.00, cached_input=0.025, cache_write=0),  # noqa: E501
+    "gpt-5.3-codex": ModelPricing(input=1.75, output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
+    "gpt-5.2-codex": ModelPricing(input=1.75, output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
+    "gpt-5.2": ModelPricing(input=1.75, output=14.00, cached_input=0.175, cache_write=0),  # noqa: E501
+    "gpt-5.1-codex-max": ModelPricing(input=1.25, output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
+    "gpt-5.1-codex-mini": ModelPricing(input=0.25, output=2.00, cached_input=0.025, cache_write=0),  # noqa: E501
+    "gpt-5.1": ModelPricing(input=1.25, output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
+    "gpt-5": ModelPricing(input=1.25, output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
 }
 
 # Google Gemini (text input, <=200k context)
 # https://ai.google.dev/gemini-api/docs/pricing
 # cache_write = 0 (Gemini CLI doesn't report cache creation tokens)
 GOOGLE_PRICING: dict[str, ModelPricing] = {
-    "gemini-3.1-pro-preview":  ModelPricing(input=2.00,  output=12.00, cached_input=0.20,  cache_write=0),  # noqa: E501
-    "gemini-3-flash-preview":  ModelPricing(input=0.50,  output=3.00,  cached_input=0.05,  cache_write=0),  # noqa: E501
-    "gemini-2.5-pro":          ModelPricing(input=1.25,  output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
-    "gemini-2.5-flash":        ModelPricing(input=0.30,  output=2.50,  cached_input=0.03,  cache_write=0),  # noqa: E501
-    "gemini-2.5-flash-lite":   ModelPricing(input=0.10,  output=0.40,  cached_input=0.01,  cache_write=0),  # noqa: E501
+    "gemini-3.1-pro-preview": ModelPricing(
+        input=2.00, output=12.00, cached_input=0.20, cache_write=0
+    ),  # noqa: E501
+    "gemini-3-flash-preview": ModelPricing(
+        input=0.50, output=3.00, cached_input=0.05, cache_write=0
+    ),  # noqa: E501
+    "gemini-2.5-pro": ModelPricing(input=1.25, output=10.00, cached_input=0.125, cache_write=0),  # noqa: E501
+    "gemini-2.5-flash": ModelPricing(input=0.30, output=2.50, cached_input=0.03, cache_write=0),  # noqa: E501
+    "gemini-2.5-flash-lite": ModelPricing(
+        input=0.10, output=0.40, cached_input=0.01, cache_write=0
+    ),  # noqa: E501
 }
 
 # Combined lookup
