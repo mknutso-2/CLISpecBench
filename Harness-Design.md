@@ -81,7 +81,7 @@ harness implementation: how those concepts become running code.
 ┌──────────────────────────────────────────────────────┐
 │  Results (one JSON file per run)                     │
 │                                                      │
-│  results/<task>/<agent>/<run>.json                   │
+│  transient_results/<task>/<agent>/<run>.json         │
 └──────────────────────────────────────────────────────┘
 ```
 
@@ -382,7 +382,7 @@ run_quality_eval()
 
 assemble_result()
   → Combine all scores and metadata into result JSON
-  → Write to results/<task>/<agent>/run-<N>.json
+  → Write to transient_results/<task>/<agent>/run-<N>.json
 ```
 
 ### 7.2 Timeout Handling
@@ -476,7 +476,7 @@ Each run produces a result JSON file plus two preserved artifacts: the full
 agent transcript and the complete source code directory.
 
 ```
-results/
+transient_results/
   cncsim-cpp/
     claude-code/
       run-1.json                 # Structured result (scores, tests, metadata)
@@ -533,7 +533,7 @@ swe-buildbench run
     --runs <N>                         # Default: 3 for agentic, 1 for model-api
     --prompt-variant <name>            # Default: base
     --skip-extensions                  # Skip extension tasks
-    --output-dir <path>                # Default: results/
+    --output-dir <path>                # Default: transient_results/
     --model <model-id>                 # For model-api mode: claude-opus-4-6, gpt-4o, etc.
     --api-key-env <VAR=value>          # Repeatable: inject secrets into container
 

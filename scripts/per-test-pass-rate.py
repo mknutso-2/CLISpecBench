@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Per-test pass-rate CSV across all runs of a task family.
 
-For each unique pytest ``node_id`` seen in ``results/<task-prefix>*/**/result.json``,
+For each unique pytest ``node_id`` seen in ``transient_results/<task-prefix>*/**/result.json``,
 emits one row with: attempted (total appearances), passed (outcome=="passed"),
 failed, skipped, errored, pass_rate.
 
@@ -26,7 +26,7 @@ def main() -> None:
 
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
-        "--results-dir", default="results", help="Root results directory"
+        "--results-dir", default="transient_results", help="Root results directory"
     )
     parser.add_argument(
         "--task-prefix",

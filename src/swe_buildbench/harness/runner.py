@@ -165,7 +165,7 @@ def run_evaluation(
     eval_number: int = 1,
     prompt_variant: str | None = None,
     timeout_seconds: float = DEFAULT_TIMEOUT,
-    output_dir: Path = Path("results"),
+    output_dir: Path = Path("transient_results"),
     api_key_env: dict[str, str] | None = None,
     skip_extensions: bool = False,
 ) -> RunResult:

@@ -5,7 +5,7 @@
 #   ./scripts/run-model-sweep.sh --task wordcount-cpp [--agents claude-code,codex-cli,gemini-cli] [--runs 1]
 #
 # Reads model lists from models/<agent>.txt (format: model,effort per line).
-# Results are written to results/<task>/<agent>/<model>/run-N.json.
+# Results are written to transient_results/<task>/<agent>/<model>/run-N.json.
 # A consolidated CSV is written at the end.
 
 set -euo pipefail
@@ -18,7 +18,7 @@ TASK=""
 AGENTS="claude-code,codex-cli,copilot-cli,gemini-cli"
 RUNS=1
 TIMEOUT=14400
-OUTPUT_DIR="results"
+OUTPUT_DIR="transient_results"
 
 usage() {
     echo "Usage: $0 --task <task> [--agents <a,b,c>] [--runs N] [--timeout S] [--output-dir DIR]"

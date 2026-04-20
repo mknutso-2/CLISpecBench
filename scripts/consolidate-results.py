@@ -17,7 +17,7 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Consolidate results into CSV")
-    parser.add_argument("--results-dir", default="results", help="Root results directory")
+    parser.add_argument("--results-dir", default="transient_results", help="Root results directory")
     parser.add_argument("--output", "-o", default=None, help="Output CSV path (default: stdout)")
     parser.add_argument("--task", default=None, help="Filter by task")
     args = parser.parse_args()

@@ -587,7 +587,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     run_parser.add_argument("--runs", type=int, default=3)
     run_parser.add_argument("--prompt-variant", default=None)
-    run_parser.add_argument("--output-dir", default="results")
+    run_parser.add_argument("--output-dir", default="transient_results")
     run_parser.add_argument("--model", default=None, help="Model to use (e.g. opus, sonnet, o3)")
     run_parser.add_argument(
         "--effort",
@@ -601,7 +601,7 @@ def main(argv: list[str] | None = None) -> None:
     results_parser = subparsers.add_parser("results", help="View evaluation results")
     results_parser.add_argument("--task", default=None)
     results_parser.add_argument("--agent", default=None)
-    results_parser.add_argument("--output-dir", default="results")
+    results_parser.add_argument("--output-dir", default="transient_results")
     results_parser.add_argument("--format", choices=["table", "json", "csv"], default="table")
     results_parser.add_argument("--compare", action="store_true")
     results_parser.add_argument(
@@ -620,7 +620,7 @@ def main(argv: list[str] | None = None) -> None:
         "backfill-subscores",
         help="Recompute per-capability subscores for existing result.json files",
     )
-    bf_parser.add_argument("--output-dir", default="results")
+    bf_parser.add_argument("--output-dir", default="transient_results")
     bf_parser.add_argument(
         "--dry-run",
         action="store_true",
