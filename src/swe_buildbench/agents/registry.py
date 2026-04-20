@@ -11,7 +11,6 @@ from swe_buildbench.agents.claude_code import ClaudeCodeAdapter
 from swe_buildbench.agents.codex_cli import CodexCLIAdapter
 from swe_buildbench.agents.copilot_cli import CopilotCLIAdapter
 from swe_buildbench.agents.gemini_cli import GeminiCLIAdapter
-from swe_buildbench.agents.model_api import ModelAPIAdapter
 
 AgentFactory = Callable[[str | None, str | None], AgentAdapter]
 BenchmarkCostPreference = Literal["reported", "estimated"]
@@ -23,7 +22,7 @@ class AgentSpec:
 
     agent_id: str
     factory: AgentFactory
-    docker_image: str | None = None
+    docker_image: str
     version_command: str | None = None
     auth_smoke_script: str | None = None
     benchmark_cost_preference: BenchmarkCostPreference = "reported"
@@ -36,14 +35,6 @@ class AgentSpec:
     ) -> AgentAdapter:
         """Instantiate this agent adapter for a single run."""
         return self.factory(model, effort)
-
-
-def _build_model_api_adapter(
-    model: str | None,
-    effort: str | None,
-) -> AgentAdapter:
-    del effort
-    return ModelAPIAdapter(model=model or "claude-opus-4-6")
 
 
 _AGENT_SPECS: dict[str, AgentSpec] = {
@@ -76,10 +67,6 @@ _AGENT_SPECS: dict[str, AgentSpec] = {
         version_command="gemini --version",
         auth_smoke_script="scripts/smoke-test-gemini.sh",
     ),
-    "model-api": AgentSpec(
-        agent_id="model-api",
-        factory=_build_model_api_adapter,
-    ),
 }
 
 
@@ -92,17 +79,14 @@ def get_agent_spec(agent_id: str) -> AgentSpec:
     return spec
 
 
-def list_agent_ids(*, include_non_container: bool = True) -> list[str]:
+def list_agent_ids() -> list[str]:
     """Return supported agent IDs in stable sorted order."""
-    return [spec.agent_id for spec in list_agent_specs(include_non_container=include_non_container)]
+    return [spec.agent_id for spec in list_agent_specs()]
 
 
-def list_agent_specs(*, include_non_container: bool = True) -> list[AgentSpec]:
+def list_agent_specs() -> list[AgentSpec]:
     """Return supported agent specs in stable sorted order."""
-    specs = sorted(_AGENT_SPECS.values(), key=lambda spec: spec.agent_id)
-    if include_non_container:
-        return specs
-    return [spec for spec in specs if spec.docker_image is not None]
+    return sorted(_AGENT_SPECS.values(), key=lambda spec: spec.agent_id)
 
 
 def list_auth_smoke_scripts() -> list[str]:

@@ -34,17 +34,10 @@ BASE_IMAGE = "swe-buildbench-base"
 
 
 def _agent_image(agent_id: str) -> str:
-    image = get_agent_spec(agent_id).docker_image
-    if image is None:
-        raise ValueError(f"Agent {agent_id!r} does not define a container image")
-    return image
+    return get_agent_spec(agent_id).docker_image
 
 
-CONTAINER_AGENT_SPECS = [
-    spec
-    for spec in list_agent_specs(include_non_container=False)
-    if spec.docker_image is not None and spec.version_command is not None
-]
+CONTAINER_AGENT_SPECS = [spec for spec in list_agent_specs() if spec.version_command is not None]
 
 
 def _agent_spec_id(spec: AgentSpec) -> str:
@@ -273,7 +266,6 @@ class TestAgentCliInstalled:
 
     @pytest.mark.parametrize("spec", CONTAINER_AGENT_SPECS, ids=_agent_spec_id)
     def test_agent_cli_version(self, spec: AgentSpec) -> None:
-        assert spec.docker_image is not None
         assert spec.version_command is not None
         if not _image_available(spec.docker_image):
             pytest.skip(f"Docker image {spec.docker_image} not available")

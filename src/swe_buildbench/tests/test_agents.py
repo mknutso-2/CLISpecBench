@@ -19,7 +19,7 @@ from swe_buildbench.agents.registry import (
     list_auth_smoke_scripts,
 )
 
-CONTAINER_AGENT_SPECS = list_agent_specs(include_non_container=False)
+CONTAINER_AGENT_SPECS = list_agent_specs()
 REPO_ROOT = Path(__file__).resolve().parents[3]
 
 

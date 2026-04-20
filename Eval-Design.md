@@ -14,7 +14,7 @@
 
 ## 1. Overview
 
-SWE-BuildBench is a benchmark suite for evaluating **AI coding agents and models** on **documentation-driven system implementation** tasks. Each task gives the subject a curated documentation corpus — which may be a single specification document or a realistic collection of related documents — and asks it to produce a fully functional, compilable/runnable implementation, with no access to the hidden test suite used to score it.
+SWE-BuildBench is a benchmark suite for evaluating **AI coding agents** on **documentation-driven system implementation** tasks. Each task gives the agent a curated documentation corpus — which may be a single specification document or a realistic collection of related documents — and asks it to produce a fully functional, compilable/runnable implementation, with no access to the hidden test suite used to score it.
 
 The central question SWE-BuildBench asks is:
 
@@ -24,12 +24,7 @@ This differs from existing coding benchmarks in a fundamental way. HumanEval and
 
 **On the name.** "SWE" follows the convention established by SWE-bench and signals that this is a full software engineering benchmark — not a code completion or patch task. "Build" is the operative word: every SWE-BuildBench task asks an agent to construct a working system from scratch, given only a documentation corpus. This distinguishes it from a companion benchmark we anticipate in the future — **SWE-ModifyBench** — which will ask agents to correctly modify or extend an existing codebase given change requirements. "Bench" signals a formal, reusable, leaderboard-worthy artifact intended for citation and longitudinal comparison.
 
-SWE-BuildBench evaluates two distinct subject types, which are treated as separate leaderboard tracks:
-
-- **Agentic CLI track** — coding agent CLIs such as Claude Code, Codex CLI, and Gemini CLI, which have access to a file system, terminal, compiler, and the ability to iterate on their own output
-- **Model API track** — model endpoints called directly via API, which must produce a complete multi-file project in a single structured response with no iteration
-
-These tracks measure different things. The agentic track is the primary one: it reflects how engineers actually use these tools and is the more relevant capability signal. The model API track provides a lower-bound baseline. The delta between a model's API score and its agent score is itself a finding — it quantifies how much the agentic scaffolding contributes.
+SWE-BuildBench evaluates coding agent CLIs — tools such as Claude Code, Codex CLI, and Gemini CLI — that have access to a file system, terminal, compiler, and the ability to iterate on their own output. This mirrors how engineers actually use these tools and is where the interesting capability signal lives: whether the agent can extract requirements from documentation, design a multi-file system, implement it, and verify its own work without supervision.
 
 ---
 
@@ -44,8 +39,6 @@ These tracks measure different things. The agentic track is the primary one: it 
 **Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-cpp` vs `cncsim-py`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
 
 **The meta-score is an aggregate, not an average.** The SWE-BuildBench score is the geometric mean of task scores, not the arithmetic mean. This penalizes models that score well on one task but fail on others — generalization matters.
-
-**Agentic CLI is the primary track.** Multi-file system implementation is a natural fit for coding agents and an awkward fit for one-shot API calls. The agentic track reflects real-world usage. The model API track exists as a baseline and comparison point, not as the primary result.
 
 **Non-developer base prompt.** The base prompt is written from the perspective of a domain expert who is not a software developer — someone who knows exactly what they want to build but has no software engineering background. They would not think to specify test coverage, code quality standards, architectural patterns, or implementation strategy, just as they would not specify which sorting algorithm to use. The only exceptions are the three items the evaluation harness physically requires: implementation language, CLI flags, and output JSON schema. These are included with a brief framing note ("for technical compatibility, please use C++20 and produce output in the following format") that signals infrastructure constraint rather than engineering guidance. Everything else — whether to write tests, which architecture to choose, how to handle errors, what quality standards to follow — is left entirely to the agent's judgment. This framing serves two purposes: it measures genuine agent autonomy rather than instruction-following ability, and it emulates a realistic and increasingly common usage pattern where domain experts use coding agents to build real systems without software engineering backgrounds. Prompt variants that add developer-level guidance ("write a test for each discrete feature," "follow C++ Core Guidelines") are evaluated separately and never included in the base leaderboard — their value is measuring how much that guidance helps.
 
@@ -119,7 +112,7 @@ See Section 6.
 
 ## Base Prompt
 <!-- The base prompt is in prompts/base.md. Document here what it contains
-     and confirm it adheres to the minimal prompt contract (Section 5.4 / Prompt Design):
+     and confirm it adheres to the minimal prompt contract (Section 5.3 / Prompt Design):
      corpus pointer, CLI interface, output schema, language — nothing else. -->
 
 ## Included Prompt Variants
@@ -213,7 +206,7 @@ An extension task is a hidden follow-up prompt that asks the agent to modify or 
 
 **Extension tasks are optional per task.** Not every task has a natural extension point, and designing good extension tasks requires domain expertise. Tasks without extensions still have a quality signal through the LLM judge. Tasks with extensions report an additional extensibility score. This keeps the contribution bar achievable: a contributor can submit a valid task with the three required scoring dimensions and add extensions later (or not at all).
 
-**Harness flow.** After the base task is scored, the harness injects the extension prompt into the same session (agentic mode) or sends a second API call with the extension prompt plus the model's own source files as context (model API mode). The agent modifies its own code, and the harness scores the result against a separate hidden test suite specific to the extension. If a task defines multiple extensions, they are run sequentially in the same session — each one builds on the state left by the previous extension.
+**Harness flow.** After the base task is scored, the harness injects the extension prompt into the same agent session so the agent retains full context of the code it just wrote. The agent modifies its own code, and the harness scores the result against a separate hidden test suite specific to the extension. If a task defines multiple extensions, they are run sequentially in the same session — each one builds on the state left by the previous extension.
 
 ```
 extension_score = sum(ext_weight_i * ext_pass_rate_i) / sum(ext_weight_i)
@@ -221,7 +214,7 @@ extension_score = sum(ext_weight_i * ext_pass_rate_i) / sum(ext_weight_i)
 
 where each `ext_pass_rate_i` is the fraction of hidden tests passed for extension `i`.
 
-**Interpretation caveat.** In agentic mode, the extension score reflects the joint capability of code maintainability and the agent's modification skill. A powerful agent might successfully extend poorly-structured code through brute-force refactoring. In model API mode, where the model has no iteration, the extension score is a purer signal of code structure since the model must work with what it wrote in a single pass. This difference is itself a finding worth reporting.
+**Interpretation caveat.** The extension score reflects the joint capability of code maintainability and the agent's modification skill. A capable agent may successfully extend poorly-structured code through brute-force refactoring, so a high extension score doesn't cleanly isolate structure from modification ability. Persistently low extension scores across capable agents, however, are a reasonable signal of structural rigidity in the underlying implementation.
 
 **The extension score is reported separately from the base task score.** It is not folded into the weighted sum that produces the task score. This ensures that the base task score remains comparable across all tasks regardless of whether they include extensions, and that a model's base correctness and extensibility are visible as distinct signals.
 
@@ -243,20 +236,20 @@ swe_buildbench_score = geometric_mean(task_score_1, task_score_2, ..., task_scor
 
 Geometric mean is used rather than arithmetic mean because a model that excels at one task but fails another represents worse generalization than one that scores moderately across all tasks. The geometric mean penalizes zero or near-zero scores more severely.
 
-The meta-score is only reported for models evaluated on all current tasks. Partial coverage is reported as individual task scores only.
+The meta-score is only reported for agents evaluated on all current tasks. Partial coverage is reported as individual task scores only.
 
 ---
 
-## 5. Evaluation Modes
+## 5. Evaluation Execution
 
-### 5.1 Agentic CLI Mode (Primary)
+### 5.1 Agent Execution
 
-The harness invokes a coding agent CLI — Claude Code, Codex CLI, Gemini CLI, or similar — inside a sandboxed Docker container. The agent receives the spec document and the task prompt, then operates autonomously: reading files, writing source code, running the compiler, observing errors, and iterating until it signals completion or the session times out.
+The harness invokes a coding agent CLI — Claude Code, Codex CLI, Gemini CLI, or similar — inside a sandboxed Docker container. The agent receives the documentation corpus and the task prompt, then operates autonomously: reading files, writing source code, running the compiler, observing errors, and iterating until it signals completion or the session times out.
 
 The harness provides:
-- A clean working directory containing the spec document and the prompt file
-- A Docker container with the task's required compiler and toolchain, but no internet access
-- A time limit and token budget (see Section 5.3)
+- A clean working directory containing the documentation corpus and the prompt file
+- A Docker container with the task's required compiler and toolchain, but no internet access beyond the agent's own API host
+- A time limit and token budget (see Section 5.2)
 
 The agent produces:
 - A directory of source files and a build system (e.g., CMakeLists.txt)
@@ -265,37 +258,7 @@ The agent produces:
 
 The harness then calls `build.sh` on the resulting directory and proceeds to scoring. The agent's ability to iterate — to write code, compile it, see errors, and fix them — is not a confound to be controlled for; it is the capability being evaluated.
 
-**Why multi-file projects require agent mode.** A complete system implementation is inherently multi-file: header and source files, a build system, a test suite, potentially supporting libraries. A model cannot produce this through a plain API call without some mechanism for expressing multiple files. Rather than artificially constrain agent evaluations to one-shot generation, the agentic track lets the agent use the tools it was designed for.
-
-### 5.2 Model API Mode (Comparison Baseline)
-
-The harness calls a model endpoint directly via the API, in a single request. Because a multi-file project cannot be expressed in free-form text without ambiguity, the prompt specifies a **structured output envelope** that the model must use to express its submission:
-
-```json
-{
-  "files": [
-    {"path": "CMakeLists.txt",  "content": "..."},
-    {"path": "src/main.cpp",    "content": "..."},
-    {"path": "src/simulator.h", "content": "..."},
-    {"path": "tests/test_motion.cpp", "content": "..."}
-  ]
-}
-```
-
-The harness parses this envelope, writes the files to disk, and proceeds identically to the agentic track from that point — same `build.sh`, same hidden test suite, same scoring pipeline.
-
-This is not zero-scaffolding: the structured output format is a minimal convention the model must follow. However, the model receives no tools, no compiler feedback, and no opportunity to iterate. It must plan the entire architecture, implement all files, and write its own tests in a single response. This is a harder and more artificial constraint than agent mode, which is why it serves as a lower-bound baseline rather than the primary eval.
-
-The model API prompt appends the following instruction to the standard task prompt:
-
-```
-Respond with a single JSON object conforming to this schema:
-{"files": [{"path": "<relative path>", "content": "<file contents>"}]}
-Include all source files, build system files, and test files in the array.
-Do not include any text outside the JSON object.
-```
-
-### 5.3 Agentic Mode Infrastructure Requirements
+### 5.2 Infrastructure Requirements
 
 **Sandboxing.** Agent runs must execute in Docker containers with no outbound network access, resource limits (CPU, memory), and filesystem isolation. An agent that can execute arbitrary shell commands must not be able to affect the host system or contact external services.
 
@@ -305,9 +268,9 @@ Do not include any text outside the JSON object.
 
 **Cost.** A single agent run for a complex task may consume 100,000–500,000 tokens. At current pricing, evaluating three agents on a single task costs $30–100. Full leaderboard updates should be budgeted accordingly.
 
-**Non-determinism.** Agent runs are substantially more non-deterministic than one-shot API calls. The same agent given the same prompt will produce structurally different code on different runs. Published leaderboard results for agent evaluations report the mean of three independent runs ± standard deviation.
+**Non-determinism.** Agent runs are highly non-deterministic: the same agent given the same prompt will produce structurally different code on different runs. Published leaderboard results report the mean of three independent runs ± standard deviation.
 
-### 5.4 Prompt Design
+### 5.3 Prompt Design
 
 **The non-developer persona.** When writing a base prompt, the author should imagine a domain expert with no software engineering background — a machinist, a protocol designer, a format specification author. This person knows exactly what they want built and can describe it clearly in domain terms. They would not think to ask for unit tests, specify an architectural pattern, request a particular error handling style, or mention code quality standards. The base prompt should sound like it came from that person.
 
@@ -352,19 +315,18 @@ swe-buildbench run --task cncsim-cpp --agent claude-code --prompt-variant with-g
 swe-buildbench run --task cncsim-cpp --agent claude-code --skip-extensions
 ```
 
-**Extension task execution flow.** When a task defines extension tasks and `--skip-extensions` is not passed, the harness proceeds as follows after base scoring: (1) the extension prompt is injected into the active agent session (agentic mode) or sent as a follow-up API call with the model's source files as context (model API mode); (2) the agent modifies its code; (3) the harness rebuilds and scores against the extension's hidden test suite; (4) if multiple extensions are defined, each builds on the state left by the previous one. Extension scores are reported alongside (but separate from) the base task score.
+**Extension task execution flow.** When a task defines extension tasks and `--skip-extensions` is not passed, the harness proceeds as follows after base scoring: (1) the extension prompt is injected into the active agent session so the agent retains context of the code it just wrote; (2) the agent modifies its code; (3) the harness rebuilds and scores against the extension's hidden test suite; (4) if multiple extensions are defined, each builds on the state left by the previous one. Extension scores are reported alongside (but separate from) the base task score.
 
-### 5.5 Harness Invocation Summary
+### 5.4 Harness Invocation Summary
 
-| | Agentic CLI Mode | Model API Mode |
-|---|---|---|
-| Subject | Claude Code, Codex CLI, etc. | Claude API, OpenAI API, etc. |
-| Input | Spec file + prompt file in working directory | Single API request with structured output instruction |
-| Iteration | Agent iterates freely until done or timeout | None — single response |
-| Output | Directory of files produced by agent | JSON envelope parsed into files |
-| Scaffolding provided | Docker environment, compiler toolchain | Structured output format only |
-| Multi-file support | Native | Via JSON file envelope |
-| Runs per result | 3 (mean ± stddev reported) | 1 (temperature=0) |
+| Dimension | Value |
+|---|---|
+| Subject | Coding agent CLI (Claude Code, Codex CLI, Gemini CLI, etc.) |
+| Input | Assembled prompt + documentation corpus in a clean working directory |
+| Iteration | Agent iterates freely until it signals completion or the safety backstop fires |
+| Output | Directory of source files, build config, and tests produced by the agent |
+| Scaffolding | Docker sandbox with compiler toolchain; network restricted to the agent's API host |
+| Runs per result | 3 (mean ± stddev reported) |
 
 ---
 
@@ -427,13 +389,13 @@ Each task's `harness/build.sh` must produce a single executable at `./build/<tas
 
 ### 7.2 Living Benchmark
 
-Test cases are versioned. Old tests that are suspected to be contaminated (e.g., published in a paper that post-dates a model's training) are retired to a `retired/` directory and replaced with new ones. Each model evaluation record includes the test suite version it was run against, enabling longitudinal comparison even as the suite evolves.
+Test cases are versioned. Old tests that are suspected to be contaminated (e.g., published in a paper that post-dates a model's training) are retired to a `retired/` directory and replaced with new ones. Each agent evaluation record includes the test suite version it was run against, enabling longitudinal comparison even as the suite evolves.
 
 ### 7.3 Reproducibility
 
-All evaluations are run in Docker containers with pinned language versions. A model evaluation record includes:
+All evaluations are run in Docker containers with pinned language versions. An agent evaluation record includes:
 
-- Model name and version string
+- Agent CLI name and version string
 - Test suite version (git SHA of private repo)
 - Docker image SHA
 - Date of evaluation
@@ -490,15 +452,15 @@ Acceptance criteria:
 - The task must not be in a domain likely to have high training data contamination
 - The full test suite must have at least 50 tests with meaningful category coverage
 - The harness must build and run cleanly in the provided Docker image
-- Extension tasks are optional; if included, each extension must have its own hidden test suite with at least 20 tests and a prompt that follows the non-developer persona (Section 5.4)
+- Extension tasks are optional; if included, each extension must have its own hidden test suite with at least 20 tests and a prompt that follows the non-developer persona (Section 5.3)
 
 ### 9.2 Contributor Incentives
 
-Accepted task contributors are credited as **task maintainers** in the repository and on the leaderboard. Task maintainers receive free evaluations of all submitted models against their task. If SWE-BuildBench is cited in papers or model cards, contributors are acknowledged in those citations.
+Accepted task contributors are credited as **task maintainers** in the repository and on the leaderboard. Task maintainers receive free evaluations of all submitted agents against their task. If SWE-BuildBench is cited in papers or model cards, contributors are acknowledged in those citations.
 
-### 9.3 Model Submission
+### 9.3 Agent Submission
 
-Model evaluations are requested by opening a GitHub issue with the model's API endpoint and access details. The maintainer runs the evaluation and publishes results to the leaderboard within two weeks.
+Agent evaluations are requested by opening a GitHub issue with the agent CLI name, version string, and any authentication details required to run it in the harness sandbox. The maintainer runs the evaluation and publishes results to the leaderboard within two weeks.
 
 ---
 
@@ -523,11 +485,10 @@ Three complementary strategies are employed:
 - [ ] CNCSim current extensions: arc plane selection (ext-01), coordinate offsets (ext-02) with hidden test suites
 - [ ] CNCSim future extensions: stock removal simulation (ext-01), Haas dialect (ext-02) with hidden test suites
 - [ ] C++ quality eval: C++ Core Guidelines rubric (20–25 selected guidelines)
-- [ ] Docker sandbox images for agentic and model API modes
+- [ ] Docker sandbox image per supported agent CLI
 - [ ] Scoring harness: correctness + coverage + quality + extension pipeline
-- [ ] Agentic CLI track: initial results for Claude Code, Codex CLI, Gemini CLI
-- [ ] Model API track: initial results for Claude Opus, GPT-4o, Gemini as baseline
-- [ ] Blog post: methodology, findings, failure mode analysis, agentic vs. one-shot delta, extensibility findings
+- [ ] Initial results for Claude Code, Codex CLI, Gemini CLI
+- [ ] Blog post: methodology, findings, failure mode analysis, extensibility findings
 - [ ] CONTRIBUTING.md and task-template/
 
 ### v1.1 — Second Task
@@ -537,7 +498,7 @@ Three complementary strategies are employed:
 - [ ] Geometric mean aggregation in leaderboard
 
 ### v2.0 — Framework Maturity
-- [ ] Submission server for automated model evaluation
+- [ ] Submission server for automated agent evaluation
 - [ ] Additional languages (Rust support)
 - [ ] Community-contributed tasks
 - [ ] Versioned test suite with retirement/rotation policy

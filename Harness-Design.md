@@ -14,12 +14,12 @@
 ## 1. Purpose
 
 This document describes the evaluation harness: the software that invokes AI
-coding agents (or model APIs) against SWE-BuildBench tasks, captures their
-output, builds it, runs the hidden test suite, and records structured results.
+coding agents against SWE-BuildBench tasks, captures their output, builds it,
+runs the hidden test suite, and records structured results.
 
 It is a companion to `Eval-Design.md`, which defines the benchmark's
-scoring model, task anatomy, and evaluation modes. This document covers the
-harness implementation: how those concepts become running code.
+scoring model and task anatomy. This document covers the harness
+implementation: how those concepts become running code.
 
 ---
 
@@ -37,9 +37,6 @@ harness implementation: how those concepts become running code.
 
 4. **Be agent-agnostic.** Adding a new agent CLI should require only a small
    adapter module, not changes to the core harness.
-
-5. **Support both evaluation modes** (agentic CLI and model API) through the
-   same scoring pipeline.
 
 ---
 
@@ -109,7 +106,6 @@ src/swe_buildbench/
     claude_code.py              # Claude Code CLI adapter
     codex_cli.py                # Codex CLI adapter
     gemini_cli.py               # Gemini CLI adapter
-    model_api.py                # Model API mode adapter (direct API calls)
 
   build/                        # Shared CMake build utilities
     build.py                    # build_cmake_project, CMakeBuildResult
@@ -240,11 +236,6 @@ from the JSONL event stream — `turn.completed` events contain `input_tokens`,
 **Gemini CLI.** Invoked in non-interactive mode. Token usage is extracted via
 OpenTelemetry export (similar to Claude Code) or parsed from the `/stats`
 output captured at session end.
-
-**Model API.** No Docker container. The adapter calls the model API directly
-from the host, parses the structured JSON file envelope from the response,
-writes files to disk, and returns token counts from the API response's `usage`
-field. The rest of the pipeline (build, test, score) proceeds identically.
 
 ---
 
@@ -529,12 +520,12 @@ For a given agent, find `node_id`s where `outcome` varies across runs.
 ```
 swe-buildbench run
     --task <task-id>                   # Required: cncsim-cpp, cncsim-py, wordcount-cpp, ...
-    --agent <agent-name>               # Required: claude-code, codex-cli, gemini-cli, model-api
-    --runs <N>                         # Default: 3 for agentic, 1 for model-api
+    --agent <agent-name>               # Required: claude-code, codex-cli, copilot-cli, gemini-cli
+    --runs <N>                         # Default: 3
     --prompt-variant <name>            # Default: base
     --skip-extensions                  # Skip extension tasks
     --output-dir <path>                # Default: transient_results/
-    --model <model-id>                 # For model-api mode: claude-opus-4-6, gpt-4o, etc.
+    --model <model-id>                 # Override the default model for the chosen agent (e.g. claude-opus-4-6)
     --api-key-env <VAR=value>          # Repeatable: inject secrets into container
 
 swe-buildbench results
@@ -559,11 +550,6 @@ swe-buildbench run --task cncsim-cpp --agent codex-cli \
     --prompt-variant with-tests \
     --api-key-env OPENAI_API_KEY=$OPENAI_API_KEY
 
-# Run a model API evaluation (single run, no Docker)
-swe-buildbench run --task cncsim-cpp --agent model-api \
-    --model claude-opus-4-6 --runs 1 \
-    --api-key-env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
-
 # Compare results across agents for a task
 swe-buildbench results --task cncsim-cpp --compare
 ```
@@ -577,9 +563,7 @@ the runner continues after base scoring:
 
 ```
 for each extension in task.extensions:
-    1. Inject extension prompt into the active agent session
-       - Agentic: append to the running session inside the container
-       - Model API: new API call with agent's source files as context
+    1. Append extension prompt to the running agent session inside the container
     2. Wait for agent to finish modifying code (same timeout rules)
     3. Rebuild submission
     4. Run extension-specific hidden tests
@@ -604,7 +588,6 @@ analysis of token efficiency (correctness per token) and cost estimation.
 | Claude Code | OpenTelemetry file export inside container; parse `claude_code.token.usage` metric | Per-metric-type (input, output, cache_read, cache_creation) |
 | Codex CLI | Parse JSONL event stream from `codex exec --json`; sum `turn.completed` events | Per-turn, summed to session total |
 | Gemini CLI | OpenTelemetry export or capture `/stats` output at session end | Session total |
-| Model API | Read `usage` field from API response object | Per-request (typically one request) |
 
 ### 11.2 Normalized Schema
 
@@ -660,10 +643,10 @@ traceable even if a tag is moved.
   directory and configure the agent to write telemetry files directly. This
   is simpler but couples the agent's telemetry config to the harness.
 
-- **Agent session persistence for extensions.** In agentic mode, extension
-  prompts should be injected into the *same* session so the agent retains
-  context about its own code. Whether all agent CLIs support appending to a
-  running session (vs. starting a new one with files as context) needs
+- **Agent session persistence for extensions.** Extension prompts should be
+  injected into the *same* session so the agent retains context about its own
+  code. Whether all agent CLIs support appending to a running session (vs.
+  starting a new one with the prior source files as context) needs
   investigation per agent.
 
 - **Parallel runs.** Running 3 repetitions sequentially is slow (up to 90
@@ -676,8 +659,3 @@ traceable even if a tag is moved.
   agent's self-written tests (for coverage scoring). Heuristics: files in a
   `tests/` or `test/` directory, files matching `test_*.py` or `*_test.cpp`.
   This may need to be configurable per task if agents use non-standard layouts.
-
-- **Model API structured output reliability.** Some models may not reliably
-  produce valid JSON matching the file envelope schema. The harness should
-  attempt to parse, and if parsing fails, record `build.success: false` with
-  the parse error — not silently skip the run.
