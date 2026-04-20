@@ -19,7 +19,7 @@ from swe_buildbench.harness.results import (
 def _make_run_result(agent: str, token_usage: TokenUsage | None) -> RunResult:
     return RunResult(
         metadata=RunMetadata(
-            run_id="run-1",
+            run_uid="00000000-0000-0000-0000-000000000001",
             task="cncsim-cpp",
             agent=agent,
             agent_version="1.0.0",

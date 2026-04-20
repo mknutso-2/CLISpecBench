@@ -34,7 +34,8 @@ from swe_buildbench.harness.results import (
     TestSummary,
     TokenUsage,
     compute_source_stats,
-    make_run_id,
+    make_run_label,
+    make_run_uid,
     result_path,
     save_source_dir,
     save_transcript,
@@ -82,7 +83,7 @@ def _write_infrastructure_failure_result(
     out_path: Path,
     task: TaskDefinition,
     adapter: AgentAdapter,
-    run_id: str,
+    run_uid: str,
     run_number: int,
     timestamp: str,
     prompt_variant: str | None,
@@ -94,7 +95,7 @@ def _write_infrastructure_failure_result(
     notes: str,
 ) -> RunResult:
     metadata = RunMetadata(
-        run_id=run_id,
+        run_uid=run_uid,
         task=task.task_id,
         agent=adapter.name,
         agent_version=adapter.version,
@@ -181,9 +182,10 @@ def run_evaluation(
     if api_key_env is None:
         api_key_env = {}
 
-    run_id = make_run_id(task.task_id, adapter.name, run_number, adapter.model)
+    run_uid = make_run_uid()
+    run_label = make_run_label(task.task_id, adapter.name, run_number, adapter.model)
     timestamp = datetime.now(UTC).isoformat()
-    log.info("Starting run %s", run_id)
+    log.info("Starting run %s (uid=%s)", run_label, run_uid)
 
     # Compute content hashes up-front so they're logged even if the run dies
     # later. These are cheap (sha256 over prompt + docs + tests).
@@ -367,7 +369,7 @@ def run_evaluation(
             )
 
         metadata = RunMetadata(
-            run_id=run_id,
+            run_uid=run_uid,
             task=task.task_id,
             agent=adapter.name,
             agent_version=adapter.version,
@@ -431,13 +433,13 @@ def run_evaluation(
                         "Failed to write canonical transcript to run dir",
                         exc_info=True,
                     )
-                # Include the eval directory in the folder name.  ``run_id``
+                # Include the eval directory in the folder name.  ``run_label``
                 # alone collides across re-runs because it omits the
                 # auto-incremented eval number — two ``--runs 1`` invocations
                 # of the same task/agent/model on the same day produce
-                # identical run_ids but distinct ``eval<N>/`` paths.
+                # identical labels but distinct ``eval<N>/`` paths.
                 eval_dir_name = out_path.parent.parent.name  # e.g. "eval2"
-                home_dest_dir = Path.home() / ".claude" / "projects" / f"{run_id}_{eval_dir_name}"
+                home_dest_dir = Path.home() / ".claude" / "projects" / f"{run_label}_{eval_dir_name}"
                 home_dest = home_dest_dir / src.name
                 try:
                     home_dest_dir.mkdir(parents=True, exist_ok=True)
@@ -446,7 +448,7 @@ def run_evaluation(
                 except Exception:
                     log.warning(
                         "Failed to write canonical transcript to ~/.claude/projects/%s_%s/",
-                        run_id,
+                        run_label,
                         eval_dir_name,
                         exc_info=True,
                     )
@@ -485,7 +487,7 @@ def run_evaluation(
             out_path=out_path,
             task=task,
             adapter=adapter,
-            run_id=run_id,
+            run_uid=run_uid,
             run_number=run_number,
             timestamp=timestamp,
             prompt_variant=prompt_variant,

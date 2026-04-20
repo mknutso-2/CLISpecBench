@@ -6,13 +6,14 @@ import json
 import logging
 import os
 import shutil
+import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "2.0"
 _VALID_BENCHMARK_COST_PREFERENCES = frozenset({"reported", "estimated"})
 
 
@@ -163,9 +164,16 @@ class RunArtifacts:
 
 @dataclass
 class RunMetadata:
-    """Identifying information for a single evaluation run."""
+    """Identifying information for a single evaluation run.
 
-    run_id: str
+    ``run_uid`` is a UUID4 generated when the result is first written. It is
+    the stable cross-reference handle between a transient result and its
+    published copy — all other identifying fields (task, agent, model, etc.)
+    are already present structurally, so a human-readable composite run_id is
+    redundant.
+    """
+
+    run_uid: str
     task: str
     agent: str
     agent_version: str
@@ -271,7 +279,17 @@ class RunResult:
         path.write_text(json.dumps(self.to_dict(), indent=2) + "\n", encoding="utf-8")
 
 
-def make_run_id(task: str, agent: str, run_number: int, model: str | None = None) -> str:
+def make_run_uid() -> str:
+    """Return a fresh UUID4 string for a new evaluation run."""
+    return str(uuid.uuid4())
+
+
+def make_run_label(task: str, agent: str, run_number: int, model: str | None = None) -> str:
+    """Human-readable label for logs and ~/.claude/projects/ folder naming.
+
+    Not persisted in the result schema — all of its components are already in
+    ``RunMetadata`` as structured fields.
+    """
     ts = datetime.now(UTC).strftime("%Y-%m-%d")
     model_part = f"_{model}" if model else ""
     return f"{task}_{agent}{model_part}_{ts}_run-{run_number}"
@@ -438,9 +456,17 @@ def save_source_dir(result_json_path: Path, source_dir: Path) -> str:
 
 
 def load_result(path: Path) -> RunResult:
-    """Load a RunResult from a JSON file."""
+    """Load a RunResult from a JSON file.
+
+    Tolerant of pre-2.0 files: the legacy ``run_id`` composite string is
+    dropped (its fields are already present structurally), and a missing
+    ``run_uid`` is filled with an empty string so existing transient results
+    remain readable. Legacy files thus won't be publishable until re-run.
+    """
     data = json.loads(path.read_text(encoding="utf-8"))
     meta = data["metadata"]
+    meta.pop("run_id", None)
+    meta.setdefault("run_uid", "")
     meta.setdefault("eval_version", "unknown")
     meta.setdefault("harness_version", "unknown")
     meta.setdefault("benchmark_cost_preference", None)

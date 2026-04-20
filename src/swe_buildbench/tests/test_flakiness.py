@@ -34,7 +34,7 @@ def _make_run(outcomes: dict[str, str]) -> RunResult:
             summary.error += 1
     return RunResult(
         metadata=RunMetadata(
-            run_id="r",
+            run_uid="00000000-0000-0000-0000-000000000001",
             task="t",
             agent="a",
             agent_version="v",
