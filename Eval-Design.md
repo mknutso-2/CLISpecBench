@@ -6,10 +6,10 @@
 
 ---
 
-> **Note on CNCSim naming.** The current harness exposes explicit language task
-> IDs such as `cncsim-cpp`, `cncsim-py`, `cncsim-js`, and `cncsim-rs` for the
-> single `Evals/CNCSim/` eval that exists today. The repository currently ships
-> one CNCSim eval with multiple language variants. See `Evals/CNCSim/README.md`
+> **Note on RS274 naming.** The current harness exposes explicit language task
+> IDs such as `rs274-cpp`, `rs274-py`, `rs274-js`, and `rs274-rs` for the
+> single `Evals/RS274/` eval that exists today. The repository currently ships
+> one RS274 eval with multiple language variants. See `Evals/RS274/README.md`
 > for the current framing.
 
 ## 1. Overview
@@ -30,13 +30,13 @@ SWE-BuildBench evaluates coding agent CLIs — tools such as Claude Code, Codex 
 
 ## 2. Design Principles
 
-**One corpus, one task.** Each task provides a curated documentation corpus: one or more publicly available documents that together constitute a complete and authoritative description of what must be built. The corpus composition is a deliberate task design decision — it may be a single dense specification (as in CNCSim), or a realistic multi-document collection (a primary spec, errata, worked examples, architecture notes) that more closely mirrors how engineers encounter requirements in practice. What the corpus must never include is a reference implementation or working code that solves the task. The subject must extract all requirements from the documentation itself.
+**One corpus, one task.** Each task provides a curated documentation corpus: one or more publicly available documents that together constitute a complete and authoritative description of what must be built. The corpus composition is a deliberate task design decision — it may be a single dense specification (as in RS274), or a realistic multi-document collection (a primary spec, errata, worked examples, architecture notes) that more closely mirrors how engineers encounter requirements in practice. What the corpus must never include is a reference implementation or working code that solves the task. The subject must extract all requirements from the documentation itself.
 
 **Deterministic scoring.** Every correctness test has an exact expected output. There is no ambiguity in whether a test passes. The hidden test suite is written and locked before any model is evaluated.
 
 **Contamination resistance by design.** Test cases are never published. The full test suite lives in a private repository. Tasks are chosen from domains where ground-truth implementations do not saturate model training data.
 
-**Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-cpp` vs `cncsim-py`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
+**Language is a task parameter, not a framework requirement.** The CLI contract and scoring schema are consistent across all tasks. A single eval (prompt, docs, hidden test suite, reference implementations) may be offered in multiple target languages, and each (eval, language) pair is registered as a distinct task ID (e.g. `rs274-cpp` vs `rs274-py`). The hidden test suite is language-agnostic and exercises the submission through the shared CLI contract.
 
 **The meta-score is an aggregate, not an average.** The SWE-BuildBench score is the geometric mean of task scores, not the arithmetic mean. This penalizes models that score well on one task but fail on others — generalization matters.
 
@@ -161,7 +161,7 @@ If the artifact fails to compile or crashes on every test, correctness = 0. Comp
 
 **Performance tests.** Some tasks include performance test cases that require the artifact to process a large or pathological input within a domain-meaningful time limit. These are ordinary correctness tests with an additional `timeout_seconds` field; they pass or fail like any other test and contribute to the correctness score. The timeout threshold is set generously enough that any correct O(n) implementation passes on any reasonable hardware, and strictly enough that pathologically slow implementations (O(n²) or worse) fail on all hardware. This approach works because the differences that matter are orders-of-magnitude algorithmic failures, not constant-factor variations — hardware variance between runs is at most 2–3×, while the gap between a correct and a catastrophically slow implementation is typically 100–1000×.
 
-Performance tests are optional per task. Not every domain has a realistic large-input scenario where algorithmic quality is distinguishable. Task authors include performance tests only when there is a plausible real-world input size that exposes meaningful differences (e.g., a 100MB G-code file for CNCSim; not applicable for most Markdown parsing tasks).
+Performance tests are optional per task. Not every domain has a realistic large-input scenario where algorithmic quality is distinguishable. Task authors include performance tests only when there is a plausible real-world input size that exposes meaningful differences (e.g., a 100MB G-code file for RS274; not applicable for most Markdown parsing tasks).
 
 *Note: v1.0 uses timeout-as-threshold (pass/fail) as described above. A future version may introduce continuous performance measurement — recording actual wall-clock time and reporting throughput (e.g., MB/s) as a graded metric alongside correctness. This requires pinning to a specific hardware class, running multiple trials to account for OS noise, and enforcing consistent compiler optimization flags in the harness. See Roadmap (Section 11).*
 
@@ -292,7 +292,7 @@ The test for a well-written base prompt: could a knowledgeable person in the pro
 
 **Prompt variants.** A prompt variant adds one or more developer-level instructions to the base prompt. Variants live in `prompts/variants/` and are named to describe what they add. Results from variants are labeled separately and never included in the base leaderboard. Their purpose is to answer a second class of questions: how much does each type of guidance improve output quality?
 
-Example variants for CNCSim:
+Example variants for RS274:
 - `with-tests.md` — adds: "Write a unit test for each discrete G-code command you implement."
 - `with-guidelines.md` — adds: "Follow the C++ Core Guidelines when writing your code."
 - `with-tdd.md` — adds: "Use test-driven development: write tests before implementation."
@@ -304,15 +304,15 @@ The difference in correctness score between `base` and `with-tests` directly mea
 
 ```
 # Evaluate with base prompt (default — scores count toward leaderboard)
-swe-buildbench run --task cncsim-cpp --agent claude-code
+swe-buildbench run --task rs274-cpp --agent claude-code
 
 # Evaluate with a named variant (scores reported separately)
-swe-buildbench run --task cncsim-cpp --agent claude-code --prompt-variant with-tests
-swe-buildbench run --task cncsim-cpp --agent claude-code --prompt-variant with-guidelines
+swe-buildbench run --task rs274-cpp --agent claude-code --prompt-variant with-tests
+swe-buildbench run --task rs274-cpp --agent claude-code --prompt-variant with-guidelines
 
 # Evaluate with extension tasks (if the task defines them)
 # Extensions run automatically after base scoring unless --skip-extensions is passed
-swe-buildbench run --task cncsim-cpp --agent claude-code --skip-extensions
+swe-buildbench run --task rs274-cpp --agent claude-code --skip-extensions
 ```
 
 **Extension task execution flow.** When a task defines extension tasks and `--skip-extensions` is not passed, the harness proceeds as follows after base scoring: (1) the extension prompt is injected into the active agent session so the agent retains context of the code it just wrote; (2) the agent modifies its code; (3) the harness rebuilds and scores against the extension's hidden test suite; (4) if multiple extensions are defined, each builds on the state left by the previous one. Extension scores are reported alongside (but separate from) the base task score.
@@ -349,13 +349,13 @@ The artifact must write a single JSON object to `--output`. The top-level schema
 
 ```json
 {
-  "task_id": "cncsim-cpp",
+  "task_id": "rs274-cpp",
   "status": "ok",
   "result": { }
 }
 ```
 
-The `result` object schema is task-specific and defined in each task's TASK.md. For example, CNCSim writes final machine state; CHIP-8 writes register and memory state at a specified cycle.
+The `result` object schema is task-specific and defined in each task's TASK.md. For example, RS274 writes final machine state; CHIP-8 writes register and memory state at a specified cycle.
 
 ### 6.3 Exit Codes
 
@@ -411,7 +411,7 @@ Two patterns to apply when authoring an eval:
 - **Gate shared preconditions once.** Put schema/shape checks in one dedicated test (e.g. `test_output_schema.py`), not inside every behavioral test. If the gate fails, downstream behavioral tests still report independently — or are skipped with a single reason — rather than all piling onto the same root cause.
 - **Keep behavioral assertions tolerant of detail they are not testing.** Use `payload.get("error") is None` rather than `payload["error"] is None`, so a subtle schema slip (missing key vs. null value) does not crash a motion or state test before it reaches the assertion the test was actually meant to verify.
 
-Worked example: sonnet-4-6's CNCSim cpp run 3 (see `published_results/CNCSIM/results-2_1_1.md`) built cleanly and claimed complete, but the agent emitted the required `error` output field only when non-empty, missing the spec's `null` on success. Because 259 behavioral tests asserted `payload["error"] is None` at the top, that single ~5-LOC mistake failed every one of them with `KeyError: 'error'` — costing the run ~55% of the suite before any of its actual RS274 logic was probed. A schema gate plus `.get("error")` in behavioral tests would have localized the failure to one schema test and let the rest of the suite measure what it was named for.
+Worked example: sonnet-4-6's RS274 cpp run 3 (see `published_results/CNCSIM/results-2_1_1.md`) built cleanly and claimed complete, but the agent emitted the required `error` output field only when non-empty, missing the spec's `null` on success. Because 259 behavioral tests asserted `payload["error"] is None` at the top, that single ~5-LOC mistake failed every one of them with `KeyError: 'error'` — costing the run ~55% of the suite before any of its actual RS274 logic was probed. A schema gate plus `.get("error")` in behavioral tests would have localized the failure to one schema test and let the rest of the suite measure what it was named for.
 
 ---
 
@@ -419,7 +419,7 @@ Worked example: sonnet-4-6's CNCSim cpp run 3 (see `published_results/CNCSIM/res
 
 Implementation language is a task-level configuration, not a framework requirement. The harness is language-agnostic — it builds the submission via a per-language build backend, then invokes the resulting command with the standard CLI contract.
 
-A single eval can be offered in multiple languages. The prompt, documentation corpus, and hidden test suite are shared across language variants; the only per-language assets are a short `language-requirements-<lang>.md` prompt (stored once in `Evals/_shared/`) and a per-eval `reference-implementation-<lang>/` directory that must pass the full hidden test suite. Each (eval, language) pair is registered as a distinct task ID (e.g. `cncsim-cpp`, `cncsim-py`).
+A single eval can be offered in multiple languages. The prompt, documentation corpus, and hidden test suite are shared across language variants; the only per-language assets are a short `language-requirements-<lang>.md` prompt (stored once in `Evals/_shared/`) and a per-eval `reference-implementation-<lang>/` directory that must pass the full hidden test suite. Each (eval, language) pair is registered as a distinct task ID (e.g. `rs274-cpp`, `rs274-py`).
 
 Each language requires a one-time setup cost:
 - A Docker image with pinned compiler/runtime versions
@@ -470,9 +470,9 @@ Three complementary strategies are employed:
 
 **Private test suites.** The full hidden test suite for every task is never published. Evaluations are run by the maintainer (or task maintainer) and only scores are reported publicly. This is the primary protection.
 
-**Domain expertise.** CNCSim test cases are designed by someone with professional CNC machining experience. The adversarial cases in particular require deep domain knowledge to write and cannot be reproduced by generalizing from public examples.
+**Domain expertise.** RS274 test cases are designed by someone with professional CNC machining experience. The adversarial cases in particular require deep domain knowledge to write and cannot be reproduced by generalizing from public examples.
 
-**Structural resistance.** "Build a system" tasks require genuine understanding, not recall. Even if a model's training data contained a CNCSim test case, knowing the correct answer for one arc endpoint test does not help on a different arc test. Memorization provides negligible advantage over understanding.
+**Structural resistance.** "Build a system" tasks require genuine understanding, not recall. Even if a model's training data contained a RS274 test case, knowing the correct answer for one arc endpoint test does not help on a different arc test. Memorization provides negligible advantage over understanding.
 
 **Living benchmark rotation.** Test cases are tracked by date of introduction. Cases pre-dating a model's training cutoff are flagged in analysis but not removed, to preserve longitudinal comparability. New cases are added periodically to maintain forward-looking coverage.
 
@@ -480,10 +480,10 @@ Three complementary strategies are employed:
 
 ## 11. Roadmap
 
-### v1.0 — CNCSim Launch
-- [ ] CNCSim task: harness, prompt, hidden tests, sample tests
-- [ ] CNCSim current extensions: arc plane selection (ext-01), coordinate offsets (ext-02) with hidden test suites
-- [ ] CNCSim future extensions: stock removal simulation (ext-01), Haas dialect (ext-02) with hidden test suites
+### v1.0 — RS274 Launch
+- [ ] RS274 task: harness, prompt, hidden tests, sample tests
+- [ ] RS274 current extensions: arc plane selection (ext-01), coordinate offsets (ext-02) with hidden test suites
+- [ ] RS274 future extensions: stock removal simulation (ext-01), Haas dialect (ext-02) with hidden test suites
 - [ ] C++ quality eval: C++ Core Guidelines rubric (20–25 selected guidelines)
 - [ ] Docker sandbox image per supported agent CLI
 - [ ] Scoring harness: correctness + coverage + quality + extension pipeline
@@ -514,7 +514,7 @@ Three complementary strategies are employed:
 
 - **Temperature.** What sampling temperature should be used? Lower temperatures produce more deterministic output but may suppress architecturally creative solutions. Current position: temperature=0 for reproducibility.
 
-- **Context window handling for CNCSim-Full.** The full RS274/NGC PDF is ~200 pages. Models with smaller context windows may need to truncate. Current position: provide the full document and let the model decide what to include; context window limitations are a valid dimension of model capability.
+- **Context window handling for RS274-Full.** The full RS274/NGC PDF is ~200 pages. Models with smaller context windows may need to truncate. Current position: provide the full document and let the model decide what to include; context window limitations are a valid dimension of model capability.
 
 - **Agent timeout fairness.** Faster agents complete more iterations within the 4-hour wall-clock cap, which may advantage them independent of code quality. Should the cap be token-based rather than time-based? Current position: wall-clock cap is simpler and more operationally meaningful; token cap is logged separately as a secondary dimension.
 

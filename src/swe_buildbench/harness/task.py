@@ -133,8 +133,16 @@ def _register_language_tasks(
     }
 
 
+_RS274_LANGUAGES = ("cpp", "py", "js", "rs")
+_RS274_TASKS = _register_language_tasks("rs274", "Evals/RS274", _RS274_LANGUAGES)
+
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
-    **_register_language_tasks("cncsim", "Evals/CNCSim", ("cpp", "py", "js", "rs")),
+    **_RS274_TASKS,
+    # Keep historical CNCSim task IDs working while scripts/results catch up.
+    **{
+        f"cncsim-{language}": _RegisteredTask("Evals/RS274", language=language)
+        for language in _RS274_LANGUAGES
+    },
     **_register_language_tasks("wordcount", "Evals/WordCount", ("cpp", "py", "js", "rs")),
     **_register_language_tasks("iges", "Evals/IGES", ("cpp", "js", "py", "rs")),
 }

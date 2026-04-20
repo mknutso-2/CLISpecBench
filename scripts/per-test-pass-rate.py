@@ -30,8 +30,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--task-prefix",
-        default="cncsim",
-        help="Only include task folders whose names start with this (default: cncsim)",
+        default="rs274",
+        help="Only include task folders whose names start with this (default: rs274)",
     )
     parser.add_argument(
         "--output", "-o", default=None, help="Output CSV path (default: stdout)"

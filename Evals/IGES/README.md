@@ -14,7 +14,7 @@ format used across mechanical CAD systems since 1980.
 
 ## Why this eval
 
-CNCSim is the benchmark's first eval and has proven valuable, but frontier
+RS274 is the benchmark's first eval and has proven valuable, but frontier
 agents are beginning to saturate it. IGES is intended as a harder
 spec-comprehension challenge along the same axis:
 
@@ -28,7 +28,7 @@ spec-comprehension challenge along the same axis:
   re-implemented from scratch; there is no saturated public corpus of
   reference implementations in agent training data.
 
-Unlike CNCSim, there is no "lite" variant. Agents are asked for full
+Unlike RS274, there is no "lite" variant. Agents are asked for full
 87-entity coverage.
 
 ## Directory Structure (target)
@@ -59,7 +59,7 @@ VERSION                             # Semver for this eval
 
 The agent's submission is a single binary (default name `iges`) supporting
 five subcommands. All emit JSON, all write both on success and error, all
-follow CNCSim's exit-code convention (0 success, 1 invalid input, 2 internal
+follow RS274's exit-code convention (0 success, 1 invalid input, 2 internal
 error).
 
 | Subcommand | Purpose |
@@ -108,7 +108,7 @@ Carried over from IGES-SDK's original scope:
 Per `AGENTS.md` and this repo's `CLAUDE.md`:
 
 - `iges-5-3-specification.md` is the **source of truth**. Do not edit it
-  unless explicitly asked — same rule as `RS274NGC.md` for CNCSim.
+  unless explicitly asked — same rule as `RS274NGC.md` for RS274.
 - `technical-requirements-prompt.md` is a **harness contract**, not a
   behavior spec. Only edit it when the CLI contract changes.
 - Tests follow the **three-tier invariant policy** inherited from
@@ -131,7 +131,7 @@ Per `AGENTS.md` and this repo's `CLAUDE.md`:
 - [IGES-SDK](../IGES-SDK) — the upstream C++23 library being ported into
   this eval. Will remain as a snapshot; no longer developed independently
   once the port completes.
-- [CNCSim](../CNCSim) — the sibling eval whose harness conventions this
+- [RS274](../RS274) — the sibling eval whose harness conventions this
   eval mirrors (`conftest.py` pattern, multi-language ref-impl layout,
   versioning rules).
 - [Eval-Design.md](../../Eval-Design.md) — benchmark-level design.

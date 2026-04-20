@@ -24,7 +24,7 @@ from swe_buildbench.harness.results import (
 )
 
 
-def _make_result_file(path: Path, *, run_uid: str, task: str = "cncsim-cpp",
+def _make_result_file(path: Path, *, run_uid: str, task: str = "rs274-cpp",
                      agent: str = "claude-code", model: str | None = "claude-opus-4-7",
                      effort: str | None = "max") -> RunResult:
     """Write a minimal RunResult to ``path`` and return it."""
@@ -58,13 +58,13 @@ def _make_result_file(path: Path, *, run_uid: str, task: str = "cncsim-cpp",
 
 
 def test_published_runs_dir_includes_model_effort(tmp_path: Path) -> None:
-    d = published_runs_dir(tmp_path, "cncsim-cpp", "claude-code", "claude-opus-4-7", "max")
-    assert d == tmp_path / "cncsim-cpp" / "claude-code" / "claude-opus-4-7_max"
+    d = published_runs_dir(tmp_path, "rs274-cpp", "claude-code", "claude-opus-4-7", "max")
+    assert d == tmp_path / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max"
 
 
 def test_published_runs_dir_omits_effort_when_none(tmp_path: Path) -> None:
-    d = published_runs_dir(tmp_path, "cncsim-cpp", "claude-code", "claude-opus-4-7", None)
-    assert d == tmp_path / "cncsim-cpp" / "claude-code" / "claude-opus-4-7"
+    d = published_runs_dir(tmp_path, "rs274-cpp", "claude-code", "claude-opus-4-7", None)
+    assert d == tmp_path / "rs274-cpp" / "claude-code" / "claude-opus-4-7"
 
 
 def test_next_published_run_number_empty_dir(tmp_path: Path) -> None:
@@ -93,7 +93,7 @@ def test_publish_writes_first_run_file_and_strips_artifacts(tmp_path: Path) -> N
     )
 
     expected = (
-        published_root / "cncsim-cpp" / "claude-code" / "claude-opus-4-7_max" / "run1.json"
+        published_root / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max" / "run1.json"
     )
     assert target == expected
     payload = json.loads(target.read_text(encoding="utf-8"))
@@ -113,7 +113,7 @@ def test_publish_auto_increments_across_calls(tmp_path: Path) -> None:
         _make_result_file(source, run_uid=f"uid-{i}")
         publish_result(source, published_root, status="Complete", last_message=f"run {i}")
 
-    target_dir = published_root / "cncsim-cpp" / "claude-code" / "claude-opus-4-7_max"
+    target_dir = published_root / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max"
     names = sorted(p.name for p in target_dir.iterdir())
     assert names == ["run1.json", "run2.json", "run3.json"]
 
@@ -175,10 +175,10 @@ def test_publish_carries_commentary_slug(tmp_path: Path) -> None:
         tmp_path / "published",
         status="Complete",
         last_message="see commentary",
-        commentary="cncsim-cpp-gpt-5.1-high-variance",
+        commentary="rs274-cpp-gpt-5.1-high-variance",
     )
     payload = json.loads(target.read_text(encoding="utf-8"))
-    assert payload["editorial"]["commentary"] == "cncsim-cpp-gpt-5.1-high-variance"
+    assert payload["editorial"]["commentary"] == "rs274-cpp-gpt-5.1-high-variance"
 
 
 def test_find_duplicate_publication_tolerates_corrupt_files(tmp_path: Path) -> None:
@@ -201,7 +201,7 @@ def test_find_duplicate_publication_tolerates_corrupt_files(tmp_path: Path) -> N
 def test_publish_ignores_corrupt_neighbors_when_scanning(tmp_path: Path) -> None:
     """A corrupt sibling file must not block publishing a fresh uid."""
     published_root = tmp_path / "published"
-    corrupt_dir = published_root / "cncsim-cpp" / "claude-code" / "claude-opus-4-7_max"
+    corrupt_dir = published_root / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max"
     corrupt_dir.mkdir(parents=True)
     (corrupt_dir / "run1.json").write_text("garbage")
 
@@ -221,8 +221,8 @@ def test_publish_rejects_when_invariant_broken(tmp_path: Path) -> None:
     compound it. The tree must be fixed manually first.
     """
     published_root = tmp_path / "published"
-    dir_a = published_root / "cncsim-cpp" / "claude-code" / "model-a"
-    dir_b = published_root / "cncsim-cpp" / "claude-code" / "model-b"
+    dir_a = published_root / "rs274-cpp" / "claude-code" / "model-a"
+    dir_b = published_root / "rs274-cpp" / "claude-code" / "model-b"
     dir_a.mkdir(parents=True)
     dir_b.mkdir(parents=True)
     shared = {"metadata": {"run_uid": "shared-uid"}}
@@ -283,7 +283,7 @@ def test_publish_with_matching_commentary_does_not_warn(
     import logging
 
     published_root = tmp_path / "published"
-    commentary_dir = published_root / "CNCSIM" / "commentary"
+    commentary_dir = published_root / "RS274" / "commentary"
     commentary_dir.mkdir(parents=True)
     (commentary_dir / "my-slug.md").write_text("notes")
 
@@ -312,8 +312,8 @@ def test_load_result_migrates_legacy_run_id(tmp_path: Path) -> None:
     legacy_payload: dict[str, object] = {
         "schema_version": "1.1",
         "metadata": {
-            "run_id": "cncsim-cpp_claude-code_claude-opus-4-7_2026-04-02_run-1",
-            "task": "cncsim-cpp",
+            "run_id": "rs274-cpp_claude-code_claude-opus-4-7_2026-04-02_run-1",
+            "task": "rs274-cpp",
             "agent": "claude-code",
             "agent_version": "1.0.0",
             "prompt_variant": "base",
@@ -341,7 +341,7 @@ def test_load_result_migrates_legacy_run_id(tmp_path: Path) -> None:
     result = load_result(source)
     assert result.metadata.run_uid == ""
     assert not hasattr(result.metadata, "run_id")
-    assert result.metadata.task == "cncsim-cpp"
+    assert result.metadata.task == "rs274-cpp"
     assert result.metadata.model == "claude-opus-4-7"
 
     # And confirm publish refuses — the migrated file has no uid to carry.

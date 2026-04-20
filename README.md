@@ -15,7 +15,7 @@ The repo is easier to navigate if you separate five concepts:
 |---|---|---|
 | **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/swe_buildbench/agents/` and containerized from `docker/agents/` |
 | **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
-| **Task** | A harness-visible eval-language pair. This is what `swe-buildbench run --task ...` and `swe-buildbench validate --task ...` operate on. Examples: `wordcount-cpp`, `wordcount-rs`, `cncsim-js`. | Registered in `src/swe_buildbench/harness/task.py` |
+| **Task** | A harness-visible eval-language pair. This is what `swe-buildbench run --task ...` and `swe-buildbench validate --task ...` operate on. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/swe_buildbench/harness/task.py` |
 | **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/swe_buildbench/harness/`, `src/swe_buildbench/build/`, `src/swe_buildbench/cli.py` |
 | **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/swe_buildbench/tests/` |
 
@@ -30,7 +30,7 @@ Two useful distinctions:
 ```
 Evals/                   # Evaluation tasks (one directory per task)
   _shared/               #   Shared language-requirements prompts
-  CNCSim/                #   CNC G-code interpreter (full benchmark task)
+  RS274/                #   CNC G-code interpreter (full benchmark task)
   IGES/                  #   IGES CAD interchange parser/writer eval
   IGES-SDK/              #   Upstream IGES porting source tree
   WordCount/             #   Word frequency counter (toy eval for harness testing)
@@ -48,7 +48,7 @@ Design docs:
 
 - `Eval-Design.md` -- benchmark-level design (scoring, task anatomy, eval modes)
 - `Harness-Design.md` -- evaluation harness architecture and implementation
-- `Evals/CNCSim/README.md` -- CNCSim task design and test categories
+- `Evals/RS274/README.md` -- RS274 task design and test categories
 - `Evals/IGES/README.md` -- IGES eval design, scope, and contract notes
 
 ## Requirements
@@ -65,15 +65,15 @@ Requirements depend on what you plan to do on the **host machine**:
   - **CMake + a C++ compiler** — needed if you run C++ reference implementations or
     point tests at a local C++ submission with `--implementation-root`.
     - **C++20** is the shared prompt/harness baseline and is sufficient for the current
-      `CNCSim` and `WordCount` C++ reference implementations.
+      `RS274` and `WordCount` C++ reference implementations.
     - **C++23-capable compiler** is needed if you also want to build/run the current
       `IGES` C++ reference implementation.
   - **Node.js 22+** — needed only if you run JavaScript reference implementations on
     the host, such as `pytest Evals/WordCount/tests --language=js` or
-    `pytest Evals/CNCSim/tests --language=js`.
+    `pytest Evals/RS274/tests --language=js`.
   - **Rust stable** via [rustup](https://rustup.rs/) — needed only if you run Rust
     reference implementations on the host, such as
-    `pytest Evals/WordCount/tests --language=rs` or `pytest Evals/CNCSim/tests --language=rs`.
+    `pytest Evals/WordCount/tests --language=rs` or `pytest Evals/RS274/tests --language=rs`.
     The repo's shared Rust prompt currently targets **Rust 2021 or later**.
 - **Bundled in the Docker images, so not required on the host just to run evals**
   - **Node.js 22+** for the CLI-agent containers
@@ -171,7 +171,7 @@ Each eval task follows a standard pipeline:
 
 ```bash
 swe-buildbench run --task wordcount-cpp --agent claude-code
-swe-buildbench run --task cncsim-cpp --agent codex-cli
+swe-buildbench run --task rs274-cpp --agent codex-cli
 swe-buildbench run --task iges-cpp --agent copilot-cli
 ```
 
@@ -198,7 +198,7 @@ every PR; the fourth is a hand-run diagnostic for new-machine setup.
 Each task's hidden test suite, run against its reference implementation:
 
 ```bash
-pytest Evals/CNCSim/tests --language=cpp
+pytest Evals/RS274/tests --language=cpp
 pytest Evals/IGES/tests --language=cpp
 pytest Evals/WordCount/tests --language=cpp
 ```

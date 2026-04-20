@@ -20,6 +20,15 @@ class TestTaskDefinitionLanguage:
         assert isinstance(task, TaskDefinition)
         assert task.language == "cpp"
 
+    def test_rs274_legacy_alias_resolves_to_renamed_eval(self) -> None:
+        repo_root = _repo_root()
+        canonical = resolve_task(repo_root, "rs274-cpp")
+        legacy = resolve_task(repo_root, "cncsim-cpp")
+
+        assert canonical.root == repo_root / "Evals" / "RS274"
+        assert legacy.root == canonical.root
+        assert canonical.language == legacy.language == "cpp"
+
 
 class TestPythonTaskRegistration:
     def test_wordcount_python_is_registered(self) -> None:

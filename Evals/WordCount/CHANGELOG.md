@@ -18,7 +18,7 @@
   entry point promised by `Evals/_shared/language-requirements-py.md`.
   No WordCount-specific failure was observed (typical submissions are
   single-file), but this is the same staging path that broke multi-
-  module CNCSim and IGES Python submissions which encoded `output` as
+  module RS274 and IGES Python submissions which encoded `output` as
   their package name. Harness-only change in
   `src/swe_buildbench/harness/scoring.py` (`_CONTAINER_SUBMISSION`) and
   `src/swe_buildbench/harness/docker.py` (`copy_in` now auto-creates

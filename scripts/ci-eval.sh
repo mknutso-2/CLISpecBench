@@ -13,8 +13,8 @@ uv run pytest Evals/WordCount/tests -v --language=cpp
 # The cpp reference has known v2.0 feature gaps (motion trace and
 # full-circle center-format arcs without in-plane axis words). Those
 # tests are deselected here and exercised against the py reference below.
-echo "==> pytest CNCSim (cpp)"
-uv run pytest Evals/CNCSim/tests -v --language=cpp \
+echo "==> pytest RS274 (cpp)"
+uv run pytest Evals/RS274/tests -v --language=cpp \
   -m "not trace" -k "not full-circle-no-axis-words"
-echo "==> pytest CNCSim (py)"
-uv run pytest Evals/CNCSim/tests -v --language=py
+echo "==> pytest RS274 (py)"
+uv run pytest Evals/RS274/tests -v --language=py

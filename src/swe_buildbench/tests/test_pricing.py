@@ -48,7 +48,7 @@ class TestEstimateCost:
         assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
 
     def test_haiku_real_run(self) -> None:
-        """Verify estimate against the actual haiku CNCSim run token breakdown."""
+        """Verify estimate against the actual haiku RS274 run token breakdown."""
         # From transcript: input=360, cache_creation=109733, cache_read=3542369, output=63559
         cost = estimate_cost(
             "claude-haiku-4-5-20251001",

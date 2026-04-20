@@ -25,7 +25,7 @@ uv run pyright
 
 ```bash
 pytest path/to/test_file.py::test_name
-pytest Evals/CNCSim/tests --language=cpp
+pytest Evals/RS274/tests --language=cpp
 pytest Evals/WordCount/tests --language=py
 pytest Evals/WordCount/tests --language=cpp --implementation-root /path/to/agent-output
 uv run pytest src/swe_buildbench/tests -m "not docker and not prompts_agent"

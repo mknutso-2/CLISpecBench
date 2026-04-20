@@ -1,4 +1,4 @@
-# Memorization Analysis — CNCSim and SWE-BuildBench
+# Memorization Analysis — RS274 and SWE-BuildBench
 
 **Status:** Draft  
 **Last Updated:** April 2026
@@ -11,7 +11,7 @@ Epoch AI's [MirrorCode preliminary results](https://epoch.ai/blog/mirrorcode-pre
 (Adamczewski, Rein, Owen, Brand; April 2026) raise important questions about
 how much of a model's performance on coding benchmarks is attributable to
 memorization of training data versus genuine problem-solving. This document
-analyzes what those findings mean for interpreting CNCSim scores and proposes
+analyzes what those findings mean for interpreting RS274 scores and proposes
 concrete experiments to measure and mitigate memorization effects.
 
 ---
@@ -39,11 +39,11 @@ Critical limitation they acknowledge:
 > perhaps AIs could memorize other relevant details, such as discussion of the
 > codebases and their algorithmic approaches."
 
-This limitation is directly relevant to CNCSim.
+This limitation is directly relevant to RS274.
 
 ---
 
-## 3. CNCSim's Memorization Risk Profile
+## 3. RS274's Memorization Risk Profile
 
 ### 3.1 What is certainly in training data
 
@@ -59,14 +59,14 @@ This limitation is directly relevant to CNCSim.
 
 | Artifact | Status | Notes |
 |----------|--------|-------|
-| CNCSim hidden test suite | Private | Never published |
-| CNCSim CLI contract + JSON schema | Public but novel | Custom to this eval |
-| CNCSim reference implementations | Public but post-2025 | Original code, not copies |
+| RS274 hidden test suite | Private | Never published |
+| RS274 CLI contract + JSON schema | Public but novel | Custom to this eval |
+| RS274 reference implementations | Public but post-2025 | Original code, not copies |
 
 ### 3.3 The unmeasurable gap
 
-MirrorCode's function-level Levenshtein test cannot be applied to CNCSim
-because CNCSim asks "implement this spec," not "reproduce this codebase." There
+MirrorCode's function-level Levenshtein test cannot be applied to RS274
+because RS274 asks "implement this spec," not "reproduce this codebase." There
 is no single target to compare against — any correct RS274 interpreter counts.
 
 The memorization risk that matters is **algorithmic/architectural**: models have
@@ -141,8 +141,8 @@ training data. If memorization contributes, models should perform better in
 languages where more exemplars exist.
 
 **Method:**
-1. Run the same agent against `cncsim-cpp` (C++), `cncsim-py`,
-   `cncsim-js`.
+1. Run the same agent against `rs274-cpp` (C++), `rs274-py`,
+   `rs274-js`.
 2. Control for the model's general language proficiency (measure via unrelated
    benchmarks).
 3. A delta that exceeds the general proficiency difference suggests
@@ -151,15 +151,15 @@ languages where more exemplars exist.
 ### 4.4 Cross-generation comparison
 
 **Hypothesis:** MirrorCode found memorization scores *decreased* across Claude
-generations. If CNCSim scores increase while memorization (measured by 4.2)
+generations. If RS274 scores increase while memorization (measured by 4.2)
 stays flat or decreases, improvements reflect genuine capability gains.
 
 **Method:**
-1. Run CNCSim across multiple model checkpoints (e.g., Opus 3.5, 4.0, 4.6;
+1. Run RS274 across multiple model checkpoints (e.g., Opus 3.5, 4.0, 4.6;
    GPT-4o, o3; Gemini 2.5).
 2. Run spec-contradicting probes (4.2) on each.
-3. Plot: (CNCSim score) vs. (spec-adherence rate on contradicting probes).
-4. If these correlate positively, better models are better readers. If CNCSim
+3. Plot: (RS274 score) vs. (spec-adherence rate on contradicting probes).
+4. If these correlate positively, better models are better readers. If RS274
    score rises but spec-adherence is flat, newer models may just have more
    G-code data.
 
@@ -184,11 +184,11 @@ the spec and builds from scratch).
 ## 5. Mitigation: The RS274-Alt Spec
 
 Beyond measurement, spec-contradicting modifications can serve as a
-**mitigation** — a contamination-resistant variant of the CNCSim eval.
+**mitigation** — a contamination-resistant variant of the RS274 eval.
 
 ### 5.1 Design: RS274-Alt (Modified G-code Semantics)
 
-Create a fork of the CNCSim eval where the specification document describes a
+Create a fork of the RS274 eval where the specification document describes a
 G-code dialect with deliberately non-standard semantics. This forces the model
 to implement what the document says rather than what it "knows" G-code should
 do.
@@ -222,11 +222,11 @@ do.
    is mechanical — each modification has a known effect on outputs.
 3. **Fork the reference implementation:** Modify the Python ref impl (easiest
    to patch) to match RS274-Alt semantics. Use it to generate expected outputs.
-4. **Register as a new task:** `cncsim-alt-cpp` alongside `cncsim-cpp`.
-5. **Score interpretation:** An agent's score on `cncsim-alt-cpp` vs. `cncsim-cpp`
+4. **Register as a new task:** `rs274-alt-cpp` alongside `rs274-cpp`.
+5. **Score interpretation:** An agent's score on `rs274-alt-cpp` vs. `rs274-cpp`
    directly measures how much the standard semantics being in training data
    contributes. If scores are similar, the model is spec-driven. If
-   `cncsim-alt` is much lower, memorization was helping.
+   `rs274-alt` is much lower, memorization was helping.
 
 ### 5.3 Contamination lifecycle
 
@@ -296,7 +296,7 @@ For contamination resistance, the most promising candidates are those where:
 
 ## 7. Relationship to MirrorCode's Methodology
 
-| Dimension | MirrorCode | SWE-BuildBench (CNCSim) |
+| Dimension | MirrorCode | SWE-BuildBench (RS274) |
 |-----------|-----------|------------------------|
 | Input to agent | Execute-only binary + docs | Spec document only (no binary) |
 | What's measured | "Can you clone this behavior?" | "Can you read and implement this?" |
@@ -328,6 +328,6 @@ memorization.
 4. **Establish a function-level baseline** (experiment 4.5) for the models
    you're scoring. This is cheap and provides context even if not conclusive.
 
-5. **Consider registering `cncsim-alt-cpp` scores separately** on any leaderboard,
-   with the delta (`cncsim-cpp` − `cncsim-alt-cpp`) reported as a memorization
+5. **Consider registering `rs274-alt-cpp` scores separately** on any leaderboard,
+   with the delta (`rs274-cpp` − `rs274-alt-cpp`) reported as a memorization
    indicator.

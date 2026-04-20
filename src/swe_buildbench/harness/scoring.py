@@ -23,7 +23,7 @@ TEST_RUNNER_IMAGE = "swe-buildbench-base"
 # _CONTAINER_SUBMISSION retains the ``output/`` wrapper from the agent workspace
 # so agents that write ``from output.foo import bar`` (or the language-equivalent)
 # resolve the same way at test time as they do in their dev environment. See the
-# CNCSim-py run 1 (Opus 4.7, 2026-04-18) incident for the motivation.
+# RS274-py run 1 (Opus 4.7, 2026-04-18) incident for the motivation.
 _CONTAINER_TESTS = PurePosixPath("/tmp/tests")
 _CONTAINER_SUBMISSION = PurePosixPath("/tmp/submission/output")
 _CONTAINER_SRC = PurePosixPath("/tmp/src")

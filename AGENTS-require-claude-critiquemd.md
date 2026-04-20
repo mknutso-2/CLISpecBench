@@ -21,7 +21,7 @@ Workflow:
 1. Before calling the review, prepare the review target (working-tree changes, a commit hash, or specific files).
 2. Invoke `/codex:adversarial-review` with a focus prompt that includes:
    - what code to inspect (for example "Review the working-tree changes" or "Review commit abc1234")
-   - which docs define correctness (for example `AGENTS.md`, `Evals/CNCSim/CNCSim-Design.md`, `Evals/CNCSim/prompt/base-prompt.md`, `Evals/CNCSim/prompt/technical-requirements-prompt.md`, and the RS274 docs)
+  - which docs define correctness (for example `AGENTS.md`, `Evals/RS274/README.md`, `Evals/RS274/prompt/base-prompt.md`, `Evals/RS274/prompt/technical-requirements-prompt.md`, and the RS274 docs)
    - the instruction to be skeptical and surface concrete findings with file references
 3. Codex's review output is returned verbatim into the Claude Code conversation, so the user can see the full exchange.
 4. Evaluate Codex's findings. For each finding, either accept it and fix the issue, or prepare a counterargument grounded in the spec or code.
@@ -29,5 +29,5 @@ Workflow:
 
 Example invocation:
 ```text
-/codex:adversarial-review Review the working-tree changes. Check alignment with AGENTS.md, Evals/CNCSim/CNCSim-Design.md, Evals/CNCSim/prompt/base-prompt.md, Evals/CNCSim/prompt/technical-requirements-prompt.md, and the RS274 docs. Be skeptical. Focus on concrete findings with file references, not style.
+/codex:adversarial-review Review the working-tree changes. Check alignment with AGENTS.md, Evals/RS274/README.md, Evals/RS274/prompt/base-prompt.md, Evals/RS274/prompt/technical-requirements-prompt.md, and the RS274 docs. Be skeptical. Focus on concrete findings with file references, not style.
 ```

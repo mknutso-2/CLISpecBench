@@ -39,6 +39,7 @@ passed=0
 failed=0
 
 for rel_script in "${smoke_scripts[@]}"; do
+    rel_script="${rel_script%$'\r'}"
     agent="$(basename "$rel_script" .sh)"
     agent="${agent#smoke-test-}"
     echo ""

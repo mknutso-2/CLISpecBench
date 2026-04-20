@@ -20,7 +20,7 @@ def _make_run_result(agent: str, token_usage: TokenUsage | None) -> RunResult:
     return RunResult(
         metadata=RunMetadata(
             run_uid="00000000-0000-0000-0000-000000000001",
-            task="cncsim-cpp",
+            task="rs274-cpp",
             agent=agent,
             agent_version="1.0.0",
             prompt_variant="base",

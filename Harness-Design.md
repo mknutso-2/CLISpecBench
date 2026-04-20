@@ -6,10 +6,10 @@
 
 ---
 
-> **Note on CNCSim naming.** The current harness exposes explicit language task
-> IDs such as `cncsim-cpp`, `cncsim-py`, `cncsim-js`, and `cncsim-rs`. The
-> current repository ships a single `Evals/CNCSim/` eval. See
-> `Evals/CNCSim/README.md`.
+> **Note on RS274 naming.** The current harness exposes explicit language task
+> IDs such as `rs274-cpp`, `rs274-py`, `rs274-js`, and `rs274-rs`. The
+> current repository ships a single `Evals/RS274/` eval. See
+> `Evals/RS274/README.md`.
 
 ## 1. Purpose
 
@@ -26,7 +26,7 @@ implementation: how those concepts become running code.
 ## 2. Goals
 
 1. **Run any supported agent against any task with a single command.**
-   `swe-buildbench run --task cncsim-cpp --agent claude-code`
+   `swe-buildbench run --task rs274-cpp --agent claude-code`
 
 2. **Produce structured, machine-readable results** that capture per-test
    pass/fail, token usage, timing, and scoring — enabling cross-model and
@@ -111,20 +111,18 @@ src/swe_buildbench/
     build.py                    # build_cmake_project, CMakeBuildResult
     target.py                   # ImplementationTarget, find_repo_root
 
-  cncsim/                       # CNCSim-specific test infrastructure
-    target.py                   # CNCSim default implementation target resolution
-    rs274_parameters.py         # RS274 parameter constants
-    modal_groups.py             # Modal group constants
-    test_support.py             # Test helpers (run_cncsim, parameter files, etc.)
-
 Evals/
   _shared/                          # Shared across evals
     language-requirements-cpp.md        # C++ boilerplate
     language-requirements-py.md         # Python boilerplate
     language-requirements-js.md         # JavaScript boilerplate
     language-requirements-rs.md         # Rust boilerplate
-  CNCSim/                           # CNC G-code interpreter eval
+  RS274/                           # CNC G-code interpreter eval
     prompt/ docs/ tests/
+    tests/
+      rs274_support.py                 # RS274 test helpers
+      rs274_parameters.py              # RS274 parameter constants
+      modal_groups.py                  # RS274 modal group constants
     reference-implementation-cpp/       # C++ reference
     reference-implementation-py/        # Python reference
     reference-implementation-js/        # JavaScript reference
@@ -403,7 +401,7 @@ inspection and programmatic aggregation.
 
   "metadata": {
     "run_uid": "e81e6027-5353-479b-babd-cff232765773",
-    "task": "cncsim-cpp",
+    "task": "rs274-cpp",
     "agent": "claude-code",
     "agent_version": "1.0.16",
     "prompt_variant": "base",
@@ -468,7 +466,7 @@ agent transcript and the complete source code directory.
 
 ```
 transient_results/
-  cncsim-cpp/
+  rs274-cpp/
     claude-code/
       run-1.json                 # Structured result (scores, tests, metadata)
       run-1-transcript.jsonl     # Full agent conversation/event log
@@ -519,7 +517,7 @@ For a given agent, find `node_id`s where `outcome` varies across runs.
 
 ```
 swe-buildbench run
-    --task <task-id>                   # Required: cncsim-cpp, cncsim-py, wordcount-cpp, ...
+    --task <task-id>                   # Required: rs274-cpp, rs274-py, wordcount-cpp, ...
     --agent <agent-name>               # Required: claude-code, codex-cli, copilot-cli, gemini-cli
     --runs <N>                         # Default: 3
     --prompt-variant <name>            # Default: base
@@ -541,17 +539,17 @@ swe-buildbench validate
 ### 9.1 Examples
 
 ```bash
-# Run Claude Code against CNCSim C++, 3 runs, base prompt
-swe-buildbench run --task cncsim-cpp --agent claude-code \
+# Run Claude Code against RS274 C++, 3 runs, base prompt
+swe-buildbench run --task rs274-cpp --agent claude-code \
     --api-key-env ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY
 
-# Run Codex CLI against CNCSim C++ with the "with-tests" prompt variant
-swe-buildbench run --task cncsim-cpp --agent codex-cli \
+# Run Codex CLI against RS274 C++ with the "with-tests" prompt variant
+swe-buildbench run --task rs274-cpp --agent codex-cli \
     --prompt-variant with-tests \
     --api-key-env OPENAI_API_KEY=$OPENAI_API_KEY
 
 # Compare results across agents for a task
-swe-buildbench results --task cncsim-cpp --compare
+swe-buildbench results --task rs274-cpp --compare
 ```
 
 ---

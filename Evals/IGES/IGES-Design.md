@@ -8,21 +8,21 @@
 
 ## 1. Why this eval exists
 
-CNCSim tests whether an agent can read a single domain spec (RS274NGC)
+RS274 tests whether an agent can read a single domain spec (RS274NGC)
 and produce a stateful interpreter. Early results suggest the task is
 trending toward saturation for frontier models. The IGES eval was designed
-as a harder doc-comprehension task that shares CNCSim's shape — hidden
+as a harder doc-comprehension task that shares RS274's shape — hidden
 pytest suite, Docker-sandboxed build, language-agnostic submission — but
-pushes on three axes CNCSim doesn't cover:
+pushes on three axes RS274 doesn't cover:
 
 1. **Spec breadth.** IGES 5.3 defines 87 entity types spread across
-   ~400 pages. CNCSim's RS274 is one ~40-page spec. An agent cannot
+   ~400 pages. RS274's RS274 is one ~40-page spec. An agent cannot
    one-shot the whole IGES spec from memory; it has to read, index, and
    reconstruct the parser / writer entity-by-entity.
 2. **Lossy round-trips.** Fixed-format ASCII with defaulted fields,
    Hollerith strings, and free-format continuation forces the agent to
    reason about *file-level* invariants (section accounting, DE pointer
-   arithmetic) in addition to *entity-level* grammar. CNCSim never has
+   arithmetic) in addition to *entity-level* grammar. RS274 never has
    to serialize its state back to a format.
 3. **Multi-surface CLI.** The submission exposes five subcommands
    (`parse`, `write`, `query`, `eval`, `roundtrip`) that must agree on
@@ -53,7 +53,7 @@ JSON-on-stdin/stdout was considered and rejected. File-path I/O is
 simpler for tests, survives OS-specific pipe issues (Windows+WSL
 Docker was a repeated pain point during harness development; see
 `AGENTS.md`), and composes with the harness's existing `pytest tmp_path`
-pattern used by CNCSim.
+pattern used by RS274.
 
 Resolved contract decisions:
 
