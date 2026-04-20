@@ -178,3 +178,90 @@ def test_publish_carries_commentary_slug(tmp_path: Path) -> None:
     )
     payload = json.loads(target.read_text(encoding="utf-8"))
     assert payload["editorial"]["commentary"] == "cncsim-cpp-gpt-5.1-high-variance"
+
+
+def test_find_duplicate_publication_tolerates_corrupt_files(tmp_path: Path) -> None:
+    """Malformed publications in the tree must not crash or bypass the check."""
+    published = tmp_path / "published" / "task" / "agent" / "model"
+    published.mkdir(parents=True)
+    (published / "run1.json").write_text("not json at all")
+    (published / "run2.json").write_text("[]")
+    (published / "run3.json").write_text('{"metadata": null}')
+    (published / "run4.json").write_text(
+        json.dumps({"metadata": {"run_uid": "present-uid"}})
+    )
+
+    assert find_duplicate_publication(tmp_path / "published", "missing") is None
+    assert find_duplicate_publication(tmp_path / "published", "present-uid") == (
+        published / "run4.json"
+    )
+
+
+def test_publish_ignores_corrupt_neighbors_when_scanning(tmp_path: Path) -> None:
+    """A corrupt sibling file must not block publishing a fresh uid."""
+    published_root = tmp_path / "published"
+    corrupt_dir = published_root / "cncsim-cpp" / "claude-code" / "claude-opus-4-7_max"
+    corrupt_dir.mkdir(parents=True)
+    (corrupt_dir / "run1.json").write_text("garbage")
+
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(source, run_uid="fresh-uid")
+    target = publish_result(
+        source, published_root, status="Complete", last_message="clean publish",
+    )
+    assert target.exists()
+    assert target.name == "run2.json"  # run1.json is the corrupt one; we skip to run2
+
+
+def test_load_result_migrates_legacy_run_id(tmp_path: Path) -> None:
+    """Pre-2.0 payloads with ``metadata.run_id`` must still load.
+
+    The legacy run_id is dropped (fields it encoded are already structured in
+    metadata) and run_uid defaults to empty — which makes the file
+    unpublishable until the run is redone, by design.
+    """
+    from swe_buildbench.harness.results import load_result
+
+    legacy_payload = {
+        "schema_version": "1.1",
+        "metadata": {
+            "run_id": "cncsim-cpp_claude-code_claude-opus-4-7_2026-04-02_run-1",
+            "task": "cncsim-cpp",
+            "agent": "claude-code",
+            "agent_version": "1.0.0",
+            "prompt_variant": "base",
+            "run_number": 1,
+            "timestamp": "2026-04-02T00:00:00+00:00",
+            "test_suite_version": "abc1234",
+            "eval_version": "2.1.1",
+            "harness_version": "0.1.0",
+            "docker_image_sha": "sha256:test",
+            "wall_clock_seconds": 1.0,
+            "exit_reason": "completed",
+            "model": "claude-opus-4-7",
+            "effort": "max",
+        },
+        "token_usage": None,
+        "build": {"success": True, "duration_seconds": 0.0, "diagnostics": ""},
+        "tests": [],
+        "test_summary": {"passed": 0, "failed": 0, "skipped": 0, "error": 0},
+        "scores": {},
+    }
+    source = tmp_path / "legacy" / "result.json"
+    source.parent.mkdir(parents=True)
+    source.write_text(json.dumps(legacy_payload), encoding="utf-8")
+
+    result = load_result(source)
+    assert result.metadata.run_uid == ""
+    assert not hasattr(result.metadata, "run_id")
+    assert result.metadata.task == "cncsim-cpp"
+    assert result.metadata.model == "claude-opus-4-7"
+
+    # And confirm publish refuses — the migrated file has no uid to carry.
+    with pytest.raises(PublishError, match="no run_uid"):
+        publish_result(
+            source,
+            tmp_path / "published",
+            status="Complete",
+            last_message="should reject",
+        )

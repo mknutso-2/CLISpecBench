@@ -408,10 +408,10 @@ inspection and programmatic aggregation.
 
 ```json
 {
-  "schema_version": "1.0",
+  "schema_version": "2.0",
 
   "metadata": {
-    "run_id": "cncsim-cpp_claude-code_2026-03-31_run-1",
+    "run_uid": "e81e6027-5353-479b-babd-cff232765773",
     "task": "cncsim-cpp",
     "agent": "claude-code",
     "agent_version": "1.0.16",

@@ -54,15 +54,28 @@ def next_published_run_number(target_dir: Path) -> int:
 
 
 def find_duplicate_publication(published_root: Path, run_uid: str) -> Path | None:
-    """Return the path of an already-published file carrying ``run_uid``, if any."""
+    """Return the path of an already-published file carrying ``run_uid``, if any.
+
+    Malformed publications are tolerated during the scan — a corrupt file can
+    not vouch for its own uid, so we skip it and keep looking rather than
+    either bypassing the check (silently) or crashing the publish (loudly).
+    Readers interested in surfacing corruption can re-scan and report, but
+    that is a separate concern from "is this uid already claimed".
+    """
     if not run_uid or not published_root.is_dir():
         return None
     for p in published_root.rglob("run*.json"):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
+            existing_uid = data["metadata"]["run_uid"]
         except (OSError, json.JSONDecodeError):
+            log.warning("Skipping unreadable published file during duplicate scan: %s", p)
             continue
-        if data.get("metadata", {}).get("run_uid") == run_uid:
+        except (KeyError, TypeError):
+            # Wrong shape (not a dict, missing keys, null metadata, etc.).
+            # Can't vouch for a uid we can't read — skip and keep looking.
+            continue
+        if existing_uid == run_uid:
             return p
     return None
 

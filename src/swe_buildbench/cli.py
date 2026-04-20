@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 import sys
 from pathlib import Path
@@ -548,14 +549,24 @@ DEFAULT_PUBLISHED_DIR = "published_results"
 
 
 def _cmd_publish(args: argparse.Namespace) -> None:
+    repo_root = _find_repo_root()
+
+    # Accept `source` both as an absolute path and as a path relative to the
+    # user's cwd. If the cwd-relative form does not resolve, fall back to
+    # repo-root-relative so `swe-buildbench publish transient_results/...`
+    # works from subdirectories too.
     source = Path(args.source)
+    if not source.is_absolute() and not source.is_file():
+        repo_relative = repo_root / args.source
+        if repo_relative.is_file():
+            source = repo_relative
     if not source.is_file():
-        print(f"No such file: {source}", file=sys.stderr)
+        print(f"publish: source not found: {args.source}", file=sys.stderr)
         sys.exit(1)
 
     published_root = Path(args.published_dir)
     if not published_root.is_absolute():
-        published_root = (_find_repo_root() / published_root).resolve()
+        published_root = (repo_root / published_root).resolve()
 
     try:
         target = publish_result(
@@ -569,9 +580,15 @@ def _cmd_publish(args: argparse.Namespace) -> None:
     except PublishError as exc:
         print(f"publish: {exc}", file=sys.stderr)
         sys.exit(1)
+    except (json.JSONDecodeError, KeyError, TypeError) as exc:
+        print(f"publish: source is not a valid result.json ({exc})", file=sys.stderr)
+        sys.exit(1)
+    except OSError as exc:
+        print(f"publish: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     try:
-        rel = target.relative_to(_find_repo_root())
+        rel = target.relative_to(repo_root)
         print(str(rel))
     except ValueError:
         print(str(target))
