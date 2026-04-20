@@ -134,7 +134,7 @@ def _run_cncsim_and_read_outputs(
 # agent's JSON writer (missing `"error": null` on success) fails every one of
 # those tests with `KeyError: 'error'`, drowning the real behavioral signal —
 # e.g. sonnet-4-6 cpp eval2/run3 lost 259 tests to this single cascade
-# (see `official-results/CNCSIM/results-2_1_1.md` and `Eval-Design.md` §7.4).
+# (see `published_results/CNCSIM/results-2_1_1.md` and `Eval-Design.md` §7.4).
 # Intentionally not changed before V3.0 to avoid mid-version test-suite churn.
 def run_cncsim(
     submission_command: Sequence[str],

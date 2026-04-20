@@ -216,8 +216,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       const message =
         window.location.protocol === 'file:'
-          ? `Unable to load ${DATA_PATH} from file://. Use the data source picker below, or serve this page from a local server (for example: python -m http.server 8000 from official-results/web).`
-          : `Unable to load ${DATA_PATH}: ${error.message}. Open this page through a local web server and refresh (for example: python -m http.server 8000 from official-results/web).`;
+          ? `Unable to load ${DATA_PATH} from file://. Use the data source picker below, or serve this page from a local server (for example: python -m http.server 8000 from published_results/web).`
+          : `Unable to load ${DATA_PATH}: ${error.message}. Open this page through a local web server and refresh (for example: python -m http.server 8000 from published_results/web).`;
       setError(message);
       return;
     }

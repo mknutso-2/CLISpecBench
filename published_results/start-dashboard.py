@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Launch the results dashboard web page.
 
-This script starts a local Python HTTP server for `official-results/web` if one is
+This script starts a local Python HTTP server for `published_results/web` if one is
 not already serving the dashboard, then opens the dashboard in the default browser.
 """
 
@@ -27,7 +27,7 @@ EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id"}
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Start the official-results web dashboard and open it.",
+        description="Start the published_results web dashboard and open it.",
     )
     parser.add_argument(
         "--port",
