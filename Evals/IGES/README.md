@@ -7,9 +7,10 @@ format used across mechanical CAD systems since 1980.
 
 > **Status.** Port-in-progress. The eval is being adapted from a standalone
 > [IGES-SDK](../IGES-SDK) C++ library with a Catch2 test suite. See
-> [`PLAN.md`](PLAN.md) for the checklist and current progress. The
-> eval is not yet registered as a task in `_KNOWN_TASKS` and has no reference
-> implementation under `reference-implementation-cpp/` yet.
+> [`PLAN.md`](PLAN.md) for the checklist and current progress. The harness now
+> registers explicit language task IDs (`iges-cpp`, `iges-py`, `iges-js`,
+> `iges-rs`) in `_KNOWN_TASKS`; readiness still depends on the current state of
+> each language's prompt/tests/reference implementation.
 
 ## Why this eval
 
@@ -118,11 +119,12 @@ Per `AGENTS.md` and this repo's `CLAUDE.md`:
 - Every ref-impl bug must have an eval test that enforces the correct
   behavior.
 
-## Task IDs (planned)
+## Task IDs
 
-- `iges` — C++23 target (default)
-- `iges-py` — Python target (added once `reference-implementation-py/` lands)
-- `iges-js`, `iges-rs` — future
+- `iges-cpp` — C++23 target
+- `iges-py` — Python target
+- `iges-js` — JavaScript target
+- `iges-rs` — Rust target
 
 ## References
 
