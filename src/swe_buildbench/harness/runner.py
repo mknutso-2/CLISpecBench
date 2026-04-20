@@ -439,7 +439,9 @@ def run_evaluation(
                 # of the same task/agent/model on the same day produce
                 # identical labels but distinct ``eval<N>/`` paths.
                 eval_dir_name = out_path.parent.parent.name  # e.g. "eval2"
-                home_dest_dir = Path.home() / ".claude" / "projects" / f"{run_label}_{eval_dir_name}"
+                home_dest_dir = (
+                    Path.home() / ".claude" / "projects" / f"{run_label}_{eval_dir_name}"
+                )
                 home_dest = home_dest_dir / src.name
                 try:
                     home_dest_dir.mkdir(parents=True, exist_ok=True)

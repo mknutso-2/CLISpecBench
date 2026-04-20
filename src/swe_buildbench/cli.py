@@ -11,6 +11,7 @@ from swe_buildbench.agents.base import AgentAdapter
 from swe_buildbench.agents.registry import get_agent_spec, list_agent_ids
 from swe_buildbench.harness.flakiness import compute_flakiness
 from swe_buildbench.harness.hashing import hash_prompt_content, hash_test_suite
+from swe_buildbench.harness.publish import PublishError, publish_result
 from swe_buildbench.harness.results import (
     EvalLock,
     RunResult,
@@ -543,6 +544,39 @@ def _cmd_hash(args: argparse.Namespace) -> None:
         print(tests.manifest, end="")
 
 
+DEFAULT_PUBLISHED_DIR = "published_results"
+
+
+def _cmd_publish(args: argparse.Namespace) -> None:
+    source = Path(args.source)
+    if not source.is_file():
+        print(f"No such file: {source}", file=sys.stderr)
+        sys.exit(1)
+
+    published_root = Path(args.published_dir)
+    if not published_root.is_absolute():
+        published_root = (_find_repo_root() / published_root).resolve()
+
+    try:
+        target = publish_result(
+            source,
+            published_root,
+            status=args.status,
+            last_message=args.last_message,
+            commentary=args.commentary,
+            force=args.force,
+        )
+    except PublishError as exc:
+        print(f"publish: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    try:
+        rel = target.relative_to(_find_repo_root())
+        print(str(rel))
+    except ValueError:
+        print(str(target))
+
+
 def _cmd_validate(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
     try:
@@ -645,6 +679,41 @@ def main(argv: list[str] | None = None) -> None:
         help="Also print the full per-file manifest that feeds each hash",
     )
 
+    # --- publish ---
+    publish_parser = subparsers.add_parser(
+        "publish",
+        help="Publish a transient result.json into published_results/",
+    )
+    publish_parser.add_argument(
+        "source",
+        help="Path to a transient result.json (e.g. transient_results/.../result.json)",
+    )
+    publish_parser.add_argument(
+        "--status",
+        required=True,
+        help="Editorial status label (e.g. 'Complete', 'Incomplete', 'Context exhausted')",
+    )
+    publish_parser.add_argument(
+        "--last-message",
+        required=True,
+        help="Editorial summary of the run's completion state (shown in results table)",
+    )
+    publish_parser.add_argument(
+        "--commentary",
+        default=None,
+        help="Optional slug of a markdown file in published_results/<eval>/commentary/",
+    )
+    publish_parser.add_argument(
+        "--published-dir",
+        default=DEFAULT_PUBLISHED_DIR,
+        help=f"Root of published_results tree (default: {DEFAULT_PUBLISHED_DIR}/)",
+    )
+    publish_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite an existing publication sharing the same run_uid",
+    )
+
     # --- validate ---
     validate_parser = subparsers.add_parser("validate", help="Validate a task definition")
     validate_parser.add_argument("--task", required=True, choices=list_tasks())
@@ -672,6 +741,8 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_backfill_subscores(args)
     elif args.command == "hash":
         _cmd_hash(args)
+    elif args.command == "publish":
+        _cmd_publish(args)
     elif args.command == "validate":
         _cmd_validate(args)
 
