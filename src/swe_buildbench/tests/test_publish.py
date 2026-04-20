@@ -10,6 +10,7 @@ import pytest
 from swe_buildbench.harness.publish import (
     PublishError,
     find_duplicate_publication,
+    find_duplicate_publications,
     next_published_run_number,
     publish_result,
     published_runs_dir,
@@ -213,6 +214,92 @@ def test_publish_ignores_corrupt_neighbors_when_scanning(tmp_path: Path) -> None
     assert target.name == "run2.json"  # run1.json is the corrupt one; we skip to run2
 
 
+def test_publish_rejects_when_invariant_broken(tmp_path: Path) -> None:
+    """If the same run_uid appears in >1 published file, refuse to publish.
+
+    That state is always a prior bug and overwriting one of them would just
+    compound it. The tree must be fixed manually first.
+    """
+    published_root = tmp_path / "published"
+    dir_a = published_root / "cncsim-cpp" / "claude-code" / "model-a"
+    dir_b = published_root / "cncsim-cpp" / "claude-code" / "model-b"
+    dir_a.mkdir(parents=True)
+    dir_b.mkdir(parents=True)
+    shared = {"metadata": {"run_uid": "shared-uid"}}
+    (dir_a / "run1.json").write_text(json.dumps(shared))
+    (dir_b / "run1.json").write_text(json.dumps(shared))
+
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(source, run_uid="shared-uid")
+
+    with pytest.raises(PublishError, match="more than one published file"):
+        publish_result(
+            source, published_root, status="Complete", last_message="x", force=True,
+        )
+
+
+def test_find_duplicate_publications_returns_all_matches(tmp_path: Path) -> None:
+    published = tmp_path / "published"
+    a = published / "task" / "agent" / "x"
+    b = published / "task" / "agent" / "y"
+    a.mkdir(parents=True)
+    b.mkdir(parents=True)
+    (a / "run1.json").write_text(json.dumps({"metadata": {"run_uid": "U"}}))
+    (b / "run1.json").write_text(json.dumps({"metadata": {"run_uid": "U"}}))
+    (b / "run2.json").write_text(json.dumps({"metadata": {"run_uid": "other"}}))
+
+    matches = find_duplicate_publications(published, "U")
+    assert len(matches) == 2
+    assert all(p.name == "run1.json" for p in matches)
+
+
+def test_publish_warns_on_missing_commentary(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Unknown commentary slug warns but does not block (same-PR workflow)."""
+    import logging
+
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(source, run_uid="uid-warn")
+
+    with caplog.at_level(logging.WARNING, logger="swe_buildbench.harness.publish"):
+        publish_result(
+            source,
+            tmp_path / "published",
+            status="Complete",
+            last_message="x",
+            commentary="does-not-exist",
+        )
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert any(
+        "commentary slug" in m and "does-not-exist" in m for m in messages
+    )
+
+
+def test_publish_with_matching_commentary_does_not_warn(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+) -> None:
+    import logging
+
+    published_root = tmp_path / "published"
+    commentary_dir = published_root / "CNCSIM" / "commentary"
+    commentary_dir.mkdir(parents=True)
+    (commentary_dir / "my-slug.md").write_text("notes")
+
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(source, run_uid="uid-ok")
+
+    with caplog.at_level(logging.WARNING, logger="swe_buildbench.harness.publish"):
+        publish_result(
+            source, published_root, status="Complete", last_message="x",
+            commentary="my-slug",
+        )
+
+    messages = [r.getMessage() for r in caplog.records]
+    assert not any("commentary slug" in m for m in messages)
+
+
 def test_load_result_migrates_legacy_run_id(tmp_path: Path) -> None:
     """Pre-2.0 payloads with ``metadata.run_id`` must still load.
 
@@ -222,7 +309,7 @@ def test_load_result_migrates_legacy_run_id(tmp_path: Path) -> None:
     """
     from swe_buildbench.harness.results import load_result
 
-    legacy_payload = {
+    legacy_payload: dict[str, object] = {
         "schema_version": "1.1",
         "metadata": {
             "run_id": "cncsim-cpp_claude-code_claude-opus-4-7_2026-04-02_run-1",

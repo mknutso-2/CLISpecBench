@@ -53,18 +53,23 @@ def next_published_run_number(target_dir: Path) -> int:
     return max(existing, default=0) + 1
 
 
-def find_duplicate_publication(published_root: Path, run_uid: str) -> Path | None:
-    """Return the path of an already-published file carrying ``run_uid``, if any.
+def find_duplicate_publications(published_root: Path, run_uid: str) -> list[Path]:
+    """Return all published files carrying ``run_uid``.
 
-    Malformed publications are tolerated during the scan — a corrupt file can
-    not vouch for its own uid, so we skip it and keep looking rather than
+    A healthy tree has at most one. Returning a list (not the first hit) lets
+    ``publish_result`` enforce the at-most-one invariant and refuse to act on
+    a tree where the same uid has been published more than once — that state
+    is always a prior bug and silently overwriting one of the duplicates
+    would just compound it.
+
+    Malformed publications are tolerated during the scan — a corrupt file
+    can't vouch for its uid, so we skip it and keep looking rather than
     either bypassing the check (silently) or crashing the publish (loudly).
-    Readers interested in surfacing corruption can re-scan and report, but
-    that is a separate concern from "is this uid already claimed".
     """
     if not run_uid or not published_root.is_dir():
-        return None
-    for p in published_root.rglob("run*.json"):
+        return []
+    matches: list[Path] = []
+    for p in sorted(published_root.rglob("run*.json")):
         try:
             data = json.loads(p.read_text(encoding="utf-8"))
             existing_uid = data["metadata"]["run_uid"]
@@ -73,10 +78,28 @@ def find_duplicate_publication(published_root: Path, run_uid: str) -> Path | Non
             continue
         except (KeyError, TypeError):
             # Wrong shape (not a dict, missing keys, null metadata, etc.).
-            # Can't vouch for a uid we can't read — skip and keep looking.
             continue
         if existing_uid == run_uid:
-            return p
+            matches.append(p)
+    return matches
+
+
+def find_duplicate_publication(published_root: Path, run_uid: str) -> Path | None:
+    """Return the first published file carrying ``run_uid``, or ``None``.
+
+    Thin wrapper around :func:`find_duplicate_publications` preserved for
+    callers that only need the existence check.
+    """
+    matches = find_duplicate_publications(published_root, run_uid)
+    return matches[0] if matches else None
+
+
+def _find_commentary_file(published_root: Path, slug: str) -> Path | None:
+    """Return the first ``commentary/<slug>.md`` found under published_root."""
+    if not slug or not published_root.is_dir():
+        return None
+    for p in published_root.glob(f"*/commentary/{slug}.md"):
+        return p
     return None
 
 
@@ -102,11 +125,28 @@ def publish_result(
             "Re-run the evaluation to produce a publishable result."
         )
 
-    existing = find_duplicate_publication(published_root, meta.run_uid)
+    existing_matches = find_duplicate_publications(published_root, meta.run_uid)
+    if len(existing_matches) > 1:
+        paths = "\n  ".join(str(p) for p in existing_matches)
+        raise PublishError(
+            f"run_uid {meta.run_uid} already appears in more than one published "
+            f"file — the at-most-one invariant is broken. Resolve manually before "
+            f"publishing:\n  {paths}"
+        )
+
+    existing = existing_matches[0] if existing_matches else None
     if existing and not force:
         raise PublishError(
             f"run_uid {meta.run_uid} already published at "
             f"{existing.relative_to(published_root.parent)}. Use --force to overwrite."
+        )
+
+    if commentary and _find_commentary_file(published_root, commentary) is None:
+        log.warning(
+            "commentary slug %r has no matching file under %s/*/commentary/ "
+            "— publishing anyway (verify the file lands in the same change)",
+            commentary,
+            published_root.name,
         )
 
     target_dir = published_runs_dir(
