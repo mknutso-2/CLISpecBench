@@ -20,11 +20,11 @@ Meta: This file is a breathing document. If you read it and find that any of the
 
 - **`base-prompt.md`** The base prompt is written from the perspective of a domain expert who is not a software developer — someone who knows exactly what they want to build but has no software engineering background. They would not think to specify test coverage, code quality standards, architectural patterns, or implementation strategy, just as they would not specify which sorting algorithm to use.
 - **`prompt/docs/`** is for any documentation that a domain expert might reasonably provide to a software engineer to help them understand the problem and its constraints. Examples include a machinist providing the RS274 spec to specify how a CNC machine simulation should behave, a CAD engineer providing the IGES spec to specify how IGES files should be parsed and interpreted, a programming language official specification, a board or card game official rule book, etc.
-- **`technical-requirements-prompt.md`** as a harness contract only: language/tooling constraints, CLI flags, exit codes, and output schema or serialization details. Behavioral requirements belong in `base-prompt.md` or `prompt/docs/`.
+- **`technical-requirements-prompt.md`** is a harness contract only: language/tooling constraints, CLI flags, exit codes, and output schema or serialization details. Behavioral requirements belong in `base-prompt.md` or `prompt/docs/`. Only edit this file when the harness build/invoke/output contract changes. If a new test depends on behavior that is not derivable from `base-prompt.md`, `technical-requirements-prompt.md`, and `prompt/docs/`, fix those sources instead of smuggling behavior into the contract prompt — agents should be able to pass in principle from those three sources alone.
 
 Everything else — whether to write tests, which architecture to choose, how to handle errors, what quality standards to follow — is left entirely to the agent's judgment. This framing serves two purposes: it measures genuine agent autonomy rather than instruction-following ability, and it emulates a realistic and increasingly common usage pattern where domain experts use coding agents to build real systems without software engineering backgrounds.
 
-## Writing tests three golden rules
+## Writing tests: three golden rules
 
 1. **Thorough coverage of the spec.** Every directive and requirement from a specification *must* have an associated test case in the eval.
 2. **Unequivocally unambiguous tests.** The `docs` corpus associated with each eval may include some requirements that are clear and some that are ambiguous. The goal of CLISpecBench is that 100% success rate is possible for an agent that fully understands the spec. To achieve this, every test in an eval must only verify invariants that are unequivocally, unambiguously defined in the documentation corpus.
@@ -36,6 +36,7 @@ Worked example: sonnet-4-6's RS274 cpp run 3 (see `published_results/CNCSIM/resu
 - Once the eval has been put in service, bump `Evals/<Task>/VERSION` and update `Evals/<Task>/CHANGELOG.md` for any contract-affecting change: prompts, docs, tests, harness contract, or reference implementation changes that alter observable behavior.
 - Use a patch bump for clarifications and bug fixes, a minor bump for new behavior or expanded contract, and a major bump for breaking changes.
 - Pure refactors that do not change observable behavior do not need a version bump.
+- When bumping `VERSION`, date the new `CHANGELOG.md` header with today's date (`## vX.Y.Z — YYYY-MM-DD`) in the same commit. Do not use `— unreleased` as a deferred-date marker: eval runs stamp `eval_version` from the `VERSION` file immediately, so there is no pre-release state worth encoding. Describe pending-but-unlanded work in a PR description or a TODO, not in a dated `CHANGELOG.md` header.
 
 ## Validation
 
