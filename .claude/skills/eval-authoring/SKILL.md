@@ -16,21 +16,26 @@ Meta: This file is a breathing document. If you read it and find that any of the
 - New tasks must be registered in `src/clispecbench/harness/task.py` via `_KNOWN_TASKS`.
 - New evals should include at least `Evals/<Name>/{prompt,tests,reference-implementation-cpp}/` unless there is a concrete reason to use a different reference-language layout.
 
-## Authoring rules
+## Writing prompt artifacts
 
-- Treat `technical-requirements-prompt.md` as a harness contract only: language/tooling constraints, CLI flags, exit codes, and output schema or serialization details. Behavioral requirements belong in `base-prompt.md` or `prompt/docs/`.
-- Only edit `technical-requirements-prompt.md` when the harness build/invoke/output contract changes. If a new test depends on behavior that is not derivable from `base-prompt.md`, `technical-requirements-prompt.md`, and `prompt/docs/`, fix those sources instead of smuggling behavior into the contract prompt. Agents should be able to pass in principle from those three sources alone.
-- Do not edit `Evals/RS274/prompt/docs/RS274NGC.md` unless explicitly asked. RS274 tests should only depend on behavior that is plainly stated there. If a desired test depends on multi-clause inference or needs clearer behavior, document it in `Evals/RS274/README.md` or `Evals/RS274/prompt/base-prompt.md`, not in the spec mirror.
-- Every reference-implementation bug fix must ship with an eval test that enforces the corrected behavior. Reference implementations exist to validate the tests, not the other way around.
-- Keep test failure modes independent. A test named for behavior X should fail because of X — if many tests share a precondition (schema shape, a parse step, a preamble assertion), one bug cascades into all of them and the score measures that bug N times rather than measuring N independent behaviors. Gate shared preconditions once (e.g. a single `test_output_schema.py`) and keep behavioral assertions tolerant of detail they are not testing: prefer `payload.get("error") is None` to `payload["error"] is None` so a missing-key schema slip surfaces as one schema failure rather than as hundreds of duplicated `KeyError`s. See `Eval-Design.md` §7.4 for the worked example (sonnet-4-6 RS274 cpp run 3 lost 55% of the suite to one such cascade).
-- Keep `__init__.py` minimal. Do not add package-root re-exports unless they are part of a deliberate public API.
+- **`base-prompt.md`** The base prompt is written from the perspective of a domain expert who is not a software developer — someone who knows exactly what they want to build but has no software engineering background. They would not think to specify test coverage, code quality standards, architectural patterns, or implementation strategy, just as they would not specify which sorting algorithm to use.
+- **`prompt/docs/`** is for any documentation that a domain expert might reasonably provide to a software engineer to help them understand the problem and its constraints. Examples include a machinist providing the RS274 spec to specify how a CNC machine simulation should behave, a CAD engineer providing the IGES spec to specify how IGES files should be parsed and interpreted, a programming language official specification, a board or card game official rule book, etc.
+- **`technical-requirements-prompt.md`** as a harness contract only: language/tooling constraints, CLI flags, exit codes, and output schema or serialization details. Behavioral requirements belong in `base-prompt.md` or `prompt/docs/`.
+
+Everything else — whether to write tests, which architecture to choose, how to handle errors, what quality standards to follow — is left entirely to the agent's judgment. This framing serves two purposes: it measures genuine agent autonomy rather than instruction-following ability, and it emulates a realistic and increasingly common usage pattern where domain experts use coding agents to build real systems without software engineering backgrounds.
+
+## Writing tests three golden rules
+
+1. **Thorough coverage of the spec.** Every directive and requirement from a specification *must* have an associated test case in the eval.
+2. **Unequivocally unambiguous tests.** The `docs` corpus associated with each eval may include some requirements that are clear and some that are ambiguous. The goal of CLISpecBench is that 100% success rate is possible for an agent that fully understands the spec. To achieve this, every test in an eval must only verify invariants that are unequivocally, unambiguously defined in the documentation corpus.
+3. **Independent tests.** Tests should have independent failure modes. A test named for behavior X should only fail because of X. When many tests share a precondition — a schema assertion, a fixture that parses output, a preamble check — one bug in the submitted application violating that precondtion cascades and the score stops measuring N independent capabilities and starts measuring one thing N times. The rule of thumb: **if a test fails, the failure should tell you something you didn't learn from the other tests failing.**
+Worked example: sonnet-4-6's RS274 cpp run 3 (see `published_results/CNCSIM/results-2_1_1.md`) built cleanly and claimed complete, but the agent emitted the required `error` output field only when non-empty, missing the spec's `null` on success. Because 259 behavioral tests asserted `payload["error"] is None` at the top, that single ~5-LOC mistake failed every one of them with `KeyError: 'error'` — costing the run ~55% of the suite before any of its actual RS274 logic was probed. A schema gate plus `.get("error")` in behavioral tests would have localized the failure to one schema test and let the rest of the suite measure what it was named for.
 
 ## Versioning
 
-- Bump `Evals/<Task>/VERSION` and update `Evals/<Task>/CHANGELOG.md` for any contract-affecting change: prompts, docs, tests, harness contract, or reference implementation changes that alter observable behavior.
+- Once the eval has been put in service, bump `Evals/<Task>/VERSION` and update `Evals/<Task>/CHANGELOG.md` for any contract-affecting change: prompts, docs, tests, harness contract, or reference implementation changes that alter observable behavior.
 - Use a patch bump for clarifications and bug fixes, a minor bump for new behavior or expanded contract, and a major bump for breaking changes.
 - Pure refactors that do not change observable behavior do not need a version bump.
-- When bumping `VERSION`, date the new `CHANGELOG.md` header with today's date (`## vX.Y.Z — YYYY-MM-DD`) in the same commit. Do not use `— unreleased` as a deferred-date marker: eval runs stamp `eval_version` from the `VERSION` file immediately, so there is no pre-release state worth encoding. Describe pending-but-unlanded work in a PR description or a TODO, not in a dated `CHANGELOG.md` header.
 
 ## Validation
 
