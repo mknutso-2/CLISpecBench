@@ -1,0 +1,103 @@
+from __future__ import annotations
+
+from copy import deepcopy
+from pathlib import Path
+from typing import Any, cast
+
+import pytest
+from marc21_spec_support import (
+    fields_with_indicator_constraints,
+    fields_with_nonrepeatable_subfields,
+    fields_with_subfield_constraints,
+    first_nonrepeatable_subfield_code,
+    invalid_indicator_for,
+    invalid_subfield_code_for,
+    record_for_official_example,
+    rule_compatible_example_text,
+)
+
+from conftest import run_marc21
+
+_INDICATOR_CASES = fields_with_indicator_constraints()
+_INDICATOR_IDS = [tag for tag, _ in _INDICATOR_CASES]
+_SUBFIELD_CASES = fields_with_subfield_constraints()
+_SUBFIELD_IDS = [tag for tag, _ in _SUBFIELD_CASES]
+_NONREPEATABLE_CASES = fields_with_nonrepeatable_subfields()
+_NONREPEATABLE_IDS = [tag for tag, _ in _NONREPEATABLE_CASES]
+
+
+@pytest.mark.parametrize(("tag", "rule"), _INDICATOR_CASES, ids=_INDICATOR_IDS)
+def test_render_rejects_indicator_values_outside_official_field_definition(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    record = record_for_official_example(tag, rule_compatible_example_text(tag))
+    field = deepcopy(record["data_fields"][0])
+    indicators = list(field["indicators"])
+    if rule.get("indicator1"):
+        indicators[0] = invalid_indicator_for(tag, cast(list[str] | None, rule["indicator1"]))
+    else:
+        indicators[1] = invalid_indicator_for(tag, cast(list[str] | None, rule["indicator2"]))
+    field["indicators"] = indicators
+    record["data_fields"] = [field]
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "render_iso2709", "record": record},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_request"
+
+
+@pytest.mark.parametrize(("tag", "rule"), _SUBFIELD_CASES, ids=_SUBFIELD_IDS)
+def test_render_rejects_subfield_codes_outside_official_field_definition(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    record = record_for_official_example(tag, rule_compatible_example_text(tag))
+    field = deepcopy(record["data_fields"][0])
+    field["subfields"].append({"code": invalid_subfield_code_for(rule), "value": "invalid"})
+    record["data_fields"] = [field]
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "render_iso2709", "record": record},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_CASES,
+    ids=_NONREPEATABLE_IDS,
+)
+def test_render_rejects_duplicate_nonrepeatable_subfields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    record = record_for_official_example(tag, rule_compatible_example_text(tag))
+    field = deepcopy(record["data_fields"][0])
+    code = first_nonrepeatable_subfield_code(rule)
+    existing = next((subfield for subfield in field["subfields"] if subfield["code"] == code), None)
+    duplicate_value = "duplicate" if existing is None else str(existing["value"])
+    field["subfields"].append({"code": code, "value": duplicate_value})
+    if existing is None:
+        field["subfields"].append({"code": code, "value": duplicate_value})
+    record["data_fields"] = [field]
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "render_iso2709", "record": record},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_request"
