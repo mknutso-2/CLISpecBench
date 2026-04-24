@@ -11,12 +11,14 @@ deeper VEVENT method cases (ADD, REFRESH, COUNTER, DECLINECOUNTER,
 plus SEQUENCE/DTSTAMP edge cases) are in `test_itip_methods_deep.py`.
 
 Summary of the §3.2 matrix pinned here:
-  - REQUEST (§3.2.2):  ORGANIZER 1, ATTENDEE 1+.
+  - PUBLISH (§3.2.1):  ORGANIZER 1 (MUST be present per §3.2.1
+                        prose and table), DTSTART 1, SUMMARY 1;
+                        ATTENDEE 0 (MUST NOT).
+  - REQUEST (§3.2.2):  ORGANIZER 1, ATTENDEE 1+, DTSTART 1, SUMMARY 1.
   - REPLY (§3.2.3):    ORGANIZER 1, ATTENDEE 1 carrying PARTSTAT.
   - CANCEL (§3.2.5):   ORGANIZER 1, SEQUENCE 1; STATUS (if present)
                         MUST be CANCELLED; absent STATUS is valid per
                         §3.2.5 prose (METHOD alone conveys cancellation).
-  - PUBLISH (§3.2.1):  ORGANIZER MAY appear, ATTENDEE MUST NOT.
 
 When required iTIP properties are missing or inconsistent, the parser
 SHOULD emit an `itip_missing_property` warning. The specific `message`
