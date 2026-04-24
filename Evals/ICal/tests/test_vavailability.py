@@ -69,6 +69,24 @@ def test_vavailability_busytype_busy(
     assert vas[0].get("busytype") == "BUSY"
 
 
+def test_vavailability_busytype_absent_emits_null(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """tech-reqs VAVAILABILITY schema §: when BUSYTYPE is absent on
+    the VAVAILABILITY component, `busytype` is emitted as null
+    (NOT materialized as "BUSY-UNAVAILABLE" — contrast VFREEBUSY's
+    fbtype field which does materialize its default). This
+    distinguishes the two availability surfaces."""
+    body = (
+        "UID:va1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\nDTEND:20260201T000000Z\n"
+        # deliberately no BUSYTYPE line
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    assert vas[0].get("busytype") is None
+
+
 def test_vavailability_busytype_busy_unavailable(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:

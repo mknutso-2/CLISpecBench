@@ -251,14 +251,44 @@ def test_change_case_upper_preserves_brace_group(
 def test_change_case_title_preserves_after_colon_space(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """'t' mode preserves case of the first letter after ':' + whitespace run (btxhak §3.5)."""
+    """'t' mode preserves the case of the first letter after ':' +
+    whitespace (summary.md §8.2 sentinel list). First 'A' stays,
+    "thing" lowers; after ':' + space, 'A' of "Another" stays."""
     bbl, _ = _exec(
         submission_command,
         tmp_path,
         '"A Thing: Another Thing" "t" change.case$ write$',
     )
-    # First 'A' stays, "thing" lowers; after ':' + space, 'A' of "Another" stays.
     assert bbl.rstrip("\n") == "A thing: Another thing"
+
+
+def test_change_case_title_does_not_preserve_after_period_space(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """summary.md §8.2: colon-plus-whitespace is the ONLY sentinel
+    that preserves the following letter. Period + whitespace does
+    NOT trigger preservation — "Done. Another Sentence" lowercases
+    the post-period "Another" to "another"."""
+    bbl, _ = _exec(
+        submission_command,
+        tmp_path,
+        '"Done. Another Sentence" "t" change.case$ write$',
+    )
+    assert bbl.rstrip("\n") == "Done. another sentence"
+
+
+def test_change_case_title_does_not_preserve_after_comma(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """summary.md §8.2: ONLY colon triggers preservation. Comma +
+    whitespace does NOT; the following letter is lowercased like
+    any other intra-title letter."""
+    bbl, _ = _exec(
+        submission_command,
+        tmp_path,
+        '"Stop, Think Again" "t" change.case$ write$',
+    )
+    assert bbl.rstrip("\n") == "Stop, think again"
 
 
 def test_change_case_title_preserves_first_letter(

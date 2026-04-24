@@ -176,16 +176,17 @@ def test_unknown_component_is_warning_not_error(
     out = run_parse(submission_command, ics, tmp_path)
     warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
     kinds = [w.get("kind") for w in warnings]
-    # Exact warning kind depends on the tool, but it must not have
-    # exited 1 AND must have something in warnings.
+    # The tool must not have exited 1 AND must have emitted at least
+    # one warning for the unknown component.
     assert len(warnings) >= 1, (
         f"expected at least one warning for VUNKNOWN; got: {warnings!r}"
     )
-    # The kind should plausibly be something unsupported/unknown.
-    assert any(
-        "unsupported" in (k or "").lower() or "unknown" in (k or "").lower()
-        for k in kinds
-    ) or len(warnings) >= 1
+    # The kind must be the tech-reqs-declared `unsupported_component`.
+    # (Prior version of this test had a tautological "or" fallback
+    # that always passed as long as any warning existed.)
+    assert "unsupported_component" in kinds, (
+        f"expected 'unsupported_component' warning kind; got kinds {kinds!r}"
+    )
 
 
 # ---------------------------------------------------------------------------

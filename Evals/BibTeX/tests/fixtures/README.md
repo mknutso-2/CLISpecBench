@@ -72,14 +72,18 @@ The expected fixtures were generated with:
 A submission must match these `.bbl` files byte-for-byte, with two
 documented approximations per summary.md §8:
 
-1. `width$` values may follow either the cmr10-exact table or the
-   summary.md §8.1 approximation. Deep unit tests pin absolute
-   values where both interpretations agree (e.g. `a=500`), a
-   set-of-acceptable values where they diverge (e.g. space ∈
-   {278, 250}), or the weaker ordering where a flat
-   approximation would flatten an exact distinction (`M >= m`).
-   The parity corpus here does not require byte-exact `width$`
-   output inside the `.bbl`.
-2. `change.case$` and `purify$` on nested LaTeX accent macros past
+1. `change.case$` and `purify$` on nested LaTeX accent macros past
    depth 1 (e.g. `{{\"o}}`) are not asserted by parity tests; they
    are covered by narrower unit tests.
+
+**`width$` and parity.** `alpha.bst` uses `width$` to pick the
+widest entry label for the `\begin{thebibliography}{<longest>}`
+line, so the `width$` implementation actually changes the bytes
+written into the `.bbl`. The fixtures in this directory were
+regenerated against BibTeX 0.99c (cmr10-exact `width$` values),
+so passing the parity tests REQUIRES cmr10-exact `width$`.
+An implementation that uses the §8.1 approximation table will
+pass the deep `width$` unit tests but fail the `alpha.*.expected.bbl`
+parity tests because the `longest` label argument embedded in
+`\begin{thebibliography}{...}` will differ. summary.md §8.1's
+"reference-style parity caveat" spells this out in prose.

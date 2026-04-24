@@ -63,21 +63,24 @@ Top-level JSON key order is not asserted — tests use `.get()`.
 Warning arrays preserve the chronological order in which warnings
 were generated.
 
-Warning `kind` values emitted by this tool:
+Warning `kind` values emitted by this tool. The tool emits one of
+these canonical kind strings for every warning; tests assert on
+these exact strings, so a submission that uses a synonym (e.g.
+`"crossref_missing"` instead of `"unresolved_crossref"`) will fail
+the warning-kind checks.
 
-- `crossref_missing` — `crossref` points at a non-existent key.
+- `unresolved_crossref` — `crossref` points at a non-existent key.
 - `crossref_cycle` — `crossref` chain contains a cycle.
-- `duplicate_key` — two entries with the same citation key.
-- `duplicate_field` — a single entry defines the same field twice.
-- `unknown_macro` — reference to an unresolved `@string` macro.
-- `citation_missing` — a cited key had no matching entry.
-- `empty_entry_body` — entry has no fields after the key.
-- `line_overflow` — a `write$` call produced a line that could not
-  be wrapped under 79 columns.
-- `stack_overflow_warning` — non-fatal stack depth growth past a
-  safe threshold.
-- `name_parse_fallback` — an author-name token didn't match any of
-  the three canonical forms; tool made a best-effort split.
+- `unresolved_macro` — reference to an unresolved `@string` macro.
+- `duplicate_key` — two `.bib` entries share a citation key.
+- `bst_type_error` — stack type error at runtime on a built-in;
+  the built-in recovers by pushing a default value rather than
+  aborting the run (so tests see the warning and still get a
+  well-formed `.bbl`).
+- `bst_undefined_field` — a `.bst` program accessed a field not
+  declared in the entry type or absent from the current entry.
+- `bst_undefined_function` — a `.bst` program called or assigned
+  to an identifier that was never declared.
 
 ## Exit codes
 

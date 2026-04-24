@@ -11,9 +11,12 @@ SIMPLE = wrap_event("UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\
 
 def test_parse_top_level_keys(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(submission_command, SIMPLE, tmp_path)
-    # Required top-level keys. Implementations MAY add extensions (e.g.,
-    # `availabilities` for RFC 7953 VAVAILABILITY) — so this is a
-    # superset check.
+    # Tech-reqs declares every key in this set as MANDATORY on parse
+    # output — including `availabilities` (the RFC 7953 VAVAILABILITY
+    # top-level array, empty when no VAVAILABILITY components were
+    # parsed). Keep this as a subset-check so an implementation that
+    # adds additional extension keys (reserved x-names etc.) isn't
+    # penalized.
     required = {
         "calendar",
         "events",
@@ -21,6 +24,7 @@ def test_parse_top_level_keys(submission_command: tuple[str, ...], tmp_path: Pat
         "journals",
         "freebusy",
         "timezones",
+        "availabilities",
         "warnings",
     }
     assert required.issubset(set(out.keys()))
@@ -32,7 +36,10 @@ def test_parse_top_level_keys_all_present(
     # v0.3: key order is a harness-recommended convention, not semantic.
     # Tests assert presence only.
     out = run_parse(submission_command, SIMPLE, tmp_path)
-    required = {"calendar", "events", "todos", "journals", "freebusy", "timezones", "warnings"}
+    required = {
+        "calendar", "events", "todos", "journals", "freebusy",
+        "timezones", "availabilities", "warnings",
+    }
     assert required.issubset(set(out.keys()))
 
 

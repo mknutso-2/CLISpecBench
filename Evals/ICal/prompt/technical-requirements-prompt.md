@@ -318,6 +318,15 @@ windows:
 }
 ```
 
+`busytype` is emitted as-is when the `BUSYTYPE` property is
+present on the VAVAILABILITY. When the property is absent the
+schema emits `null` — the RFC 7953 §3.2 default of
+`BUSY-UNAVAILABLE` is NOT materialized in the JSON (this differs
+from the VFREEBUSY `fbtype` field, which DOES materialize the
+default `"BUSY"` string). Consumers that need the default applied
+should do so themselves, substituting `"BUSY-UNAVAILABLE"` for
+`null`.
+
 An `available object` is the AVAILABLE sub-component (RFC 7953
 §3.2). The schema covers every AVAILABLE property RFC 7953 §3.2
 mentions. Any additional extension property appears in

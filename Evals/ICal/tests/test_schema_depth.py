@@ -50,7 +50,14 @@ def test_empty_calendar_has_empty_arrays_not_nulls(
 ) -> None:
     empty = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\nEND:VCALENDAR\n"
     out = run_parse(submission_command, empty, tmp_path)
-    for key in ("events", "todos", "journals", "freebusy", "timezones", "warnings"):
+    # All top-level list keys declared by tech-reqs MUST be empty
+    # lists on an empty VCALENDAR, not null. `availabilities` is in
+    # the tech-reqs mandatory set so it's checked here alongside the
+    # other list-shaped keys.
+    for key in (
+        "events", "todos", "journals", "freebusy",
+        "timezones", "availabilities", "warnings",
+    ):
         val = out.get(key)
         assert val is not None, f"{key} is null; should be []"
         assert isinstance(val, list), f"{key} not a list: {type(val)}"

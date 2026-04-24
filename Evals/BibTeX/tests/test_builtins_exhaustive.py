@@ -865,14 +865,24 @@ def test_preamble_empty_when_none(
 def test_preamble_concatenated(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Multiple @preamble values are concatenated (spec §3.5 / btxhak §4)."""
+    """summary.md §3.5 / btxhak §4: `preamble$` returns the
+    concatenation of all `@preamble` values in their source order.
+    Source-order is the semantic invariant; a single ASCII-space
+    separator between successive `@preamble` values is acceptable
+    (and is what BibTeX 0.99c emits when the values are pushed to
+    the output stack). Two preambles "aa" + "bb" MUST yield
+    exactly "aa bb" — NOT reversed "bb aa", NOT interleaved with
+    some other character, NOT "aabb" (the space is what BibTeX's
+    macro table inserts between successive preamble buffers)."""
     bib = (
         '@preamble{"aa"}\n'
         '@preamble{"bb"}\n'
         '@article{a, author = "X"}\n'
     )
     bbl, _ = _exec(submission_command, tmp_path, "preamble$ write$", bib=bib)
-    assert "aa" in bbl and "bb" in bbl
+    assert bbl.rstrip("\n") == "aa bb", (
+        f"expected 'aa bb' (source order, single-space separator); got {bbl!r}"
+    )
 
 
 # ---------------------------------------------------------------------------

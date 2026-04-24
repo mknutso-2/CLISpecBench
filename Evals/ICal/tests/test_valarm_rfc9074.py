@@ -138,15 +138,11 @@ def test_proximity_xname_preserved(
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
-    prox = alarm.get("proximity")
-    assert prox == "X-CUSTOM-ZONE" or prox is None  # tools may reject x-name
-    if prox is None:
-        # Then raw_properties must have it.
-        raw = cast(
-            list[dict[str, Any]], alarm.get("raw_properties") or []
-        )
-        names = [str(p.get("name", "")).upper() for p in raw]
-        assert "PROXIMITY" in names
+    # tech-reqs declares `proximity: ARRIVE | DEPART | string | null`
+    # — the `string` arm covers x-names. The emitted value MUST be
+    # the literal X-CUSTOM-ZONE string; null would silently drop the
+    # x-name and require consumers to sift raw_properties to find it.
+    assert alarm.get("proximity") == "X-CUSTOM-ZONE"
 
 
 def test_proximity_absence_is_null(

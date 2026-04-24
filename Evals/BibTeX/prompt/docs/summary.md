@@ -550,13 +550,15 @@ LaTeX-accent case.
 
 **Title-mode (`t`) capitalization rules.** In `t` mode, BibTeX
 preserves (does not lowercase) the first letter of the string AND
-the first letter immediately following each of these sentinels:
-`:`, `?`, `!`, `.` when followed by at least one whitespace
-character. All other letters outside brace-protected groups are
-lowercased. Example: `"A Thing: Another Thing"` → `"A thing:
-Another thing"`. This rule covers the RFC-standard "capitalize
-after sentence punctuation" case that bibtex.web implements; other
-punctuation (comma, semicolon) does NOT trigger preservation.
+the first letter immediately following a colon-plus-whitespace
+sentinel (`: `). All other letters outside brace-protected groups
+are lowercased, including letters after other punctuation
+(`?`, `!`, `.`, `,`, `;`). Example: `"A Thing: Another Thing"` →
+`"A thing: Another thing"`; but `"Done. Another Sentence"` →
+`"Done. another sentence"` (period is NOT a sentinel).
+This narrow rule reflects the canonical BibTeX 0.99c title-mode
+behavior; richer "capitalize after sentence-ending punctuation"
+logic is out of scope.
 
 ### 8.3 `purify$`
 

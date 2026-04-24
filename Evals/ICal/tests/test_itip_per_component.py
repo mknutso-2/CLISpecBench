@@ -62,9 +62,11 @@ def test_vjournal_request_is_undefined_method(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """RFC 5546 §3.5 does not define REQUEST for VJOURNAL. Emitting
-    METHOD:REQUEST on a VJOURNAL-bearing calendar MUST warn — the
-    `method not defined` message is the iTIP-level rule, not a
-    per-property missing check."""
+    METHOD:REQUEST on a VJOURNAL-bearing calendar MUST warn. Per
+    the warning contract in tech-reqs, undefined-method messages
+    only need the component name as a substring — the method name
+    is optional for that message variant — so we only require
+    `"VJOURNAL"` here."""
     body = (
         "UID:j1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T100000Z\nSUMMARY:Entry\n"
@@ -72,23 +74,35 @@ def test_vjournal_request_is_undefined_method(
     )
     out = run_parse(submission_command, _vjournal_calendar("REQUEST", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("VJOURNAL" in m and "REQUEST" in m for m in msgs), (
-        f"expected a 'METHOD REQUEST not defined for VJOURNAL' warning; got {msgs!r}"
+    assert any("VJOURNAL" in m for m in msgs), (
+        f"expected a warning mentioning VJOURNAL; got {msgs!r}"
     )
 
 
 def test_vjournal_refresh_is_undefined_method(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Same rule for REFRESH — not in the §3.5 table."""
+    """Same rule for REFRESH — not in the §3.5 table. Fixture
+    carries DTSTART, ORGANIZER, and DESCRIPTION so if the impl
+    were to fall back to PUBLISH-style validation, it would
+    emit no property-missing warnings. The warning that fires
+    must therefore include the "not defined" wording.
+
+    Note: `itip_missing_property` is the warning kind for BOTH
+    missing-property and undefined-method cases — the method
+    name and "not defined" in the message differentiate them.
+    We check the message text here to isolate the
+    undefined-method path."""
     body = (
         "UID:j1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\n"
+        "DTSTART:20260301T100000Z\nDESCRIPTION:Retro notes\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _vjournal_calendar("REFRESH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("VJOURNAL" in m for m in msgs)
+    assert any("VJOURNAL" in m and "not defined" in m for m in msgs), (
+        f"expected a 'not defined for VJOURNAL' warning; got {msgs!r}"
+    )
 
 
 def test_vjournal_publish_requires_organizer(
