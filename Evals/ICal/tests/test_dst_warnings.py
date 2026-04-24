@@ -386,3 +386,96 @@ def test_recurring_event_crossing_dst_boundary(
     # Three occurrences produced; offsets shift at DST.
     occs = out.get("occurrences") or []
     assert len(occs) == 3
+
+
+# ---------------------------------------------------------------------------
+# Neighbor-year transition isolation — proves the (y-1, y, y+1) scan,
+# not just the "year y only" scan.
+# ---------------------------------------------------------------------------
+
+# A contrived-but-legal zone whose (spring-forward) transition lands at
+# local 2024-12-31 23:30:00. The +30min jump to 2025-01-01 00:00 creates
+# a gap that crosses the year boundary: local 2024-12-31 23:45 exists,
+# but the wall-clock skips straight to 2025-01-01 00:00. An event at
+# 2024-12-31 23:45 local is in the gap; finding this requires scanning
+# the transition at year y=2024 when querying year 2024.
+#
+# The stronger test is the mirror: an event in year 2025 near the
+# boundary. If the transition anchor is DTSTART=20241231T233000, then
+# RRULE FREQ=YEARLY generates transitions each Dec 31 23:30. An event
+# at 2026-01-01 00:00:15 — i.e. just past a transition-delta window that
+# ends in Jan of the EVENT year but started in December of the PRIOR
+# year — would be caught only if the detector scans year local.year - 1
+# (i.e. 2025). A year-only scan (2026) would miss it: the 2026 transition
+# is Dec 31 2026 23:30, months later.
+
+YEAREND_GAP_TZ = """\
+BEGIN:VTIMEZONE
+TZID:Test/YearEndGap
+BEGIN:STANDARD
+DTSTART:20241231T233000
+TZOFFSETFROM:+0000
+TZOFFSETTO:+0100
+TZNAME:YEG
+RRULE:FREQ=YEARLY;BYMONTH=12;BYMONTHDAY=31
+END:STANDARD
+END:VTIMEZONE
+"""
+
+
+def _wrap_yearend_tz(event_body: str) -> str:
+    return (
+        HEAD + YEAREND_GAP_TZ
+        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
+    )
+
+
+def test_yearend_gap_detected_via_neighbor_year_scan(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Proves detect_tz_anomaly's (y-1, y, y+1) scan, not just year-y.
+
+    Fixture: +00:00 → +01:00 spring-forward at local 2025-12-31 23:30.
+    The gap runs [2025-12-31 23:30, 2026-01-01 00:30). An event at
+    local 2026-01-01 00:15 is INSIDE the gap — but the transition is
+    anchored to Dec 31 of the PRIOR year (2025). A detector that
+    enumerates only the event's own year (2026) would generate the
+    Dec 31 2026 23:30 transition, which is nowhere near the event.
+    Catching this event requires scanning year 2025 (i.e. event.year - 1).
+
+    If this test fails, the multi-year scan regressed to single-year."""
+    body = (
+        "UID:e-yearend\nDTSTAMP:20260101T120000Z\n"
+        # Local 2026-01-01 00:15 lies in the 2025-12-31T23:30 +01:00 gap.
+        "DTSTART;TZID=Test/YearEndGap:20260101T001500\n"
+    )
+    out = run_expand(
+        submission_command,
+        _wrap_yearend_tz(body),
+        "2026-01-01T00:00:00Z",
+        "2026-01-02T00:00:00Z",
+        tmp_path,
+    )
+    assert "nonexistent_local_time" in _kinds(out)
+
+
+def test_yearend_gap_mirror_detected_via_same_year_scan(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Complement test to guard against the naive fix (e.g. "always scan
+    event.year - 1"). An event at local 2025-12-31 23:45 is inside the
+    2025 gap itself and MUST be detected under the same scan. If the
+    implementation erroneously only scanned y-1, it would miss this
+    case (would scan 2024) and this test would fail."""
+    body = (
+        "UID:e-yearend-same\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART;TZID=Test/YearEndGap:20251231T234500\n"
+    )
+    out = run_expand(
+        submission_command,
+        _wrap_yearend_tz(body),
+        "2025-12-31T00:00:00Z",
+        "2026-01-01T00:00:00Z",
+        tmp_path,
+    )
+    assert "nonexistent_local_time" in _kinds(out)

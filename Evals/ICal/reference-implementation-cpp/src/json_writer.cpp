@@ -491,8 +491,22 @@ std::string emit_parse_json(const Calendar& cal) {
             o << ",\"contact\":"; if (av.contact) jstr(o, *av.contact); else o << "null";
             o << ",\"created\":"; if (av.created) jstr(o, *av.created); else o << "null";
             o << ",\"last_modified\":"; if (av.last_modified) jstr(o, *av.last_modified); else o << "null";
+            // Emit recurrence_id with the same shape VEvent uses so both
+            // recurrence override surfaces have identical param fidelity.
+            // RFC 5545 §3.8.4.4 allows RECURRENCE-ID to carry TZID + RANGE.
             o << ",\"recurrence_id\":";
-            if (av.recurrence_id) emit_date_or_dt(o, *av.recurrence_id); else o << "null";
+            if (av.recurrence_id) {
+                const auto& rid = *av.recurrence_id;
+                o << "{\"value\":"; jstr(o, iso_format(rid));
+                o << ",\"range\":";
+                if (av.recurrence_id_range) jstr(o, *av.recurrence_id_range);
+                else o << "null";
+                o << ",\"tzid\":";
+                if (rid.tzid) jstr(o, *rid.tzid); else o << "null";
+                o << '}';
+            } else {
+                o << "null";
+            }
             o << ",\"categories\":[";
             for (std::size_t k = 0; k < av.categories.size(); ++k) {
                 if (k) o << ',';

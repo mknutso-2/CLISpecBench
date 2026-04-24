@@ -201,3 +201,69 @@ def test_unique_uids_no_warning(
     warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
     kinds = [w.get("kind") for w in warnings]
     assert "duplicate_uid" not in kinds
+
+
+# ---------------------------------------------------------------------------
+# UTC-OFFSET seconds preservation (RFC 5545 §3.3.14)
+# ---------------------------------------------------------------------------
+
+
+def test_utc_offset_seconds_preserved_on_output(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5545 §3.3.14: UTC-OFFSET permits an optional SECOND field in
+    the on-wire form ``±HHMMSS``. Historical zones (e.g. LMT entries
+    for pre-1972 observances) genuinely carry non-zero seconds. The
+    shipped JSON schema normalizes UTC-OFFSET to colonized
+    ``±HH:MM:SS`` when seconds are non-zero; it MUST NOT silently
+    truncate seconds to 00.
+
+    Fixture: an LMT-style observance with TZOFFSETFROM:+014516 /
+    TZOFFSETTO:+014516 — Amsterdam's +0:19:32 would be an even better
+    real-world case but +014516 exercises the full second code-path
+    without tying the test to a specific zone's history."""
+    body = (
+        "TZID:Historical/LMT\n"
+        "BEGIN:STANDARD\n"
+        "DTSTART:18000101T000000\n"
+        "TZOFFSETFROM:+014516\n"
+        "TZOFFSETTO:+014516\n"
+        "TZNAME:LMT\n"
+        "END:STANDARD\n"
+    )
+    out = run_parse(submission_command, _wrap_tz(body), tmp_path)
+    tzs = _tzs(out)
+    assert len(tzs) == 1
+    observances = cast(list[dict[str, Any]], tzs[0].get("standard") or [])
+    assert len(observances) == 1
+    off_from = observances[0].get("tzoffsetfrom")
+    off_to = observances[0].get("tzoffsetto")
+    # Emission MUST preserve the 16 seconds — not truncate to +01:45.
+    assert off_from == "+01:45:16", f"expected seconds preserved, got {off_from!r}"
+    assert off_to == "+01:45:16", f"expected seconds preserved, got {off_to!r}"
+
+
+def test_utc_offset_without_seconds_stays_hhmm(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """The complement of the seconds-preserving test: a modern offset
+    like -05:00 (no seconds) MUST still emit in the ``±HH:MM`` form
+    rather than being padded to ``-05:00:00``. Emitting ":00" when
+    the source did not include seconds would be gratuitously verbose
+    and could fail byte-exact comparisons downstream."""
+    body = (
+        "TZID:America/New_York\n"
+        "BEGIN:STANDARD\n"
+        "DTSTART:20071104T020000\n"
+        "TZOFFSETFROM:-0400\n"
+        "TZOFFSETTO:-0500\n"
+        "TZNAME:EST\n"
+        "END:STANDARD\n"
+    )
+    out = run_parse(submission_command, _wrap_tz(body), tmp_path)
+    tzs = _tzs(out)
+    observances = cast(list[dict[str, Any]], tzs[0].get("standard") or [])
+    off_from = observances[0].get("tzoffsetfrom")
+    off_to = observances[0].get("tzoffsetto")
+    assert off_from == "-04:00", f"expected ±HH:MM form, got {off_from!r}"
+    assert off_to == "-05:00", f"expected ±HH:MM form, got {off_to!r}"

@@ -265,6 +265,7 @@ struct Available {
     std::optional<std::string> created;
     std::optional<std::string> last_modified;
     std::optional<DateOrDateTime> recurrence_id;
+    std::optional<std::string> recurrence_id_range;  // "THISANDFUTURE" etc.
     std::vector<std::string> categories;
     std::vector<std::string> comment;
     std::optional<RRule> rrule;

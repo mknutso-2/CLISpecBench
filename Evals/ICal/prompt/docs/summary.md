@@ -410,14 +410,16 @@ colonized `±HH:MM` form on output; input may use the RFC-5545
 ### 5.3 Zoned output convention
 
 In `expand`, zoned DATE-TIMEs are emitted as UTC strings (trailing
-`Z`). A `tz` field on each occurrence reports the originating TZID
+`Z`). Each occurrence carries a `tz` field with the originating TZID
 string so the consumer can reconstruct local time if desired:
 
 ```json
 {"uid": "...", "dtstart": "2026-03-05T15:00:00Z", "tz": "America/New_York"}
 ```
 
-Floating occurrences emit no `tz` field.
+Floating and UTC occurrences still carry the `tz` key — its value is
+`null`. The key is always present on every occurrence so the caller
+can branch on presence without worrying about missing fields.
 
 ## 6. iTIP scheduling (§3.6.1; RFC 5546 §3)
 
@@ -426,22 +428,38 @@ Floating occurrences emit no `tz` field.
 the file should be interpreted as a scheduling message. The tool:
 
 - Surfaces `METHOD` in the `calendar` object.
-- For every iTIP method other than `PUBLISH`, validates the
-  base-level properties RFC 5546 §3 requires on every iTIP
-  message: `UID`, `DTSTAMP`, and `SEQUENCE`. Missing required
-  properties emit `itip_missing_property` warnings.
-- For each method, also validates the method-specific requirements
-  from RFC 5546 §3.2:
-    * `PUBLISH` — ATTENDEE MUST NOT appear (§3.2.1).
-    * `REQUEST` — requires ORGANIZER + ATTENDEE (§3.2.2).
-    * `REPLY` — requires ORGANIZER + ATTENDEE with PARTSTAT
-      (§3.2.3).
-    * `ADD` — requires ORGANIZER (§3.2.4).
-    * `CANCEL` — requires ORGANIZER (§3.2.5). STATUS:CANCELLED is
-      NOT required; the CANCEL METHOD itself conveys cancellation.
-    * `REFRESH` — requires ORGANIZER + ATTENDEE (§3.2.6).
-    * `COUNTER` — requires ORGANIZER + ATTENDEE (§3.2.7).
-    * `DECLINECOUNTER` — requires ORGANIZER (§3.2.8).
+- For every iTIP method, validates the per-method property matrix
+  from the RFC 5546 §3.2.x tables. `UID` and `DTSTAMP` are "1"
+  (required) in every table including PUBLISH, so those are
+  enforced unconditionally. `SEQUENCE` is per-method:
+
+    | Method         | SEQUENCE row | Other required      | ATTENDEE     |
+    |----------------|--------------|---------------------|--------------|
+    | PUBLISH        | 0 or 1 (opt) | —                   | MUST NOT     |
+    | REQUEST        | 0 or 1 (opt) | ORGANIZER           | 1+           |
+    | REPLY          | 0 or 1 (opt) | ORGANIZER + PARTSTAT| 1            |
+    | ADD            | 1 (MUST > 0) | ORGANIZER           | 0+           |
+    | CANCEL         | 1            | ORGANIZER           | 0+           |
+    | REFRESH        | 0 (MUST NOT) | ORGANIZER           | 1            |
+    | COUNTER        | 1            | ORGANIZER           | 0+           |
+    | DECLINECOUNTER | 1            | ORGANIZER           | 1+           |
+
+- Additional method-specific rules from RFC 5546 §3.2:
+    * `PUBLISH` — Attendees MUST NOT appear (§3.2.1 prose).
+    * `REPLY` — the ATTENDEE MUST carry a `PARTSTAT` parameter
+      communicating the response (§3.2.3).
+    * `ADD` — `SEQUENCE` MUST be greater than 0 (§3.2.4 table row).
+    * `CANCEL` — if `STATUS` is present, it MUST be `CANCELLED`.
+      `STATUS` may be omitted: the prose of §3.2.5 allows `METHOD`
+      alone to convey cancellation. A `CANCEL` with
+      `STATUS:TENTATIVE`/`CONFIRMED` is internally inconsistent and
+      warns.
+    * `REFRESH` — `SEQUENCE` "0" in the table is an explicit "MUST
+      NOT be present" per §3.2.6. Emitting SEQUENCE on a REFRESH
+      produces a warning.
+- Missing or inconsistent properties emit `itip_missing_property`
+  warnings (same warning kind for all violations; the `message`
+  field describes the specific rule).
 - Does not implement any networking or mailbox delivery.
 
 ## 7. RECURRENCE-ID overrides
@@ -484,7 +502,8 @@ ical parse --input <file.ics> --output <out.json>
 
 Writes a JSON object with keys (in this order):
 `calendar`, `events`, `todos`, `journals`, `freebusy`, `timezones`,
-`warnings`.
+`availabilities`, `warnings`. `availabilities` is the RFC 7953
+VAVAILABILITY top-level array (may be empty).
 
 ### 9.2 `expand`
 
@@ -502,10 +521,21 @@ Writes a JSON object with keys (in this order):
   "uid": "string",
   "dtstart": "ISO-8601 string",
   "dtend": "ISO-8601 string | null",
-  "tz": "string | null",   // present only for zoned events
-  "override": true | false  // present if from a RECURRENCE-ID override
+  "tz": "string | null",
+  "override": true | false,
+  "recurrence_id": "ISO-8601 string | null",
+  "range": "THISANDFUTURE | null",
+  "cancelled": true | false
 }
 ```
+
+Every key above is always present on every occurrence so consumers can
+access them uniformly. `tz` is `null` for floating-time occurrences and
+for events whose DTSTART is UTC. `recurrence_id` and `range` are `null`
+when the occurrence is not an override. `cancelled` is `true` when the
+occurrence is suppressed by an override `STATUS:CANCELLED` (the
+occurrence is still emitted in the array so the consumer sees the
+cancellation, rather than being silently dropped).
 
 ## 10. Warning kinds
 

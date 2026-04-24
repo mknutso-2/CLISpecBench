@@ -297,7 +297,11 @@ def test_available_with_recurrence_id(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """RFC 7953 §3.2: RECURRENCE-ID is allowed on AVAILABLE to override a
-    specific instance of a recurring availability block."""
+    specific instance of a recurring availability block. The JSON shape
+    MUST match VEvent's recurrence_id object ({value, range, tzid}) so
+    both recurrence surfaces carry identical parameter fidelity — a
+    scalar string here would silently drop TZID/RANGE if they were
+    present on other fixtures."""
     body = (
         "UID:av1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260101T000000Z\n"
@@ -310,7 +314,43 @@ def test_available_with_recurrence_id(
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
-    assert av.get("recurrence_id") is not None
+    rid = av.get("recurrence_id")
+    assert isinstance(rid, dict), f"expected object, got {rid!r}"
+    # `value` is the ISO-8601 form of the referenced instance.
+    assert "2026-06-01" in cast(str, rid.get("value"))
+    # Neither RANGE nor TZID is set in this fixture — both explicit null.
+    assert rid.get("range") is None
+    assert rid.get("tzid") is None
+
+
+def test_available_recurrence_id_with_tzid_and_range(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5545 §3.8.4.4 lets RECURRENCE-ID carry both a TZID= parameter
+    and RANGE=THISANDFUTURE/THISANDPRIOR. The Available schema must
+    preserve both parameters (the structured object shape); a scalar
+    ISO string would silently drop them."""
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
+        "BEGIN:VTIMEZONE\nTZID:America/New_York\n"
+        "BEGIN:STANDARD\nDTSTART:20071104T020000\n"
+        "TZOFFSETFROM:-0400\nTZOFFSETTO:-0500\n"
+        "END:STANDARD\nEND:VTIMEZONE\n"
+        "BEGIN:AVAILABLE\n"
+        "UID:a1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART;TZID=America/New_York:20260601T090000\n"
+        "DTEND;TZID=America/New_York:20260601T170000\n"
+        "RECURRENCE-ID;TZID=America/New_York;RANGE=THISANDFUTURE:20260601T090000\n"
+        "END:AVAILABLE\n"
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
+    rid = av.get("recurrence_id")
+    assert isinstance(rid, dict)
+    assert rid.get("tzid") == "America/New_York"
+    assert rid.get("range") == "THISANDFUTURE"
 
 
 def test_available_with_categories_and_comment(

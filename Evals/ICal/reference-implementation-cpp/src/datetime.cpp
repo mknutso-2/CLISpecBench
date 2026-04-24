@@ -214,8 +214,18 @@ std::string format_utc_offset(int seconds) {
     int abs_s = seconds < 0 ? -seconds : seconds;
     int hh = abs_s / 3600;
     int mm = (abs_s % 3600) / 60;
+    int ss = abs_s % 60;
     char buf[16];
-    std::snprintf(buf, sizeof(buf), "%c%02d:%02d", seconds < 0 ? '-' : '+', hh, mm);
+    if (ss != 0) {
+        // RFC 5545 §3.3.14: UTC-OFFSET permits an optional SECOND field.
+        // Preserve the precision of the source TZOFFSET* value when the
+        // on-wire form carried seconds (e.g. pre-1972 historical zones).
+        std::snprintf(buf, sizeof(buf), "%c%02d:%02d:%02d",
+                      seconds < 0 ? '-' : '+', hh, mm, ss);
+    } else {
+        std::snprintf(buf, sizeof(buf), "%c%02d:%02d",
+                      seconds < 0 ? '-' : '+', hh, mm);
+    }
     return buf;
 }
 

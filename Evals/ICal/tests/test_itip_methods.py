@@ -240,6 +240,32 @@ def test_cancel_missing_organizer_emits_itip_warning(
     assert "itip_missing_property" in _warn_kinds(out)
 
 
+def test_cancel_status_if_present_must_be_cancelled(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.2.5 STATUS row: "MUST be set to CANCELLED to cancel
+    the entire event." A CANCEL that carries STATUS with any value
+    other than CANCELLED (e.g. TENTATIVE or CONFIRMED) is internally
+    inconsistent — the METHOD says "cancel" but the STATUS does not.
+    Validator must warn."""
+    body = _BASE_WITH_ORGANIZER + "STATUS:TENTATIVE\n"
+    ics = _wrap_with_method("CANCEL", body)
+    out = run_parse(submission_command, ics, tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_cancel_status_cancelled_case_insensitive(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5545 property-value comparison for STATUS is case-insensitive
+    in practice. STATUS:cancelled (lowercase) on a CANCEL should not
+    trigger the "STATUS must be CANCELLED" warning."""
+    body = _BASE_WITH_ORGANIZER + "STATUS:cancelled\n"
+    ics = _wrap_with_method("CANCEL", body)
+    out = run_parse(submission_command, ics, tmp_path)
+    assert "itip_missing_property" not in _warn_kinds(out)
+
+
 # ---------------------------------------------------------------------------
 # PUBLISH imposes no attendee-level iTIP requirement beyond the base
 # VEVENT minimum. A PUBLISH without ORGANIZER or ATTENDEE is fine.

@@ -126,18 +126,28 @@ def test_width_space_is_cmr10_value(
     )
 
 
-def test_width_uppercase_letter_is_cmr10_value(
+def test_width_uppercase_letter_not_less_than_lowercase(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Uppercase 'M' is 917 in cmr10, wider than lowercase 'm' (833)."""
+    """Width of uppercase 'M' must not be *less* than lowercase 'm'.
+
+    Two shipping behaviors satisfy summary.md §8.1:
+    - The cmr10-exact table (bibtex.web §13): M=917 > m=833.
+    - The explicit approximation contract in §8.1: all alphanumerics
+      contribute 500 uniformly, so M == m.
+
+    Both are within the contract. Asserting a strict `M > m` would
+    force cmr10 exactness and exclude the documented approximation,
+    so we only require the weaker ordering `M >= m`. An implementation
+    that reported `M < m` would be miscalibrated under either
+    interpretation."""
     bbl_m, _ = _exec(submission_command, tmp_path, '"M" width$ int.to.str$ write$')
     bbl_lower_m, _ = _exec(
         submission_command, tmp_path, '"m" width$ int.to.str$ write$'
     )
     m = int(bbl_m.strip())
     lm = int(bbl_lower_m.strip())
-    # Relative ordering: M is wider than lowercase m in cmr10.
-    assert m > lm, f"'M'={m} not > 'm'={lm}"
+    assert m >= lm, f"'M'={m} less than 'm'={lm}; invalid under every §8.1 interpretation"
 
 
 def test_width_three_letters_sums(submission_command: tuple[str, ...], tmp_path: Path) -> None:

@@ -621,29 +621,28 @@ void validate_itip(Calendar& cal) {
         cal.warnings.push_back(std::move(w));
     };
 
-    // Base-level iTIP requirements applied to EVERY method other than PUBLISH:
-    // RFC 5546 §3 requires UID, DTSTAMP, and SEQUENCE on the published object.
-    // UID is already mandatory under RFC 5545 and surfaced by parsing; we
-    // warn if it is empty. DTSTAMP and SEQUENCE are not structurally
-    // required by RFC 5545 but ARE required by RFC 5546 for any iTIP method.
-    auto check_base = [&](const VEvent& e) {
+    // Per-method iTIP validation derived directly from the RFC 5546 §3.2
+    // constraint tables for VEVENT (we treat VTODO and VJOURNAL under the
+    // same matrix — the deep method semantics are event-oriented and
+    // journal/todo are validated against the same required skeleton).
+    //
+    // UID and DTSTAMP are "1" (required) in every §3.2.x table including
+    // §3.2.1 PUBLISH, so we check those unconditionally. SEQUENCE varies
+    // per method and in REFRESH is explicitly "0" (MUST NOT be present).
+    auto check_event = [&](const VEvent& e) {
+        // Universal requirements (all §3.2.x tables).
         if (e.uid.empty()) emit("", "iTIP message requires UID");
         if (!e.dtstamp) emit(e.uid, "iTIP message requires DTSTAMP");
-        if (!e.sequence) emit(e.uid, "iTIP message requires SEQUENCE");
-    };
 
-    auto check_event = [&](const VEvent& e) {
         if (m == "PUBLISH") {
-            // RFC 5546 §3.2.1: ORGANIZER is MAY, ATTENDEE MUST NOT appear.
+            // §3.2.1: Attendees MUST NOT be present. SEQUENCE is 0 or 1.
             if (!e.attendees.empty()) emit(e.uid, "PUBLISH MUST NOT include ATTENDEE");
-            return;
-        }
-        // All remaining methods are true iTIP messages.
-        check_base(e);
-        if (m == "REQUEST") {
+        } else if (m == "REQUEST") {
+            // §3.2.2: ORGANIZER 1, ATTENDEE 1+. SEQUENCE 0 or 1 (optional).
             if (!e.organizer) emit(e.uid, "REQUEST requires ORGANIZER");
             if (e.attendees.empty()) emit(e.uid, "REQUEST requires ATTENDEE");
         } else if (m == "REPLY") {
+            // §3.2.3: ORGANIZER 1, ATTENDEE 1 (with PARTSTAT). SEQUENCE 0 or 1.
             if (!e.organizer) emit(e.uid, "REPLY requires ORGANIZER");
             if (e.attendees.empty()) {
                 emit(e.uid, "REPLY requires ATTENDEE");
@@ -654,21 +653,39 @@ void validate_itip(Calendar& cal) {
                 }
                 if (!any_partstat) emit(e.uid, "REPLY attendee requires PARTSTAT");
             }
-        } else if (m == "CANCEL") {
-            if (!e.organizer) emit(e.uid, "CANCEL requires ORGANIZER");
-            // RFC 5546 §3.2.5: the cancellation indication MAY be conveyed
-            // by the METHOD property alone; STATUS:CANCELLED is NOT
-            // mandatory. We do not warn on its absence.
         } else if (m == "ADD") {
+            // §3.2.4: ORGANIZER 1, SEQUENCE 1 with value MUST be > 0.
             if (!e.organizer) emit(e.uid, "ADD requires ORGANIZER");
+            if (!e.sequence) emit(e.uid, "ADD requires SEQUENCE");
+            else if (*e.sequence == 0) emit(e.uid, "ADD requires SEQUENCE greater than 0");
+        } else if (m == "CANCEL") {
+            // §3.2.5: ORGANIZER 1, SEQUENCE 1. STATUS is 0 or 1; when
+            // present on a whole-event cancel, MUST be CANCELLED. The
+            // prose of §3.2.5 allows METHOD:CANCEL alone to convey
+            // cancellation, so we do not warn on STATUS absence.
+            if (!e.organizer) emit(e.uid, "CANCEL requires ORGANIZER");
+            if (!e.sequence) emit(e.uid, "CANCEL requires SEQUENCE");
+            if (e.status) {
+                std::string upper_status = to_upper(*e.status);
+                if (upper_status != "CANCELLED") {
+                    emit(e.uid, "CANCEL STATUS must be CANCELLED");
+                }
+            }
         } else if (m == "REFRESH") {
+            // §3.2.6: ORGANIZER 1, ATTENDEE 1. SEQUENCE 0 — MUST NOT be present.
             if (!e.organizer) emit(e.uid, "REFRESH requires ORGANIZER");
             if (e.attendees.empty()) emit(e.uid, "REFRESH requires ATTENDEE");
+            if (e.sequence) emit(e.uid, "REFRESH MUST NOT include SEQUENCE");
         } else if (m == "COUNTER") {
+            // §3.2.7: ORGANIZER 1, SEQUENCE 1. ATTENDEE is 0+ (optional —
+            // "Can also be used to propose other Attendees").
             if (!e.organizer) emit(e.uid, "COUNTER requires ORGANIZER");
-            if (e.attendees.empty()) emit(e.uid, "COUNTER requires ATTENDEE");
+            if (!e.sequence) emit(e.uid, "COUNTER requires SEQUENCE");
         } else if (m == "DECLINECOUNTER") {
+            // §3.2.8: ORGANIZER 1, ATTENDEE 1+, SEQUENCE 1.
             if (!e.organizer) emit(e.uid, "DECLINECOUNTER requires ORGANIZER");
+            if (e.attendees.empty()) emit(e.uid, "DECLINECOUNTER requires ATTENDEE");
+            if (!e.sequence) emit(e.uid, "DECLINECOUNTER requires SEQUENCE");
         }
     };
 
@@ -960,7 +977,13 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
                 if (auto dt = parse_ical_datetime(p.value); dt) cur_available.last_modified = iso_format(*dt);
             }
             else if (p.name == "RECURRENCE-ID") {
+                // Per RFC 7953 §3.2, AVAILABLE overrides follow the normal
+                // RFC 5545 §3.8.4.4 RECURRENCE-ID semantics, including the
+                // optional RANGE=THISANDFUTURE parameter (§3.2.11). TZID is
+                // captured inside the DateOrDateTime by parse_dodt.
                 cur_available.recurrence_id = parse_dodt(p.value, p.params, cal.warnings, cur_available.uid);
+                auto rit = p.params.find("RANGE");
+                if (rit != p.params.end()) cur_available.recurrence_id_range = rit->second;
             }
             else if (p.name == "CATEGORIES") {
                 for (const auto& c : split(p.value, ',')) {
