@@ -380,34 +380,42 @@ asserted.
 kind is reused across many distinct RFC 5546 rules within a single
 component×method cell (e.g. both "VTODO PUBLISH missing PRIORITY"
 and "VTODO PUBLISH missing SUMMARY" emit the same kind). To let
-tests distinguish those cases, the message MUST contain the
-following uppercase tokens as plain (ASCII, case-sensitive)
-substrings whenever one of these rules fires:
+tests distinguish those cases, every `itip_missing_property`
+message on a non-VEVENT component MUST contain:
 
-1. The **method name** the rule is tied to: one of
-   `PUBLISH`, `REQUEST`, `REPLY`, `ADD`, `CANCEL`, `REFRESH`,
-   `COUNTER`, `DECLINECOUNTER`.
-2. The **component name** when the rule is NOT on VEVENT: one of
-   `VTODO`, `VJOURNAL`, `VFREEBUSY`. (VEVENT rules do not need to
-   include `VEVENT` in the message; VEVENT is the default.)
-3. The **RFC property name** the rule references:
-   `UID` / `DTSTAMP` / `DTSTART` / `DTEND` / `ORGANIZER` /
-   `ATTENDEE` / `SEQUENCE` / `SUMMARY` / `PRIORITY` / `DESCRIPTION`
-   / `STATUS` / `PARTSTAT`.
+1. **The adjacent phrase `<METHOD> <COMPONENT>`** as a plain
+   case-sensitive ASCII substring — method name and component
+   name separated by exactly one ASCII space, in that order.
+   Method is one of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`,
+   `CANCEL`, `REFRESH`, `COUNTER`, `DECLINECOUNTER`. Non-VEVENT
+   component is one of `VTODO`, `VJOURNAL`, `VFREEBUSY`. VEVENT
+   rules do not need `VEVENT` in the message (VEVENT is the
+   default); they only need the method name.
+2. **The RFC property name** the rule references somewhere else
+   in the message: `UID` / `DTSTAMP` / `DTSTART` / `DTEND` /
+   `ORGANIZER` / `ATTENDEE` / `SEQUENCE` / `SUMMARY` / `PRIORITY`
+   / `DESCRIPTION` / `STATUS` / `PARTSTAT`.
 
-A conforming implementation may wrap those tokens in any prose it
-likes. Example messages that would all satisfy the
+"Method X not defined for <COMPONENT>" warnings (when a VJOURNAL
+or VFREEBUSY carries a method its §3.5 / §3.3 table does not
+define) MUST contain the component name as a plain substring;
+the method name is optional for those messages.
+
+A conforming implementation may wrap those tokens in any
+surrounding prose. Example messages that would all satisfy the
 "VTODO PUBLISH missing PRIORITY" rule:
 
     "PUBLISH VTODO requires PRIORITY"
-    "Missing PRIORITY on PUBLISH VTODO"
-    "PRIORITY (required by §3.4.1) not set on PUBLISH VTODO"
+    "PUBLISH VTODO: missing PRIORITY field"
+    "PRIORITY is required for PUBLISH VTODO per §3.4.1"
 
 Non-conforming examples that would fail the tests:
 
-    "required property missing"                     (no method name)
-    "publish vtodo requires priority"               (lowercase tokens)
-    "method PUBLISH missing required property"     (no property name)
+    "required property missing"                       (no phrase, no property)
+    "publish vtodo requires priority"                 (lowercase tokens)
+    "VTODO PUBLISH requires PRIORITY"                 (wrong order — METHOD must come FIRST)
+    "method is PUBLISH and component is VTODO"        (tokens not adjacent)
+    "PUBLISH-style VTODO requires PRIORITY"           (hyphen between, not single space)
 
 Everywhere else the test suite checks only the warning `kind`.
 
