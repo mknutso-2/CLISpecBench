@@ -174,7 +174,9 @@ void emit_trigger(std::ostringstream& o, const Trigger& t) {
 }
 
 void emit_alarm(std::ostringstream& o, const VAlarm& a) {
-    o << "{\"action\":";
+    o << "{\"uid\":";
+    if (a.uid) jstr(o, *a.uid); else o << "null";
+    o << ",\"action\":";
     if (a.action) jstr(o, *a.action); else o << "null";
     o << ",\"trigger\":";
     if (a.trigger) emit_trigger(o, *a.trigger); else o << "null";
@@ -198,7 +200,18 @@ void emit_alarm(std::ostringstream& o, const VAlarm& a) {
     }
     o << "],\"acknowledged\":";
     if (a.acknowledged) jstr(o, *a.acknowledged); else o << "null";
-    o << ",\"raw_properties\":";
+    o << ",\"proximity\":";
+    if (a.proximity) jstr(o, *a.proximity); else o << "null";
+    o << ",\"related_to\":[";
+    for (std::size_t i = 0; i < a.related_to.size(); ++i) {
+        if (i) o << ',';
+        o << "{\"value\":";
+        jstr(o, a.related_to[i].value);
+        o << ",\"reltype\":";
+        if (a.related_to[i].reltype) jstr(o, *a.related_to[i].reltype); else o << "null";
+        o << '}';
+    }
+    o << "],\"raw_properties\":";
     emit_raw_properties(o, a.raw_properties);
     o << '}';
 }
@@ -289,6 +302,34 @@ void emit_todo(std::ostringstream& o, const VTodo& t) {
     o << '}';
 }
 
+// RFC 5545 §3.6.4 VFREEBUSY — each FREEBUSY property becomes a
+// `{fbtype, periods: [<period>, ...]}` entry in `freebusy`.
+void emit_freebusy(std::ostringstream& o, const VFreeBusy& fb) {
+    o << '{';
+    emit_event_common(o, fb);
+    o << ",\"freebusy\":[";
+    for (std::size_t i = 0; i < fb.freebusy_entries.size(); ++i) {
+        if (i) o << ',';
+        const auto& fe = fb.freebusy_entries[i];
+        o << "{\"fbtype\":";
+        if (fe.fbtype) jstr(o, *fe.fbtype); else jstr(o, std::string("BUSY"));
+        o << ",\"periods\":[";
+        for (std::size_t j = 0; j < fe.periods.size(); ++j) {
+            if (j) o << ',';
+            const auto& per = fe.periods[j];
+            o << "{\"start\":"; emit_date_or_dt(o, per.start);
+            if (per.end) {
+                o << ",\"end\":"; emit_date_or_dt(o, *per.end);
+            } else if (per.duration) {
+                o << ",\"duration\":"; jstr(o, *per.duration);
+            }
+            o << '}';
+        }
+        o << "]}";
+    }
+    o << "]}";
+}
+
 // For VTIMEZONE observance DTSTART: always emit as floating (no trailing Z)
 // per RFC 5545 §3.8.2.4.
 std::string iso_format_floating(const DateTime& dt) {
@@ -372,7 +413,7 @@ std::string emit_parse_json(const Calendar& cal) {
     o << "],\"journals\":[";
     for (std::size_t i = 0; i < cal.journals.size(); ++i) { if (i) o << ','; emit_event(o, cal.journals[i]); }
     o << "],\"freebusy\":[";
-    for (std::size_t i = 0; i < cal.freebusy.size(); ++i) { if (i) o << ','; emit_event(o, cal.freebusy[i]); }
+    for (std::size_t i = 0; i < cal.freebusy.size(); ++i) { if (i) o << ','; emit_freebusy(o, cal.freebusy[i]); }
     o << "],\"timezones\":[";
     for (std::size_t i = 0; i < cal.timezones.size(); ++i) { if (i) o << ','; emit_vtimezone(o, cal.timezones[i]); }
     o << "],\"warnings\":[";

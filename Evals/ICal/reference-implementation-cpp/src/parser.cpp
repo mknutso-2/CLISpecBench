@@ -530,6 +530,15 @@ void apply_alarm_prop(VAlarm& a, const Property& p, Calendar& cal) {
     else if (p.name == "ACKNOWLEDGED") {
         if (auto dt = parse_ical_datetime(p.value); dt) a.acknowledged = iso_format(*dt);
     }
+    else if (p.name == "UID") a.uid = p.value;           // RFC 9074 §4
+    else if (p.name == "PROXIMITY") a.proximity = p.value;  // RFC 9074 §8
+    else if (p.name == "RELATED-TO") {                   // RFC 9074 §9
+        RelatedTo r;
+        r.value = p.value;
+        auto rit = p.params.find("RELTYPE");
+        if (rit != p.params.end()) r.reltype = rit->second;
+        a.related_to.push_back(std::move(r));
+    }
     (void)cal;
 }
 
@@ -838,7 +847,38 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
             }
         }
         else if (in_vjournal) apply_common_prop(cur_journal, p, cal);
-        else if (in_vfreebusy) apply_common_prop(cur_freebusy, p, cal);
+        else if (in_vfreebusy) {
+            apply_common_prop(cur_freebusy, p, cal);
+            if (p.name == "FREEBUSY") {
+                FreeBusyEntry entry;
+                auto fbit = p.params.find("FBTYPE");
+                if (fbit != p.params.end()) entry.fbtype = fbit->second;
+                // Split comma-separated periods at the top level.
+                std::string buf;
+                for (char c : p.value) {
+                    if (c == ',') {
+                        if (!buf.empty()) {
+                            if (auto pp = parse_period_token(
+                                    buf, p.params, cal.warnings, cur_freebusy.uid);
+                                pp) {
+                                entry.periods.push_back(*pp);
+                            }
+                            buf.clear();
+                        }
+                    } else {
+                        buf.push_back(c);
+                    }
+                }
+                if (!buf.empty()) {
+                    if (auto pp = parse_period_token(
+                            buf, p.params, cal.warnings, cur_freebusy.uid);
+                        pp) {
+                        entry.periods.push_back(*pp);
+                    }
+                }
+                cur_freebusy.freebusy_entries.push_back(std::move(entry));
+            }
+        }
     }
 
     if (!stack.empty()) {

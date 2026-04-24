@@ -129,7 +129,14 @@ struct Trigger {
     std::optional<std::string> related;    // "START" | "END" | nullopt (absolute)
 };
 
+// RFC 9074 §9: RELATED-TO value with optional RELTYPE parameter.
+struct RelatedTo {
+    std::string value;
+    std::optional<std::string> reltype;
+};
+
 struct VAlarm {
+    std::optional<std::string> uid;           // RFC 9074 §4
     std::optional<std::string> action;
     std::optional<Trigger> trigger;
     std::optional<std::string> duration;
@@ -138,7 +145,9 @@ struct VAlarm {
     std::optional<std::string> description;
     std::optional<std::string> summary;
     std::vector<CalAddress> attendees;
-    std::optional<std::string> acknowledged;  // normalized ISO-8601 UTC
+    std::optional<std::string> acknowledged;  // RFC 9074 §6, ISO-8601 UTC
+    std::optional<std::string> proximity;     // RFC 9074 §8: ARRIVE|DEPART|x-name
+    std::vector<RelatedTo> related_to;        // RFC 9074 §9
     std::vector<Property> raw_properties;
 };
 
@@ -175,7 +184,18 @@ struct VTodo : VEvent {
     std::optional<int> percent_complete;
 };
 struct VJournal : VEvent {};
-struct VFreeBusy : VEvent {};
+
+// VFREEBUSY: RFC 5545 §3.6.4 / §3.8.2.6. A FREEBUSY property is a list of
+// PERIOD values with an optional FBTYPE parameter. Default FBTYPE is BUSY.
+struct FreeBusyEntry {
+    std::optional<std::string> fbtype;   // BUSY | FREE | BUSY-UNAVAILABLE |
+                                         // BUSY-TENTATIVE | x-name
+    std::vector<Period> periods;
+};
+
+struct VFreeBusy : VEvent {
+    std::vector<FreeBusyEntry> freebusy_entries;
+};
 
 struct Observance {
     DateTime dtstart{};

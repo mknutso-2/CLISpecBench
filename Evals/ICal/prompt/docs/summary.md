@@ -18,6 +18,10 @@
 > - [`authoritative/rfc7986.txt`](authoritative/rfc7986.txt) — *New
 >   Properties for iCalendar* (RFC 7986) — calendar-level `NAME`,
 >   `REFRESH-INTERVAL`, `COLOR`, `IMAGE`, `CONFERENCE`, etc.
+> - [`authoritative/rfc9074.txt`](authoritative/rfc9074.txt) —
+>   *"VALARM" Extensions for iCalendar* (RFC 9074, August 2021) —
+>   `ACKNOWLEDGED`, `PROXIMITY`, `RELATED-TO`, snooze workflow,
+>   enhanced EMAIL alarm semantics. Updates RFC 5545 §3.6.6.
 >
 > **Where this summary and the authoritative RFCs conflict, the RFCs
 > are authoritative.** Tests in this eval assert behavior that is

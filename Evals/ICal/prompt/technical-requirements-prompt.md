@@ -148,10 +148,11 @@ A `cal-address object`:
 }
 ```
 
-A `valarm object`:
+A `valarm object` (includes RFC 9074 extensions):
 
 ```json
 {
+  "uid": "string | null",
   "action": "AUDIO | DISPLAY | EMAIL | PROCEDURE | string",
   "trigger": {"value": "ISO-8601 | ISO-8601 duration",
                "related": "START | END | null"},
@@ -162,10 +163,26 @@ A `valarm object`:
   "repeat": integer | null,
   "attach": [<attachment>, ...],
   "acknowledged": "ISO-8601 | null",
+  "proximity": "ARRIVE | DEPART | string | null",
+  "related_to": [{"value": "string",
+                     "reltype": "string | null"}, ...],
   "raw_properties": [{"name": "string", "params": {},
                         "value": "string"}, ...]
 }
 ```
+
+RFC 9074 adds:
+
+- `UID` on VALARM to uniquely identify alarms across replicas.
+- `ACKNOWLEDGED` — UTC DATE-TIME of the user's last acknowledgement
+  of this alarm (used for snooze workflows).
+- `PROXIMITY` — geographic-trigger hint: `ARRIVE`, `DEPART`, or
+  an x-name.
+- `RELATED-TO` — links this alarm to other components (e.g.,
+  another VEVENT or VALARM UID) with an optional `RELTYPE`
+  parameter.
+- Enhanced EMAIL-alarm semantics with multiple ATTACH values
+  interpretable as email attachments.
 
 VTODO/VJOURNAL/VFREEBUSY objects carry the common base (`uid`,
 `dtstamp`, `summary`, `description`, `categories`, `organizer`,
