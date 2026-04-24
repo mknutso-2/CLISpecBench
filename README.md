@@ -1,21 +1,19 @@
 # CLISpecBench
 
-A benchmark suite for evaluating AI coding agents on documentation-driven
-implementation tasks. Agents receive a specification and domain docs, then must
-produce a working implementation that passes a hidden test suite. Tasks may
-expose one or more target languages; the harness currently supports C++,
-Python, JavaScript, and Rust, with a shared test suite verifying each
-submission through a language-agnostic CLI contract.
+A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from well-defined specifications.
+Agents receive a specification and domain docs, then are asked to produce a working CLI application that satisfies the spec. The submitted
+code is built and run again a test suite (hidden from the agent) to measure adherence to the specification.
+Asking the agent to produce a CLI application allows us to evaluate its output when the submitted code is written in virtually any language (though the harness currently supports C++, Rust, Python and JavaScript).
 
 ## Core Concepts
 
-The repo is easier to navigate if you separate five concepts:
+The repo is organized around a few core concepts:
 
 | Concept | Meaning | Main locations |
 |---|---|---|
 | **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/clispecbench/agents/` and containerized from `docker/agents/` |
 | **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
-| **Task** | A harness-visible eval-language pair. This is what `clispecbench run --task ...` and `clispecbench validate --task ...` operate on. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
+| **Task** | A eval-language pair. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
 | **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/clispecbench/harness/`, `src/clispecbench/build/`, `src/clispecbench/cli.py` |
 | **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/clispecbench/tests/` |
 
@@ -30,11 +28,11 @@ Two useful distinctions:
 ```
 Evals/                   # Evaluation tasks (one directory per task)
   _shared/               #   Shared language-requirements prompts
-  RS274/                #   CNC G-code interpreter (full benchmark task)
+  RS274/                 #   CNC G-code interpreter (full benchmark task)
   IGES/                  #   IGES CAD interchange parser/writer eval
   IGES-SDK/              #   Upstream IGES porting source tree
   WordCount/             #   Word frequency counter (toy eval for harness testing)
-src/clispecbench/      # Python package
+src/clispecbench/        # Python package
   agents/                #   One adapter module per coding agent
   build/                 #   Multi-language submission build backends
   harness/               #   Eval orchestration, Docker, scoring, results
@@ -135,10 +133,10 @@ container at runtime.
   `~/.gemini/`, and `~/.config/gh/hosts.yml` are mounted directly.
 
 ```bash
-claude login          # Claude Code
+claude auth login     # Claude Code
 codex login           # Codex CLI
 gh auth login         # GitHub CLI token used by GitHub Copilot CLI
-gemini auth login     # Gemini CLI
+gemini                # Gemini CLI - Select "Sign in with Google"
 ```
 
 GitHub Copilot CLI can also consume `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or
@@ -152,20 +150,29 @@ tests** sub-section under [Running Tests](#running-tests).
 
 Each eval task follows a standard pipeline:
 
-1. **Prompt assembly** -- The harness concatenates the base prompt (domain expert
-   persona) with the technical requirements prompt, and includes the docs directory.
+1. **Prompt assembly** -- The harness concatenates a base prompt (written in the voice of a domain expert with no coding knowledge)
+ with the technical requirements prompt (which define the command line interface required by the test suite), implementation-language specific instructions,
+ e.g. using C++20. The base prompt may also reference a `docs/` folder which can contain any relevant documentation that the agent may consult during implementation.
 
-2. **Agent invocation** -- The agent CLI runs inside a Docker container with the
-   prompt and docs mounted. Network access is restricted to the agent's API host.
-   Host auth credentials are mounted read-only.
+2. **Agent invocation** -- The agent runs inside a Docker container with the
+   prompt, docs, and the host auth credentials for the coding agents mounted.
+   Network access is restricted to the agent's API host.
 
-3. **Build** -- The agent's output is built with CMake inside the sandbox.
+3. **Build** -- The agent output is prepared and run via a language-specific backend in the
+   harness: C++ is built with CMake, Rust with Cargo, and Python/JavaScript submissions
+   are run directly.
 
-4. **Test** -- The hidden pytest test suite runs against the built executable.
+4. **Test** -- The eval's hidden pytest test suite runs against the built executable.
    Results are captured as structured JSON via pytest-json-report.
 
 5. **Scoring** -- Per-test pass/fail, token usage, timing, and composite scores
-   are written to a `RunResult` JSON file.
+   are written to a `RunResult` JSON file at
+   `transient_results/<task>/<agent>/<model-effort>/eval<N>/run<M>/result.json`.
+   The run folder also stores sibling artifacts (`transcript.jsonl`, `source/`,
+   telemetry copies), and `eval<N>/progress.txt` is updated after each completed run.
+
+6. **Publish (optional)** -- Promote a transient result to the official published tree
+   by using the `clispecbench publish` command (shown in the next section).
 
 ## Running an Eval
 
@@ -180,6 +187,20 @@ View results:
 ```bash
 clispecbench results
 ```
+
+## Publish Official Results
+
+Use `clispecbench publish` to copy a transient result into the published results tree:
+
+```bash
+clispecbench publish transient_results/<task>/<agent>/<model-effort>/eval<eval>/run<run>/result.json \
+  --status "Complete" \
+  --last-message "..." \
+  --published-dir published_results
+```
+
+Set `--published-dir` to your target official root (for example `official_results`), and
+optionally add `--commentary <slug>` if you want to attach a markdown commentary file.
 
 ## Running Tests
 
@@ -282,10 +303,6 @@ both setup steps first if you haven't already:
 MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 
 # 2. Log in to each CLI on the host (see "4. Authenticate CLI agents" above)
-claude login
-codex login
-gh auth login
-gemini auth login
 ```
 
 Then run the smoke tests:
@@ -307,8 +324,7 @@ mounting strategy that the harness uses.
 
 ## Adding a Coding Agent
 
-Adding a new coding agent is currently spread across a few touchpoints. The
-functionality is not fully centralized in one folder yet, so use this checklist.
+Adding a new coding agent is currently spread across a few touchpoints.
 
 **Required touchpoints**
 
@@ -335,12 +351,6 @@ functionality is not fully centralized in one folder yet, so use this checklist.
 - If the agent needs special network access, update the adapter's `allowed_hosts`.
 
 ## Adding a New Eval
-
-Adding a new eval is already more localized than adding a coding agent. Most of
-the work lives under `Evals/<Task>/`; the main repo-wide touchpoint is the task
-registry in `src/clispecbench/harness/task.py`.
-
-**Required touchpoints**
 
 1. **Create the eval directory** under `Evals/<Task>/`.
 2. **Add the prompt/docs/tests/reference implementation** under that directory.
@@ -403,8 +413,7 @@ minimal example.
 
 If the eval should be runnable through `clispecbench`, register one task ID
 per harness-visible `(eval, language)` pair in `src/clispecbench/harness/task.py`.
-The current file uses `_register_language_tasks(...)`, and every registered
-language is explicit, including `cpp`:
+`task.py` currently uses `_register_language_tasks(...)`:
 
 ```python
 _KNOWN_TASKS: dict[str, _RegisteredTask] = {
