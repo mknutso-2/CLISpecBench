@@ -613,7 +613,11 @@ void validate_itip(Calendar& cal) {
     };
 
     auto check_event = [&](const VEvent& e) {
-        if (m == "REQUEST") {
+        if (m == "PUBLISH") {
+            // RFC 5546 §3.2.1: ORGANIZER is MAY, ATTENDEE MUST NOT appear.
+            // We emit a warning when ATTENDEE is present (violates MUST NOT).
+            if (!e.attendees.empty()) emit(e.uid, "PUBLISH MUST NOT include ATTENDEE");
+        } else if (m == "REQUEST") {
             if (!e.organizer) emit(e.uid, "REQUEST requires ORGANIZER");
         } else if (m == "REPLY") {
             if (!e.organizer) emit(e.uid, "REPLY requires ORGANIZER");
