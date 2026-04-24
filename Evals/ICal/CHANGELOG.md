@@ -1,5 +1,43 @@
 # ICal Eval Changelog
 
+## v1.3.0 — 2026-04-24
+
+Eval-authoring rule-3 hardening from a 136-failure classification
+review across Opus 4.7 max and gpt-5.5 xhigh runs. Fixes spec
+ambiguities, removes one false impl/spec contradiction, and
+tightens four test contracts to localize failures.
+
+**Spec changes** (`prompt/docs/summary.md`):
+
+- §5.1 **VTIMEZONE resolution** gained explicit step 4 covering
+  local times before any observance's DTSTART: tool MUST use the
+  earliest observance's TZOFFSETFROM (the pre-observance state
+  per RFC 5545 §3.8.3.1). Was previously undefined behavior.
+
+- §7 **Override resolution** reconciled with §9.2's occurrence
+  schema: `STATUS:CANCELLED` overrides keep the occurrence in the
+  array with `cancelled: true` rather than dropping it (consumers
+  observe the cancellation explicitly). Reference implementation
+  patched in both the non-RRULE and RRULE code paths to emit at
+  the original recurrence-id time with the cancelled flag set,
+  including the THISANDFUTURE + CANCELLED case.
+
+**Contract clarifications** (`prompt/technical-requirements-prompt.md`):
+
+- iTIP `itip_missing_property` warning contract tightened. Message
+  MUST contain the adjacent phrase `<METHOD> <COMPONENT>` (or
+  reverse), the specific property name token, and AT MOST ONE
+  property token from the allowed list (rules out "omnibus" messages
+  that list every required property and would spuriously satisfy
+  every property-specific test).
+
+**Test isolation**:
+
+- `test_recurrence_id_cancel_marks_occurrence_cancelled` (renamed
+  from `_removes_occurrence`) now asserts the §9.2 schema shape.
+- `test_itip_per_component.py` `_warn_mentions_method_component_property`
+  helper enforces the tightened contract; 9 assertions migrated.
+
 ## v1.2.0 — 2026-04-24
 
 Completes PLAN.md — all remaining priorities landed. Adds 68 new

@@ -180,39 +180,39 @@ comma is joined with commas preserved into `First`.
 
 ### 2.6 `format.name$` inter-token separator
 
-When `format.name$` rejoins the tokens of a name part, the separator
-between adjacent tokens depends on (a) which letter-form the format
-string used and (b) what `bibtex.web §10270` decides based on
-accumulated-text length.
+When `format.name$` rejoins the tokens of a name part, the
+**bibtex.web §10270 reference rule** is deterministic: at each
+inter-token gap, look at the source text that separated the two
+tokens; if it was a `sep_char` (the tie `~` or hyphen `-`),
+preserve it literally; otherwise, use a tie `~` if the accumulated
+rendered text up to and including the left token is shorter than
+three non-brace letters OR if this is the last inter-token gap,
+and otherwise use a single ASCII space. This rule applies uniformly
+to both the abbreviated single-letter forms (`{f}`, `{v}`, `{l}`,
+`{j}`) and the doubled spelled-out forms (`{ff}`, `{vv}`, `{ll}`,
+`{jj}`).
 
-**The abbreviated form** (single-letter placeholders `{f}`, `{v}`,
-`{l}`, `{j}` — initials only) applies the `bibtex.web §10270`
-`enough_text_chars(long_token=3)` rule: the joiner is a tie `~`
-unless the accumulated rendered text in this name-part is at least
-three non-brace letters AND this is not the last inter-token gap,
-in which case it is a single ASCII space.
-
-**The doubled form** (spelled-out placeholders `{ff}`, `{vv}`,
-`{ll}`, `{jj}`) uses a single ASCII space as the inter-token
-separator in the common case. Implementations MAY preserve source
-`~` / `-` literally when the source text placed one between two
-tokens (following §2.1's literal-preservation rule), and MAY also
-apply the §10270 tie rule at the last gap or to short accumulated
-text — but these behaviors are not required for the doubled form.
-
-**Tests accept either form** (tie or space) at any default-separator
-gap in either letter-form. Tests that want to exercise the abbreviated
-form's tie behavior specifically cite this section and use the `{f}`
-placeholder explicitly. The helper `_normalize_separator` in
-`test_name_grammar_exhaustive.py` folds ties to spaces before
-comparison to encode this acceptance band.
+**Implementation simplification permitted.** Faithfully reproducing
+the §10270 rule (especially the `enough_text_chars` accumulator)
+adds non-trivial state for marginal value when the consuming style
+file usually rewrites the rendered name with explicit separators
+anyway (`plain.bst` / `alpha.bst` / `unsrt.bst` / `abbrv.bst` all
+do this). Implementations MAY emit a single ASCII space at every
+inter-token gap regardless of the §10270 rule. The test suite
+encodes this relaxation explicitly: every multi-token name-part
+assertion folds tie to space before comparison (via the
+`_normalize_separator` helper in `test_name_grammar_exhaustive.py`,
+or via `parse_name_dump` in `conftest.py` for the shared name
+probe). Source-preserved tie / hyphen behavior is exercised by
+the parity-fixture tests in `test_reference_styles.py`, which run
+the historic BibTeX 0.99c output as the reference.
 
 Example: the author `"John Paul von~der Leyden"` rendered through
-`{ff}{vv}{ll}` may yield any of (a) `First="John~Paul"`, `von="von~der"`,
-(b) `First="John Paul"`, `von="von der"`, or mixed. All are conforming.
-A test that needs the source-preserved tie to round-trip SHOULD use a
-format string that does not invoke the `{ff}`-style name rendering
-— e.g. check the raw author field via `raw_properties`.
+`{ff}{vv}{ll}` may yield any of (a) `First="John~Paul"`, `von="von~der"`
+(faithful §10270), (b) `First="John Paul"`, `von="von der"` (always-
+space simplification), or any mixture (e.g. preserving the source
+tie in von but using space everywhere else). All three are
+conforming.
 
 ## 3. `.bst` style file language
 

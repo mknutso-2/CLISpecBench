@@ -396,19 +396,31 @@ and "VTODO PUBLISH missing SUMMARY" emit the same kind). To let
 tests distinguish those cases, every `itip_missing_property`
 message on a non-VEVENT component MUST contain:
 
-1. **Both the method token and the non-VEVENT component token**
-   as plain case-sensitive ASCII substrings. Either order is
-   accepted: `"PUBLISH VTODO ..."` and `"... VTODO PUBLISH"` are
-   equally conforming. Method is one of `PUBLISH`, `REQUEST`,
-   `REPLY`, `ADD`, `CANCEL`, `REFRESH`, `COUNTER`,
-   `DECLINECOUNTER`. Non-VEVENT component is one of `VTODO`,
-   `VJOURNAL`, `VFREEBUSY`. VEVENT rules do not need `VEVENT` in
-   the message (VEVENT is the default); they only need the method
-   token.
-2. **The RFC property name** the rule references somewhere else
-   in the message: `UID` / `DTSTAMP` / `DTSTART` / `DTEND` /
-   `ORGANIZER` / `ATTENDEE` / `SEQUENCE` / `SUMMARY` / `PRIORITY`
-   / `DESCRIPTION` / `STATUS` / `PARTSTAT`.
+1. **An adjacent method-and-component phrase** as a plain
+   case-sensitive ASCII substring. The two tokens MUST be
+   separated by exactly one ASCII space, in either order. So
+   either `"PUBLISH VTODO"` or `"VTODO PUBLISH"` is conforming;
+   non-adjacent or extra-character forms (e.g.
+   `"method PUBLISH and component VTODO"`,
+   `"PUBLISH-style VTODO"`) are not.
+   Method is one of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`,
+   `CANCEL`, `REFRESH`, `COUNTER`, `DECLINECOUNTER`. Non-VEVENT
+   component is one of `VTODO`, `VJOURNAL`, `VFREEBUSY`. VEVENT
+   rules do not need `VEVENT` in the message (VEVENT is the
+   default); they only need the method token.
+2. **The RFC property name** the rule references, immediately
+   after the method-component phrase OR within ten characters of
+   it. The intent is to associate the missing property with the
+   specific cell, ruling out an "omnibus" message that lists
+   every possible required property and would pass every
+   property-specific test. Allowed property tokens: `UID` /
+   `DTSTAMP` / `DTSTART` / `DTEND` / `ORGANIZER` / `ATTENDEE` /
+   `SEQUENCE` / `SUMMARY` / `PRIORITY` / `DESCRIPTION` / `STATUS` /
+   `PARTSTAT`.
+3. The message MUST NOT contain MORE THAN ONE property token
+   from the list above. (One missing-rule violation per warning;
+   if multiple rules fire on the same fixture, the impl emits
+   multiple warnings, one per rule.)
 
 "Method X not defined for <COMPONENT>" warnings (when a VJOURNAL
 or VFREEBUSY carries a method its §3.5 / §3.3 table does not
@@ -422,13 +434,15 @@ surrounding prose. Example messages that would all satisfy the
     "PUBLISH VTODO requires PRIORITY"
     "VTODO PUBLISH requires PRIORITY"
     "PUBLISH VTODO: missing PRIORITY field"
-    "PRIORITY is required for method=PUBLISH component=VTODO (§3.4.1)"
+    "PUBLISH VTODO PRIORITY missing per §3.4.1"
 
 Non-conforming examples that would fail the tests:
 
     "required property missing"                       (no method, no component, no property)
     "publish vtodo requires priority"                 (lowercase tokens)
-    "CANCEL VJOURNAL needs ORGANIZER" for a VTODO     (wrong component token)
+    "method PUBLISH and component VTODO"              (tokens not adjacent)
+    "PUBLISH VTODO needs ORGANIZER ATTENDEE PRIORITY" (multiple property tokens)
+    "PRIORITY is required for VTODO"                  (no method token)
 
 Everywhere else the test suite checks only the warning `kind`.
 

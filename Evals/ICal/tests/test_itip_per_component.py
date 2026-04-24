@@ -42,20 +42,47 @@ def _warn_messages(out: dict[str, Any]) -> list[str]:
     return [w.get("message", "") for w in cast(list[dict[str, Any]], raw)]
 
 
+_ALL_ITIP_PROPERTY_TOKENS = {
+    "UID", "DTSTAMP", "DTSTART", "DTEND", "ORGANIZER", "ATTENDEE",
+    "SEQUENCE", "SUMMARY", "PRIORITY", "DESCRIPTION", "STATUS",
+    "PARTSTAT",
+}
+
+
 def _warn_mentions_method_component_property(
     messages: list[str], method: str, component: str, property_name: str
 ) -> bool:
     """Check the non-VEVENT iTIP warning contract per
-    technical-requirements-prompt.md §Warning-schema: a conforming
-    message MUST contain both the method and component tokens as
-    plain case-sensitive ASCII substrings (either order accepted),
-    plus the RFC property name token somewhere in the message.
+    technical-requirements-prompt.md §Warning-schema. A conforming
+    message MUST:
+
+      1. Contain the adjacent two-word phrase ``<METHOD> <COMPONENT>``
+         OR ``<COMPONENT> <METHOD>`` (single ASCII space between).
+      2. Contain the specific RFC property name token under test.
+      3. Contain EXACTLY ONE property token from the allowed list —
+         this rules out the "omnibus message" failure mode where a
+         single warning lists every possible required property and
+         would spuriously satisfy every property-specific test
+         (one warning per missing rule, not one warning per
+         component×method cell).
+
     Returns True if at least one message in `messages` satisfies all
-    three conditions."""
-    return any(
-        method in m and component in m and property_name in m
-        for m in messages
-    )
+    three conditions for the given (method, component, property_name).
+    """
+    pair_a = f"{method} {component}"
+    pair_b = f"{component} {method}"
+    for m in messages:
+        # Rule 1: adjacent phrase, either order.
+        if pair_a not in m and pair_b not in m:
+            continue
+        # Rule 2: the specific property under test must appear.
+        if property_name not in m:
+            continue
+        # Rule 3: exactly one property token in the message overall.
+        if sum(1 for tok in _ALL_ITIP_PROPERTY_TOKENS if tok in m) != 1:
+            continue
+        return True
+    return False
 
 
 # ---------------------------------------------------------------------------
@@ -385,10 +412,12 @@ def test_vfreebusy_publish_requires_dtstart_and_dtend(
 ) -> None:
     """All three VFREEBUSY iTIP methods require DTSTART and DTEND
     (§3.3.1/§3.3.2/§3.3.3 tables). Missing DTEND on a PUBLISH is a
-    matrix violation. The message MUST carry the adjacent
-    `PUBLISH VFREEBUSY` phrase per the warning contract — earlier
-    impls emitted `"VFREEBUSY iTIP requires DTEND"` without the
-    method name, which violated the contract."""
+    matrix violation. Per the warning contract, the message MUST
+    carry the adjacent two-word phrase `PUBLISH VFREEBUSY` (or
+    `VFREEBUSY PUBLISH`) plus the property name, with at most one
+    property token in the message — earlier impls emitted
+    `"VFREEBUSY iTIP requires DTEND"` without the method name, which
+    violated the contract."""
     body = (
         "UID:f1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T000000Z\n"  # no DTEND
@@ -404,13 +433,14 @@ def test_vfreebusy_shared_check_messages_carry_adjacent_phrase(
 ) -> None:
     """The universal UID/DTSTAMP/ORGANIZER checks on VFREEBUSY must
     ALSO include the method-plus-component adjacent phrase per the
-    iter 11 warning contract. Prior impls emitted bare
+    warning contract. Prior impls emitted bare
     `"iTIP message requires UID"` — no method, no component — which
     left tests unable to discriminate a missing-UID on a VFREEBUSY
     from a missing-UID on any other component.
 
     Fixture: empty UID + no DTSTAMP on a REQUEST VFREEBUSY. Both
-    warnings MUST start with the literal `REQUEST VFREEBUSY` phrase."""
+    warnings MUST contain the adjacent phrase `REQUEST VFREEBUSY`
+    (or `VFREEBUSY REQUEST`) plus exactly one property token."""
     body = (
         # UID intentionally empty (trailing value),  no DTSTAMP.
         "UID:\n"

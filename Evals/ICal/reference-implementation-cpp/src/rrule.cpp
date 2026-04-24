@@ -659,6 +659,37 @@ std::vector<Occurrence> expand_events(
             // THISANDFUTURE: if base occurrence is at or after the TAF target,
             // emit the occurrence shifted by taf_shift_seconds.
             if (taf_override && compare_datetime(cmp, taf_override->target_utc) >= 0) {
+                // §7: THISANDFUTURE override with STATUS:CANCELLED cancels
+                // every occurrence from the anchor onward. Emit each at its
+                // ORIGINAL recurrence-time with cancelled=true rather than
+                // shifting (the override carried no live new dtstart, just
+                // a cancellation signal).
+                bool taf_cancelled = taf_override->event->status
+                    && *taf_override->event->status == "CANCELLED";
+                if (taf_cancelled) {
+                    bool is_anchor = compare_datetime(cmp, taf_override->target_utc) == 0;
+                    if (is_anchor) {
+                        if (uid_overrides_ptr) {
+                            for (auto& ov : *uid_overrides_ptr) {
+                                if (ov.range == "THISANDFUTURE"
+                                    && compare_datetime(ov.target_utc, taf_override->target_utc) == 0) {
+                                    ov.consumed = true;
+                                    break;
+                                }
+                            }
+                        }
+                        emit_override(dt, iso_format(taf_override->target_utc),
+                                      taf_override->range, true);
+                    } else {
+                        Occurrence occ = make_occurrence(ev.uid, dt, true, *ev.dtstart, cal, warnings);
+                        occ.range = taf_override->range;
+                        occ.cancelled = true;
+                        if (compare(occ.dtstart, from) >= 0 && compare(occ.dtstart, to) < 0) {
+                            result.push_back(std::move(occ));
+                        }
+                    }
+                    continue;
+                }
                 DateTime shifted = add_seconds(cmp, taf_shift_seconds);
                 // Attach tz of the override for reporting.
                 if (taf_override->event->dtstart && taf_override->event->dtstart->tzid) {

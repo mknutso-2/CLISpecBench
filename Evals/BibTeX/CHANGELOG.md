@@ -1,5 +1,55 @@
 # BibTeX Eval Changelog
 
+## v1.2.0 — 2026-04-24
+
+Eval-authoring rule-3 hardening from a 136-failure classification
+review across Opus 4.7 max and gpt-5.5 xhigh runs.
+
+**Cascade fix — end-of-run output flush** (test helpers in
+`test_bst_language.py`, `test_bst_parser_edges.py`,
+`test_builtins_deep.py`, `test_builtins_exhaustive.py`,
+`test_library_divergence.py`):
+
+- BST test bodies that ended on bare `write$` were silently
+  losing output on impls that only flushed on `newline$`. One
+  forgotten flush cascaded across ~195 tests. Helpers now
+  auto-append `newline$` to bodies ending on bare `write$`,
+  localizing the bug to a single new gate test
+  `test_bare_write_flushes_at_end_of_run` in `test_output_buffer.py`.
+
+**Test probe stability** (`tests/conftest.py`):
+
+- Rewrote `PROBE_STYLE_NAMES` to avoid stack-underflow caused by
+  `" " *` after each `write$`. The new probe uses one-value-per-
+  write$ (no stray `*`), unblocking all 15 `test_names.py` tests
+  on conforming impls.
+- `parse_name_dump` now folds tie `~` to ASCII space per §2.6
+  (both forms are conforming output of `format.name$`); test
+  assertions over multi-token name parts no longer pin one of
+  two equally-valid forms.
+
+**Spec clarifications** (`prompt/docs/summary.md`):
+
+- §2.6 **`format.name$` inter-token separator** documents
+  bibtex.web §10270's deterministic rule and explicitly grants
+  implementations the simpler "always emit ASCII space" option.
+  Both interpretations pass the tests.
+- §3.6 **Output buffer** invariants pinned: `write$` content is
+  preserved verbatim on short (unwrapped) lines including
+  trailing whitespace; pending content MUST flush at process exit.
+- §5.2 **Log schema** field semantics defined per-key
+  (`entries_read = cited-and-parsed`, NOT bib-total;
+  `iterations` counts ITERATE commands not entries-iterated;
+  etc.) — previously under-specified and ambiguous.
+
+**Test independence**:
+
+- `test_form1_all_lowercase_absorbs_into_last`,
+  `test_name_tied_tokens_preserved_as_separate`, and 7 others in
+  `test_name_grammar_exhaustive.py` now route multi-token
+  comparisons through `_normalize_separator` to encode the §2.6
+  acceptance band uniformly.
+
 ## v1.1.0 — 2026-04-23
 
 Test-surface expansion per `PLAN.md`, adding 111 new tests

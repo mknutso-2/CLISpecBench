@@ -84,8 +84,10 @@ CHANGELOG.md
    During `expand`, resolve `TZID=X` DATE-TIMEs to UTC by walking
    the observances and applying the appropriate TZOFFSETTO.
 5. **Overrides** — `RECURRENCE-ID` events replace matching base
-   instances; `STATUS:CANCELLED` overrides remove instances.
-   Occurrences carry an `override` boolean.
+   instances; `STATUS:CANCELLED` overrides keep the occurrence in
+   the array but mark it `cancelled: true` so consumers can
+   observe the cancellation explicitly. Occurrences carry an
+   `override` boolean and a `cancelled` boolean.
 6. **EXDATE / EXRULE / RDATE** — additive and subtractive
    modifiers applied correctly.
 

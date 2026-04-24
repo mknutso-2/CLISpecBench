@@ -279,7 +279,15 @@ parse_dump = parse_field_dump
 
 
 def parse_name_dump(bbl: str) -> list[dict[str, Any]]:
-    """Parse output of PROBE_STYLE_NAMES."""
+    """Parse output of PROBE_STYLE_NAMES.
+
+    Inter-token separators in name parts (tie ``~`` vs ASCII space)
+    are folded to a single ASCII space per summary.md §2.6 — both
+    forms are conforming output of ``format.name$``, and pinning one
+    over the other would over-strict the contract. Tests that need
+    to observe the source-preserved tie should use a different probe
+    that doesn't go through ``format.name$``.
+    """
     entries: list[dict[str, Any]] = []
     cur_key: str | None = None
     cur_names: list[dict[str, str]] = []
@@ -310,6 +318,9 @@ def parse_name_dump(bbl: str) -> list[dict[str, Any]]:
                             if o_idx < next_idx:
                                 next_idx = o_idx
                     val = buf[len(label) : next_idx].rstrip()
+                    # §2.6: normalize tie to space so tests don't pin
+                    # one of two conforming forms.
+                    val = val.replace("~", " ")
                     parts[label[:-1]] = val
                     buf = buf[next_idx:]
             cur_names.append(parts)

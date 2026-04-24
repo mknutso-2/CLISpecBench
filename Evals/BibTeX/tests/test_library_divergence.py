@@ -72,7 +72,9 @@ def test_name_tied_tokens_preserved_as_separate(
 ) -> None:
     # Tie character ~ separates tokens for the grammar. "John~Paul Smith"
     # tokenizes as ["John", "Paul", "Smith"]. Form 1 with no lowercase:
-    # First = "John Paul", Last = "Smith".
+    # First includes both John and Paul, Last = "Smith".
+    # The inter-token separator may be tie or space per §2.6; this
+    # test normalizes ties to spaces before comparison.
     bib = '@article{a, author = "John~Paul Smith"}\n'
     style = """\
 ENTRY { author } { } { }
@@ -83,7 +85,7 @@ READ
 ITERATE {f}
 """
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
-    assert bbl.strip() == "John Paul/Smith"
+    assert bbl.strip().replace("~", " ") == "John Paul/Smith"
 
 
 def test_num_names_treats_brace_group_and_as_literal(
