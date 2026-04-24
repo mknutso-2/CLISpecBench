@@ -1,5 +1,88 @@
 # ICal Eval Changelog
 
+## v1.2.0 — 2026-04-24
+
+Completes PLAN.md — all remaining priorities landed. Adds 68 new
+tests (342 → 410) and three new authoritative RFCs.
+
+New authoritative RFCs under `prompt/docs/authoritative/`:
+
+  * `rfc7953.txt` — *Calendar Availability* (August 2016, 47 KB)
+  * `rfc9073.txt` — *Event Publishing Extensions to iCalendar*
+    (August 2021, 58 KB)
+  * `rfc9253.txt` — *Support for iCalendar Relationships*
+    (August 2022, 38 KB)
+
+Test-surface additions:
+
+  * **B13 — Error line/column precision** (+9 tests,
+    `test_error_precision.py`). Error JSON carries 1-indexed
+    positive line/column; non-fatal conditions warn without
+    hard-failing; warnings include uid when applicable.
+
+  * **B11 — 75-octet folding edges** (+5 tests,
+    `test_folding_edges.py`). `line_too_long` warning emitted on
+    unfolded >75-octet lines; exactly 75-octet and properly-folded
+    long lines do not warn; TEXT escapes preserved across folds;
+    multi-byte UTF-8 chars intact across fold boundaries. Parser
+    extended with LineRecord.was_folded tracking.
+
+  * **B14 — Stress + regression** (+10 tests, `test_stress.py`).
+    500-event calendar parses; RRULE COUNT=1000 expands correctly;
+    HOURLY bounded by window; 20-deep override chain resolves;
+    mid-file malformed entry preserves surrounding events; 50
+    VALARMs on one event; YEARLY+BYMONTHDAY across a decade; UNTIL
+    at window boundary inclusive; empty window → no occurrences;
+    mixed UTC/floating/zoned coexist.
+
+  * **B12 — Real-world calendar corpus** (+10 tests + 3 fixtures,
+    `test_real_world_corpora.py` + `calendars/`). Gmail-style,
+    Outlook-style, and iTIP REQUEST .ics exercise full feature
+    stack: VTIMEZONE, RRULE, full attendee grammar, VALARM,
+    quoted TZID params, X-MICROSOFT extensions.
+
+  * **A4+B9 — RFC 9253 iCalendar Relationships** (+8 tests,
+    `test_rfc9253_relationships.py`). LINK with LINKREL, GAP
+    parameter on RELATED-TO, expanded RELTYPE values
+    (FINISHTOSTART, FINISHTOFINISH, DEPENDS-ON, etc.),
+    STRUCTURED-CATEGORIES, CONCEPT, REFID preserved in
+    raw_properties.
+
+  * **A2+B7 — RFC 7953 VAVAILABILITY** (+12 tests,
+    `test_vavailability.py`). Full typed VAvailability +
+    AVAILABLE sub-components; BUSYTYPE values; PRIORITY;
+    ORGANIZER; RRULE on AVAILABLE; multiple VAVAILABILITY per
+    calendar; empty availabilities key always present.
+
+  * **A3+B8 — RFC 9073 Event Publishing Extensions** (+14 tests,
+    `test_rfc9073_event_publishing.py`). STRUCTURED-DATA (URI,
+    inline TEXT, binary BASE64); STYLED-DESCRIPTION (HTML,
+    markdown, multi-language); LOCATION-TYPE parameter;
+    PARTICIPANT / VLOCATION / VRESOURCE sub-components don't
+    crash the parser; CALENDAR-ADDRESS preserved.
+
+Reference implementation additions:
+
+  * `ical.hpp`: new `Available` + `VAvailability` structs;
+    `Calendar.availabilities` vector.
+  * `parser.cpp`: new VAVAILABILITY / AVAILABLE component handling
+    with typed property dispatch; `skip_depth` counter prevents
+    unknown sub-components (PARTICIPANT / VLOCATION / VRESOURCE)
+    from clobbering parent component UID and other fields;
+    `line_too_long` warning on unfolded >75-octet lines;
+    `LineRecord.was_folded` flag plumbed through unfold.
+  * `json_writer.cpp`: emits `availabilities` top-level array.
+
+Test contract changes:
+
+  * `test_schema.py:test_parse_top_level_keys` is now a SUPERSET
+    check (required keys present) rather than exact match.
+    Implementations MAY emit additional keys for RFC extensions
+    (e.g. `availabilities`).
+
+PLAN.md complete: 14 / 14 priorities landed. Full ICal suite is
+**410 tests**, all passing. Ruff + pyright strict-mode clean.
+
 ## v1.1.0 — 2026-04-24
 
 Test-surface expansion per `PLAN.md` Parts B1-B10 (B7-B9 and B11-B14
