@@ -96,3 +96,34 @@ def test_byhour_supported_v02(submission_command: tuple[str, ...], tmp_path: Pat
     out = run_parse(submission_command, ics, tmp_path)
     kinds = [w.get("kind") for w in warnings_of(out)]
     assert "unsupported_rrule_part" not in kinds
+
+
+def test_rrule_count_and_until_mutually_exclusive(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5545 §3.3.10: UNTIL and COUNT MUST NOT occur in the same
+    'recur' part. When an RRULE carries both, the parser emits a
+    `malformed_value` warning. We parse both keys so the raw RRULE
+    round-trips in the JSON (downstream tooling can inspect the
+    invalid state); the warning signals the violation."""
+    ics = wrap_event(
+        "UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\n"
+        "RRULE:FREQ=DAILY;COUNT=5;UNTIL=20260401T000000Z\n"
+    )
+    out = run_parse(submission_command, ics, tmp_path)
+    kinds = [w.get("kind") for w in warnings_of(out)]
+    assert "malformed_value" in kinds
+
+
+def test_rrule_count_without_until_does_not_warn(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Complement: COUNT alone (or UNTIL alone) is legal. Guards
+    against an over-eager impl that warns on any COUNT presence."""
+    ics = wrap_event(
+        "UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\n"
+        "RRULE:FREQ=DAILY;COUNT=5\n"
+    )
+    out = run_parse(submission_command, ics, tmp_path)
+    kinds = [w.get("kind") for w in warnings_of(out)]
+    assert "malformed_value" not in kinds

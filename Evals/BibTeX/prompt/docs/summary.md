@@ -524,6 +524,19 @@ protection) MUST compare equal under `width$` for the same
 implementation; `width$` comparisons used for sort keys are
 meaningful to two-decimal-point ordering.
 
+**Reference-style parity caveat.** `alpha.bst` uses `width$` to pick
+the widest entry label for the `\begin{thebibliography}{longest}`
+line in the `.bbl` output, so the `width$` implementation choice
+actually changes which label string gets embedded. The parity
+fixtures in `tests/fixtures/` were regenerated against BibTeX 0.99c
+(cmr10-exact); an implementation that uses the §8.1 approximation
+table will emit a different `longest-label` argument and fail
+byte-exact parity on the `alpha.*.expected.bbl` fixtures even
+though the deep `width$` unit tests pass. Put differently:
+passing both the deep unit tests AND the `alpha` parity tests
+requires cmr10-exact values in `width$`. Submissions that only aim
+for the deep-unit-tests subset may use the approximation freely.
+
 ### 8.2 `change.case$` and LaTeX accent handling
 
 `change.case$` respects brace-protection: characters inside balanced
@@ -535,15 +548,70 @@ Implementations MAY preserve entire brace groups verbatim regardless
 of whether they begin with `\`. Tests will not assert on the deep
 LaTeX-accent case.
 
+**Title-mode (`t`) capitalization rules.** In `t` mode, BibTeX
+preserves (does not lowercase) the first letter of the string AND
+the first letter immediately following each of these sentinels:
+`:`, `?`, `!`, `.` when followed by at least one whitespace
+character. All other letters outside brace-protected groups are
+lowercased. Example: `"A Thing: Another Thing"` → `"A thing:
+Another thing"`. This rule covers the RFC-standard "capitalize
+after sentence punctuation" case that bibtex.web implements; other
+punctuation (comma, semicolon) does NOT trigger preservation.
+
 ### 8.3 `purify$`
 
 `purify$` strips non-alphanumeric characters and collapses spaces.
-Inside a brace group that begins with `\` (a LaTeX control
-sequence), the leading `\<command-name>` is dropped and the
-interior is `purify$`-ed recursively. Inside a plain brace group,
-the interior is `purify$`-ed recursively as if unbraced. These
-simplifications match the common-case BibTeX output on textual
-input and omit control-sequence-argument edge cases.
+Non-alphanumeric characters are either dropped outright or
+converted to a single ASCII space:
+
+- Dropped outright: ASCII punctuation (`.`, `,`, `;`, `!`, `?`,
+  `(`, `)`, `[`, `]`, `{`, `}`, `"`, `'`, `` ` ``, etc.).
+- Converted to a single space: inter-word separators that carry
+  visual spacing meaning in the typeset form. `-` (hyphen) and
+  `~` (non-breaking space tie) are the two sentinel characters
+  the historic BibTeX converts to spaces per `bibtex.web §10602`.
+  The test suite pins these two.
+
+Brace group handling:
+
+- Inside a brace group that begins with `\<name>` (a LaTeX control
+  sequence with no argument), BibTeX recognizes a small set of
+  "special character" control sequences and restores them as ASCII
+  letter sequences (`bibtex.web §10602`). The set is:
+
+  | Control seq | Restored as |
+  |-------------|-------------|
+  | `\AE`       | `AE`        |
+  | `\ae`       | `ae`        |
+  | `\OE`       | `OE`        |
+  | `\oe`       | `oe`        |
+  | `\AA`       | `AA`        |
+  | `\aa`       | `aa`        |
+  | `\O`        | `O`         |
+  | `\o`        | `o`         |
+  | `\L`        | `L`         |
+  | `\l`        | `l`         |
+  | `\ss`       | `ss`        |
+  | `\i`        | `i`         |
+  | `\j`        | `j`         |
+
+  Behavior for control sequences NOT in the table above
+  (e.g. `{\foo}`) is not pinned by this spec — bibtex.web has
+  intricate rules for single-letter vs multi-letter CS parsing
+  that tests do not exercise.
+
+- Inside a brace group that begins with `\<name>` followed by its
+  own brace-delimited argument (e.g. `{\"o}` for ö), the leading
+  `\<name>` is dropped and the interior is `purify$`-ed
+  recursively — so `{\"o}` yields `"o"` (just the letter inside
+  the accent's argument).
+- Inside a plain brace group (no leading `\`), the interior is
+  `purify$`-ed recursively as if unbraced. The braces themselves
+  contribute nothing.
+
+These rules match the historic BibTeX 0.99c behavior on the
+`btxhak`-documented inputs and are what the parity fixtures
+were generated against.
 
 ### 8.4 `text.length$`
 

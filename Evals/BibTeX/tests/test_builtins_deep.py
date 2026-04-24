@@ -625,33 +625,42 @@ def test_purify_tilde_becomes_space(
     assert bbl.rstrip("\n") == "a b"
 
 
-def test_purify_preserves_ae_ligature_letters(
+def test_purify_ae_ligature_restored_as_letters(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    r"""Per bibtex.web §10602, the AE ligature inside {\AE} restores 'AE' in purify$."""
+    r"""summary.md §8.3 ligature table: `\AE` → "AE". The brace group
+    `{\AE}` contributes the two letters "AE" to the purified output,
+    not an empty string and not the control-sequence literal."""
     bbl, _ = _exec(
         submission_command,
         tmp_path,
         r'"{\AE}ther" purify$ write$',
     )
     out = bbl.rstrip("\n")
-    # Implementations differ on exact casing, but AE (or ae) must appear.
-    assert "AE" in out or "ae" in out
-    assert "ther" in out
+    assert out == "AEther", f"expected 'AEther' per ligature table; got {out!r}"
+
+
 
 
 def test_purify_brace_group_with_only_punct_is_stripped(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A brace group containing only non-alphanumeric chars is stripped to empty."""
+    """summary.md §8.3: a plain brace group is purified recursively
+    as if unbraced. `{!@#}` has only non-alphanumeric chars so its
+    interior purifies to empty; the surrounding `abc` and `def`
+    concatenate directly. The brace characters themselves MUST NOT
+    appear in the output either."""
     bbl, _ = _exec(
         submission_command,
         tmp_path,
         '"abc{!@#}def" purify$ write$',
     )
     out = bbl.rstrip("\n")
-    assert "!" not in out and "@" not in out and "#" not in out
-    assert "abc" in out and "def" in out
+    # Pin the exact output: no punctuation, no braces, just "abcdef".
+    assert out == "abcdef", (
+        f"expected 'abcdef' (recursive purify strips interior and "
+        f"unwraps braces); got {out!r}"
+    )
 
 
 def test_purify_is_idempotent(

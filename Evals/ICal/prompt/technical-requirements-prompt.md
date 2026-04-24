@@ -204,8 +204,12 @@ VTODO/VJOURNAL/VFREEBUSY objects carry the common base (`uid`,
   strings), `attachments`, `rrule`, `rdate`, `exdate`,
   `recurrence_id`.
 - **VFREEBUSY** adds `dtstart`, `dtend`, `freebusy` (array of
-  `{"fbtype": "string | null", "periods": [<period>, ...]}`),
-  `related_to`.
+  `{"fbtype": "string", "periods": [<period>, ...]}`),
+  `related_to`. When `FBTYPE` is absent on a `FREEBUSY` property,
+  the emitted `fbtype` is the literal string `"BUSY"` — the
+  RFC 5545 §3.2.9 default is materialized in the JSON rather than
+  surfaced as `null`, so consumers can dispatch on the string
+  without extra null-handling.
 
 ## VTIMEZONE object schema
 
@@ -263,7 +267,7 @@ Notes:
   "byweekno": [integer, ...] | null,
   "byyearday": [integer, ...] | null,
   "bymonthday": [integer, ...] | null,
-  "byday": [{"weekday": "MO..SU", "offset": integer | null}, ...] | null,
+  "byday": [{"weekday": "MO..SU", "ordinal": integer | null}, ...] | null,
   "byhour": [integer, ...] | null,
   "byminute": [integer, ...] | null,
   "bysecond": [integer, ...] | null,
@@ -429,6 +433,13 @@ On exit 1:
   "warnings": [...]
 }
 ```
+
+`error.line` and `error.column` are 1-based, positive integers
+pointing at the first character of the offending token whenever a
+position can meaningfully be computed. For errors where no content
+location exists (e.g. a missing `BEGIN:VCALENDAR` at end-of-input),
+both fields MAY be set to `1` as a defensible fallback — tests
+that check positivity accept any `line >= 1` and `column >= 1`.
 
 ## Exit codes
 

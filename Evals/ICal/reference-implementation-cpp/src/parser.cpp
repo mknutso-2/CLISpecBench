@@ -452,6 +452,17 @@ void apply_common_prop(VEvent& ev, const Property& p, Calendar& cal) {
     }
     else if (p.name == "RRULE") {
         ev.rrule = parse_rrule(p.value);
+        // RFC 5545 §3.3.10: UNTIL and COUNT MUST NOT occur in the same
+        // 'recur' part. We parse both (so the RRULE round-trips in the
+        // raw JSON) but surface a malformed_value warning and let the
+        // downstream expander apply whichever one fires first.
+        if (ev.rrule->count.has_value() && ev.rrule->until.has_value()) {
+            Warning w; w.kind = "malformed_value";
+            w.message = "RRULE MUST NOT combine COUNT and UNTIL (RFC 5545 §3.3.10)";
+            if (!ev.uid.empty()) w.uid = ev.uid;
+            w.value = std::string(p.value);
+            cal.warnings.push_back(std::move(w));
+        }
         // RFC 7529: emit rscale_unsupported when RSCALE is non-Gregorian, or
         // when SKIP is present (we only support SKIP=OMIT which is the default
         // Gregorian behavior).

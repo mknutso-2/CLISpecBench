@@ -82,10 +82,13 @@ ITERATE {f}
     assert bbl.strip() == "John Paul/Smith"
 
 
-def test_num_names_counts_and_in_quoted_string(
+def test_num_names_treats_brace_group_and_as_literal(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    # Multiple `and` separators plus one embedded in braces should yield 3.
+    """num.names$ counts top-level `and` separators but treats `and`
+    inside brace groups as part of a single name. Three top-level
+    `and`s would be 4 names; two top-level `and`s with a third `and`
+    inside `{Brown and Green}` yields 3 names."""
     bib = '@article{a, author = "Smith and Jones and {Brown and Green}"}\n'
     style = """\
 ENTRY { author } { } { }
