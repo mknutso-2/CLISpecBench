@@ -3,6 +3,10 @@ from __future__ import annotations
 import base64
 from typing import Any
 
+FT = b"\x1e"
+RT = b"\x1d"
+SF = b"\x1f"
+
 _SAMPLE_RECORD_B64 = (
     "MDAzMDRuYW0gYTIyMDAxMDkgYSA0NTAwMDAxMDAwNjAwMDAwMDA1MDAxNzAwMDA2MDA4MDA0MTAwMDIzMDQwMDAx"
     "MzAwMDY0MTAwMDAzMTAwMDc3MjQ1MDA1NTAwMTA4NjUwMDAzMTAwMTYzHjEyMzQ1HjIwMjYwNDIxMTIwMDAwLjAe"
@@ -77,6 +81,43 @@ def sample_record_cjk() -> dict[str, Any]:
     return record
 
 
+def encode_iso2709_record(record: dict[str, Any]) -> bytes:
+    field_payloads: list[bytes] = []
+    directory_entries: list[bytes] = []
+    field_start = 0
+
+    for field in record["control_fields"]:
+        payload = field["value"].encode("utf-8") + FT
+        field_payloads.append(payload)
+        directory_entries.append(
+            field["tag"].encode("ascii") + f"{len(payload):04d}{field_start:05d}".encode("ascii")
+        )
+        field_start += len(payload)
+
+    for field in record["data_fields"]:
+        body = bytearray()
+        body.extend(field["indicators"][0].encode("ascii"))
+        body.extend(field["indicators"][1].encode("ascii"))
+        for subfield in field["subfields"]:
+            body.extend(SF)
+            body.extend(subfield["code"].encode("ascii"))
+            body.extend(subfield["value"].encode("utf-8"))
+        body.extend(FT)
+        payload = bytes(body)
+        field_payloads.append(payload)
+        directory_entries.append(
+            field["tag"].encode("ascii") + f"{len(payload):04d}{field_start:05d}".encode("ascii")
+        )
+        field_start += len(payload)
+
+    directory = b"".join(directory_entries) + FT
+    base_address = 24 + len(directory)
+    body = directory + b"".join(field_payloads) + RT
+    record_length = 24 + len(body)
+    leader = _leader_for_transport(record["leader_template"], record_length, base_address)
+    return leader.encode("ascii") + body
+
+
 def encode_iso2709(record: dict[str, Any]) -> bytes:
     if record != sample_record():
         raise ValueError("encode_iso2709 only supports the canonical sample_record fixture")
@@ -111,16 +152,18 @@ def sample_marcxml(record: dict[str, Any] | None = None) -> str:
 
 def sample_marcxml_collection(record: dict[str, Any] | None = None) -> str:
     return (
-        '<collection xmlns="http://www.loc.gov/MARC21/slim">'
-        f"{sample_marcxml(record)}"
-        "</collection>"
+        f'<collection xmlns="http://www.loc.gov/MARC21/slim">{sample_marcxml(record)}</collection>'
     )
 
 
 def _xml_escape(text: str) -> str:
     return (
-        text.replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
-        .replace('"', "&quot;")
+        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
     )
+
+
+def _leader_for_transport(template: str, record_length: int, base_address: int) -> str:
+    leader = list(template)
+    leader[:5] = list(f"{record_length:05d}")
+    leader[12:17] = list(f"{base_address:05d}")
+    return "".join(leader)

@@ -6,20 +6,28 @@ from typing import Any, cast
 
 import pytest
 from marc21_spec_support import (
+    duplicate_nonrepeatable_field_record,
     fields_with_indicator_constraints,
     fields_with_nonrepeatable_subfields,
     fields_with_subfield_constraints,
     first_nonrepeatable_subfield_code,
     invalid_indicator_for,
     invalid_subfield_code_for,
+    nonrepeatable_control_field_cases,
+    nonrepeatable_data_field_cases,
     record_for_official_example,
     rule_compatible_example_text,
 )
+from marc21_support import encode_iso2709_record, sample_marcxml
 
-from conftest import run_marc21
+from conftest import b64, run_marc21
 
 _INDICATOR_CASES = fields_with_indicator_constraints()
 _INDICATOR_IDS = [tag for tag, _ in _INDICATOR_CASES]
+_NONREPEATABLE_CONTROL_CASES = nonrepeatable_control_field_cases()
+_NONREPEATABLE_CONTROL_IDS = [tag for tag, _ in _NONREPEATABLE_CONTROL_CASES]
+_NONREPEATABLE_DATA_CASES = nonrepeatable_data_field_cases()
+_NONREPEATABLE_DATA_IDS = [tag for tag, _ in _NONREPEATABLE_DATA_CASES]
 _SUBFIELD_CASES = fields_with_subfield_constraints()
 _SUBFIELD_IDS = [tag for tag, _ in _SUBFIELD_CASES]
 _NONREPEATABLE_CASES = fields_with_nonrepeatable_subfields()
@@ -101,3 +109,141 @@ def test_render_rejects_duplicate_nonrepeatable_subfields_from_official_rules(
     assert result.returncode == 1
     assert payload is not None
     assert payload["error"]["code"] == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_CONTROL_CASES,
+    ids=_NONREPEATABLE_CONTROL_IDS,
+)
+def test_render_rejects_duplicate_nonrepeatable_control_fields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del rule
+    record = duplicate_nonrepeatable_field_record(tag)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "render_iso2709", "record": record},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_DATA_CASES,
+    ids=_NONREPEATABLE_DATA_IDS,
+)
+def test_render_rejects_duplicate_nonrepeatable_data_fields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del rule
+    record = duplicate_nonrepeatable_field_record(tag)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "render_iso2709", "record": record},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_request"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_CONTROL_CASES,
+    ids=_NONREPEATABLE_CONTROL_IDS,
+)
+def test_inspect_marcxml_rejects_duplicate_nonrepeatable_control_fields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del rule
+    record = duplicate_nonrepeatable_field_record(tag)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_DATA_CASES,
+    ids=_NONREPEATABLE_DATA_IDS,
+)
+def test_inspect_marcxml_rejects_duplicate_nonrepeatable_data_fields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del rule
+    record = duplicate_nonrepeatable_field_record(tag)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_CONTROL_CASES,
+    ids=_NONREPEATABLE_CONTROL_IDS,
+)
+def test_inspect_rejects_duplicate_nonrepeatable_control_fields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del rule
+    record = duplicate_nonrepeatable_field_record(tag)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+@pytest.mark.parametrize(
+    ("tag", "rule"),
+    _NONREPEATABLE_DATA_CASES,
+    ids=_NONREPEATABLE_DATA_IDS,
+)
+def test_inspect_rejects_duplicate_nonrepeatable_data_fields_from_official_rules(
+    tag: str,
+    rule: dict[str, Any],
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del rule
+    record = duplicate_nonrepeatable_field_record(tag)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"

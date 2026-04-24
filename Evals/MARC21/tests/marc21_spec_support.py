@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
@@ -73,6 +74,26 @@ def fields_with_nonrepeatable_subfields() -> list[tuple[str, dict[str, Any]]]:
     ]
 
 
+def nonrepeatable_control_field_cases() -> list[tuple[str, dict[str, Any]]]:
+    rules = load_field_rules()
+    return [
+        (tag, rule)
+        for tag, rule in sorted(rules.items())
+        if tag <= "009" and rule.get("repeatable") is False and tag in load_field_examples()
+    ]
+
+
+def nonrepeatable_data_field_cases() -> list[tuple[str, dict[str, Any]]]:
+    rules = load_field_rules()
+    return [
+        (tag, rule)
+        for tag, rule in sorted(rules.items())
+        if tag > "009"
+        and rule.get("repeatable") is False
+        and try_rule_compatible_example_text(tag) is not None
+    ]
+
+
 def record_for_official_example(tag: str, example_text: str) -> dict[str, Any]:
     record: dict[str, Any] = {
         "leader_template": _LEADER_TEMPLATE,
@@ -83,6 +104,20 @@ def record_for_official_example(tag: str, example_text: str) -> dict[str, Any]:
         record["control_fields"].append({"tag": tag, "value": example_text})
         return record
     record["data_fields"].append(parse_data_field_example(tag, example_text))
+    return record
+
+
+def duplicate_nonrepeatable_field_record(tag: str) -> dict[str, Any]:
+    example_text = (
+        rule_compatible_example_text(tag) if tag > "009" else representative_example_text(tag)
+    )
+    record = record_for_official_example(tag, example_text)
+    if tag <= "009":
+        field = deepcopy(record["control_fields"][0])
+        record["control_fields"] = [field, deepcopy(field)]
+        return record
+    field = deepcopy(record["data_fields"][0])
+    record["data_fields"] = [field, deepcopy(field)]
     return record
 
 
@@ -116,9 +151,8 @@ def try_roundtrippable_example_text(tag: str) -> str | None:
     if tag <= "009":
         return rows[0]["text"]
     rule = load_field_rules().get(tag)
-    require_rule_match = (
-        isinstance(rule, dict)
-        and (_rule_has_unambiguous_indicators(rule) or _rule_has_unambiguous_subfields(rule))
+    require_rule_match = isinstance(rule, dict) and (
+        _rule_has_unambiguous_indicators(rule) or _rule_has_unambiguous_subfields(rule)
     )
     for row in rows:
         text = row["text"]
@@ -198,9 +232,7 @@ def _matches_rule(field: dict[str, Any], rule: dict[str, Any]) -> bool:
         normalize_indicator_char(value) for value in indicator2
     }:
         return False
-    allowed_subfields = {
-        entry["code"]: entry["repeatable"] for entry in rule.get("subfields", [])
-    }
+    allowed_subfields = {entry["code"]: entry["repeatable"] for entry in rule.get("subfields", [])}
     counts: dict[str, int] = {}
     if allowed_subfields:
         for subfield in field["subfields"]:

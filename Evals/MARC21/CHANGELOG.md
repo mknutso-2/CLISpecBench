@@ -1,5 +1,18 @@
 # Changelog
 
+## v2.5.0 — 2026-04-23
+
+- Reframed the eval as a full-corpus MARC 21 bibliographic task rather than an
+  "expanded profile" and clarified that the checked-in Library of Congress
+  corpus is the normative source for field semantics within the single-record
+  UTF-8 interchange contract.
+- Added corpus-wide repeatability coverage from the bundled MARC21 rule table
+  for nonrepeatable control and data fields across `render_iso2709`,
+  `inspect_marcxml`, and `inspect`.
+- Added a generic ISO 2709 test helper so official-rule validation cases can be
+  exercised through inspect-path fixtures without depending on the submission
+  under test.
+
 ## v2.4.4 — 2026-04-22
 
 - Moved the MARC21 artifact generator out of the agent-scored eval test suite

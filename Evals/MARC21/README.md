@@ -1,20 +1,22 @@
 # MARC21
 
-MARC 21 bibliographic expanded-profile eval for CLISpecBench.
+MARC 21 bibliographic full-corpus eval for CLISpecBench.
 
 This eval asks an agent to implement a parser, validator, ISO 2709 renderer,
-and MARCXML renderer for a broader MARC 21 bibliographic interchange profile.
+and MARCXML renderer for MARC 21 bibliographic records using the full checked-in
+official Library of Congress bibliographic corpus.
 
-The eval is intentionally narrower than full MARC 21. It focuses on:
+The transport contract remains concrete and deterministic. It focuses on:
 
 - single-record ISO 2709 inputs
 - single-record MARCXML inputs
 - UTF-8 / Unicode records only
 - leader and directory correctness
-- control fields (`001`-`009`)
-- data fields with exactly two indicators and explicit subfields
 - canonical JSON inspection output
 - MARCXML inspection and rendering from the canonical JSON record model
+- field, indicator, subfield, and repeatability validation derived from the
+  mirrored official bibliographic pages when those rules are unambiguous in the
+  public corpus
 
 The initial runnable eval is Python-only for the same reason as the other new
 batch evals: it keeps four new tasks runnable and agent-evaluable without
