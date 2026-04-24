@@ -104,7 +104,7 @@ Tests use `.get()`-based helpers (`find_event`, `warnings_of`,
 uv run pytest Evals/ICal/tests --language=cpp
 ```
 
-The reference implementation passes all **410** tests. Run from the
+The reference implementation passes all **465** tests. Run from the
 repository root.
 
 ## Task IDs
