@@ -621,13 +621,28 @@ void validate_itip(Calendar& cal) {
         cal.warnings.push_back(std::move(w));
     };
 
+    // Base-level iTIP requirements applied to EVERY method other than PUBLISH:
+    // RFC 5546 §3 requires UID, DTSTAMP, and SEQUENCE on the published object.
+    // UID is already mandatory under RFC 5545 and surfaced by parsing; we
+    // warn if it is empty. DTSTAMP and SEQUENCE are not structurally
+    // required by RFC 5545 but ARE required by RFC 5546 for any iTIP method.
+    auto check_base = [&](const VEvent& e) {
+        if (e.uid.empty()) emit("", "iTIP message requires UID");
+        if (!e.dtstamp) emit(e.uid, "iTIP message requires DTSTAMP");
+        if (!e.sequence) emit(e.uid, "iTIP message requires SEQUENCE");
+    };
+
     auto check_event = [&](const VEvent& e) {
         if (m == "PUBLISH") {
             // RFC 5546 §3.2.1: ORGANIZER is MAY, ATTENDEE MUST NOT appear.
-            // We emit a warning when ATTENDEE is present (violates MUST NOT).
             if (!e.attendees.empty()) emit(e.uid, "PUBLISH MUST NOT include ATTENDEE");
-        } else if (m == "REQUEST") {
+            return;
+        }
+        // All remaining methods are true iTIP messages.
+        check_base(e);
+        if (m == "REQUEST") {
             if (!e.organizer) emit(e.uid, "REQUEST requires ORGANIZER");
+            if (e.attendees.empty()) emit(e.uid, "REQUEST requires ATTENDEE");
         } else if (m == "REPLY") {
             if (!e.organizer) emit(e.uid, "REPLY requires ORGANIZER");
             if (e.attendees.empty()) {
@@ -641,6 +656,9 @@ void validate_itip(Calendar& cal) {
             }
         } else if (m == "CANCEL") {
             if (!e.organizer) emit(e.uid, "CANCEL requires ORGANIZER");
+            // RFC 5546 §3.2.5: the cancellation indication MAY be conveyed
+            // by the METHOD property alone; STATUS:CANCELLED is NOT
+            // mandatory. We do not warn on its absence.
         } else if (m == "ADD") {
             if (!e.organizer) emit(e.uid, "ADD requires ORGANIZER");
         } else if (m == "REFRESH") {
@@ -652,7 +670,6 @@ void validate_itip(Calendar& cal) {
         } else if (m == "DECLINECOUNTER") {
             if (!e.organizer) emit(e.uid, "DECLINECOUNTER requires ORGANIZER");
         }
-        // PUBLISH imposes no attendee-level iTIP requirement beyond the base.
     };
 
     for (const auto& e : cal.events) check_event(e);
@@ -790,6 +807,15 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
 
         if (p.name == "BEGIN") {
             std::string name = to_upper(p.value);
+            // If we are already inside an unsupported sub-component, treat any
+            // nested BEGIN as another unsupported level — do NOT open a
+            // known component inside garbage, because its parent is already
+            // dropped and the body would silently attach to the wrong scope.
+            if (skip_depth > 0) {
+                stack.push_back(name);
+                skip_depth++;
+                continue;
+            }
             if (name == "VCALENDAR") {
                 stack.push_back(name);
             } else if (stack.empty()) {
@@ -849,15 +875,13 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
                 return ParseError{ln.line_number, 1, "END:" + name + " without matching BEGIN"};
             }
             stack.pop_back();
-            // Did we just exit an unknown sub-component? Check whether this END
-            // is for one of the known component names; if not, decrement skip.
-            static const std::set<std::string> known_blocks = {
-                "VCALENDAR", "VEVENT", "VTODO", "VJOURNAL", "VFREEBUSY",
-                "VTIMEZONE", "STANDARD", "DAYLIGHT", "VALARM",
-                "VAVAILABILITY", "AVAILABLE"
-            };
-            if (known_blocks.count(name) == 0 && skip_depth > 0) {
+            // While we are inside an unsupported sub-component, every BEGIN is
+            // treated as another unsupported level (see BEGIN dispatch above).
+            // Mirror that here: every END decrements skip_depth until we
+            // unwind back to the known scope.
+            if (skip_depth > 0) {
                 skip_depth--;
+                continue;
             }
             if (name == "VALARM") {
                 in_valarm = false;
@@ -927,10 +951,31 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
             else if (p.name == "DURATION") cur_available.duration = p.value;
             else if (p.name == "SUMMARY") cur_available.summary = unescape_text(p.value);
             else if (p.name == "DESCRIPTION") cur_available.description = unescape_text(p.value);
+            else if (p.name == "LOCATION") cur_available.location = unescape_text(p.value);
+            else if (p.name == "CONTACT") cur_available.contact = unescape_text(p.value);
+            else if (p.name == "CREATED") {
+                if (auto dt = parse_ical_datetime(p.value); dt) cur_available.created = iso_format(*dt);
+            }
+            else if (p.name == "LAST-MODIFIED") {
+                if (auto dt = parse_ical_datetime(p.value); dt) cur_available.last_modified = iso_format(*dt);
+            }
+            else if (p.name == "RECURRENCE-ID") {
+                cur_available.recurrence_id = parse_dodt(p.value, p.params, cal.warnings, cur_available.uid);
+            }
+            else if (p.name == "CATEGORIES") {
+                for (const auto& c : split(p.value, ',')) {
+                    cur_available.categories.push_back(unescape_text(c));
+                }
+            }
+            else if (p.name == "COMMENT") cur_available.comment.push_back(unescape_text(p.value));
             else if (p.name == "RRULE") cur_available.rrule = parse_rrule(p.value);
             else if (p.name == "RDATE") {
                 auto ds = parse_rdate_list(p.value, p.params, cal.warnings, cur_available.uid);
                 for (auto& d : ds) cur_available.rdate.push_back(std::move(d));
+            }
+            else if (p.name == "EXDATE") {
+                auto ds = parse_date_list(p.value, p.params, cal.warnings, cur_available.uid);
+                for (auto& d : ds) cur_available.exdate.push_back(std::move(d));
             }
             continue;
         }

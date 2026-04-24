@@ -487,11 +487,32 @@ std::string emit_parse_json(const Calendar& cal) {
             o << ",\"duration\":"; if (av.duration) jstr(o, *av.duration); else o << "null";
             o << ",\"summary\":"; if (av.summary) jstr(o, *av.summary); else o << "null";
             o << ",\"description\":"; if (av.description) jstr(o, *av.description); else o << "null";
-            o << ",\"rrule\":"; if (av.rrule) emit_rrule(o, *av.rrule); else o << "null";
+            o << ",\"location\":"; if (av.location) jstr(o, *av.location); else o << "null";
+            o << ",\"contact\":"; if (av.contact) jstr(o, *av.contact); else o << "null";
+            o << ",\"created\":"; if (av.created) jstr(o, *av.created); else o << "null";
+            o << ",\"last_modified\":"; if (av.last_modified) jstr(o, *av.last_modified); else o << "null";
+            o << ",\"recurrence_id\":";
+            if (av.recurrence_id) emit_date_or_dt(o, *av.recurrence_id); else o << "null";
+            o << ",\"categories\":[";
+            for (std::size_t k = 0; k < av.categories.size(); ++k) {
+                if (k) o << ',';
+                jstr(o, av.categories[k]);
+            }
+            o << "],\"comment\":[";
+            for (std::size_t k = 0; k < av.comment.size(); ++k) {
+                if (k) o << ',';
+                jstr(o, av.comment[k]);
+            }
+            o << "],\"rrule\":"; if (av.rrule) emit_rrule(o, *av.rrule); else o << "null";
             o << ",\"rdate\":[";
             for (std::size_t k = 0; k < av.rdate.size(); ++k) {
                 if (k) o << ',';
                 emit_rdate_entry(o, av.rdate[k]);
+            }
+            o << "],\"exdate\":[";
+            for (std::size_t k = 0; k < av.exdate.size(); ++k) {
+                if (k) o << ',';
+                emit_date_or_dt(o, av.exdate[k]);
             }
             o << "],\"raw_properties\":"; emit_raw_properties(o, av.raw_properties);
             o << '}';

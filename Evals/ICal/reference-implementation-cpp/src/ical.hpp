@@ -260,8 +260,16 @@ struct Available {
     std::optional<std::string> duration;
     std::optional<std::string> summary;
     std::optional<std::string> description;
+    std::optional<std::string> location;
+    std::optional<std::string> contact;
+    std::optional<std::string> created;
+    std::optional<std::string> last_modified;
+    std::optional<DateOrDateTime> recurrence_id;
+    std::vector<std::string> categories;
+    std::vector<std::string> comment;
     std::optional<RRule> rrule;
     std::vector<RDateEntry> rdate;
+    std::vector<DateOrDateTime> exdate;
     std::vector<Property> raw_properties;
 };
 

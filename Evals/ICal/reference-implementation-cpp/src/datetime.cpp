@@ -369,55 +369,74 @@ std::string detect_tz_anomaly(
     }
     if (!tz) return "";
 
-    // Enumerate observance transitions whose local-time moment is near `local`.
-    // For each observance, compute the transition local moment in the year of `local`.
-    // We check both standard and daylight observances.
-
-    auto transition_in_year = [&](const Observance& obs, int year)
-        -> std::optional<DateTime> {
-        // Derive the transition DTSTART for this year.
-        DateTime t = obs.dtstart;
-        t.date.year = year;
-        if (!obs.rrule) return t;
-        const RRule& r = *obs.rrule;
-        // Apply BYMONTH / BYMONTHDAY / BYDAY adjustments for the given year.
-        if (!r.bymonth.empty()) t.date.month = r.bymonth[0];
-        if (!r.bymonthday.empty()) {
-            t.date.day = r.bymonthday[0];
-        } else if (!r.byday.empty() && r.byday[0].ordinal.has_value()) {
-            int y = t.date.year;
-            int m = t.date.month;
-            int target_ord = *r.byday[0].ordinal;
-            Weekday target_wd = r.byday[0].weekday;
-            int dim = days_in_month(y, m);
-            std::vector<int> matches;
-            for (int day = 1; day <= dim; ++day) {
-                if (weekday_of(Date{y, m, day}) == target_wd) matches.push_back(day);
-            }
-            int idx = target_ord > 0
-                ? target_ord - 1
-                : static_cast<int>(matches.size()) + target_ord;
-            if (idx >= 0 && idx < static_cast<int>(matches.size())) {
-                t.date.day = matches[idx];
-            }
+    // Enumerate every transition instant for the observance that falls near
+    // `local` (within a year on either side). Includes:
+    //   * DTSTART itself (if within range and RRULE absent or year matches)
+    //   * RRULE-expansions for local.year - 1, local.year, local.year + 1
+    //     (honoring UNTIL). BYMONTH / BYMONTHDAY / ordinal-BYDAY applied.
+    //   * RDATE entries (floating DATE-TIMEs).
+    //
+    // Returning one DateTime per generated transition means a zone with
+    // multiple rules (e.g., BYMONTHDAY-only vs. ordinal BYDAY) produces
+    // multiple candidate transitions per year, and RDATE-only observances
+    // produce their explicit transition instants.
+    auto compute_ordinal_day = [](int year, int month, int ordinal, Weekday wd) -> int {
+        int dim = days_in_month(year, month);
+        std::vector<int> matches;
+        for (int day = 1; day <= dim; ++day) {
+            if (weekday_of(Date{year, month, day}) == wd) matches.push_back(day);
         }
-        // Respect UNTIL.
-        if (r.until && compare_datetime(t, *r.until) > 0) return std::nullopt;
-        return t;
+        int idx = ordinal > 0 ? ordinal - 1 : static_cast<int>(matches.size()) + ordinal;
+        if (idx >= 0 && idx < static_cast<int>(matches.size())) {
+            return matches[idx];
+        }
+        return -1;
     };
 
-    auto check = [&](const Observance& obs) -> std::string {
-        auto tropt = transition_in_year(obs, local.date.year);
-        if (!tropt) return "";
-        DateTime t = *tropt;
+    auto transitions_for = [&](const Observance& obs) -> std::vector<DateTime> {
+        std::vector<DateTime> out;
+        if (!obs.rrule) {
+            out.push_back(obs.dtstart);
+        }
+        // RDATE entries.
+        for (const auto& rd : obs.rdate) {
+            if (rd.dt && rd.dt->datetime) {
+                out.push_back(*rd.dt->datetime);
+            } else if (rd.dt && rd.dt->date) {
+                out.push_back(DateTime{*rd.dt->date, 0, 0, 0, TimeKind::Floating, {}});
+            }
+        }
+        if (!obs.rrule) return out;
+        const RRule& r = *obs.rrule;
+        // Generate one transition per target year in [local.year - 1, +1]:
+        for (int dy = -1; dy <= 1; ++dy) {
+            int year = local.date.year + dy;
+            DateTime t = obs.dtstart;
+            t.date.year = year;
+            // Skip if year is before the observance's DTSTART year.
+            if (year < obs.dtstart.date.year) continue;
+            if (!r.bymonth.empty()) t.date.month = r.bymonth[0];
+            if (!r.bymonthday.empty()) {
+                t.date.day = r.bymonthday[0];
+            } else if (!r.byday.empty() && r.byday[0].ordinal.has_value()) {
+                int d = compute_ordinal_day(
+                    t.date.year, t.date.month, *r.byday[0].ordinal, r.byday[0].weekday
+                );
+                if (d > 0) t.date.day = d;
+            }
+            // Honor UNTIL.
+            if (r.until && compare_datetime(t, *r.until) > 0) continue;
+            out.push_back(t);
+        }
+        return out;
+    };
+
+    auto check_transition = [&](const Observance& obs, const DateTime& t) -> std::string {
         auto off_from = parse_utc_offset(obs.tzoffsetfrom);
         auto off_to = parse_utc_offset(obs.tzoffsetto);
         if (!off_from || !off_to) return "";
         long long delta = static_cast<long long>(*off_to) - static_cast<long long>(*off_from);
         if (delta == 0) return "";
-
-        // For fall-back: ambiguous window = [t + delta, t) in local time.
-        // For spring-forward: nonexistent window = (t, t + delta) in local.
         DateTime lo, hi;
         bool fold;
         if (delta < 0) {
@@ -429,7 +448,6 @@ std::string detect_tz_anomaly(
             hi = add_seconds(t, delta);
             fold = false;
         }
-        // Compare local to [lo, hi).
         if (compare_datetime(local, lo) >= 0 && compare_datetime(local, hi) < 0) {
             return fold ? "timezone_fold_ambiguous" : "nonexistent_local_time";
         }
@@ -437,12 +455,16 @@ std::string detect_tz_anomaly(
     };
 
     for (const auto& obs : tz->standard) {
-        auto k = check(obs);
-        if (!k.empty()) return k;
+        for (const auto& t : transitions_for(obs)) {
+            auto k = check_transition(obs, t);
+            if (!k.empty()) return k;
+        }
     }
     for (const auto& obs : tz->daylight) {
-        auto k = check(obs);
-        if (!k.empty()) return k;
+        for (const auto& t : transitions_for(obs)) {
+            auto k = check_transition(obs, t);
+            if (!k.empty()) return k;
+        }
     }
     return "";
 }

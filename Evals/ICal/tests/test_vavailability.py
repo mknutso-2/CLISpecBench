@@ -246,3 +246,112 @@ def test_availabilities_key_present_when_empty(
     out = run_parse(submission_command, HEAD + TAIL, tmp_path)
     availabilities = out.get("availabilities")
     assert availabilities == []
+
+
+# ---------------------------------------------------------------------------
+# AVAILABLE extended fields (RFC 7953 §3.2)
+# ---------------------------------------------------------------------------
+
+
+def test_available_with_location_and_contact(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
+        "BEGIN:AVAILABLE\n"
+        "UID:a1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260601T090000Z\nDTEND:20260601T170000Z\n"
+        "LOCATION:My Office\n"
+        "CONTACT:Jane Doe\\, jane@example.com\n"
+        "END:AVAILABLE\n"
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
+    assert av.get("location") == "My Office"
+    assert "Jane Doe" in cast(str, av.get("contact"))
+
+
+def test_available_with_created_and_last_modified(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
+        "BEGIN:AVAILABLE\n"
+        "UID:a1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260601T090000Z\nDTEND:20260601T170000Z\n"
+        "CREATED:20260101T080000Z\n"
+        "LAST-MODIFIED:20260501T090000Z\n"
+        "END:AVAILABLE\n"
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
+    assert "2026-01-01" in cast(str, av.get("created"))
+    assert "2026-05-01" in cast(str, av.get("last_modified"))
+
+
+def test_available_with_recurrence_id(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 7953 §3.2: RECURRENCE-ID is allowed on AVAILABLE to override a
+    specific instance of a recurring availability block."""
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
+        "BEGIN:AVAILABLE\n"
+        "UID:a1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260601T090000Z\nDTEND:20260601T170000Z\n"
+        "RECURRENCE-ID:20260601T090000Z\n"
+        "END:AVAILABLE\n"
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
+    assert av.get("recurrence_id") is not None
+
+
+def test_available_with_categories_and_comment(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
+        "BEGIN:AVAILABLE\n"
+        "UID:a1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260601T090000Z\nDTEND:20260601T170000Z\n"
+        "CATEGORIES:OFFICE-HOURS,CONSULTATION\n"
+        "COMMENT:In-person only\n"
+        "COMMENT:Bring your laptop\n"
+        "END:AVAILABLE\n"
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
+    cats = cast(list[Any], av.get("categories") or [])
+    assert "OFFICE-HOURS" in cats
+    assert "CONSULTATION" in cats
+    comments = cast(list[Any], av.get("comment") or [])
+    assert len(comments) == 2
+
+
+def test_available_with_exdate(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
+        "BEGIN:AVAILABLE\n"
+        "UID:a1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260601T090000Z\nDTEND:20260601T170000Z\n"
+        "RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR\n"
+        "EXDATE:20260703T090000Z\n"
+        "END:AVAILABLE\n"
+    )
+    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    vas = _availabilities(out)
+    av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
+    exdate = cast(list[Any], av.get("exdate") or [])
+    assert len(exdate) == 1

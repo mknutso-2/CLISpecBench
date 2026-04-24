@@ -333,12 +333,21 @@ The 37 built-in functions:
 ### 3.6 Output buffering and line breaking
 
 Real BibTeX automatically wraps output at ~79 characters by
-inserting a newline at a suitable space. For this eval the tool
-MUST replicate that behavior: when the accumulated "line so far"
-exceeds 79 characters and a whitespace is reachable, break at the
-latest whitespace <= 79 columns, output a line terminator (see §5.4
-for line-ending convention), and continue on a new line with a
-2-space leading indent.
+inserting a newline at a suitable space. Per `bibtex.web` §15, the
+algorithm has two phases:
+
+1. **Backward scan.** When the accumulated "line so far" exceeds 79
+   characters, search backward from column 79 to the minimum print
+   column (3) for a whitespace. If found, break at that whitespace,
+   output a line terminator (see §5.4 for line-ending convention),
+   and continue on a new line with a 2-space leading indent.
+
+2. **Forward-scan fallback.** If no whitespace exists in columns
+   [3, 79], keep accumulating characters past column 79 until the
+   FIRST whitespace is found, then break there with the same
+   2-space indented continuation. If no whitespace exists anywhere
+   in the logical line, emit it verbatim (no wrap possible; line
+   overflows 79 cols, which is allowed for single unbreakable tokens).
 
 Lines explicitly ended by `newline$` do not get the 2-space indent
 on the following content.

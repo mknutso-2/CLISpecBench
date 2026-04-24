@@ -96,15 +96,48 @@ def _log_warnings(log: dict[str, Any] | None) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def test_width_single_lowercase_letter_is_positive(
+def test_width_single_lowercase_letter_is_cmr10_value(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Single lowercase alpha has a specific positive cmr10 width."""
+    """Single lowercase 'a' is 500 in cmr10 (bibtex.web §13 char_width).
+
+    btxhak §4 allows conforming implementations to approximate the
+    cmr10 table. This test accepts either the exact bibtex.web value
+    (500) or the approximation documented in summary §8.1
+    (alphanumeric=500 too) — both agree for 'a'. Non-500 values
+    indicate an implementation using a different weighting scheme
+    (e.g., flat 1000 per char, or 1 per char) that would fail real
+    BibTeX .bbl parity, so we reject them outright.
+    """
     bbl, _ = _exec(submission_command, tmp_path, '"a" width$ int.to.str$ write$')
     value = int(bbl.strip())
-    assert value > 0
-    # cmr10 'a' is 500; but summary.md §8.1 approximates. Either way, >200.
-    assert value >= 200, f"'a' width unexpectedly small: {value}"
+    assert value == 500, f"width$ of 'a' expected cmr10 value 500; got {value}"
+
+
+def test_width_space_is_cmr10_value(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """ASCII space is 278 in cmr10; summary §8.1 approximates to 250.
+    We accept either but nothing else."""
+    bbl, _ = _exec(submission_command, tmp_path, '" " width$ int.to.str$ write$')
+    value = int(bbl.strip())
+    assert value in (278, 250), (
+        f"width$ of ' ' expected cmr10=278 or approximation=250; got {value}"
+    )
+
+
+def test_width_uppercase_letter_is_cmr10_value(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Uppercase 'M' is 917 in cmr10, wider than lowercase 'm' (833)."""
+    bbl_m, _ = _exec(submission_command, tmp_path, '"M" width$ int.to.str$ write$')
+    bbl_lower_m, _ = _exec(
+        submission_command, tmp_path, '"m" width$ int.to.str$ write$'
+    )
+    m = int(bbl_m.strip())
+    lm = int(bbl_lower_m.strip())
+    # Relative ordering: M is wider than lowercase m in cmr10.
+    assert m > lm, f"'M'={m} not > 'm'={lm}"
 
 
 def test_width_three_letters_sums(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -147,15 +180,24 @@ def test_width_space_less_than_letter(
     assert bbl.strip() == "1"
 
 
-def test_width_sort_stable_on_tie(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """Two keys with identical width sort stably by READ order."""
+def test_width_used_as_sort_key_breaks_ties_by_read_order(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Two authors whose names have identical width$ sort stably by READ
+    order. This actually exercises width$ as part of the sort key.
+
+    'abc' and 'cba' both have width$ = 500 + 556 + 500 = ... some fixed
+    value regardless of order (width$ is commutative across chars). So
+    their sort keys are identical and the READ order wins.
+    """
     bib = (
-        '@article{a, author = "Alpha"}\n'
-        '@article{b, author = "Beta"}\n'
+        '@article{a, author = "abc"}\n'
+        '@article{b, author = "cba"}\n'
     )
     style = (
         'ENTRY { author } { } { sort.key$ }\n'
-        'FUNCTION {presort} { author \'sort.key$ := }\n'
+        'FUNCTION {presort}\n'
+        '{ author width$ int.to.str$ \'sort.key$ := }\n'
         'FUNCTION {emit} { cite$ write$ newline$ }\n'
         'READ\n'
         'ITERATE {presort}\n'
@@ -163,7 +205,7 @@ def test_width_sort_stable_on_tie(submission_command: tuple[str, ...], tmp_path:
         'ITERATE {emit}\n'
     )
     bbl, _ = run_bibtex(submission_command, bib, style, ["a", "b"], tmp_path)
-    # "Alpha" sorts before "Beta", so a then b.
+    # Both entries' sort keys are "<width>" (same integer). READ order wins.
     assert bbl.split() == ["a", "b"]
 
 
@@ -288,21 +330,37 @@ def test_top_preserves_following_stack(
     assert "X" in bbl
 
 
-def test_stack_empties_stack(
+def test_stack_dumps_without_affecting_output(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """stack$ dumps and empties the stack (btxhak §4). A subsequent write$
-    on the empty stack should surface a bst_type_error warning (not crash)."""
-    _, log = _exec(
+    """stack$ writes its dump to the log/blg, not to the .bbl output.
+    The user's intended .bbl content must be unaffected by stack$.
+
+    After: `"A" write$ stack$ "B" write$`, the .bbl contains exactly
+    "AB" regardless of whether stack$ empties the stack (btxhak §4
+    describes stack$ as a diagnostic aid).
+    """
+    bbl, _ = _exec(
         submission_command,
         tmp_path,
-        '"ignored" stack$ write$',
-        with_log=True,
+        '"A" write$ stack$ "B" write$',
     )
-    # Either a type-error warning from write$-on-empty, or bbl is empty; we accept
-    # both interpretations of "stack$ empties" vs "stack$ is a dump no-op".
-    assert log is not None  # just ensure --log produced something
-    _ = _log_warnings(log)
+    assert bbl.replace("\n", "") == "AB", (
+        f"stack$ must not leak into .bbl; got {bbl!r}"
+    )
+
+
+def test_stack_preserves_post_execution_flow(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Execution continues after stack$; stack$ does not abort the
+    interpreter (btxhak §4 — diagnostic)."""
+    bbl, _ = _exec(
+        submission_command,
+        tmp_path,
+        'stack$ "continued" write$',
+    )
+    assert "continued" in bbl
 
 
 def test_top_after_write_still_writes(

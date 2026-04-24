@@ -113,12 +113,18 @@ Optional: `CALSCALE` (default GREGORIAN), `METHOD` (for iTIP).
 
 Output JSON organizes components as:
 
-- `calendar` — PRODID, VERSION, CALSCALE, METHOD.
+- `calendar` — PRODID, VERSION, CALSCALE, METHOD, plus the RFC
+  7986 calendar-level properties (NAME, DESCRIPTION,
+  REFRESH-INTERVAL, SOURCE, COLOR, URL, CATEGORIES, IMAGE,
+  CONFERENCE).
 - `events` — VEVENTs.
 - `todos` — VTODOs.
 - `journals` — VJOURNALs.
 - `freebusy` — VFREEBUSYs.
 - `timezones` — VTIMEZONE definitions (§5.3).
+- `availabilities` — VAVAILABILITY components (RFC 7953). See
+  `technical-requirements-prompt.md` for the `vavailability object`
+  and `available object` schemas.
 - `warnings` — structured warnings.
 
 ### 2.3 VEVENT
@@ -379,9 +385,12 @@ In the `parse` output, each VTIMEZONE appears in `timezones` as:
 ```json
 {
   "tzid": "string",
+  "last_modified": "ISO-8601 | null",
+  "tzurl": "string | null",
+  "comment": ["string", ...],
   "standard": [
     {
-      "dtstart": "ISO-8601 string",
+      "dtstart": "ISO-8601 string (floating)",
       "tzoffsetfrom": "±HH:MM",
       "tzoffsetto": "±HH:MM",
       "tzname": "string | null",
@@ -392,6 +401,11 @@ In the `parse` output, each VTIMEZONE appears in `timezones` as:
   "daylight": [ <same shape> ]
 }
 ```
+
+The VTIMEZONE-level `comment` array captures zero or more COMMENT
+properties at the VTIMEZONE level. Offsets are normalized to the
+colonized `±HH:MM` form on output; input may use the RFC-5545
+`±HHMM` form.
 
 ### 5.3 Zoned output convention
 
@@ -412,10 +426,22 @@ Floating occurrences emit no `tz` field.
 the file should be interpreted as a scheduling message. The tool:
 
 - Surfaces `METHOD` in the `calendar` object.
-- For `REQUEST` / `CANCEL` / `REPLY`, validates that each VEVENT has
-  the properties iTIP requires for that method (UID, DTSTAMP,
-  SEQUENCE; for CANCEL: STATUS=CANCELLED). Missing required
+- For every iTIP method other than `PUBLISH`, validates the
+  base-level properties RFC 5546 §3 requires on every iTIP
+  message: `UID`, `DTSTAMP`, and `SEQUENCE`. Missing required
   properties emit `itip_missing_property` warnings.
+- For each method, also validates the method-specific requirements
+  from RFC 5546 §3.2:
+    * `PUBLISH` — ATTENDEE MUST NOT appear (§3.2.1).
+    * `REQUEST` — requires ORGANIZER + ATTENDEE (§3.2.2).
+    * `REPLY` — requires ORGANIZER + ATTENDEE with PARTSTAT
+      (§3.2.3).
+    * `ADD` — requires ORGANIZER (§3.2.4).
+    * `CANCEL` — requires ORGANIZER (§3.2.5). STATUS:CANCELLED is
+      NOT required; the CANCEL METHOD itself conveys cancellation.
+    * `REFRESH` — requires ORGANIZER + ATTENDEE (§3.2.6).
+    * `COUNTER` — requires ORGANIZER + ATTENDEE (§3.2.7).
+    * `DECLINECOUNTER` — requires ORGANIZER (§3.2.8).
 - Does not implement any networking or mailbox delivery.
 
 ## 7. RECURRENCE-ID overrides

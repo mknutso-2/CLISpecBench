@@ -100,7 +100,7 @@ def test_add_with_organizer_ok(
 ) -> None:
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
-        "RECURRENCE-ID:20260305T100000Z\n"
+        "SEQUENCE:0\nRECURRENCE-ID:20260305T100000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _wrap("ADD", body), tmp_path)
@@ -140,7 +140,7 @@ def test_refresh_with_both_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
+        "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE:mailto:a@example.com\n"
     )
@@ -179,7 +179,8 @@ def test_counter_with_both_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T110000Z\n"
+        "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
+        "DTSTART:20260301T110000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE:mailto:a@example.com\n"
     )
@@ -207,7 +208,7 @@ def test_declinecounter_with_organizer_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
+        "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE:mailto:a@example.com\n"
     )
@@ -243,6 +244,63 @@ def test_method_value_canonicalization(
 # ---------------------------------------------------------------------------
 
 
+def test_itip_requires_sequence(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3: every iTIP message (other than PUBLISH) requires
+    SEQUENCE."""
+    body = (
+        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE;PARTSTAT=ACCEPTED:mailto:a@example.com\n"
+        # deliberately missing SEQUENCE
+    )
+    out = run_parse(submission_command, _wrap("REQUEST", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_itip_requires_dtstamp(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3: DTSTAMP is required on every iTIP message (other
+    than PUBLISH)."""
+    body = (
+        "UID:e1\nSEQUENCE:0\nDTSTART:20260301T100000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE;PARTSTAT=ACCEPTED:mailto:a@example.com\n"
+        # deliberately missing DTSTAMP
+    )
+    out = run_parse(submission_command, _wrap("REQUEST", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_request_requires_attendee(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.2.2: REQUEST requires at least one ATTENDEE."""
+    body = (
+        "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
+        "DTSTART:20260301T100000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # deliberately missing ATTENDEE
+    )
+    out = run_parse(submission_command, _wrap("REQUEST", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_publish_does_not_require_sequence(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """PUBLISH does NOT need SEQUENCE (RFC 5546 §3.2.1 relaxes)."""
+    body = (
+        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
+        "SUMMARY:Event\nORGANIZER:mailto:boss@example.com\n"
+        # no SEQUENCE, no ATTENDEE — valid PUBLISH
+    )
+    out = run_parse(submission_command, _wrap("PUBLISH", body), tmp_path)
+    assert "itip_missing_property" not in _warn_kinds(out)
+
+
 def test_itip_warning_per_event(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
@@ -251,12 +309,14 @@ def test_itip_warning_per_event(
         HEAD
         + "METHOD:REQUEST\n"
         + "BEGIN:VEVENT\n"
-        "UID:a\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
+        "UID:a\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
+        "DTSTART:20260301T100000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE;PARTSTAT=ACCEPTED:mailto:x@example.com\n"
         "END:VEVENT\n"
         + "BEGIN:VEVENT\n"
-        "UID:b\nDTSTAMP:20260101T120000Z\nDTSTART:20260302T100000Z\n"
+        "UID:b\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
+        "DTSTART:20260302T100000Z\n"
         # missing ORGANIZER on the second event
         "END:VEVENT\n"
         + TAIL

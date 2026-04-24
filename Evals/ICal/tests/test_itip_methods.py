@@ -71,6 +71,7 @@ _BASE = (
     "UID:e1\n"
     "DTSTAMP:20260420T120000Z\n"
     "DTSTART:20260305T100000Z\n"
+    "SEQUENCE:0\n"
     "SUMMARY:Sample\n"
 )
 
@@ -136,10 +137,12 @@ def test_request_missing_organizer_emits_itip_warning(
 def test_well_formed_request_emits_no_itip_warning(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A METHOD:REQUEST calendar with an ORGANIZER satisfies the iTIP
-    requirement, so no `itip_missing_property` warning should be
-    emitted."""
-    ics = _wrap_with_method("REQUEST", _BASE_WITH_ORGANIZER)
+    """A METHOD:REQUEST calendar with ORGANIZER + ATTENDEE + SEQUENCE
+    satisfies the iTIP requirements (RFC 5546 §3.2.2 + §3), so no
+    `itip_missing_property` warning should be emitted."""
+    ics = _wrap_with_method(
+        "REQUEST", _BASE_WITH_ORGANIZER_AND_ATTENDEE_PARTSTAT
+    )
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
 

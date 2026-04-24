@@ -37,9 +37,13 @@ UTC date-times. `--from` is inclusive; `--to` is exclusive.
   "journals": [<vjournal object>, ...],
   "freebusy": [<vfreebusy object>, ...],
   "timezones": [<vtimezone object>, ...],
+  "availabilities": [<vavailability object>, ...],
   "warnings": [<warning object>, ...]
 }
 ```
+
+Where `availabilities` is the array of RFC 7953 VAVAILABILITY
+components parsed from the input (empty list when none are present).
 
 ### `expand` output
 
@@ -203,6 +207,7 @@ VTODO/VJOURNAL/VFREEBUSY objects carry the common base (`uid`,
   "tzid": "string",
   "last_modified": "ISO-8601 | null",
   "tzurl": "string | null",
+  "comment": ["string", ...],
   "standard": [<observance object>, ...],
   "daylight": [<observance object>, ...]
 }
@@ -213,19 +218,30 @@ Where each observance object:
 ```json
 {
   "dtstart": "ISO-8601 string (floating)",
-  "tzoffsetfrom": "±HHMM or ±HHMMSS",
-  "tzoffsetto": "±HHMM or ±HHMMSS",
-  "tzname": ["string", ...],
+  "tzoffsetfrom": "±HH:MM",
+  "tzoffsetto": "±HH:MM",
+  "tzname": "string | null",
   "rrule": <rrule object | null>,
-  "rdate": ["ISO-8601", ...],
-  "comment": ["string", ...]
+  "rdate": ["ISO-8601", ...]
 }
 ```
 
-VTIMEZONE may contain multiple STANDARD and/or multiple DAYLIGHT
-observances to model historical rule changes (each observance is
-active from its DTSTART forward until superseded by the next
-observance's DTSTART — per RFC 5545 §3.6.5).
+Notes:
+
+- `tzoffsetfrom` / `tzoffsetto` are emitted in the colonized form
+  (`+HH:MM` / `-HH:MM`); the input RFC 5545 form (`±HHMM`) is
+  normalized on read.
+- `tzname` is a scalar string, not an array. An observance with no
+  TZNAME emits null.
+- VTIMEZONE-level `comment` (top-level, not inside an observance) is
+  an array of strings. Observance-level COMMENT is surfaced in each
+  observance's raw_properties when carried in `raw_properties` is
+  supported by the impl; this schema does not expose it as a typed
+  field on the observance.
+- VTIMEZONE may contain multiple STANDARD and/or multiple DAYLIGHT
+  observances to model historical rule changes (each observance is
+  active from its DTSTART forward until superseded by the next
+  observance's DTSTART — per RFC 5545 §3.6.5).
 
 ## RRULE object schema
 
@@ -263,6 +279,56 @@ observance's DTSTART — per RFC 5545 §3.6.5).
 - DURATION values → ISO-8601 duration strings (`PT1H30M`, `-P1D`,
   etc.).
 - UTC-OFFSET values → `±HHMM` or `±HHMMSS`.
+
+## VAVAILABILITY object schema (RFC 7953)
+
+A `vavailability object` carries publishing-grade availability
+windows:
+
+```json
+{
+  "uid": "string",
+  "dtstamp": "ISO-8601 | null",
+  "dtstart": "ISO-8601 | null",
+  "dtend": "ISO-8601 | null",
+  "duration": "ISO-8601 duration | null",
+  "summary": "string | null",
+  "description": "string | null",
+  "busytype": "BUSY | BUSY-UNAVAILABLE | BUSY-TENTATIVE | string | null",
+  "priority": "integer | null",
+  "organizer": <cal-address object | null>,
+  "available": [<available object>, ...],
+  "raw_properties": [...]
+}
+```
+
+An `available object` is the AVAILABLE sub-component (RFC 7953
+§3.2). The schema covers every AVAILABLE property RFC 7953 §3.2
+mentions. Any additional extension property appears in
+`raw_properties`:
+
+```json
+{
+  "uid": "string",
+  "dtstamp": "ISO-8601 | null",
+  "dtstart": "ISO-8601 | null",
+  "dtend": "ISO-8601 | null",
+  "duration": "ISO-8601 duration | null",
+  "summary": "string | null",
+  "description": "string | null",
+  "location": "string | null",
+  "contact": "string | null",
+  "created": "ISO-8601 | null",
+  "last_modified": "ISO-8601 | null",
+  "recurrence_id": "ISO-8601 | null",
+  "categories": ["string", ...],
+  "comment": ["string", ...],
+  "rrule": <rrule object | null>,
+  "rdate": [<rdate entry>, ...],
+  "exdate": ["ISO-8601", ...],
+  "raw_properties": [...]
+}
+```
 
 ## Warning schema
 
