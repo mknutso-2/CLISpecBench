@@ -294,6 +294,17 @@ void emit_event_common(std::ostringstream& o, const VEvent& e) {
         if (i) o << ',';
         emit_attach(o, e.attachments[i]);
     }
+    o << "],\"related_to\":[";
+    // RFC 5545 §3.8.4.5: RELATED-TO may appear on VEVENT/VTODO/VJOURNAL/
+    // VFREEBUSY. Shape matches VALARM's related_to: {value, reltype}.
+    for (std::size_t i = 0; i < e.related_to.size(); ++i) {
+        if (i) o << ',';
+        o << "{\"value\":"; jstr(o, e.related_to[i].value);
+        o << ",\"reltype\":";
+        if (e.related_to[i].reltype) jstr(o, *e.related_to[i].reltype);
+        else o << "null";
+        o << '}';
+    }
     o << "],\"color\":"; if (e.color) jstr(o, *e.color); else o << "null";
     o << ",\"images\":[";
     for (std::size_t i = 0; i < e.images.size(); ++i) {

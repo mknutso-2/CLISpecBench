@@ -391,8 +391,8 @@ In the `parse` output, each VTIMEZONE appears in `timezones` as:
   "standard": [
     {
       "dtstart": "ISO-8601 string (floating)",
-      "tzoffsetfrom": "±HH:MM",
-      "tzoffsetto": "±HH:MM",
+      "tzoffsetfrom": "±HH:MM or ±HH:MM:SS",
+      "tzoffsetto": "±HH:MM or ±HH:MM:SS",
       "tzname": "string | null",
       "rrule": <rrule object | null>,
       "rdate": [ "ISO-8601 string", ... ]
@@ -404,8 +404,10 @@ In the `parse` output, each VTIMEZONE appears in `timezones` as:
 
 The VTIMEZONE-level `comment` array captures zero or more COMMENT
 properties at the VTIMEZONE level. Offsets are normalized to the
-colonized `±HH:MM` form on output; input may use the RFC-5545
-`±HHMM` form.
+colonized form on output (`±HH:MM` by default, or `±HH:MM:SS` when
+the source value carried non-zero seconds — pre-1972 historical
+zones routinely do). Input may use the RFC-5545 on-wire form
+`±HHMM` / `±HHMMSS`.
 
 ### 5.3 Zoned output convention
 
@@ -428,14 +430,18 @@ can branch on presence without worrying about missing fields.
 the file should be interpreted as a scheduling message. The tool:
 
 - Surfaces `METHOD` in the `calendar` object.
-- For every iTIP method, validates the per-method property matrix
-  from the RFC 5546 §3.2.x tables. `UID` and `DTSTAMP` are "1"
-  (required) in every table including PUBLISH, so those are
-  enforced unconditionally. `SEQUENCE` is per-method:
+- Validates the per-method, **per-component** matrix from RFC 5546.
+  Each component type has its own constraint tables; validators run
+  the appropriate matrix based on the component the METHOD applies
+  to (VEVENT §3.2, VFREEBUSY §3.3, VTODO §3.4, VJOURNAL §3.5).
+  `UID` and `DTSTAMP` are "1" (required) in every table, enforced
+  universally.
+
+**VEVENT (§3.2.x) — all 8 methods defined:**
 
     | Method         | SEQUENCE row | Other required      | ATTENDEE     |
     |----------------|--------------|---------------------|--------------|
-    | PUBLISH        | 0 or 1 (opt) | —                   | MUST NOT     |
+    | PUBLISH        | 0 or 1 (opt) | ORGANIZER (§3.2.1)  | MUST NOT     |
     | REQUEST        | 0 or 1 (opt) | ORGANIZER           | 1+           |
     | REPLY          | 0 or 1 (opt) | ORGANIZER + PARTSTAT| 1            |
     | ADD            | 1 (MUST > 0) | ORGANIZER           | 0+           |
@@ -444,23 +450,37 @@ the file should be interpreted as a scheduling message. The tool:
     | COUNTER        | 1            | ORGANIZER           | 0+           |
     | DECLINECOUNTER | 1            | ORGANIZER           | 1+           |
 
-- Additional method-specific rules from RFC 5546 §3.2:
-    * `PUBLISH` — Attendees MUST NOT appear (§3.2.1 prose).
-    * `REPLY` — the ATTENDEE MUST carry a `PARTSTAT` parameter
-      communicating the response (§3.2.3).
-    * `ADD` — `SEQUENCE` MUST be greater than 0 (§3.2.4 table row).
-    * `CANCEL` — if `STATUS` is present, it MUST be `CANCELLED`.
-      `STATUS` may be omitted: the prose of §3.2.5 allows `METHOD`
-      alone to convey cancellation. A `CANCEL` with
-      `STATUS:TENTATIVE`/`CONFIRMED` is internally inconsistent and
-      warns.
-    * `REFRESH` — `SEQUENCE` "0" in the table is an explicit "MUST
-      NOT be present" per §3.2.6. Emitting SEQUENCE on a REFRESH
-      produces a warning.
-- Missing or inconsistent properties emit `itip_missing_property`
-  warnings (same warning kind for all violations; the `message`
-  field describes the specific rule).
-- Does not implement any networking or mailbox delivery.
+**VTODO (§3.4.x) — all 8 methods, matrix differs from VEVENT:**
+
+- PUBLISH explicitly requires ORGANIZER (§3.4.1 — VEVENT PUBLISH prose
+  also requires it; the table is unambiguous for VTODO).
+- COUNTER additionally requires `PRIORITY` (1) and `SUMMARY` (1) per
+  §3.4.7's expanded table. SEQUENCE is "0 or 1" on VTODO COUNTER
+  (optional) — different from VEVENT COUNTER's required "1".
+- REFRESH VTODO does NOT forbid SEQUENCE (§3.4.6 SEQUENCE row is
+  "0 or 1"), unlike VEVENT REFRESH.
+
+**VJOURNAL (§3.5.x) — ONLY PUBLISH / ADD / CANCEL:**
+
+- Any other METHOD on a VJOURNAL component is an RFC 5546 violation;
+  we emit `METHOD X not defined for VJOURNAL (RFC 5546 §3.5)`.
+- PUBLISH (§3.5.1): ORGANIZER 1, ATTENDEE 0.
+- ADD (§3.5.2): ORGANIZER 1, SEQUENCE 1 MUST > 0, ATTENDEE 0.
+- CANCEL (§3.5.3): ORGANIZER 1, SEQUENCE 1, STATUS (if present) must
+  be CANCELLED.
+
+**VFREEBUSY (§3.3.x) — ONLY PUBLISH / REQUEST / REPLY:**
+
+- All three methods require DTSTART, DTEND, ORGANIZER, DTSTAMP, UID.
+- PUBLISH (§3.3.1): ATTENDEE MUST NOT appear.
+- REQUEST (§3.3.2): ATTENDEE 1+.
+- REPLY (§3.3.3): ATTENDEE 1+.
+- Any other METHOD on VFREEBUSY is an RFC 5546 violation.
+
+Missing or inconsistent properties emit `itip_missing_property`
+warnings (same warning kind for all violations; the `message` field
+describes the specific rule). Does not implement any networking or
+mailbox delivery.
 
 ## 7. RECURRENCE-ID overrides
 

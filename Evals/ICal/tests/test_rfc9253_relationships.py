@@ -167,3 +167,61 @@ def test_refid_preserved(
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     assert "REFID" in _raw_names(ev)
+
+
+# ---------------------------------------------------------------------------
+# RELATED-TO as a typed field on VEVENT / VJOURNAL (RFC 5545 §3.8.4.5).
+# Codex iter 4 called out that the schema claimed a typed `related_to` on
+# journals but the impl only parsed RELATED-TO inside VALARM. These tests
+# pin the structured shape `{value, reltype}` — matching VALARM.
+# ---------------------------------------------------------------------------
+
+
+def test_event_related_to_surfaced_as_typed_field(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RELATED-TO on VEVENT MUST populate a typed `related_to` array
+    with the same `{value, reltype}` shape VALARM uses. The raw
+    property is also preserved but the typed view is what downstream
+    tooling relies on."""
+    ics = _event_with(
+        "RELATED-TO;RELTYPE=PARENT:parent-event-uid-123\n"
+        "RELATED-TO:sibling-uid-456\n"
+    )
+    out = run_parse(submission_command, ics, tmp_path)
+    ev = find_event(out, "e1")
+    rels = cast(list[dict[str, Any]], ev.get("related_to") or [])
+    assert len(rels) == 2, (
+        f"expected 2 RELATED-TO entries; got {rels!r}"
+    )
+    # First entry: explicit RELTYPE=PARENT.
+    assert rels[0].get("value") == "parent-event-uid-123"
+    assert rels[0].get("reltype") == "PARENT"
+    # Second entry: no RELTYPE → null (RFC 5545 default is PARENT
+    # semantically but we surface only the wire-present value).
+    assert rels[1].get("value") == "sibling-uid-456"
+    assert rels[1].get("reltype") is None
+
+
+def test_journal_related_to_surfaced_as_typed_field(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """VJOURNAL must also surface `related_to` as a typed array of
+    `{value, reltype}` objects — iter 4 flagged this as missing from
+    the parser (only VALARM had it)."""
+    ics = (
+        "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
+        "BEGIN:VJOURNAL\n"
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nSUMMARY:Retro notes\n"
+        "RELATED-TO;RELTYPE=CHILD:notes-page-2\n"
+        "END:VJOURNAL\n"
+        "END:VCALENDAR\n"
+    )
+    out = run_parse(submission_command, ics, tmp_path)
+    journals = cast(list[dict[str, Any]], out.get("journals") or [])
+    assert len(journals) == 1
+    rels = cast(list[dict[str, Any]], journals[0].get("related_to") or [])
+    assert len(rels) == 1
+    assert rels[0].get("value") == "notes-page-2"
+    assert rels[0].get("reltype") == "CHILD"

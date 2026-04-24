@@ -540,6 +540,17 @@ void apply_common_prop(VEvent& ev, const Property& p, Calendar& cal) {
         if (auto dt = parse_ical_datetime(p.value); dt) ev.last_modified = iso_format(*dt);
     }
     else if (p.name == "ATTACH") ev.attachments.push_back(parse_attach(p));
+    else if (p.name == "RELATED-TO") {              // RFC 5545 §3.8.4.5
+        // Surface RELATED-TO on VEVENT / VTODO / VJOURNAL / VFREEBUSY
+        // with the same {value, reltype} shape VALARM uses (§3.2.10.1).
+        // RFC 9253 GAP is captured via raw_properties — structured GAP
+        // surfacing is handled by the separate relationships test path.
+        RelatedTo r;
+        r.value = p.value;
+        auto rit = p.params.find("RELTYPE");
+        if (rit != p.params.end()) r.reltype = rit->second;
+        ev.related_to.push_back(std::move(r));
+    }
     // RFC 7986 on VEVENT:
     else if (p.name == "COLOR") ev.color = p.value;
     else if (p.name == "IMAGE") {
@@ -621,16 +632,15 @@ void validate_itip(Calendar& cal) {
         cal.warnings.push_back(std::move(w));
     };
 
-    // Per-method iTIP validation derived directly from the RFC 5546 §3.2
-    // constraint tables for VEVENT (we treat VTODO and VJOURNAL under the
-    // same matrix — the deep method semantics are event-oriented and
-    // journal/todo are validated against the same required skeleton).
+    // Per-method, per-component iTIP validation derived from the RFC 5546
+    // constraint tables. Each of §3.2 (VEVENT) / §3.3 (VFREEBUSY) /
+    // §3.4 (VTODO) / §3.5 (VJOURNAL) defines its own matrix. VJOURNAL and
+    // VFREEBUSY support a strict subset of methods; invoking any other
+    // method on them is an RFC violation and we warn.
     //
-    // UID and DTSTAMP are "1" (required) in every §3.2.x table including
-    // §3.2.1 PUBLISH, so we check those unconditionally. SEQUENCE varies
-    // per method and in REFRESH is explicitly "0" (MUST NOT be present).
-    auto check_event = [&](const VEvent& e) {
-        // Universal requirements (all §3.2.x tables).
+    // UID and DTSTAMP are "1" (required) in every table including PUBLISH.
+    auto check_vevent = [&](const VEvent& e) {
+        // VEVENT §3.2.x tables.
         if (e.uid.empty()) emit("", "iTIP message requires UID");
         if (!e.dtstamp) emit(e.uid, "iTIP message requires DTSTAMP");
 
@@ -689,9 +699,119 @@ void validate_itip(Calendar& cal) {
         }
     };
 
-    for (const auto& e : cal.events) check_event(e);
-    for (const auto& t : cal.todos) check_event(t);
-    for (const auto& j : cal.journals) check_event(j);
+    auto check_vtodo = [&](const VEvent& t) {
+        // VTODO §3.4.x tables. Shares most shape with VEVENT but:
+        //  - PUBLISH requires ORGANIZER (VEVENT PUBLISH doesn't)
+        //  - COUNTER requires PRIORITY (§3.4.7) and SUMMARY (§3.4.7)
+        //  - DUE replaces DTEND (we don't validate DUE/DTSTART/DURATION
+        //    pairing here; parse-time structural checks handle that).
+        if (t.uid.empty()) emit("", "iTIP message requires UID");
+        if (!t.dtstamp) emit(t.uid, "iTIP message requires DTSTAMP");
+
+        if (m == "PUBLISH") {
+            // §3.4.1: ORGANIZER 1, ATTENDEE 0.
+            if (!t.organizer) emit(t.uid, "PUBLISH VTODO requires ORGANIZER");
+            if (!t.attendees.empty()) emit(t.uid, "PUBLISH VTODO MUST NOT include ATTENDEE");
+        } else if (m == "REQUEST") {
+            // §3.4.2: ORGANIZER 1, ATTENDEE 1+, SEQUENCE 0 or 1.
+            if (!t.organizer) emit(t.uid, "REQUEST VTODO requires ORGANIZER");
+            if (t.attendees.empty()) emit(t.uid, "REQUEST VTODO requires ATTENDEE");
+        } else if (m == "REPLY") {
+            // §3.4.3: ORGANIZER 1, ATTENDEE 1+ with PARTSTAT.
+            if (!t.organizer) emit(t.uid, "REPLY VTODO requires ORGANIZER");
+            if (t.attendees.empty()) {
+                emit(t.uid, "REPLY VTODO requires ATTENDEE");
+            } else {
+                bool any_partstat = false;
+                for (const auto& a : t.attendees) {
+                    if (a.partstat) { any_partstat = true; break; }
+                }
+                if (!any_partstat) emit(t.uid, "REPLY VTODO attendee requires PARTSTAT");
+            }
+        } else if (m == "ADD") {
+            // §3.4.4: ORGANIZER 1, SEQUENCE 1 MUST > 0.
+            if (!t.organizer) emit(t.uid, "ADD VTODO requires ORGANIZER");
+            if (!t.sequence) emit(t.uid, "ADD VTODO requires SEQUENCE");
+            else if (*t.sequence == 0) emit(t.uid, "ADD VTODO requires SEQUENCE greater than 0");
+        } else if (m == "CANCEL") {
+            // §3.4.5: ORGANIZER 1, SEQUENCE 1.
+            if (!t.organizer) emit(t.uid, "CANCEL VTODO requires ORGANIZER");
+            if (!t.sequence) emit(t.uid, "CANCEL VTODO requires SEQUENCE");
+            if (t.status && to_upper(*t.status) != "CANCELLED") {
+                emit(t.uid, "CANCEL VTODO STATUS must be CANCELLED");
+            }
+        } else if (m == "REFRESH") {
+            // §3.4.6: ORGANIZER 1, ATTENDEE 1. (REFRESH VTODO does NOT have
+            // SEQUENCE "0" like VEVENT REFRESH — §3.4.6 shows SEQUENCE "0 or 1".)
+            if (!t.organizer) emit(t.uid, "REFRESH VTODO requires ORGANIZER");
+            if (t.attendees.empty()) emit(t.uid, "REFRESH VTODO requires ATTENDEE");
+        } else if (m == "COUNTER") {
+            // §3.4.7: ORGANIZER 1, ATTENDEE 1+, PRIORITY 1, SEQUENCE 0 or 1, SUMMARY 1.
+            if (!t.organizer) emit(t.uid, "COUNTER VTODO requires ORGANIZER");
+            if (t.attendees.empty()) emit(t.uid, "COUNTER VTODO requires ATTENDEE");
+            if (!t.priority) emit(t.uid, "COUNTER VTODO requires PRIORITY");
+            if (!t.summary) emit(t.uid, "COUNTER VTODO requires SUMMARY");
+        } else if (m == "DECLINECOUNTER") {
+            // §3.4.8: ORGANIZER 1, ATTENDEE 1+, SEQUENCE 0 or 1.
+            if (!t.organizer) emit(t.uid, "DECLINECOUNTER VTODO requires ORGANIZER");
+            if (t.attendees.empty()) emit(t.uid, "DECLINECOUNTER VTODO requires ATTENDEE");
+        }
+    };
+
+    auto check_vjournal = [&](const VEvent& j) {
+        // VJOURNAL §3.5 only defines PUBLISH / ADD / CANCEL. Any other
+        // method on a VJOURNAL is an RFC 5546 violation.
+        if (j.uid.empty()) emit("", "iTIP message requires UID");
+        if (!j.dtstamp) emit(j.uid, "iTIP message requires DTSTAMP");
+
+        if (m == "PUBLISH") {
+            // §3.5.1: ORGANIZER 1, ATTENDEE 0, DTSTART 1, DESCRIPTION 1.
+            if (!j.organizer) emit(j.uid, "PUBLISH VJOURNAL requires ORGANIZER");
+            if (!j.attendees.empty()) emit(j.uid, "PUBLISH VJOURNAL MUST NOT include ATTENDEE");
+        } else if (m == "ADD") {
+            // §3.5.2: ORGANIZER 1, SEQUENCE 1 MUST > 0, ATTENDEE 0.
+            if (!j.organizer) emit(j.uid, "ADD VJOURNAL requires ORGANIZER");
+            if (!j.sequence) emit(j.uid, "ADD VJOURNAL requires SEQUENCE");
+            else if (*j.sequence == 0) emit(j.uid, "ADD VJOURNAL requires SEQUENCE greater than 0");
+        } else if (m == "CANCEL") {
+            // §3.5.3: ORGANIZER 1, SEQUENCE 1.
+            if (!j.organizer) emit(j.uid, "CANCEL VJOURNAL requires ORGANIZER");
+            if (!j.sequence) emit(j.uid, "CANCEL VJOURNAL requires SEQUENCE");
+            if (j.status && to_upper(*j.status) != "CANCELLED") {
+                emit(j.uid, "CANCEL VJOURNAL STATUS must be CANCELLED");
+            }
+        } else {
+            emit(j.uid, "METHOD " + m + " not defined for VJOURNAL (RFC 5546 §3.5)");
+        }
+    };
+
+    auto check_vfreebusy = [&](const VFreeBusy& f) {
+        // VFREEBUSY §3.3 only defines PUBLISH / REQUEST / REPLY.
+        if (f.uid.empty()) emit("", "iTIP message requires UID");
+        if (!f.dtstamp) emit(f.uid, "iTIP message requires DTSTAMP");
+        // All three §3.3.x tables require DTSTART, DTEND, and ORGANIZER.
+        if (!f.organizer) emit(f.uid, "VFREEBUSY iTIP requires ORGANIZER");
+        if (!f.dtstart) emit(f.uid, "VFREEBUSY iTIP requires DTSTART");
+        if (!f.dtend) emit(f.uid, "VFREEBUSY iTIP requires DTEND");
+
+        if (m == "PUBLISH") {
+            // §3.3.1: ATTENDEE 0.
+            if (!f.attendees.empty()) emit(f.uid, "PUBLISH VFREEBUSY MUST NOT include ATTENDEE");
+        } else if (m == "REQUEST") {
+            // §3.3.2: ATTENDEE 1+.
+            if (f.attendees.empty()) emit(f.uid, "REQUEST VFREEBUSY requires ATTENDEE");
+        } else if (m == "REPLY") {
+            // §3.3.3: ATTENDEE 1+.
+            if (f.attendees.empty()) emit(f.uid, "REPLY VFREEBUSY requires ATTENDEE");
+        } else {
+            emit(f.uid, "METHOD " + m + " not defined for VFREEBUSY (RFC 5546 §3.3)");
+        }
+    };
+
+    for (const auto& e : cal.events) check_vevent(e);
+    for (const auto& t : cal.todos) check_vtodo(t);
+    for (const auto& j : cal.journals) check_vjournal(j);
+    for (const auto& f : cal.freebusy) check_vfreebusy(f);
 }
 
 // Parse-time orphan override detection: each override event (one with

@@ -1,0 +1,302 @@
+"""RFC 5546 §3.3–§3.5 per-component iTIP validation.
+
+Closes Codex iter 4 adversarial-review finding #P1. Earlier iterations
+validated iTIP only against the RFC 5546 §3.2 (VEVENT) matrix, and
+reused that matrix for VTODO and VJOURNAL — which is wrong:
+
+  * VJOURNAL (§3.5) only defines PUBLISH / ADD / CANCEL. A REQUEST
+    or REFRESH on a VJOURNAL is an RFC violation.
+  * VTODO COUNTER (§3.4.7) requires PRIORITY and SUMMARY — neither
+    applies to VEVENT COUNTER.
+  * VFREEBUSY (§3.3) only defines PUBLISH / REQUEST / REPLY and has
+    explicit DTSTART/DTEND/ORGANIZER requirements not inherited from
+    any VEVENT table.
+
+These tests exercise the three new per-component matrices. All of
+them assert on the `itip_missing_property` warning kind (same kind
+for every iTIP rule violation; the message differentiates them).
+"""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, cast
+
+from conftest import run_parse
+
+HEAD = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
+TAIL = "END:VCALENDAR\n"
+
+
+def _warn_kinds(out: dict[str, Any]) -> list[str]:
+    raw = out.get("warnings") or []
+    if not isinstance(raw, list):
+        return []
+    return [w.get("kind", "") for w in cast(list[dict[str, Any]], raw)]
+
+
+def _warn_messages(out: dict[str, Any]) -> list[str]:
+    raw = out.get("warnings") or []
+    if not isinstance(raw, list):
+        return []
+    return [w.get("message", "") for w in cast(list[dict[str, Any]], raw)]
+
+
+# ---------------------------------------------------------------------------
+# VJOURNAL §3.5 — only PUBLISH / ADD / CANCEL
+# ---------------------------------------------------------------------------
+
+
+def _vjournal_calendar(method: str, journal_body: str) -> str:
+    return (
+        HEAD
+        + f"METHOD:{method}\n"
+        + "BEGIN:VJOURNAL\n"
+        + journal_body
+        + "END:VJOURNAL\n"
+        + TAIL
+    )
+
+
+def test_vjournal_request_is_undefined_method(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.5 does not define REQUEST for VJOURNAL. Emitting
+    METHOD:REQUEST on a VJOURNAL-bearing calendar MUST warn — the
+    `method not defined` message is the iTIP-level rule, not a
+    per-property missing check."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nSUMMARY:Entry\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+    )
+    out = run_parse(submission_command, _vjournal_calendar("REQUEST", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("VJOURNAL" in m and "REQUEST" in m for m in msgs), (
+        f"expected a 'METHOD REQUEST not defined for VJOURNAL' warning; got {msgs!r}"
+    )
+
+
+def test_vjournal_refresh_is_undefined_method(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Same rule for REFRESH — not in the §3.5 table."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+    )
+    out = run_parse(submission_command, _vjournal_calendar("REFRESH", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("VJOURNAL" in m for m in msgs)
+
+
+def test_vjournal_publish_requires_organizer(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.5.1 PUBLISH VJOURNAL ORGANIZER row is `1`. Missing
+    ORGANIZER on a PUBLISH VJOURNAL is a matrix violation."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nDESCRIPTION:Hello\n"
+        # deliberately missing ORGANIZER
+    )
+    out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_vjournal_publish_with_organizer_ok(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """A PUBLISH VJOURNAL with ORGANIZER, no ATTENDEE, DTSTAMP, UID,
+    and DTSTART is a minimally valid §3.5.1 PUBLISH."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nDESCRIPTION:Hello\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+    )
+    out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
+    assert "itip_missing_property" not in _warn_kinds(out)
+
+
+def test_vjournal_add_requires_sequence_greater_than_zero(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.5.2: SEQUENCE | 1 with comment `MUST be greater
+    than 0.`"""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nDESCRIPTION:Hello\n"
+        "ORGANIZER:mailto:boss@example.com\nSEQUENCE:0\n"
+    )
+    out = run_parse(submission_command, _vjournal_calendar("ADD", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+# ---------------------------------------------------------------------------
+# VTODO §3.4 — full matrix with distinctions from VEVENT
+# ---------------------------------------------------------------------------
+
+
+def _vtodo_calendar(method: str, todo_body: str) -> str:
+    return (
+        HEAD
+        + f"METHOD:{method}\n"
+        + "BEGIN:VTODO\n"
+        + todo_body
+        + "END:VTODO\n"
+        + TAIL
+    )
+
+
+def test_vtodo_counter_requires_priority(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.4.7 COUNTER VTODO PRIORITY row is `1`. A VTODO
+    COUNTER without PRIORITY is a matrix violation — this is a VTODO-
+    specific rule not present on VEVENT COUNTER."""
+    body = (
+        "UID:t1\nDTSTAMP:20260101T120000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE;PARTSTAT=TENTATIVE:mailto:a@example.com\n"
+        "SUMMARY:Alt proposal\n"
+        # deliberately missing PRIORITY
+    )
+    out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("PRIORITY" in m for m in msgs), (
+        f"expected a PRIORITY-missing warning on VTODO COUNTER; got {msgs!r}"
+    )
+
+
+def test_vtodo_counter_requires_summary(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.4.7 COUNTER VTODO SUMMARY row is `1`."""
+    body = (
+        "UID:t1\nDTSTAMP:20260101T120000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE;PARTSTAT=TENTATIVE:mailto:a@example.com\n"
+        "PRIORITY:5\n"
+        # deliberately missing SUMMARY
+    )
+    out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("SUMMARY" in m for m in msgs)
+
+
+def test_vtodo_counter_with_priority_and_summary_ok(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """A well-formed COUNTER VTODO with ORGANIZER, ATTENDEE, PRIORITY,
+    and SUMMARY must NOT emit the matrix warning."""
+    body = (
+        "UID:t1\nDTSTAMP:20260101T120000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE;PARTSTAT=TENTATIVE:mailto:a@example.com\n"
+        "PRIORITY:5\nSUMMARY:Alternate due date\n"
+    )
+    out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
+    assert "itip_missing_property" not in _warn_kinds(out)
+
+
+def test_vtodo_publish_requires_organizer(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """VTODO PUBLISH §3.4.1 ORGANIZER row is `1`."""
+    body = (
+        "UID:t1\nDTSTAMP:20260101T120000Z\n"
+        "SUMMARY:Task\n"
+        # deliberately missing ORGANIZER
+    )
+    out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+# ---------------------------------------------------------------------------
+# VFREEBUSY §3.3 — only PUBLISH / REQUEST / REPLY, DTSTART/DTEND required
+# ---------------------------------------------------------------------------
+
+
+def _vfreebusy_calendar(method: str, fb_body: str) -> str:
+    return (
+        HEAD
+        + f"METHOD:{method}\n"
+        + "BEGIN:VFREEBUSY\n"
+        + fb_body
+        + "END:VFREEBUSY\n"
+        + TAIL
+    )
+
+
+def test_vfreebusy_cancel_is_undefined_method(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.3 does not define CANCEL for VFREEBUSY."""
+    body = (
+        "UID:f1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T000000Z\nDTEND:20260302T000000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+    )
+    out = run_parse(submission_command, _vfreebusy_calendar("CANCEL", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("VFREEBUSY" in m for m in msgs)
+
+
+def test_vfreebusy_request_requires_attendee(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.3.2: VFREEBUSY REQUEST ATTENDEE row is `1+`."""
+    body = (
+        "UID:f1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T000000Z\nDTEND:20260302T000000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # deliberately missing ATTENDEE
+    )
+    out = run_parse(submission_command, _vfreebusy_calendar("REQUEST", body), tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_vfreebusy_publish_requires_dtstart_and_dtend(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """All three VFREEBUSY iTIP methods require DTSTART and DTEND
+    (§3.3.1/§3.3.2/§3.3.3 tables). Missing DTEND on a PUBLISH is a
+    matrix violation."""
+    body = (
+        "UID:f1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T000000Z\n"  # no DTEND
+        "ORGANIZER:mailto:boss@example.com\n"
+    )
+    out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("DTEND" in m for m in msgs)
+
+
+def test_vfreebusy_publish_forbids_attendee(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """VFREEBUSY PUBLISH §3.3.1 ATTENDEE row is `0` (MUST NOT)."""
+    body = (
+        "UID:f1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T000000Z\nDTEND:20260302T000000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE:mailto:a@example.com\n"  # MUST NOT be present
+    )
+    out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("PUBLISH VFREEBUSY" in m and "ATTENDEE" in m for m in msgs)
+
+
+def test_vfreebusy_publish_well_formed_ok(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Minimally valid VFREEBUSY PUBLISH: UID, DTSTAMP, DTSTART, DTEND,
+    ORGANIZER, no ATTENDEE."""
+    body = (
+        "UID:f1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T000000Z\nDTEND:20260302T000000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+    )
+    out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
+    assert "itip_missing_property" not in _warn_kinds(out)

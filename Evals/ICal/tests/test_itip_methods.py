@@ -1,25 +1,27 @@
-"""RFC 5546 iTIP method-specific requirements.
+"""RFC 5546 iTIP VEVENT method-specific requirements (§3.2).
 
 RFC 5546 defines the Transport-Independent Interoperability Protocol
 (iTIP) layered on top of iCalendar. The METHOD property on VCALENDAR
 (RFC 5545 §3.7.2) names the iTIP operation the calendar represents.
 
-Per RFC 5546 §3.2:
-  - REQUEST:         must have an ORGANIZER.
-  - REPLY:           must have an ORGANIZER and an ATTENDEE carrying a
-                     PARTSTAT that describes the attendee's response.
-  - CANCEL:          communicates cancellation; status is conveyed by
-                     STATUS:CANCELLED or implied by the CANCEL method
-                     itself.
-  - PUBLISH, ADD, REFRESH, COUNTER, DECLINECOUNTER: have their own
-    requirements per RFC 5546, but for this eval's test surface we
-    only assert that the presence of METHOD alone never triggers
-    `itip_missing_property` for PUBLISH.
+This file covers the VEVENT §3.2.x matrices. The VTODO (§3.4),
+VJOURNAL (§3.5), and VFREEBUSY (§3.3) component-specific matrices
+are covered separately in `test_itip_per_component.py`, and the
+deeper VEVENT method cases (ADD, REFRESH, COUNTER, DECLINECOUNTER,
+plus SEQUENCE/DTSTAMP edge cases) are in `test_itip_methods_deep.py`.
 
-When required iTIP properties are missing, the parser SHOULD emit an
-`itip_missing_property` warning (kind per
-`technical-requirements-prompt.md`). The specific `message` wording is
-not asserted — only the `kind` value.
+Summary of the §3.2 matrix pinned here:
+  - REQUEST (§3.2.2):  ORGANIZER 1, ATTENDEE 1+.
+  - REPLY (§3.2.3):    ORGANIZER 1, ATTENDEE 1 carrying PARTSTAT.
+  - CANCEL (§3.2.5):   ORGANIZER 1, SEQUENCE 1; STATUS (if present)
+                        MUST be CANCELLED; absent STATUS is valid per
+                        §3.2.5 prose (METHOD alone conveys cancellation).
+  - PUBLISH (§3.2.1):  ORGANIZER MAY appear, ATTENDEE MUST NOT.
+
+When required iTIP properties are missing or inconsistent, the parser
+SHOULD emit an `itip_missing_property` warning. The specific `message`
+wording is not asserted generically; tests that DO pin message content
+(e.g. CANCEL STATUS) call it out explicitly.
 
 The calendar-level METHOD is surfaced as `calendar.method` in the JSON
 schema (see v0.2 feature tests) so that downstream tooling can

@@ -73,8 +73,8 @@ agent that emits the same *semantic* content in a different
 formatting style is not penalized by any explicit test:
 
 - Top-level key order: `calendar`, `events`, `todos`, `journals`,
-  `freebusy`, `timezones`, `warnings` for `parse`; `occurrences`,
-  `warnings` for `expand`. JSON's own object-key ordering is
+  `freebusy`, `timezones`, `availabilities`, `warnings` for `parse`;
+  `occurrences`, `warnings` for `expand`. JSON's own object-key ordering is
   unordered; the harness does not assert on object-key order except
   where semantically meaningful (e.g. occurrences sort order).
 - Stable emission of optional fields as `null` vs. absence.
@@ -120,6 +120,8 @@ formatting style is not penalized by any explicit test:
   "color": "string | null",
   "images": [{"value": "string", "fmttype": "string | null",
                 "encoding": "string | null", "display": "string | null"}, ...],
+  "related_to": [{"value": "string",
+                     "reltype": "string | null"}, ...],
   "alarms": [<valarm object>, ...],
   "raw_properties": [{"name": "string", "params": {},
                         "value": "string"}, ...]
@@ -194,11 +196,16 @@ VTODO/VJOURNAL/VFREEBUSY objects carry the common base (`uid`,
 
 - **VTODO** adds `due` (ISO-8601 | null), `completed` (ISO-8601 |
   null), `percent_complete` (integer | null), `status`, `priority`,
-  `rrule`, `rdate`, `exdate`, `recurrence_id`, `alarms`.
-- **VJOURNAL** adds `status`, `related_to` (array of strings),
-  `attachments`, `rrule`, `rdate`, `exdate`, `recurrence_id`.
+  `rrule`, `rdate`, `exdate`, `recurrence_id`, `alarms`,
+  `related_to`.
+- **VJOURNAL** adds `status`, `related_to` (array of
+  `{"value": "string", "reltype": "string | null"}` — the same
+  structured shape as on VALARM/VEVENT, NOT an array of plain
+  strings), `attachments`, `rrule`, `rdate`, `exdate`,
+  `recurrence_id`.
 - **VFREEBUSY** adds `dtstart`, `dtend`, `freebusy` (array of
-  `{"fbtype": "string | null", "periods": [<period>, ...]}`).
+  `{"fbtype": "string | null", "periods": [<period>, ...]}`),
+  `related_to`.
 
 ## VTIMEZONE object schema
 
@@ -218,8 +225,8 @@ Where each observance object:
 ```json
 {
   "dtstart": "ISO-8601 string (floating)",
-  "tzoffsetfrom": "±HH:MM",
-  "tzoffsetto": "±HH:MM",
+  "tzoffsetfrom": "±HH:MM or ±HH:MM:SS",
+  "tzoffsetto": "±HH:MM or ±HH:MM:SS",
   "tzname": "string | null",
   "rrule": <rrule object | null>,
   "rdate": ["ISO-8601", ...]

@@ -205,6 +205,7 @@ struct VEvent {
     std::optional<std::string> created;              // §3.8.7.1 UTC ISO-8601
     std::optional<std::string> last_modified;        // §3.8.7.3 UTC ISO-8601
     std::vector<Attach> attachments;                 // §3.8.1.1
+    std::vector<RelatedTo> related_to;               // §3.8.4.5 (VEVENT/VTODO/VJOURNAL/VFREEBUSY)
     std::optional<std::string> color;                // RFC 7986 §5.9
     std::vector<ImageEntry> images;                  // RFC 7986 §5.10 (if used on event)
     std::vector<ConferenceEntry> conferences;        // RFC 7986 §6.3 (if used on event)

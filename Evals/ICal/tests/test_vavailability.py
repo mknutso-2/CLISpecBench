@@ -276,6 +276,10 @@ def test_available_with_location_and_contact(
 def test_available_with_created_and_last_modified(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
+    """Pin the full ISO-8601 form of CREATED / LAST-MODIFIED so that
+    a date-only fragment match can't hide a broken time component or
+    an incorrect UTC `Z` suffix. These are UTC-only properties per
+    RFC 5545 §3.8.7.1 and §3.8.7.3."""
     body = (
         "UID:av1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260101T000000Z\n"
@@ -289,8 +293,11 @@ def test_available_with_created_and_last_modified(
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
-    assert "2026-01-01" in cast(str, av.get("created"))
-    assert "2026-05-01" in cast(str, av.get("last_modified"))
+    # Pin the whole ISO-8601 value, not a substring. Format is
+    # "YYYY-MM-DDTHH:MM:SSZ" — trailing Z required because RFC 5545
+    # §3.8.7 forces UTC for both fields.
+    assert av.get("created") == "2026-01-01T08:00:00Z"
+    assert av.get("last_modified") == "2026-05-01T09:00:00Z"
 
 
 def test_available_with_recurrence_id(
@@ -316,8 +323,10 @@ def test_available_with_recurrence_id(
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
     rid = av.get("recurrence_id")
     assert isinstance(rid, dict), f"expected object, got {rid!r}"
-    # `value` is the ISO-8601 form of the referenced instance.
-    assert "2026-06-01" in cast(str, rid.get("value"))
+    # Pin the exact ISO-8601 value, not a date-fragment substring. A
+    # substring match could hide a broken time component or lost
+    # `Z` suffix.
+    assert rid.get("value") == "2026-06-01T09:00:00Z"
     # Neither RANGE nor TZID is set in this fixture — both explicit null.
     assert rid.get("range") is None
     assert rid.get("tzid") is None
@@ -349,6 +358,9 @@ def test_available_recurrence_id_with_tzid_and_range(
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
     rid = av.get("recurrence_id")
     assert isinstance(rid, dict)
+    # Pin value along with the params so a silent loss of the time-
+    # component can't pass.
+    assert rid.get("value") == "2026-06-01T09:00:00"
     assert rid.get("tzid") == "America/New_York"
     assert rid.get("range") == "THISANDFUTURE"
 
