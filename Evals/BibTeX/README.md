@@ -158,5 +158,5 @@ Known bounded gaps vs. real BibTeX 0.99c (documented in
   index over the above.
 - [`prompt/docs/LICENSES.md`](prompt/docs/LICENSES.md) — Knuth
   License redistribution notice.
-- [`Evals/NEW_EVAL_ANALYSIS.md`](../NEW_EVAL_ANALYSIS.md) — the
+- [`Evals/EVAL_CANDIDATE_DISCUSSION.md`](../EVAL_CANDIDATE_DISCUSSION.md) — the
   proposal-ranking document that motivated building this eval.

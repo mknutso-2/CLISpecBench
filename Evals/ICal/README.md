@@ -111,7 +111,7 @@ VTIMEZONE DST-boundary bugs). Testing the expansion corners against
 the full spec — especially DST boundary crossings with VTIMEZONE
 resolution, BYSETPOS interacting with time expansion, and
 `RECURRENCE-ID` override replacement — is what v0.1 deferred and
-what v0.2 now probes. See `Evals/NEW_EVAL_ANALYSIS.md` for the
+what v0.2 now probes. See `Evals/EVAL_CANDIDATE_DISCUSSION.md` for the
 original ranking argument.
 
 ## Scope
@@ -158,5 +158,5 @@ In scope (v1.0):
   redistribution notice.
 - [RFC 5545](https://datatracker.ietf.org/doc/html/rfc5545) — the
   authoritative upstream spec (online canonical version).
-- [`Evals/NEW_EVAL_ANALYSIS.md`](../NEW_EVAL_ANALYSIS.md) — the
+- [`Evals/EVAL_CANDIDATE_DISCUSSION.md`](../EVAL_CANDIDATE_DISCUSSION.md) — the
   proposal-ranking document that motivated building this eval.

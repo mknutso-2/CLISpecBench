@@ -1,9 +1,32 @@
 # New Eval Candidates — Analysis and Ranking
 
-This document evaluates ten proposed CLISpecBench eval shells authored as
-sketches under `Evals/<Name>/README.md`. It was drafted in a first pass,
-then critiqued by a second opinion (Codex GPT-5.4 acting as skeptical
-reviewer; transcript in
+This document now combines two adjacent candidate-analysis passes:
+
+1. the broad cross-domain slate currently tracked on `main`
+2. a later format-heavy slate recovered from local WIP and reconciled here
+
+They are kept together because several evals that were later prototyped in
+this repo — especially `GEDCOM`, `LAS`, `MARC21`, and `SEGY` — were selected
+from the second pass, while the first pass remains the better top-level view
+of overall benchmark portfolio fit.
+
+The broad cross-domain slate below is still the primary ranking for "what
+should CLISpecBench add next?" The later format-heavy section is retained as a
+focused appendix on large spec-shaped data formats. When the two analyses
+disagree on a raw rank number, prefer the explanation over the number: the
+first pass optimized for portfolio diversity and contamination resistance
+across domains, while the second optimized for relative promise within a much
+narrower cohort of file-format candidates.
+
+Repository-cleanup intent follows the same distinction. Candidate-only
+directories that are clearly abandoned should be removed from `Evals/`.
+Directories for candidates that are merely conditional or deferred should stay.
+Already-registered evals may also stay even when the candidate discussion is
+negative, because repo cleanup and future-candidate ranking are not identical
+questions.
+
+The broad slate was drafted in a first pass, then critiqued by a second
+opinion (Codex GPT-5.4 acting as skeptical reviewer; transcript in
 [`codex-conversations/2026-04-20-22-33-new-eval-analysis-review.md`](../codex-conversations/2026-04-20-22-33-new-eval-analysis-review.md)),
 then revised to converge on a joint ranking. Concrete changes from the
 first-pass analysis:
@@ -24,7 +47,8 @@ first-pass analysis:
     redistributable" in prose while marking the checklist item as
     partial — an internal contradiction. Resolved toward *partial* with
     the Open Group / IEEE copyright noted. Fixed in
-    [Evals/Tar/README.md](Tar/README.md).
+    the former `Evals/Tar/README.md` candidate shell before that
+    directory was removed.
   - MusicXML: the claim "Any agent that reaches for music21 has the
     entire task solved" was too absolute — music21 itself has filed
     bugs on the target semantics. Softened to "a capable agent can
@@ -69,8 +93,8 @@ material, or both.
 | 6 | [DICOM](DICOM/README.md) | Medical imaging binary format | ~91 | 1,800–2,800 | — | **yes — NEMA reproduction permission** | moderate | moderate ("no pixel decoding" is a harness choice) |
 | 7 | [MusicXML](MusicXML/README.md) | Music notation ingestion | ~75 | 1,500–3,000 | — | possibly (contamination plan required) | moderate | low |
 | 8 | [GEDCOM](GEDCOM/README.md) | Genealogy records | ~96 | 2,000–3,000 | — | ambiguous 5.5.1 license | moderate | **high** (pedigree queries are harness-defined) |
-| 9 | [SMILES](SMILES/README.md) | Chemistry notation | ~100 | 1,200–2,000 | **yes — canonical form is not deterministic across implementations** | — | moderate | low |
-| 10 | [Tar](Tar/README.md) | POSIX archive format | ~96 | 1,500–2,500 | **yes — tutorial-level saturation** | possibly (Open Group/IEEE copyright) | low | **high** (GNU extensions + path safety are evaluator policy) |
+| 9 | `SMILES` | Chemistry notation | ~100 | 1,200–2,000 | **yes — canonical form is not deterministic across implementations** | — | moderate | low |
+| 10 | `Tar` | POSIX archive format | ~96 | 1,500–2,500 | **yes — tutorial-level saturation** | possibly (Open Group/IEEE copyright) | low | **high** (GNU extensions + path safety are evaluator policy) |
 
 **Column definitions.**
 
@@ -102,8 +126,8 @@ material, or both.
 | 6 | **Conditional** | [Gerber](Gerber/README.md) | Architecturally strong; blocked today by Ucamco's spec-redistribution restriction. If permission lands, jumps to tier 1. |
 | 7 | **Hold (conditional)** | [MusicXML](MusicXML/README.md) | Keep alive only with a concrete plan for (i) adversarial-fixture authoring outside the music21 / LilyPond / Verovio corpora and (ii) evidence that the major libraries miss the repeats-tempo-transpose chain. Without those, contamination dominates. |
 | 8 | **Abandon** | [GEDCOM](GEDCOM/README.md) | Heavy contamination (1999 standard, 20+ years of OSS tooling) and too much interesting behavior lives in harness-defined relationship queries rather than the native spec. |
-| 9 | **Abandon** | [SMILES](SMILES/README.md) | Canonicalization is not deterministic across implementations (OpenSMILES §5 explicitly defers the algorithm); removing it leaves a much weaker eval that falls below the system-level bar. |
-| 10 | **Abandon** | [Tar](Tar/README.md) | Tutorial-level saturation ("Build Your Own Tar" is Coding Challenge #54, field-offset tables are on Wikipedia); too much of the interesting behavior (GNU extensions, path-safety) lives in evaluator policy rather than POSIX text. |
+| 9 | **Abandon** | `SMILES` | Canonicalization is not deterministic across implementations (OpenSMILES §5 explicitly defers the algorithm); removing it leaves a much weaker eval that falls below the system-level bar. |
+| 10 | **Abandon** | `Tar` | Tutorial-level saturation ("Build Your Own Tar" is Coding Challenge #54, field-offset tables are on Wikipedia); too much of the interesting behavior (GNU extensions, path-safety) lives in evaluator policy rather than POSIX text. |
 
 ## Consensus ranking — if all remediable blockers resolved
 
@@ -117,8 +141,8 @@ material, or both.
 | 6 | **Build later** | [PostScript](PostScript/README.md) | −2 | Still viable, but the subset-contract and ref-impl effort keep it behind Gerber/SAM/MusicXML once their blockers clear. |
 | 7 | **Build later** | [DICOM](DICOM/README.md) | −2 | With NEMA permission, still useful, but IGES overlap and the multi-part corpus maintenance burden keep it below the other build-later candidates. |
 | 8 | **Abandon** | [GEDCOM](GEDCOM/README.md) | — | License cleanup does not fix the core contamination or the harness-defined-queries problem. |
-| 9 | **Abandon** | [SMILES](SMILES/README.md) | — | Same deterministic-surface problem remains; not a paperwork blocker. |
-| 10 | **Abandon** | [Tar](Tar/README.md) | — | Same saturation problem remains; not a paperwork blocker. |
+| 9 | **Abandon** | `SMILES` | — | Same deterministic-surface problem remains; not a paperwork blocker. |
+| 10 | **Abandon** | `Tar` | — | Same saturation problem remains; not a paperwork blocker. |
 
 ---
 
@@ -433,11 +457,24 @@ point.
 
 8. **[GEDCOM](GEDCOM/README.md)** — contamination + harness-defined
    queries.
-9. **[SMILES](SMILES/README.md)** — canonical-form non-determinism
+9. **`SMILES`** — canonical-form non-determinism
    conflicts with a hard requirement; deterministic fallback scope
    too weak.
-10. **[Tar](Tar/README.md)** — tutorial-level saturation, no
+10. **`Tar`** — tutorial-level saturation, no
     paperwork remediation possible.
+
+### Candidate-directory cleanup implied by this discussion
+
+- Delete `Evals/SMILES/` and `Evals/Tar/`. They are candidate-only shells and
+  both are abandoned for structural reasons rather than temporary blockers.
+- `BGP4` and `EPUB` are also abandoned in the narrower format-heavy pass, but
+  there are no corresponding directories to delete on the current `main`
+  branch.
+- Keep `DICOM`, `Gerber`, `MusicXML`, `PostScript`, and `SAM` because they are
+  still conditional or deferred rather than rejected.
+- Keep existing shipped eval directories such as `GEDCOM`, `LAS`, `MARC21`, and
+  `SEGY`; their continued presence in the repo is a separate question from
+  whether they would rank highly as brand-new candidates today.
 
 ---
 
@@ -484,6 +521,89 @@ point.
   current-state vs. post-remediation dual ranking is a better
   framing for maintainer planning — it says directly what work
   would unlock which candidate.
+
+---
+
+## Format-heavy slate — recovered and reconciled
+
+A later narrower pass looked specifically at ten largely file-format-oriented
+candidate evals:
+
+- `GEDCOM`
+- `LAS`
+- `SEGY`
+- `MARC21`
+- `FITS`
+- `VCF`
+- `SPDX`
+- `GerberX3`
+- `EPUB`
+- `BGP4`
+
+That pass asked a different question from the broad ranking above: among
+large public specs that look naturally like `inspect` / `render` /
+`validate` / `roundtrip` tasks, which ones are the strongest next
+experiments? The narrower cohort is why some ranks differ materially from the
+broader cross-domain view above.
+
+The recovered pass originally concluded:
+
+- strongest within that narrowed cohort: `GEDCOM`, `LAS`, `SEGY`, `MARC21`
+- later / conditional: `FITS`, `VCF`, `SPDX`
+- blocked but interesting: `GerberX3`
+- abandon for now: `EPUB`, `BGP4`
+
+The table below preserves that information, but reframes it in light of the
+current repo state and the broader candidate analysis above.
+
+### Narrow-slate ranking and present interpretation
+
+| Narrow rank | Eval | Earlier verdict | Present interpretation |
+| ---: | --- | --- | --- |
+| 1 | `GEDCOM` | Keep now | Attractive inside a format-only cohort because the spec is readable and the graph surface is naturally testable. In the broader slate, though, it still grades worse on contamination and contract leakage than the raw rank suggests. |
+| 2 | `LAS` | Keep now | Still the strongest surviving outcome of that pass. Full-spec binary format, many independent failure axes, and a cleaner native contract than GEDCOM or MARC21. |
+| 3 | `SEGY` | Keep now | Conceptually strong, but later dropped from active work once full official-spec mirroring looked less comfortable from a redistribution standpoint. |
+| 4 | `MARC21` | Keep now | Still promising if the eval genuinely uses the full LOC corpus and tests more than transport-level parsing. The main under-modeling risk is not the standard; it is the authored eval surface. |
+| 5 | `FITS` | Keep later / conditional | Remains a plausible future binary-format eval, but contamination and convention drift are still real enough that it should stay behind LAS. |
+| 6 | `VCF` | Keep later / conditional | Same basic conclusion still holds: useful structure, but too much real-world behavior is effectively anchored on `htslib` and its descendants. |
+| 7 | `SPDX` | Keep later / conditional | Viable only if it becomes a graph/canonicalization/relationship task rather than a schema-validation task. |
+| 8 | `GerberX3` | Keep later / blocked | Best read today as the narrower sibling of the broader `Gerber` candidate above. The current `Gerber` analysis supersedes this one, but the redistribution blocker remains the common issue. |
+| 9 | `EPUB` | Abandon for now | Still abandoned for the same reason: too much risk that the task collapses into ZIP/XML/HTML plumbing and `EPUBCheck` agreement. |
+| 10 | `BGP4` | Abandon for now | Still weak for this benchmark track because the implementation surface is crowded and the eval boundary is easy to underspecify. |
+
+### Reconciliation notes
+
+- `LAS` is the clearest durable win from the recovered pass. Even after the
+  broader ranking and the later implementation work, it still looks like one
+  of the best large binary-spec candidates in the repo.
+- `MARC21` remains worth pursuing, but only if the eval is written against the
+  full official HTML corpus and the tests cover the field-by-field semantics of
+  the standard rather than a compressed transport-profile summary.
+- `GEDCOM` is where the two analyses diverge most sharply. The recovered
+  format-heavy pass liked it because GEDCOM files are small, the graph shape is
+  natural, and the official FamilySearch docs are readable. The broader pass
+  penalized it because relationship-query work tends to migrate into
+  harness-defined semantics rather than staying inside the native standard.
+- `SEGY` was a strong technical candidate in the narrow pass, but it no longer
+  has the same practical standing because the decision to require full
+  official-spec documents in-repo makes its documentation story materially less
+  attractive than `LAS` or `MARC21`.
+- `GerberX3` and the broader `Gerber` candidate are not contradictory analyses;
+  they are two views of the same family. The current broader `Gerber`
+  evaluation should be treated as the authoritative one.
+
+### Focused recommendations from the format-heavy pass
+
+1. Keep investing in `LAS` if the goal is to find a hard full-spec binary
+   format eval with many independent failure modes.
+2. Keep `MARC21` in play, but only under a strict "full official corpus, no
+   compressed evaluator summaries in `prompt/docs/`" discipline.
+3. Treat `FITS`, `VCF`, and `SPDX` as reserve candidates rather than near-term
+   priorities.
+4. Leave `EPUB` and `BGP4` abandoned unless the benchmark goals change.
+5. Treat `GEDCOM` as historically important to the repo's prototyping path, but
+   not as strong evidence that it should outrank the broader cross-domain
+   candidates above.
 
 ---
 

@@ -306,7 +306,7 @@ an agent-supplied date range.
 - iTIP scheduling semantics (RFC 5546).
 
 The first-pass proposal in
-[`Evals/NEW_EVAL_ANALYSIS.md`](../NEW_EVAL_ANALYSIS.md) pitched ICal as
+[`Evals/EVAL_CANDIDATE_DISCUSSION.md`](../EVAL_CANDIDATE_DISCUSSION.md) pitched ICal as
 the strongest non-BibTeX candidate specifically because the
 adversarial RRULE corners (BYSETPOS + BYDAY, WKST interactions) are
 well-documented sources of real bugs in mainstream libraries

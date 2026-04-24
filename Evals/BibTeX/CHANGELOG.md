@@ -247,7 +247,7 @@ entries.
 - LaTeX accent macro handling inside author names beyond the minimal
   set required by the name grammar itself.
 
-The first-pass proposal in [`Evals/NEW_EVAL_ANALYSIS.md`](../NEW_EVAL_ANALYSIS.md)
+The first-pass proposal in [`Evals/EVAL_CANDIDATE_DISCUSSION.md`](../EVAL_CANDIDATE_DISCUSSION.md)
 pitched this eval as `.bst` execution being the low-contamination core.
 v0.1 is a narrower first step: it validates that the prompt / docs /
 tests / reference-implementation pipeline works end-to-end on the
