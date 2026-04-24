@@ -145,6 +145,8 @@ _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     },
     **_register_language_tasks("wordcount", "Evals/WordCount", ("cpp", "py", "js", "rs")),
     **_register_language_tasks("iges", "Evals/IGES", ("cpp", "js", "py", "rs")),
+    **_register_language_tasks("bibtex", "Evals/BibTeX", ("cpp",)),
+    **_register_language_tasks("ical", "Evals/ICal", ("cpp",)),
 }
 
 
