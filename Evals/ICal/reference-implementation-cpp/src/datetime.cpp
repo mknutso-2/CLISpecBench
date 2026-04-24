@@ -229,21 +229,31 @@ std::optional<DateTime> resolve_zoned_to_utc(
     }
     if (!tz) return std::nullopt;
 
-    // Enumerate all transition instances (DTSTART + RRULE expansions) from each observance,
-    // pick the latest whose effective start is <= local.
+    // Enumerate all transition instances (DTSTART + RRULE expansions + RDATE entries)
+    // from each observance, pick the latest whose effective start is <= local.
     auto enumerate_observance = [](const Observance& obs, const DateTime& up_to_local)
         -> std::vector<DateTime> {
         std::vector<DateTime> out;
+        // Always include DTSTART.
         if (!obs.rrule) {
             out.push_back(obs.dtstart);
-            return out;
         }
+        // Add any RDATE entries (treated as additional transition instants).
+        for (const auto& rd : obs.rdate) {
+            if (rd.dt && rd.dt->datetime) out.push_back(*rd.dt->datetime);
+            else if (rd.dt && rd.dt->date) {
+                out.push_back(DateTime{*rd.dt->date, 0, 0, 0, TimeKind::Floating, {}});
+            }
+        }
+        if (!obs.rrule) return out;
         const RRule& r = *obs.rrule;
         DateTime cur = obs.dtstart;
         int safety = 10000;
         int interval = std::max(1, r.interval);
         while (safety-- > 0) {
             if (compare_datetime(cur, up_to_local) > 0) break;
+            // Honor UNTIL: if cur > until, stop (cur is not valid).
+            if (r.until && compare_datetime(cur, *r.until) > 0) break;
             out.push_back(cur);
             // Advance one interval.
             DateTime next;
@@ -346,6 +356,95 @@ std::optional<DateTime> resolve_zoned_to_utc(
     result.kind = TimeKind::Utc;
     result.tzid.clear();
     return result;
+}
+
+// Detect whether a local time falls in a DST fall-back overlap ("fold",
+// ambiguous) or spring-forward gap ("gap", nonexistent) for the given TZID.
+// Returns "" if neither, or the anomaly kind as a string.
+std::string detect_tz_anomaly(
+    const DateTime& local, const std::string& tzid, const Calendar& cal) {
+    const VTimezone* tz = nullptr;
+    for (const auto& t : cal.timezones) {
+        if (t.tzid == tzid) { tz = &t; break; }
+    }
+    if (!tz) return "";
+
+    // Enumerate observance transitions whose local-time moment is near `local`.
+    // For each observance, compute the transition local moment in the year of `local`.
+    // We check both standard and daylight observances.
+
+    auto transition_in_year = [&](const Observance& obs, int year)
+        -> std::optional<DateTime> {
+        // Derive the transition DTSTART for this year.
+        DateTime t = obs.dtstart;
+        t.date.year = year;
+        if (!obs.rrule) return t;
+        const RRule& r = *obs.rrule;
+        // Apply BYMONTH / BYMONTHDAY / BYDAY adjustments for the given year.
+        if (!r.bymonth.empty()) t.date.month = r.bymonth[0];
+        if (!r.bymonthday.empty()) {
+            t.date.day = r.bymonthday[0];
+        } else if (!r.byday.empty() && r.byday[0].ordinal.has_value()) {
+            int y = t.date.year;
+            int m = t.date.month;
+            int target_ord = *r.byday[0].ordinal;
+            Weekday target_wd = r.byday[0].weekday;
+            int dim = days_in_month(y, m);
+            std::vector<int> matches;
+            for (int day = 1; day <= dim; ++day) {
+                if (weekday_of(Date{y, m, day}) == target_wd) matches.push_back(day);
+            }
+            int idx = target_ord > 0
+                ? target_ord - 1
+                : static_cast<int>(matches.size()) + target_ord;
+            if (idx >= 0 && idx < static_cast<int>(matches.size())) {
+                t.date.day = matches[idx];
+            }
+        }
+        // Respect UNTIL.
+        if (r.until && compare_datetime(t, *r.until) > 0) return std::nullopt;
+        return t;
+    };
+
+    auto check = [&](const Observance& obs) -> std::string {
+        auto tropt = transition_in_year(obs, local.date.year);
+        if (!tropt) return "";
+        DateTime t = *tropt;
+        auto off_from = parse_utc_offset(obs.tzoffsetfrom);
+        auto off_to = parse_utc_offset(obs.tzoffsetto);
+        if (!off_from || !off_to) return "";
+        long long delta = static_cast<long long>(*off_to) - static_cast<long long>(*off_from);
+        if (delta == 0) return "";
+
+        // For fall-back: ambiguous window = [t + delta, t) in local time.
+        // For spring-forward: nonexistent window = (t, t + delta) in local.
+        DateTime lo, hi;
+        bool fold;
+        if (delta < 0) {
+            lo = add_seconds(t, delta);
+            hi = t;
+            fold = true;
+        } else {
+            lo = t;
+            hi = add_seconds(t, delta);
+            fold = false;
+        }
+        // Compare local to [lo, hi).
+        if (compare_datetime(local, lo) >= 0 && compare_datetime(local, hi) < 0) {
+            return fold ? "timezone_fold_ambiguous" : "nonexistent_local_time";
+        }
+        return "";
+    };
+
+    for (const auto& obs : tz->standard) {
+        auto k = check(obs);
+        if (!k.empty()) return k;
+    }
+    for (const auto& obs : tz->daylight) {
+        auto k = check(obs);
+        if (!k.empty()) return k;
+    }
+    return "";
 }
 
 } // namespace ical

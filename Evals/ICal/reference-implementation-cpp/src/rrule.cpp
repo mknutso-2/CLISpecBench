@@ -352,7 +352,22 @@ DateTime to_comparable(const DateTime& dt, const Calendar& cal, std::vector<Warn
                        const std::string& uid) {
     if (dt.kind == TimeKind::Zoned && !dt.tzid.empty()) {
         auto resolved = resolve_zoned_to_utc(dt, dt.tzid, cal);
-        if (resolved) return *resolved;
+        if (resolved) {
+            // DST fold-ambiguous / nonexistent-local-time detection.
+            std::string anomaly = detect_tz_anomaly(dt, dt.tzid, cal);
+            if (!anomaly.empty()) {
+                Warning w; w.kind = anomaly;
+                if (anomaly == "timezone_fold_ambiguous") {
+                    w.message = "Local time in DST fall-back overlap; using pre-transition offset";
+                } else {
+                    w.message = "Local time in DST spring-forward gap; using post-transition offset";
+                }
+                w.uid = uid.empty() ? std::optional<std::string>{} : uid;
+                w.value = dt.tzid;
+                warnings.push_back(std::move(w));
+            }
+            return *resolved;
+        }
         Warning w; w.kind = "unresolved_tzid";
         w.message = "TZID '" + dt.tzid + "' is not defined in the file; treating as floating";
         w.uid = uid.empty() ? std::optional<std::string>{} : uid;
