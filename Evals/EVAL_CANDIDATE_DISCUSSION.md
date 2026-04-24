@@ -18,12 +18,12 @@ first pass optimized for portfolio diversity and contamination resistance
 across domains, while the second optimized for relative promise within a much
 narrower cohort of file-format candidates.
 
-Repository-cleanup intent follows the same distinction. Candidate-only
-directories that are clearly abandoned should be removed from `Evals/`.
-Directories for candidates that are merely conditional or deferred should stay.
-Already-registered evals may also stay even when the candidate discussion is
-negative, because repo cleanup and future-candidate ranking are not identical
-questions.
+Repository cleanup is now intentionally stricter than the original wording in
+this file. Candidate-only directories that are not part of the committed eval
+roadmap should be removed from `Evals/`, even if the analysis below once
+described them as conditional or deferred. Already-registered evals may still
+stay even when the candidate discussion is negative, because repo cleanup and
+future-candidate ranking are not identical questions.
 
 The broad slate was drafted in a first pass, then critiqued by a second
 opinion (Codex GPT-5.4 acting as skeptical reviewer; transcript in
@@ -37,7 +37,8 @@ first-pass analysis:
     ([dicomstandard.org/patent](https://www.dicomstandard.org/patent))
     grants a no-license right to read and implement the standard, but
     *reproduction* requires permission from the DICOM Secretariat. Fixed
-    in [Evals/DICOM/README.md](DICOM/README.md).
+    in the former `Evals/DICOM/README.md` candidate shell before that
+    directory was removed.
   - GEDCOM: "5.5.1 finalized 2019" in the original was wrong. 5.5.1 was
     released in 1999, with a 2019 re-release as FamilySearch formalized
     the standard before GEDCOM 7.0 arrived. A 1999 standard with 20+
@@ -54,7 +55,8 @@ first-pass analysis:
     bugs on the target semantics. Softened to "a capable agent can
     reproduce large parts of the required behavior by recalling
     music21's algorithm structure rather than reasoning from the W3C
-    spec." Fixed in [Evals/MusicXML/README.md](MusicXML/README.md).
+    spec." Fixed in the former `Evals/MusicXML/README.md` candidate
+    shell before that directory was removed.
 - **Methodology change.** The original single "hard-requirement fails"
   column conflated remediable paperwork (Gerber / DICOM redistribution)
   with structural impossibility (SMILES canonical-form
@@ -87,11 +89,11 @@ material, or both.
 |---|------|--------|-----------:|---------:|---|---|---|---|
 | 1 | [BibTeX](BibTeX/README.md) | Stack-language interpreter for bibliography styles | ~130 | 2,500–3,500 | — | — | moderate | low |
 | 2 | [ICal](ICal/README.md) | Calendar recurrence semantics (RFC 5545) | ~102 | 1,800–2,200 | — | — | moderate | moderate (inlined VTIMEZONE is a harness choice) |
-| 3 | [Gerber](Gerber/README.md) | PCB manufacturing files | ~75 | 2,500–3,500 | — | **yes — Ucamco redistribution** | moderate | low |
-| 4 | [SAM](SAM/README.md) | Bioinformatics alignment records | ~95 | 1,200–1,800 | — | possibly (hts-specs license unclear) | low | low |
-| 5 | [PostScript](PostScript/README.md) | Stack-language interpreter / graphics trace | ~99 | 2,000–2,800 | — | — | **high** (operator scope must be explicit) | moderate (published op list + arc-flattening rule) |
-| 6 | [DICOM](DICOM/README.md) | Medical imaging binary format | ~91 | 1,800–2,800 | — | **yes — NEMA reproduction permission** | moderate | moderate ("no pixel decoding" is a harness choice) |
-| 7 | [MusicXML](MusicXML/README.md) | Music notation ingestion | ~75 | 1,500–3,000 | — | possibly (contamination plan required) | moderate | low |
+| 3 | `Gerber` | PCB manufacturing files | ~75 | 2,500–3,500 | — | **yes — Ucamco redistribution** | moderate | low |
+| 4 | `SAM` | Bioinformatics alignment records | ~95 | 1,200–1,800 | — | possibly (hts-specs license unclear) | low | low |
+| 5 | `PostScript` | Stack-language interpreter / graphics trace | ~99 | 2,000–2,800 | — | — | **high** (operator scope must be explicit) | moderate (published op list + arc-flattening rule) |
+| 6 | `DICOM` | Medical imaging binary format | ~91 | 1,800–2,800 | — | **yes — NEMA reproduction permission** | moderate | moderate ("no pixel decoding" is a harness choice) |
+| 7 | `MusicXML` | Music notation ingestion | ~75 | 1,500–3,000 | — | possibly (contamination plan required) | moderate | low |
 | 8 | [GEDCOM](GEDCOM/README.md) | Genealogy records | ~96 | 2,000–3,000 | — | ambiguous 5.5.1 license | moderate | **high** (pedigree queries are harness-defined) |
 | 9 | `SMILES` | Chemistry notation | ~100 | 1,200–2,000 | **yes — canonical form is not deterministic across implementations** | — | moderate | low |
 | 10 | `Tar` | POSIX archive format | ~96 | 1,500–2,500 | **yes — tutorial-level saturation** | possibly (Open Group/IEEE copyright) | low | **high** (GNU extensions + path safety are evaluator policy) |
@@ -120,11 +122,11 @@ material, or both.
 |---:|---|---|---|
 | 1 | **Build now** | [BibTeX](BibTeX/README.md) | Best asymmetry in the set: ubiquitous `.bib` parsing but rare `.bst` execution; small authoritative corpus; strong system-level interpreter task. |
 | 2 | **Build now** | [ICal](ICal/README.md) | Single RFC + the strongest published spec-vs-library divergence evidence (rrule.js #375/#309/#556, dateutil #1398) in the core task, so hidden RRULE tests measure reasoning, not recall. |
-| 3 | **Build later** | [SAM](SAM/README.md) | Short dense spec, clean orthogonal subproblems (flags, CIGAR, MD-tag reconstruction, optional typing), lower authoring burden than DICOM, less IGES overlap. |
-| 4 | **Build later** | [PostScript](PostScript/README.md) | Distinct behavioral axis and good native spec, but high contract-design and reference-implementation burden (operator scope, arc-flattening rule). |
-| 5 | **Build later** | [DICOM](DICOM/README.md) | Real candidate, but the docs-rights story requires remediation before `prompt/docs/` can exist, and it overlaps IGES more than SAM or PostScript do. |
-| 6 | **Conditional** | [Gerber](Gerber/README.md) | Architecturally strong; blocked today by Ucamco's spec-redistribution restriction. If permission lands, jumps to tier 1. |
-| 7 | **Hold (conditional)** | [MusicXML](MusicXML/README.md) | Keep alive only with a concrete plan for (i) adversarial-fixture authoring outside the music21 / LilyPond / Verovio corpora and (ii) evidence that the major libraries miss the repeats-tempo-transpose chain. Without those, contamination dominates. |
+| 3 | **Build later** | `SAM` | Short dense spec, clean orthogonal subproblems (flags, CIGAR, MD-tag reconstruction, optional typing), lower authoring burden than DICOM, less IGES overlap. |
+| 4 | **Build later** | `PostScript` | Distinct behavioral axis and good native spec, but high contract-design and reference-implementation burden (operator scope, arc-flattening rule). |
+| 5 | **Build later** | `DICOM` | Real candidate, but the docs-rights story requires remediation before `prompt/docs/` can exist, and it overlaps IGES more than SAM or PostScript do. |
+| 6 | **Conditional** | `Gerber` | Architecturally strong; blocked today by Ucamco's spec-redistribution restriction. If permission lands, jumps to tier 1. |
+| 7 | **Hold (conditional)** | `MusicXML` | Keep alive only with a concrete plan for (i) adversarial-fixture authoring outside the music21 / LilyPond / Verovio corpora and (ii) evidence that the major libraries miss the repeats-tempo-transpose chain. Without those, contamination dominates. |
 | 8 | **Abandon** | [GEDCOM](GEDCOM/README.md) | Heavy contamination (1999 standard, 20+ years of OSS tooling) and too much interesting behavior lives in harness-defined relationship queries rather than the native spec. |
 | 9 | **Abandon** | `SMILES` | Canonicalization is not deterministic across implementations (OpenSMILES §5 explicitly defers the algorithm); removing it leaves a much weaker eval that falls below the system-level bar. |
 | 10 | **Abandon** | `Tar` | Tutorial-level saturation ("Build Your Own Tar" is Coding Challenge #54, field-offset tables are on Wikipedia); too much of the interesting behavior (GNU extensions, path-safety) lives in evaluator policy rather than POSIX text. |
@@ -135,11 +137,11 @@ material, or both.
 |---:|---|---|---|---|
 | 1 | **Build now** | [BibTeX](BibTeX/README.md) | — | Still the cleanest high-signal addition. |
 | 2 | **Build now** | [ICal](ICal/README.md) | — | Still the strongest non-BibTeX candidate; the public-library bug trail maps directly to the core task. |
-| 3 | **Build now** | [Gerber](Gerber/README.md) | **+3** (was #6 conditional) | Once permission lands, becomes a top-tier distinct-axis eval — stateful 2D graphics, strong domain persona, good system complexity. |
-| 4 | **Build later** | [SAM](SAM/README.md) | −1 | License cleanup plus its lower authoring burden make it the best next "later" candidate. |
-| 5 | **Build later** | [MusicXML](MusicXML/README.md) | **+2** (was #7 hold) | Only if the hold conditions are met; if someone proves real library divergence on the target chain and authors non-music21 fixtures, it becomes a serious build-later candidate with a richer composed pipeline than DICOM. |
-| 6 | **Build later** | [PostScript](PostScript/README.md) | −2 | Still viable, but the subset-contract and ref-impl effort keep it behind Gerber/SAM/MusicXML once their blockers clear. |
-| 7 | **Build later** | [DICOM](DICOM/README.md) | −2 | With NEMA permission, still useful, but IGES overlap and the multi-part corpus maintenance burden keep it below the other build-later candidates. |
+| 3 | **Build now** | `Gerber` | **+3** (was #6 conditional) | Once permission lands, becomes a top-tier distinct-axis eval — stateful 2D graphics, strong domain persona, good system complexity. |
+| 4 | **Build later** | `SAM` | −1 | License cleanup plus its lower authoring burden make it the best next "later" candidate. |
+| 5 | **Build later** | `MusicXML` | **+2** (was #7 hold) | Only if the hold conditions are met; if someone proves real library divergence on the target chain and authors non-music21 fixtures, it becomes a serious build-later candidate with a richer composed pipeline than DICOM. |
+| 6 | **Build later** | `PostScript` | −2 | Still viable, but the subset-contract and ref-impl effort keep it behind Gerber/SAM/MusicXML once their blockers clear. |
+| 7 | **Build later** | `DICOM` | −2 | With NEMA permission, still useful, but IGES overlap and the multi-part corpus maintenance burden keep it below the other build-later candidates. |
 | 8 | **Abandon** | [GEDCOM](GEDCOM/README.md) | — | License cleanup does not fix the core contamination or the harness-defined-queries problem. |
 | 9 | **Abandon** | `SMILES` | — | Same deterministic-surface problem remains; not a paperwork blocker. |
 | 10 | **Abandon** | `Tar` | — | Same saturation problem remains; not a paperwork blocker. |
@@ -438,19 +440,19 @@ point.
 
 ### Build after that, in order
 
-3. **[SAM](SAM/README.md)** — after ICal ships; shortest spec among
+3. **`SAM`** — after ICal ships; shortest spec among
    the remaining candidates, smallest authoring burden.
-4. **[PostScript](PostScript/README.md)** — only if appetite for a
+4. **`PostScript`** — only if appetite for a
    second interpreter eval after BibTeX; contract-design cost is real.
-5. **[DICOM](DICOM/README.md)** — only after NEMA redistribution path
+5. **`DICOM`** — only after NEMA redistribution path
    is chosen and IGES shows the parse-to-JSON axis is still
    discriminating.
 
 ### Conditional (remediable blockers)
 
-6. **[Gerber](Gerber/README.md)** — promote ahead of SAM/PostScript/
+6. **`Gerber`** — promote ahead of SAM/PostScript/
    DICOM if Ucamco grants redistribution permission.
-7. **[MusicXML](MusicXML/README.md)** — promote to build-later tier
+7. **`MusicXML`** — promote to build-later tier
    if both contamination-mitigation conditions are met.
 
 ### Abandon
@@ -470,8 +472,9 @@ point.
 - `BGP4` and `EPUB` are also abandoned in the narrower format-heavy pass, but
   there are no corresponding directories to delete on the current `main`
   branch.
-- Keep `DICOM`, `Gerber`, `MusicXML`, `PostScript`, and `SAM` because they are
-  still conditional or deferred rather than rejected.
+- Delete `Evals/DICOM/`, `Evals/Gerber/`, `Evals/MusicXML/`,
+  `Evals/PostScript/`, and `Evals/SAM/`. They were candidate-only shells for
+  work we are not currently committing to pursue.
 - Keep existing shipped eval directories such as `GEDCOM`, `LAS`, `MARC21`, and
   `SEGY`; their continued presence in the repo is a separate question from
   whether they would rank highly as brand-new candidates today.
