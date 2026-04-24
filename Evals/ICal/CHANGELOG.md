@@ -1,6 +1,18 @@
 # ICal Eval Changelog
 
-## v1.3.0 — 2026-04-24
+## v2.0.0 — 2026-04-24
+
+**Breaking**: the occurrence schema for `STATUS:CANCELLED` overrides
+changed. Previously such occurrences were silently dropped from the
+`occurrences` array; now they MUST be emitted with
+`cancelled: true`. An implementation that was passing v1.2.x by
+dropping the occurrence will fail the v2.x
+`test_recurrence_id_cancel_marks_occurrence_cancelled` test. The
+iTIP `itip_missing_property` warning contract also gained new
+requirements (adjacent method-component phrase + exactly one
+property token per warning) — implementations that emit omnibus
+messages listing all required properties in one warning will
+need to split them.
 
 Eval-authoring rule-3 hardening from a 136-failure classification
 review across Opus 4.7 max and gpt-5.5 xhigh runs. Fixes spec

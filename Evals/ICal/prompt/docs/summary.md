@@ -522,10 +522,26 @@ rules:
 - `RECURRENCE-ID` with a `RANGE=THISANDFUTURE` parameter extends the
   override to all future occurrences (replaces the base's RRULE
   expansion from Y onwards). `RANGE=THISANDPRIOR` is deprecated.
+  When combined with `STATUS:CANCELLED`, every RRULE-produced
+  occurrence at or after the RECURRENCE-ID anchor is emitted with
+  `cancelled: true` at its original recurrence time (no `dtstart`
+  shift — the cancel signal does not carry a new time).
+
+**THISANDFUTURE scope**: if a base event carries MULTIPLE
+`RANGE=THISANDFUTURE` overrides for the same UID, only the
+earliest-target override is honored by `expand`; later
+`THISANDFUTURE` overrides are silently subsumed. This matches
+real-world CalDAV convention but is a deliberate simplification —
+callers generating multiple THISANDFUTURE overrides for a single
+series should expect only the first to take effect. A
+`THISANDFUTURE` override whose `RECURRENCE-ID` doesn't match any
+base occurrence emits `orphan_override` (per the rule below) but
+is not expanded as a standalone series.
 
 Overrides that reference a recurrence-id not produced by the base
 event emit `orphan_override` warnings; the override is still emitted
-as a standalone occurrence.
+as a standalone occurrence (with `cancelled: true` if
+`STATUS:CANCELLED`).
 
 ## 8. EXRULE (deprecated)
 

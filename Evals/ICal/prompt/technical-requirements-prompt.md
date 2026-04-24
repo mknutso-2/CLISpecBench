@@ -408,19 +408,19 @@ message on a non-VEVENT component MUST contain:
    component is one of `VTODO`, `VJOURNAL`, `VFREEBUSY`. VEVENT
    rules do not need `VEVENT` in the message (VEVENT is the
    default); they only need the method token.
-2. **The RFC property name** the rule references, immediately
-   after the method-component phrase OR within ten characters of
-   it. The intent is to associate the missing property with the
-   specific cell, ruling out an "omnibus" message that lists
-   every possible required property and would pass every
-   property-specific test. Allowed property tokens: `UID` /
-   `DTSTAMP` / `DTSTART` / `DTEND` / `ORGANIZER` / `ATTENDEE` /
-   `SEQUENCE` / `SUMMARY` / `PRIORITY` / `DESCRIPTION` / `STATUS` /
-   `PARTSTAT`.
+2. **The RFC property name** the rule references MUST appear
+   somewhere in the message as a whole word (delimited by
+   non-word characters on both sides, so `X-PRIORITY` does
+   NOT count as a `PRIORITY` hit and `GUID` does NOT count as
+   a `UID` hit). Allowed property tokens: `UID` / `DTSTAMP` /
+   `DTSTART` / `DTEND` / `ORGANIZER` / `ATTENDEE` / `SEQUENCE` /
+   `SUMMARY` / `PRIORITY` / `DESCRIPTION` / `STATUS` / `PARTSTAT`.
 3. The message MUST NOT contain MORE THAN ONE property token
-   from the list above. (One missing-rule violation per warning;
-   if multiple rules fire on the same fixture, the impl emits
-   multiple warnings, one per rule.)
+   from the list above (word-bounded). This rules out the
+   "omnibus" failure mode where a single warning lists every
+   possible required property and would spuriously satisfy every
+   property-specific test. Rule is: one warning per missing
+   rule, not one warning per component×method cell.
 
 "Method X not defined for <COMPONENT>" warnings (when a VJOURNAL
 or VFREEBUSY carries a method its §3.5 / §3.3 table does not

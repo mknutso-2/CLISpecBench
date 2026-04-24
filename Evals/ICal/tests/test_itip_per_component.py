@@ -19,6 +19,7 @@ for every iTIP rule violation; the message differentiates them).
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -42,10 +43,18 @@ def _warn_messages(out: dict[str, Any]) -> list[str]:
     return [w.get("message", "") for w in cast(list[dict[str, Any]], raw)]
 
 
-_ALL_ITIP_PROPERTY_TOKENS = {
+_ALL_ITIP_PROPERTY_TOKENS = (
     "UID", "DTSTAMP", "DTSTART", "DTEND", "ORGANIZER", "ATTENDEE",
     "SEQUENCE", "SUMMARY", "PRIORITY", "DESCRIPTION", "STATUS",
     "PARTSTAT",
+)
+
+# Compile once: word-boundary regex for each token so that "X-PRIORITY"
+# or "GUID" (which contain "PRIORITY" / "UID" as substrings) do NOT
+# count as property-token hits. BibTeX-style naming convention —
+# uppercase ASCII letters only — so `\b` is sufficient.
+_TOKEN_RES: dict[str, re.Pattern[str]] = {
+    tok: re.compile(r"\b" + tok + r"\b") for tok in _ALL_ITIP_PROPERTY_TOKENS
 }
 
 
@@ -58,7 +67,9 @@ def _warn_mentions_method_component_property(
 
       1. Contain the adjacent two-word phrase ``<METHOD> <COMPONENT>``
          OR ``<COMPONENT> <METHOD>`` (single ASCII space between).
-      2. Contain the specific RFC property name token under test.
+      2. Contain the specific RFC property name token under test, as
+         a word-boundary-delimited whole word (so ``X-PRIORITY`` or
+         ``GUID`` do NOT count as PRIORITY / UID hits).
       3. Contain EXACTLY ONE property token from the allowed list —
          this rules out the "omnibus message" failure mode where a
          single warning lists every possible required property and
@@ -71,15 +82,18 @@ def _warn_mentions_method_component_property(
     """
     pair_a = f"{method} {component}"
     pair_b = f"{component} {method}"
+    target_re = _TOKEN_RES[property_name]
     for m in messages:
         # Rule 1: adjacent phrase, either order.
         if pair_a not in m and pair_b not in m:
             continue
-        # Rule 2: the specific property under test must appear.
-        if property_name not in m:
+        # Rule 2: the specific property under test must appear as a
+        # whole word (not a substring of a longer ident like X-PRIORITY).
+        if not target_re.search(m):
             continue
         # Rule 3: exactly one property token in the message overall.
-        if sum(1 for tok in _ALL_ITIP_PROPERTY_TOKENS if tok in m) != 1:
+        token_hits = sum(1 for rx in _TOKEN_RES.values() if rx.search(m))
+        if token_hits != 1:
             continue
         return True
     return False
@@ -259,7 +273,9 @@ def test_vtodo_counter_requires_priority(
 ) -> None:
     """RFC 5546 §3.4.7 COUNTER VTODO PRIORITY row is `1`. A VTODO
     COUNTER without PRIORITY is a matrix violation — this is a VTODO-
-    specific rule not present on VEVENT COUNTER."""
+    specific rule not present on VEVENT COUNTER. Warning MUST carry
+    the `COUNTER VTODO` adjacent phrase plus the PRIORITY property
+    token per the warning contract."""
     body = (
         "UID:t1\nDTSTAMP:20260101T120000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
@@ -269,9 +285,9 @@ def test_vtodo_counter_requires_priority(
     )
     out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PRIORITY" in m for m in msgs), (
-        f"expected a PRIORITY-missing warning on VTODO COUNTER; got {msgs!r}"
-    )
+    assert _warn_mentions_method_component_property(
+        msgs, "COUNTER", "VTODO", "PRIORITY"
+    ), msgs
 
 
 def test_vtodo_counter_requires_summary(
@@ -287,7 +303,9 @@ def test_vtodo_counter_requires_summary(
     )
     out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("SUMMARY" in m for m in msgs)
+    assert _warn_mentions_method_component_property(
+        msgs, "COUNTER", "VTODO", "SUMMARY"
+    ), msgs
 
 
 def test_vtodo_counter_with_priority_and_summary_ok(
