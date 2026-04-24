@@ -8,14 +8,15 @@ concrete occurrences over a date window, resolves zoned date-times
 through in-file VTIMEZONE definitions, and honors the iTIP
 scheduling layer.
 
-> **Status.** v1.0.0 — authoritative-spec release. Ships RFC 5545
-> (core), RFC 5546 (iTIP), RFC 6868 (parameter escaping), RFC 7529
-> (non-Gregorian RSCALE), and RFC 7986 (new calendar properties)
-> verbatim. Tests cover the union of those specs: VALARM, full
-> ATTENDEE grammar, RDATE PERIOD, RANGE=THISANDFUTURE, VTIMEZONE
-> historical reloads, RFC 6868 param escapes, RFC 7986
-> calendar-level properties, iTIP method-specific validation.
-> **245 tests.**
+> **Status.** v1.1.0 — test-surface expansion over v1.0. v1.0 was
+> the authoritative-spec release (RFC 5545 + 5546 + 6868 + 7529 +
+> 7986 shipped verbatim). v1.1 adds **97 new tests (245 → 342)** per
+> [`PLAN.md`](PLAN.md) Parts B1–B10, ships RFC 9074 (VALARM
+> extensions), and extends the reference implementation for VFREEBUSY
+> full modeling, 12 event-level fields, 3 VTIMEZONE fields, iTIP
+> ADD / REFRESH / COUNTER / DECLINECOUNTER, DST fold/gap warnings
+> (`timezone_fold_ambiguous`, `nonexistent_local_time`), and deep
+> schema conformance. **342 tests.**
 
 ## Directory structure
 
@@ -96,7 +97,7 @@ Tests use `.get()`-based helpers (`find_event`, `warnings_of`,
 uv run pytest Evals/ICal/tests --language=cpp
 ```
 
-The reference implementation passes all **245** tests. Run from the
+The reference implementation passes all **342** tests. Run from the
 repository root.
 
 ## Task IDs

@@ -1,5 +1,95 @@
 # ICal Eval Changelog
 
+## v1.1.0 — 2026-04-24
+
+Test-surface expansion per `PLAN.md` Parts B1-B10 (B7-B9 and B11-B14
+deferred). Adds 97 new tests (245 -> 342) across six areas that close
+the specific findings from the Codex v1.0 adversarial review.
+
+New authoritative RFC (prompt/docs/authoritative/):
+
+- `rfc9074.txt` - "VALARM" Extensions for iCalendar (RFC 9074,
+  August 2021). Closes the contract gap where `ACKNOWLEDGED` was in
+  the schema without a shipped authoritative source. Also introduces
+  UID, PROXIMITY, RELATED-TO on VALARM.
+
+A1+B6 - RFC 9074 VALARM Extensions (+12 tests,
+test_valarm_rfc9074.py):
+  - VALARM uid preserved.
+  - ACKNOWLEDGED absolute DATE-TIME; absence -> null.
+  - PROXIMITY = ARRIVE / DEPART / x-name; absence -> null.
+  - RELATED-TO plain UID; with RELTYPE; multiple entries accumulate.
+  - Snooze workflow (REPEAT + DURATION + ACKNOWLEDGED).
+  - raw_properties carries RFC 9074 props even if unfielded.
+
+B1 - VFREEBUSY full modeling (+14 tests, test_vfreebusy.py):
+  - Closes Codex v1.0 review finding #1. Previously VFreeBusy was
+    an alias for VEvent and no FREEBUSY property was parsed.
+  - Adds dedicated FreeBusyEntry struct (fbtype + periods).
+  - FBTYPE values: FREE / BUSY / BUSY-UNAVAILABLE / BUSY-TENTATIVE /
+    x-name. Default is BUSY.
+  - Multiple FREEBUSY properties accumulate.
+  - Comma-separated periods in one FREEBUSY value.
+  - PERIOD value types: start/end, start/duration.
+  - Common VFREEBUSY fields (UID/DTSTART/DTEND/ORGANIZER/ATTENDEE).
+
+B2 - Contract-vs-impl gap (+29 tests, test_event_fields.py +
+test_vtimezone_fields.py):
+  - Closes Codex v1.0 review finding #2.
+  - Event-level RFC 5545 fields newly modeled: priority, transp,
+    url, geo (with malformed-value warning), resources, contact,
+    created, last_modified, attachments (with FMTTYPE / ENCODING).
+  - RFC 7986 at event level: color, images, conferences.
+  - VTIMEZONE fields: last_modified, tzurl, comment (repeating).
+  - New warning: duplicate_uid (sec 3.8.4.7).
+
+B3+B4 - VTIMEZONE resolution depth + DST fold/gap warnings
+(+17 tests, test_vtimezone_resolution.py + test_dst_warnings.py):
+  - Closes Codex v1.0 review finding #5.
+  - Resolver honors observance RRULE UNTIL.
+  - Resolver enumerates observance RDATE entries.
+  - BYMONTHDAY honored in observance RRULE.
+  - detect_tz_anomaly() detects timezone_fold_ambiguous (fall-back
+    overlap) and nonexistent_local_time (spring-forward gap).
+  - Southern-hemisphere DST (Sydney) and no-DST zones exercised.
+
+B5 - iTIP per-method matrices (+14 tests, test_itip_methods_deep.py):
+  - Closes Codex v1.0 review finding #4. Adds depth on RFC 5546
+    sec 3.2 methods: ADD / REFRESH / COUNTER / DECLINECOUNTER.
+  - PUBLISH MUST NOT include ATTENDEE (RFC 5546 sec 3.2.1) enforced.
+  - Case-insensitive METHOD value handling.
+  - Per-event validation across multi-event calendars.
+
+B10 - Schema conformance depth (+11 tests, test_schema_depth.py):
+  - Arrays always lists, never null (empty -> []).
+  - Warning entries always carry kind.
+  - ISO-8601 regex pins on dtstart fields.
+  - Occurrences sorted by dtstart with UID lexicographic tie-break.
+  - Calendar object carries all RFC 7986 keys.
+
+Reference implementation changes:
+  - ical.hpp: added RelatedTo, FreeBusyEntry, Geo, ImageEntry,
+    ConferenceEntry; expanded VAlarm, VEvent, VTimezone, VFreeBusy.
+  - parser.cpp: extended apply_common_prop (12 new fields);
+    apply_alarm_prop (RFC 9074); FREEBUSY parsing in VFREEBUSY;
+    VTIMEZONE-level LAST-MODIFIED/TZURL/COMMENT; new
+    validate_duplicate_uids() pass; PUBLISH-forbids-ATTENDEE check.
+  - json_writer.cpp: new emit_freebusy(); emit_alarm() extended;
+    emit_event_common() emits 12 new fields; emit_vtimezone() extends.
+  - datetime.cpp: enumerate_observance now includes RDATE, honors
+    UNTIL, handles BYMONTHDAY; new detect_tz_anomaly().
+  - rrule.cpp: to_comparable emits fold/gap warnings; occurrence
+    sort adds UID tie-break.
+
+Deferred to a future v1.2 (per PLAN.md):
+  - A2+B7: RFC 7953 VAVAILABILITY.
+  - A3+B8: RFC 9073 Event Publishing Extensions.
+  - A4+B9: RFC 9253 TZIDALIASOF.
+  - B11: 75-octet folding edges (line_too_long, invalid fold).
+  - B12: real-world calendar corpus.
+  - B13: error-message line/column precision.
+  - B14: stress + regression.
+
 ## v1.0.0 — 2026-04-22
 
 **Authoritative-spec release.** Previous versions shipped a

@@ -19,7 +19,6 @@ from typing import Any, cast
 
 from conftest import run_expand, run_parse, wrap_event
 
-
 ISO_DATE_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:?\d{2})?$")
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 UTC_OFFSET = re.compile(r"^[+-]\d{4,6}$")

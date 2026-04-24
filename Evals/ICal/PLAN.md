@@ -355,7 +355,7 @@ exit=1. Add:
 
 | RFC | Status | Size | Tests driven by |
 |---|---|---|---|
-| 9074 (VALARM extensions) | pending | ~20 KB | B6 |
+| 9074 (VALARM extensions) | ✅ done | 32 KB | B6 |
 | 7953 (VAVAILABILITY) | pending | ~35 KB | B7 |
 | 9073 (event pub) | pending | ~45 KB | B8 |
 | 9253 (TZID alias) | pending | ~10 KB | B9 |
@@ -364,21 +364,22 @@ exit=1. Add:
 
 | Priority | Status | Tests | Depends on docs |
 |---|---|---|---|
-| B1: VFREEBUSY modeling | pending | 0/~15 | — |
-| B2: Contract-vs-impl gap | pending | 0/~25 | — |
-| B3: VTIMEZONE resolution depth | pending | 0/~12 | — |
-| B4: DST fold/gap warnings | pending | 0/~8 | — |
-| B5: iTIP per-method matrices | pending | 0/~20 | RFC 5546 (shipped) |
-| B6: RFC 9074 VALARM ext | pending | 0/~10 | A1 |
+| B1: VFREEBUSY modeling | ✅ done | 14 | — |
+| B2: Contract-vs-impl gap | ✅ done | 29 | — |
+| B3: VTIMEZONE resolution depth | ✅ done | 9 | — |
+| B4: DST fold/gap warnings | ✅ done | 8 | — |
+| B5: iTIP per-method matrices | ✅ done | 14 | RFC 5546 (shipped) |
+| B6: RFC 9074 VALARM ext | ✅ done | 12 | A1 |
 | B7: RFC 7953 VAVAILABILITY | pending | 0/~12 | A2 |
 | B8: RFC 9073 event pub | pending | 0/~20 | A3 |
 | B9: RFC 9253 TZID alias | pending | 0/~3 | A4 |
-| B10: Deeper schema conformance | pending | 0/~10 | — |
+| B10: Deeper schema conformance | ✅ done | 11 | — |
 | B11: 75-octet fold edges | pending | 0/~5 | — |
 | B12: Real-world corpus | pending | 0/~10 | — |
 | B13: Error line/col precision | pending | 0/~8 | — |
 | B14: Stress + regression | pending | 0/~10 | — |
-| **Total** | **0 / 168** | | |
+| **v1.1 landed** | **97** | **245 → 342** | |
+| **v1.2 pending** | **~68** | A2–A4 + B7–B9 + B11–B14 | |
 
 ## Suggested execution order
 
