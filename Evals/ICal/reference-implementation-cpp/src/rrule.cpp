@@ -739,8 +739,14 @@ std::vector<Occurrence> expand_events(
     }
     (void)has_base_event;  // tracking retained for future per-UID checks
 
+    // Stable sort by dtstart with UID lexicographic tie-break (spec: occurrences
+    // are sorted ascending by dtstart; equal timestamps break ties on uid).
     std::sort(result.begin(), result.end(),
-              [](const Occurrence& a, const Occurrence& b) { return compare(a.dtstart, b.dtstart) < 0; });
+              [](const Occurrence& a, const Occurrence& b) {
+                  int c = compare(a.dtstart, b.dtstart);
+                  if (c != 0) return c < 0;
+                  return a.uid < b.uid;
+              });
     return result;
 }
 
