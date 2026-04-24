@@ -234,10 +234,11 @@ Notes:
 - `tzname` is a scalar string, not an array. An observance with no
   TZNAME emits null.
 - VTIMEZONE-level `comment` (top-level, not inside an observance) is
-  an array of strings. Observance-level COMMENT is surfaced in each
-  observance's raw_properties when carried in `raw_properties` is
-  supported by the impl; this schema does not expose it as a typed
-  field on the observance.
+  an array of strings. Observance-level COMMENT is OUT OF SCOPE:
+  this schema does not expose it on the observance object (neither
+  as a typed field nor through `raw_properties`), and the reference
+  implementation silently drops COMMENT properties that appear
+  inside STANDARD / DAYLIGHT blocks.
 - VTIMEZONE may contain multiple STANDARD and/or multiple DAYLIGHT
   observances to model historical rule changes (each observance is
   active from its DTSTART forward until superseded by the next
@@ -278,7 +279,11 @@ Notes:
   `raw_properties[...]["params"]`.
 - DURATION values → ISO-8601 duration strings (`PT1H30M`, `-P1D`,
   etc.).
-- UTC-OFFSET values → `±HHMM` or `±HHMMSS`.
+- UTC-OFFSET values are normalized to the colonized ISO-8601 form
+  `±HH:MM` (or `±HH:MM:SS` when the input includes seconds). The
+  RFC 5545 on-wire form is `±HHMM` / `±HHMMSS` (no colon); our JSON
+  output adds the colon for readability and parity with the ISO
+  date-time strings in the rest of the schema.
 
 ## VAVAILABILITY object schema (RFC 7953)
 

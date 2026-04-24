@@ -224,6 +224,145 @@ def test_floating_time_does_not_trigger_dst_warnings(
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Fold detection across RDATE-driven and UNTIL-bounded observances
+# (exercises the detect_tz_anomaly path that enumerates RDATE + multi-year
+# RRULE + UNTIL per iter 1 review fixes).
+# ---------------------------------------------------------------------------
+
+
+HISTORICAL_US_TZ = """\
+BEGIN:VTIMEZONE
+TZID:America/New_York
+BEGIN:STANDARD
+DTSTART:19701025T020000
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST-old
+RRULE:FREQ=YEARLY;BYMONTH=10;BYDAY=-1SU;UNTIL=20061026T000000Z
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19700405T020000
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT-old
+RRULE:FREQ=YEARLY;BYMONTH=4;BYDAY=1SU;UNTIL=20070401T000000Z
+END:DAYLIGHT
+BEGIN:STANDARD
+DTSTART:20071104T020000
+TZOFFSETFROM:-0400
+TZOFFSETTO:-0500
+TZNAME:EST
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:20070311T020000
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0400
+TZNAME:EDT
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+END:DAYLIGHT
+END:VTIMEZONE
+"""
+
+
+def _wrap_historical(event_body: str) -> str:
+    return (
+        HEAD + HISTORICAL_US_TZ
+        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
+    )
+
+
+def test_historical_fold_on_pre_2007_date(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """A fold-ambiguous local time on a 2005 fall-back day (under the
+    pre-2007 UNTIL-bounded rule: last Sunday of October) must still fire
+    `timezone_fold_ambiguous`. This exercises detect_tz_anomaly's
+    multi-year enumeration + UNTIL handling.
+    """
+    body = (
+        "UID:e-hist\nDTSTAMP:20050101T120000Z\n"
+        # 2005-10-30 was the last Sunday of October 2005 → fall-back day.
+        "DTSTART;TZID=America/New_York:20051030T013000\n"
+    )
+    out = run_expand(
+        submission_command,
+        _wrap_historical(body),
+        "2005-10-01T00:00:00Z",
+        "2005-11-01T00:00:00Z",
+        tmp_path,
+    )
+    assert "timezone_fold_ambiguous" in _kinds(out)
+
+
+def test_historical_post_2007_fold_still_fires(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Post-2007 (current DST rule), the first-Sunday-of-November fall-
+    back fold-ambiguous time still fires, proving the detect_tz_anomaly
+    multi-year scan isn't confused by the presence of the old rule."""
+    body = (
+        "UID:e-modern\nDTSTAMP:20261101T120000Z\n"
+        "DTSTART;TZID=America/New_York:20261101T013000\n"
+    )
+    out = run_expand(
+        submission_command,
+        _wrap_historical(body),
+        "2026-10-01T00:00:00Z",
+        "2026-12-01T00:00:00Z",
+        tmp_path,
+    )
+    assert "timezone_fold_ambiguous" in _kinds(out)
+
+
+RDATE_DRIVEN_TZ = """\
+BEGIN:VTIMEZONE
+TZID:Test/RDate
+BEGIN:STANDARD
+DTSTART:20100101T000000
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0000
+RDATE:20250315T020000
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:20251015T020000
+TZOFFSETFROM:+0000
+TZOFFSETTO:+0100
+END:DAYLIGHT
+END:VTIMEZONE
+"""
+
+
+def _wrap_rdate_tz(event_body: str) -> str:
+    return (
+        HEAD + RDATE_DRIVEN_TZ
+        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
+    )
+
+
+def test_rdate_driven_fold_fires_warning(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """An RDATE-only transition in a zone (+0100 → +0000 on 2025-03-15
+    at local 02:00) creates a fold-ambiguous window at local 01:00–02:00.
+    This exercises detect_tz_anomaly's RDATE enumeration — previously
+    the anomaly detector ignored RDATE."""
+    body = (
+        "UID:e-rdate\nDTSTAMP:20260101T120000Z\n"
+        # 01:30 on 2025-03-15 local is in the fall-back overlap.
+        "DTSTART;TZID=Test/RDate:20250315T013000\n"
+    )
+    out = run_expand(
+        submission_command,
+        _wrap_rdate_tz(body),
+        "2025-03-01T00:00:00Z",
+        "2025-04-01T00:00:00Z",
+        tmp_path,
+    )
+    assert "timezone_fold_ambiguous" in _kinds(out)
+
+
 def test_recurring_event_crossing_dst_boundary(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:

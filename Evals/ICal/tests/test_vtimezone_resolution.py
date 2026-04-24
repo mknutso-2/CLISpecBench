@@ -288,17 +288,19 @@ def test_observance_bymonthday(
 
 
 # ---------------------------------------------------------------------------
-# Multi-BYMONTH observance — picks the right month for the given event
+# Yearly + BYMONTHDAY: the anniversary-of-transition shape
 # ---------------------------------------------------------------------------
 
 
-def test_observance_multi_bymonth(
+def test_observance_yearly_bymonthday_transition(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """An observance with BYMONTH=3,10 in one rule: the resolver should
-    generate transitions in both months per year (though this is unusual)."""
+    """An observance that fires once per year on the 15th of the configured
+    month (FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=15) resolves correctly for a
+    mid-year event several years past DTSTART. The resolver must apply
+    the single-offset rule literally without confusing year anchoring."""
     tz = (
-        "TZID:Test/MultiMonth\n"
+        "TZID:Test/Anniversary\n"
         "BEGIN:STANDARD\n"
         "DTSTART:20200115T000000\n"
         "TZOFFSETFROM:+0100\nTZOFFSETTO:+0100\n"
@@ -307,7 +309,7 @@ def test_observance_multi_bymonth(
     )
     ev = (
         "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Test/MultiMonth:20260601T120000\n"
+        "DTSTART;TZID=Test/Anniversary:20260601T120000\n"
     )
     out = run_expand(
         submission_command,
@@ -317,7 +319,7 @@ def test_observance_multi_bymonth(
         tmp_path,
     )
     starts = starts_for(out["occurrences"], "e1")
-    # Single-offset zone: 12:00 at +0100 = 11:00 UTC.
+    # Single-offset +0100 zone: 12:00 local = 11:00 UTC.
     assert starts == ["2026-06-01T11:00:00Z"]
 
 
