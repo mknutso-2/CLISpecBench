@@ -45,6 +45,8 @@ struct Warning {
     std::string message;
     std::optional<std::string> uid;
     std::optional<std::string> value;
+    std::optional<std::size_t> line;
+    std::optional<std::size_t> column;
 };
 
 struct ParseError {

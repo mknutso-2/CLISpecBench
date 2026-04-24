@@ -13,7 +13,11 @@ namespace {
 
 // --- Line unfolding (byte-based per RFC 5545 §3.1) ---
 
-struct LineRecord { std::string text; std::size_t line_number{1}; };
+struct LineRecord {
+    std::string text;
+    std::size_t line_number{1};
+    bool was_folded{false};  // true iff this logical line was assembled from >1 physical line
+};
 
 std::vector<LineRecord> unfold_lines(std::string_view src) {
     std::vector<LineRecord> out;
@@ -21,11 +25,13 @@ std::vector<LineRecord> unfold_lines(std::string_view src) {
     std::size_t start_line = 1;
     std::size_t cur_line = 1;
     bool have_cur = false;
+    bool cur_was_folded = false;
     auto flush = [&](std::size_t ln) {
         if (have_cur) {
-            out.push_back(LineRecord{std::move(cur), start_line});
+            out.push_back(LineRecord{std::move(cur), start_line, cur_was_folded});
             cur.clear();
             have_cur = false;
+            cur_was_folded = false;
         }
         start_line = ln;
     };
@@ -39,11 +45,13 @@ std::vector<LineRecord> unfold_lines(std::string_view src) {
                                && (line_text[0] == ' ' || line_text[0] == '\t');
         if (is_continuation) {
             cur += line_text.substr(1);
+            cur_was_folded = true;
         } else {
             flush(cur_line);
             cur = line_text;
             start_line = cur_line;
             have_cur = true;
+            cur_was_folded = false;
         }
         cur_line++;
         i = (eol < src.size()) ? eol + 1 : eol;
@@ -754,6 +762,23 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
 
     for (const auto& ln : lines) {
         if (ln.text.empty()) continue;
+        // RFC 5545 §3.1: "Lines of text SHOULD NOT be longer than 75 octets".
+        // After unfolding, if a logical line is still > 75 octets and was
+        // NOT split via fold in the source, emit line_too_long.
+        // Unfolded `ln.text` here is the post-unfold length; but we only
+        // warn when the ORIGINAL line (pre-fold) was >75 AND it was not
+        // folded. We approximate this by warning on any unfolded line > 75
+        // octets — per-fold is not easily distinguishable post-unfold.
+        // A more precise check is to detect whether the logical line was
+        // actually split across multiple physical lines (the unfold record
+        // doesn't carry that). We warn on output length > 75 as the
+        // pragmatic proxy.
+        if (ln.text.size() > 75 && !ln.was_folded) {
+            Warning w; w.kind = "line_too_long";
+            w.message = "content line exceeds 75 octets";
+            w.line = ln.line_number;
+            cal.warnings.push_back(std::move(w));
+        }
         auto pp = parse_property_line(ln.text, ln.line_number);
         if (!pp) return ParseError{ln.line_number, 1, "malformed content line: " + ln.text};
         const Property& p = *pp;
