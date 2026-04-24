@@ -116,20 +116,24 @@ def test_outlook_export_parses_successfully(
 def test_outlook_quoted_tzid_parameter(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Outlook emits TZID params with DQUOTE around multi-word zone names.
-    The parser must strip the quotes when resolving the TZID."""
+    """Outlook emits TZID params with DQUOTE around multi-word zone
+    names (RFC 5545 §3.1 quoted-string parameter form). The parser
+    may either strip the surrounding DQUOTEs (recommended — yields
+    a clean TZID string consumable by downstream resolvers) or
+    preserve them literally in raw_properties. This test accepts
+    both forms because RFC 5545 doesn't strictly mandate stripping;
+    but at least one form MUST appear so Outlook-exported
+    calendars round-trip."""
     ics = _load("outlook-export.ics")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "outlook-000001-aabbccdd")
-    # The event's DTSTART has TZID="Eastern Standard Time" (quoted).
-    # Parser should recognize it and preserve the TZID value.
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
     dtstart_raws = [p for p in raw if str(p.get("name", "")).upper() == "DTSTART"]
     assert len(dtstart_raws) >= 1
     params = dtstart_raws[0].get("params", {})
     tzid = params.get("TZID") if isinstance(params, dict) else None
     assert tzid in ("Eastern Standard Time", '"Eastern Standard Time"'), (
-        f"unexpected TZID param: {tzid!r}"
+        f"unexpected TZID param: {tzid!r} (expected stripped or literal-quoted form)"
     )
 
 

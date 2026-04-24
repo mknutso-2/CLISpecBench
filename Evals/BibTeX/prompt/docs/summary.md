@@ -311,7 +311,7 @@ The 37 built-in functions:
 | `call.type$` | `( → )` | Call the user-defined function whose name matches the current entry's type; if no such function, call `default.type`. |
 | `empty$` | `(any → int)` | Push 1 if top is missing or an empty/whitespace-only string; else 0. |
 | `missing$` | `(any → int)` | Push 1 if top is missing; else 0. |
-| `preamble$` | `( → str)` | Push the concatenation of all `@preamble` values. |
+| `preamble$` | `( → str)` | Push the concatenation of all `@preamble` values in source order, separated by a single ASCII space. Two preambles `"aa"` and `"bb"` yield `"aa bb"`. |
 | `num.names$` (above) | | |
 
 #### Output
@@ -435,9 +435,11 @@ Warning kinds:
 - `bst_undefined_function` — a `.bst` program called an unknown
   function. This is a *hard* error unless the function reference is
   pushed quoted; for quoted pushes it is a load-time warning.
-- `cite_not_found` — a cited key did not appear in the `.bib` database.
-  The cite key is still attempted in the `ITERATE` list as missing
-  if the style file is forgiving; otherwise the iteration skips it.
+
+A cited key that does not appear in the `.bib` database is not
+emitted as a warning; instead the key appears in the JSON log
+under `entries_cited_missing` (§5.1), and the iteration skips
+or includes it per the style file's own logic.
 
 ### 5.4 Line endings
 

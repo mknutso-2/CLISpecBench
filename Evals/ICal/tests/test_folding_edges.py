@@ -147,8 +147,14 @@ def test_fold_before_escape_sequence(
     events = cast(list[dict[str, Any]], data.get("events") or [])
     assert len(events) == 1
     desc = events[0].get("description", "")
-    # After unfold: "line1\nline2" (literal backslash-n). After TEXT escape: "line1" + LF + "line2".
-    assert "line1" in desc and "line2" in desc
+    # After unfold: "line1\nline2" (literal backslash-n). After TEXT
+    # escape: "line1" + LF + "line2". Pin the exact "\n"-separated
+    # output so that a parser which emitted literal backslash-n
+    # (no escape processing) would fail this test.
+    assert desc == "line1\nline2", (
+        f"expected unfold+escape to produce 'line1\\nline2' with real LF; "
+        f"got {desc!r}"
+    )
 
 
 # ---------------------------------------------------------------------------
