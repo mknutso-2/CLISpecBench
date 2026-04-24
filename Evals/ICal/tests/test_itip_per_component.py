@@ -248,14 +248,20 @@ def test_vtodo_counter_with_priority_and_summary_ok(
 def test_vtodo_publish_requires_organizer(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """VTODO PUBLISH §3.4.1 ORGANIZER row is `1`."""
+    """VTODO PUBLISH §3.4.1 ORGANIZER row is `1`. Fixture carries every
+    OTHER "1" row (DTSTART, PRIORITY, SUMMARY) so the emitted warning
+    isolates the ORGANIZER rule. A fixture missing multiple required
+    rows can't prove the ORGANIZER check specifically."""
     body = (
         "UID:t1\nDTSTAMP:20260101T120000Z\n"
-        "SUMMARY:Task\n"
-        # deliberately missing ORGANIZER
+        "DTSTART:20260301T100000Z\nPRIORITY:5\nSUMMARY:Task\n"
+        # deliberately missing ORGANIZER — all other required rows present
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
-    assert "itip_missing_property" in _warn_kinds(out)
+    msgs = _warn_messages(out)
+    assert any("PUBLISH VTODO" in m and "ORGANIZER" in m for m in msgs), (
+        f"expected an isolated ORGANIZER warning on VTODO PUBLISH; got {msgs!r}"
+    )
 
 
 def test_vtodo_publish_requires_priority(

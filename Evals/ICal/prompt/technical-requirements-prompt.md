@@ -368,9 +368,37 @@ Warning `kind` values emitted by this tool:
 - `line_too_long`
 
 The presence of any listed kind is semantic (tests will assert
-whether a given warning *kind* appears in the `warnings` array), but
-the specific `message` text is NOT asserted. The metadata fields are
-optional — tests must not fail on their absence.
+whether a given warning *kind* appears in the `warnings` array). The
+metadata fields (`uid`, `component`, `line`, `column`) are optional —
+tests must not fail on their absence.
+
+**`message` content — general rule**: the specific `message` wording
+is NOT normally asserted.
+
+**`message` content — narrow exceptions**: a small set of tests
+DO assert on `message` substrings, but only when the same warning
+`kind` is emitted for multiple distinct RFC rules within a single
+component/method and a kind-only check cannot distinguish them.
+The current exceptions — all of them on `itip_missing_property` —
+pin the referenced property name and component, never the full
+sentence or its punctuation. A conforming implementation may use any
+wording it likes so long as the property and component names that
+appear in the message match the RFC terms. Concretely, for the
+component–property pairs listed below, the message MUST contain
+both identifiers as separate whole tokens (case-insensitive
+matching is acceptable):
+
+- `itip_missing_property` messages for VTODO-specific rules —
+  `"PUBLISH VTODO"` + `"PRIORITY"`, `"REQUEST VTODO"` + `"PRIORITY"`
+  / `"SUMMARY"`, `"COUNTER VTODO"` + `"PRIORITY"` / `"SUMMARY"`.
+- `itip_missing_property` messages for VJOURNAL-specific rules —
+  `"PUBLISH VJOURNAL"` / `"ADD VJOURNAL"` + `"DESCRIPTION"` /
+  `"DTSTART"`.
+- `itip_missing_property` messages for VFREEBUSY — `"VFREEBUSY"`
+  appearing somewhere in the message for method-undefined and
+  DTSTART/DTEND violations.
+
+Everywhere else the test suite checks only the warning `kind`.
 
 ## Error output
 

@@ -443,41 +443,52 @@ the file should be interpreted as a scheduling message. The tool:
   `UID` and `DTSTAMP` are "1" (required) in every table, enforced
   universally.
 
-**VEVENT (§3.2.x) — all 8 methods defined:**
+**VEVENT (§3.2.x) — all 8 methods defined.** Every row marked "1"
+in the RFC constraint tables is enforced; omission emits
+`itip_missing_property`.
 
-    | Method         | SEQUENCE row | Other required      | ATTENDEE     |
-    |----------------|--------------|---------------------|--------------|
-    | PUBLISH        | 0 or 1 (opt) | ORGANIZER (§3.2.1)  | MUST NOT     |
-    | REQUEST        | 0 or 1 (opt) | ORGANIZER           | 1+           |
-    | REPLY          | 0 or 1 (opt) | ORGANIZER + PARTSTAT| 1            |
-    | ADD            | 1 (MUST > 0) | ORGANIZER           | 0+           |
-    | CANCEL         | 1            | ORGANIZER           | 0+           |
-    | REFRESH        | 0 (MUST NOT) | ORGANIZER           | 1            |
-    | COUNTER        | 1            | ORGANIZER           | 0+           |
-    | DECLINECOUNTER | 1            | ORGANIZER           | 1+           |
+    | Method         | Required rows (all "1") besides UID/DTSTAMP    | ATTENDEE |
+    |----------------|------------------------------------------------|----------|
+    | PUBLISH        | DTSTART, ORGANIZER, SUMMARY                    | MUST NOT |
+    | REQUEST        | DTSTART, ORGANIZER, SUMMARY, ATTENDEE          | 1+       |
+    | REPLY          | ORGANIZER, ATTENDEE (w/ PARTSTAT)              | 1        |
+    | ADD            | DTSTART, ORGANIZER, SUMMARY, SEQUENCE (>0)     | 0+       |
+    | CANCEL         | ORGANIZER, SEQUENCE                            | 0+       |
+    | REFRESH        | ORGANIZER, ATTENDEE; SEQUENCE MUST NOT appear  | 1        |
+    | COUNTER        | DTSTART, ORGANIZER, SUMMARY, SEQUENCE          | 0+       |
+    | DECLINECOUNTER | ORGANIZER, ATTENDEE, SEQUENCE                  | 1+       |
 
-**VTODO (§3.4.x) — all 8 methods, matrix differs from VEVENT:**
+**VTODO (§3.4.x) — all 8 methods, with VTODO-specific rows.** Mirrors
+the VEVENT table plus PRIORITY "1" on PUBLISH/REQUEST/ADD/COUNTER.
 
-- PUBLISH explicitly requires ORGANIZER (§3.4.1 — VEVENT PUBLISH prose
-  also requires it; the table is unambiguous for VTODO).
-- COUNTER additionally requires `PRIORITY` (1) and `SUMMARY` (1) per
-  §3.4.7's expanded table. SEQUENCE is "0 or 1" on VTODO COUNTER
-  (optional) — different from VEVENT COUNTER's required "1".
-- REFRESH VTODO does NOT forbid SEQUENCE (§3.4.6 SEQUENCE row is
-  "0 or 1"), unlike VEVENT REFRESH.
+    | Method         | Required rows (all "1") besides UID/DTSTAMP                      |
+    |----------------|------------------------------------------------------------------|
+    | PUBLISH        | DTSTART, ORGANIZER, PRIORITY, SUMMARY; ATTENDEE MUST NOT         |
+    | REQUEST        | DTSTART, ORGANIZER, PRIORITY, SUMMARY, ATTENDEE (1+)             |
+    | REPLY          | ORGANIZER, ATTENDEE (w/ PARTSTAT)                                |
+    | ADD            | ORGANIZER, PRIORITY, SUMMARY, SEQUENCE (>0)                      |
+    | CANCEL         | ORGANIZER, SEQUENCE                                              |
+    | REFRESH        | ORGANIZER, ATTENDEE (SEQUENCE permitted — §3.4.6 is "0 or 1")    |
+    | COUNTER        | ORGANIZER, ATTENDEE (1+), PRIORITY, SUMMARY                      |
+    | DECLINECOUNTER | ORGANIZER, ATTENDEE                                              |
 
-**VJOURNAL (§3.5.x) — ONLY PUBLISH / ADD / CANCEL:**
+**VJOURNAL (§3.5.x) — ONLY PUBLISH / ADD / CANCEL.** Any other METHOD
+on a VJOURNAL emits `METHOD X not defined for VJOURNAL (RFC 5546
+§3.5)`.
 
-- Any other METHOD on a VJOURNAL component is an RFC 5546 violation;
-  we emit `METHOD X not defined for VJOURNAL (RFC 5546 §3.5)`.
-- PUBLISH (§3.5.1): ORGANIZER 1, ATTENDEE 0.
-- ADD (§3.5.2): ORGANIZER 1, SEQUENCE 1 MUST > 0, ATTENDEE 0.
-- CANCEL (§3.5.3): ORGANIZER 1, SEQUENCE 1, STATUS (if present) must
-  be CANCELLED.
+    | Method   | Required rows besides UID/DTSTAMP                             |
+    |----------|---------------------------------------------------------------|
+    | PUBLISH  | DESCRIPTION, DTSTART, ORGANIZER; ATTENDEE MUST NOT            |
+    | ADD      | DESCRIPTION, DTSTART, ORGANIZER, SEQUENCE (>0); ATTENDEE 0    |
+    | CANCEL   | ORGANIZER, SEQUENCE; STATUS if present MUST be CANCELLED      |
 
-**VFREEBUSY (§3.3.x) — ONLY PUBLISH / REQUEST / REPLY:**
+`RECURRENCE-ID` scope on VJOURNAL (whole-series vs single-instance
+cancel) is validated via the same `orphan_override` path as VEVENT
+— the check is applied uniformly across events/todos/journals.
 
-- All three methods require DTSTART, DTEND, ORGANIZER, DTSTAMP, UID.
+**VFREEBUSY (§3.3.x) — ONLY PUBLISH / REQUEST / REPLY.** Every table
+requires DTSTART, DTEND, ORGANIZER, DTSTAMP, UID.
+
 - PUBLISH (§3.3.1): ATTENDEE MUST NOT appear.
 - REQUEST (§3.3.2): ATTENDEE 1+.
 - REPLY (§3.3.3): ATTENDEE 1+.

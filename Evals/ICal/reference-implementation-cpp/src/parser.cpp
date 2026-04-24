@@ -877,13 +877,17 @@ void validate_duplicate_uids(Calendar& cal) {
     }
 }
 
-void validate_orphan_overrides(Calendar& cal) {
-    // Index base events by UID.
+// Core orphan-override check — factored so we can apply it to
+// `events` / `todos` / `journals` uniformly. Takes a list by reference
+// and the container's warning sink.
+void validate_orphan_overrides_in(
+    const std::vector<VEvent>& components, Calendar& cal
+) {
     std::unordered_map<std::string, const VEvent*> base_by_uid;
-    for (const auto& e : cal.events) {
+    for (const auto& e : components) {
         if (!e.recurrence_id.has_value()) base_by_uid[e.uid] = &e;
     }
-    for (const auto& e : cal.events) {
+    for (const auto& e : components) {
         if (!e.recurrence_id.has_value()) continue;
         auto it = base_by_uid.find(e.uid);
         if (it == base_by_uid.end()) continue;  // no base; harness handles this elsewhere
@@ -931,6 +935,19 @@ void validate_orphan_overrides(Calendar& cal) {
             cal.warnings.push_back(std::move(w));
         }
     }
+}
+
+void validate_orphan_overrides(Calendar& cal) {
+    // Apply to every top-level recurring-component container. RFC 5545
+    // §3.8.4.4 RECURRENCE-ID semantics are identical across VEVENT /
+    // VTODO / VJOURNAL; scoping the check to events-only silently
+    // accepts broken VTODO / VJOURNAL overrides.
+    validate_orphan_overrides_in(cal.events, cal);
+    // VTodo inherits from VEvent; slice to a VEvent view via a copy.
+    std::vector<VEvent> todo_view(cal.todos.begin(), cal.todos.end());
+    validate_orphan_overrides_in(todo_view, cal);
+    std::vector<VEvent> journal_view(cal.journals.begin(), cal.journals.end());
+    validate_orphan_overrides_in(journal_view, cal);
 }
 
 } // namespace

@@ -239,6 +239,59 @@ def test_range_with_mismatched_recurrence_id_warns(
     assert "orphan_override" in kinds
 
 
+def test_orphan_override_on_vjournal_warns(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5545 §3.8.4.4 RECURRENCE-ID semantics are identical on
+    VEVENT / VTODO / VJOURNAL. A VJOURNAL override pointing at an
+    instance not produced by the base series must also trigger the
+    `orphan_override` warning — iter 6 flagged that prior impls
+    scoped the check to `cal.events` only and silently accepted
+    broken journal overrides.
+
+    Fixture: weekly Monday VJOURNAL series, override pointing at a
+    Tuesday (not in the series). Tuesday has no base instance."""
+    ics = (
+        "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
+        "BEGIN:VJOURNAL\nUID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260302T100000Z\nDESCRIPTION:Retro\n"
+        "RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=3\nEND:VJOURNAL\n"
+        # Orphan override on a Tuesday
+        "BEGIN:VJOURNAL\nUID:j1\nDTSTAMP:20260101T120000Z\n"
+        "RECURRENCE-ID:20260303T100000Z\n"
+        "DTSTART:20260303T100000Z\nDESCRIPTION:Oops\n"
+        "END:VJOURNAL\n"
+        "END:VCALENDAR\n"
+    )
+    out = run_parse(submission_command, ics, tmp_path)
+    kinds = [w.get("kind") for w in out.get("warnings", [])]
+    assert "orphan_override" in kinds
+
+
+def test_orphan_override_on_vtodo_warns(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Same rule applies to VTODO: RECURRENCE-ID must match a base
+    series instance. Fixture: daily todo, override pointing 3 days
+    past the COUNT=2 series end."""
+    ics = (
+        "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
+        "BEGIN:VTODO\nUID:t1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260302T100000Z\nSUMMARY:Daily task\nPRIORITY:5\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "RRULE:FREQ=DAILY;COUNT=2\nEND:VTODO\n"
+        # Override: day 5 of a COUNT=2 series — doesn't exist.
+        "BEGIN:VTODO\nUID:t1\nDTSTAMP:20260101T120000Z\n"
+        "RECURRENCE-ID:20260305T100000Z\n"
+        "DTSTART:20260305T100000Z\nSUMMARY:Oops\nPRIORITY:5\n"
+        "END:VTODO\n"
+        "END:VCALENDAR\n"
+    )
+    out = run_parse(submission_command, ics, tmp_path)
+    kinds = [w.get("kind") for w in out.get("warnings", [])]
+    assert "orphan_override" in kinds
+
+
 def test_single_instance_override_does_not_shift_future(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
