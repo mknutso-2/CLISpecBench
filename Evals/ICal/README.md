@@ -8,16 +8,20 @@ concrete occurrences over a date window, resolves zoned date-times
 through in-file VTIMEZONE definitions, and honors the iTIP
 scheduling layer.
 
-> **Status.** v1.2.0 — `PLAN.md` complete (all 14 priorities landed).
-> Ships **9 authoritative RFCs** verbatim: RFC 5545 (core) + RFC 5546
-> (iTIP) + RFC 6868 (param escaping) + RFC 7529 (RSCALE) + RFC 7953
-> (Calendar Availability) + RFC 7986 (calendar props) + RFC 9073
-> (event publishing) + RFC 9074 (VALARM extensions) + RFC 9253
-> (relationships). Test suite is **410 tests** (up from 245 at v1.0),
-> covering VALARM ext, VFREEBUSY semantics, VTIMEZONE resolution
-> depth, DST fold/gap warnings, iTIP per-method matrices, VAVAILABILITY,
-> event-publishing extensions, 75-octet folding edges, stress
-> scenarios, and real-world (Gmail / Outlook / iTIP) corpora.
+> **Status.** v2.0.0 — `PLAN.md` complete plus an eval-authoring
+> review arc that reconciled two contradictions in the override
+> contract. Ships **9 authoritative RFCs** verbatim: RFC 5545 (core) +
+> RFC 5546 (iTIP) + RFC 6868 (param escaping) + RFC 7529 (RSCALE) +
+> RFC 7953 (Calendar Availability) + RFC 7986 (calendar props) +
+> RFC 9073 (event publishing) + RFC 9074 (VALARM extensions) +
+> RFC 9253 (relationships). Test suite is **465 tests** (up from
+> 245 at v1.0), covering VALARM ext, VFREEBUSY semantics, VTIMEZONE
+> resolution depth, DST fold/gap warnings, iTIP per-method matrices,
+> VAVAILABILITY, event-publishing extensions, 75-octet folding edges,
+> stress scenarios, and real-world (Gmail / Outlook / iTIP) corpora.
+> The v2.0.0 major bump reflects the new `STATUS:CANCELLED` override
+> contract: cancelled instances now remain in the `occurrences`
+> array with `cancelled: true` rather than being silently dropped.
 
 ## Directory structure
 
@@ -60,7 +64,7 @@ tests/
 reference-implementation-cpp/
   CMakeLists.txt
   src/                              # see below
-VERSION                             # 1.0.0
+VERSION                             # 2.0.0
 CHANGELOG.md
 ```
 

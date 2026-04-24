@@ -49,12 +49,18 @@ _ALL_ITIP_PROPERTY_TOKENS = (
     "PARTSTAT",
 )
 
-# Compile once: word-boundary regex for each token so that "X-PRIORITY"
-# or "GUID" (which contain "PRIORITY" / "UID" as substrings) do NOT
-# count as property-token hits. BibTeX-style naming convention —
-# uppercase ASCII letters only — so `\b` is sufficient.
+# Compile once: token-boundary regex for each property identifier.
+# We use a NEGATIVE look-around for ``[\w-]`` on both sides rather
+# than Python's built-in ``\b``. The built-in is wrong here because
+# ``-`` counts as a NON-word character, so ``\bPRIORITY\b`` still
+# matches inside ``X-PRIORITY`` (hyphen-word boundary is a ``\b``
+# match point). Real RFC 5545 property names can start with ``X-``
+# for vendor extensions, and we want those to be rejected as
+# property-token hits. The custom lookaround treats both underscore
+# (``_``) and hyphen (``-``) as token-continuation chars.
 _TOKEN_RES: dict[str, re.Pattern[str]] = {
-    tok: re.compile(r"\b" + tok + r"\b") for tok in _ALL_ITIP_PROPERTY_TOKENS
+    tok: re.compile(r"(?<![\w-])" + tok + r"(?![\w-])")
+    for tok in _ALL_ITIP_PROPERTY_TOKENS
 }
 
 

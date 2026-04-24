@@ -409,12 +409,16 @@ message on a non-VEVENT component MUST contain:
    rules do not need `VEVENT` in the message (VEVENT is the
    default); they only need the method token.
 2. **The RFC property name** the rule references MUST appear
-   somewhere in the message as a whole word (delimited by
-   non-word characters on both sides, so `X-PRIORITY` does
-   NOT count as a `PRIORITY` hit and `GUID` does NOT count as
-   a `UID` hit). Allowed property tokens: `UID` / `DTSTAMP` /
-   `DTSTART` / `DTEND` / `ORGANIZER` / `ATTENDEE` / `SEQUENCE` /
-   `SUMMARY` / `PRIORITY` / `DESCRIPTION` / `STATUS` / `PARTSTAT`.
+   somewhere in the message as a standalone token — i.e. the
+   character immediately before and after each occurrence MUST
+   NOT be a word character (`[A-Za-z0-9_]`) AND MUST NOT be a
+   hyphen (`-`). This rules out BOTH purely-alphanumeric prefix
+   concatenations (`GUID` does NOT count as a `UID` hit) AND
+   vendor-extension forms (`X-PRIORITY` does NOT count as a
+   `PRIORITY` hit; `EVENT-UID` does NOT count as a `UID` hit).
+   Allowed property tokens: `UID` / `DTSTAMP` / `DTSTART` /
+   `DTEND` / `ORGANIZER` / `ATTENDEE` / `SEQUENCE` / `SUMMARY` /
+   `PRIORITY` / `DESCRIPTION` / `STATUS` / `PARTSTAT`.
 3. The message MUST NOT contain MORE THAN ONE property token
    from the list above (word-bounded). This rules out the
    "omnibus" failure mode where a single warning lists every
