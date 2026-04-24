@@ -10,13 +10,18 @@ the `.bbl` output BibTeX 0.99c would produce — **byte-exact on the
 reference styles against the reference `.bib` corpora** (modulo the
 documented approximations in `summary.md` §8).
 
-> **Status.** v1.0.0 — authoritative-spec release. Previous versions
-> shipped a clean-room summary; v1.0 ships Patashnik's original
-> documentation and source verbatim. Byte-exact `.bbl` parity
-> against real BibTeX 0.99c is the primary discriminator, paired
-> with exhaustive coverage of the name grammar, `.bst` built-ins,
-> output-buffer wrapping rules, and sort/iterate semantics.
-> **258 tests.**
+> **Status.** v1.1.0 — test-surface expansion over v1.0. v1.0 was
+> the authoritative-spec release (Patashnik's `btxdoc.tex`,
+> `btxhak.tex`, `bibtex.web`, plus `plain.bst` / `alpha.bst` /
+> `unsrt.bst` / `abbrv.bst` shipped verbatim). v1.1 adds 111 new
+> tests per [`PLAN.md`](PLAN.md) — depth on the built-ins Codex's
+> adversarial review called out as under-probed, the `bibtex.web`
+> §15 forward-scan output wrap (previously unimplemented), SORT /
+> REVERSE / ITERATE semantics, cross-entry state + name
+> disambiguation, a second reference `.bib` corpus for byte-exact
+> parity, `.bst` parser edges, error-message line/column
+> precision, `#`-concatenation + `@string` corners, and UTF-8
+> byte preservation. **369 tests.**
 
 ## Directory structure
 
@@ -96,7 +101,7 @@ execution internals.
 uv run pytest Evals/BibTeX/tests --language=cpp
 ```
 
-The reference implementation passes all **258** tests. Run from the
+The reference implementation passes all **369** tests. Run from the
 repository root.
 
 ## Task IDs

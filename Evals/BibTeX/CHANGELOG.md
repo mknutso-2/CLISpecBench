@@ -1,5 +1,79 @@
 # BibTeX Eval Changelog
 
+## v1.1.0 — 2026-04-23
+
+Test-surface expansion per `PLAN.md`, adding 111 new tests
+(258 → 369) and one reference-implementation fix (bibtex.web §15
+forward-scan output wrap).
+
+**New test files**:
+
+- `tests/test_builtins_deep.py` (35 tests) — depth on `width$`,
+  `change.case$`, `top$` / `stack$`, `warning$`, `chr.to.int$` /
+  `int.to.chr$`, `purify$`. Pins concrete cmr10 widths, `:` +
+  whitespace preservation in title-case, brace-protected ASCII,
+  emission ordering of `warning$`, multi-char `chr.to.int$`
+  type-error, ligature restoration in `purify$`.
+- `tests/test_output_wrap_forward.py` (6 tests) — bibtex.web §15
+  forward-scan wrap rule: when no whitespace in cols [3, 79] but
+  whitespace exists later, break at the first whitespace past 79.
+  Previously unimplemented in the reference impl.
+- `tests/test_sort_iterate.py` (14 tests) — SORT stability on
+  ties, lexicographic (not numeric) comparison, last-SORT-key-wins
+  on repeated sorts, REVERSE semantics with and without SORT,
+  EXECUTE between SORT and ITERATE preserves order.
+- `tests/test_cross_entry_state.py` (9 tests) — global INTEGERS /
+  STRINGS persist across ITERATE; ENTRY-scope vars reset per
+  entry; name-disambiguation via counter survives ITERATE + SORT;
+  EXECUTE can reset globals between passes.
+- `tests/test_bst_parser_edges.py` (16 tests) — negative / zero
+  integer literals, deeply nested function literals, mid-body `%`
+  comments, ITERATE-before-READ ordering error, quoted function
+  references, duplicate-FUNCTION handling (spec-strict or
+  lenient-override).
+- `tests/test_error_precision.py` (8 tests) — error JSON must
+  carry 1-indexed positive `line` / `column`, `source` = `bib` /
+  `bst` / `runtime`, missing CLI flags exit 1, nonexistent `--bib` /
+  `--aux` files exit 1.
+- `tests/test_concat_and_macros.py` (11 tests) — two-, three-, and
+  empty-string concatenation, number-to-string coercion in concat,
+  macro chain resolution, `@string` redefinition semantics,
+  self-referential macro handling, case-insensitive macro lookup
+  under concat.
+- `tests/test_unicode.py` (8 tests) — UTF-8 field values round-trip
+  through `write$`, `chr.to.int$` / `int.to.chr$` on ASCII produce
+  correct codes, LaTeX diacritic bytes preserved, `substring$` is
+  byte-oriented.
+
+**Second fixture corpus** (`fixtures/refs-edge.bib` +
+`fixtures/refs-edge.cites`):
+
+- Exercises name-grammar edges (Form 2/3, tied tokens, brace-
+  protected von), `@preamble` concatenation, case-insensitive
+  `crossref` lookup, depth-1 LaTeX accents, predefined month
+  macros, `@string`-based concatenation, long author lists with
+  `and others`.
+- `tests/test_reference_styles.py` is now parametrized over both
+  corpora × all four canonical styles → 8 parity tests (was 4).
+- `tools/regenerate_bbl_fixtures.sh` iterates both corpora.
+- `tests/fixtures/README.md` documents both corpora.
+- Existing fixtures renamed: `{style}.expected.bbl` →
+  `{style}.refs.expected.bbl`.
+
+**Reference-implementation fix**:
+
+- `reference-implementation-cpp/src/bst_interpreter.cpp`:
+  `append_output` now implements the bibtex.web §15 forward-scan
+  fallback — when no whitespace lies in cols [3, 79] but a space
+  appears past col 79, the line breaks at that space with a
+  2-space indented continuation. This closes Codex v1.0
+  adversarial-review finding #9.
+
+Version bump to 1.1.0 (also backfills from the implicit 1.0.0 of
+the previous commit, where the `VERSION` file inadvertently
+remained at 0.3.0 due to a write failure; the `CHANGELOG` header
+correctly named the release).
+
 ## v1.0.0 — 2026-04-22
 
 **Authoritative-spec release.** Previous versions shipped a

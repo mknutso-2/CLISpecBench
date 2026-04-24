@@ -32,27 +32,36 @@ STYLES_DIR = HERE.parent / "prompt" / "docs" / "authoritative"
 
 
 REFERENCE_STYLES = ["plain", "alpha", "unsrt", "abbrv"]
+# Two corpora exercise different parts of the .bst interpreter surface:
+#   refs       — core entry types, simple names, basic crossref
+#   refs-edge  — name-grammar edges (Form 2/3, ties, braces), `@preamble`
+#                concatenation, long author lists with "and others",
+#                crossref case-insensitivity, depth-1 LaTeX accents
+REFERENCE_CORPORA = ["refs", "refs-edge"]
 
 
 @pytest.mark.parametrize("style", REFERENCE_STYLES)
+@pytest.mark.parametrize("corpus", REFERENCE_CORPORA)
 def test_reference_style_bbl_parity(
-    submission_command: tuple[str, ...], tmp_path: Path, style: str
+    submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str
 ) -> None:
-    """Byte-exact `.bbl` parity for one of the four canonical styles.
+    """Byte-exact `.bbl` parity for one of the four canonical styles against
+    one of the two reference corpora.
 
-    Runs the submission against `fixtures/refs.bib` + `fixtures/refs.cites`
-    with `authoritative/<style>.bst` and compares the produced `.bbl`
-    against `fixtures/<style>.expected.bbl` byte-by-byte.
+    Runs the submission against `fixtures/<corpus>.bib` +
+    `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares
+    the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`
+    byte-by-byte.
     """
-    bib_file = FIXTURES / "refs.bib"
-    cites_file = FIXTURES / "refs.cites"
+    bib_file = FIXTURES / f"{corpus}.bib"
+    cites_file = FIXTURES / f"{corpus}.cites"
     style_file = STYLES_DIR / f"{style}.bst"
-    expected_file = FIXTURES / f"{style}.expected.bbl"
+    expected_file = FIXTURES / f"{style}.{corpus}.expected.bbl"
 
     for required in (bib_file, cites_file, style_file, expected_file):
         assert required.exists(), f"fixture missing: {required}"
 
-    output_file = tmp_path / f"out.{style}.bbl"
+    output_file = tmp_path / f"out.{style}.{corpus}.bbl"
 
     args = [
         *submission_command,
@@ -89,13 +98,13 @@ def test_reference_style_bbl_parity(
         e = expected_lines[i] if i < len(expected_lines) else "<EOF>"
         if a != e:
             raise AssertionError(
-                f"{style}.bst .bbl parity failure at line {i + 1}:\n"
+                f"{style}.bst x {corpus} .bbl parity failure at line {i + 1}:\n"
                 f"  expected: {e!r}\n"
                 f"  actual:   {a!r}\n"
                 f"(bbl sizes: actual={len(actual)}, expected={len(expected)})"
             )
     raise AssertionError(
-        f"{style}.bst .bbl byte-mismatch but line-by-line compare found "
-        f"no difference (possible trailing-newline or CRLF issue). "
-        f"Sizes: actual={len(actual)}, expected={len(expected)}."
+        f"{style}.bst x {corpus} .bbl byte-mismatch but line-by-line "
+        f"compare found no difference (possible trailing-newline or CRLF "
+        f"issue). Sizes: actual={len(actual)}, expected={len(expected)}."
     )

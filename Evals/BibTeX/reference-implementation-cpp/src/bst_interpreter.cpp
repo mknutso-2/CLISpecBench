@@ -933,26 +933,45 @@ struct Interpreter {
     }
 
     // Write a chunk to output, wrapping at 79 columns at whitespace.
+    //
+    // bibtex.web §15 rules:
+    //   (1) Try to break at the last whitespace in columns [min_print_line, max_print_line]
+    //       = [3, 79] (1-based; 0-based index [2, 79]).
+    //   (2) If no whitespace in [3, 79] but whitespace appears later, scan FORWARD past
+    //       column 79 for the first whitespace and break there (still 2-space indent on
+    //       continuation).
+    //   (3) If no whitespace anywhere, emit the line verbatim (no wrap possible).
     void append_output(std::string_view chunk) {
         for (char c : chunk) {
             if (c == '\n') {
                 flush_line(true);
-            } else {
-                current_line.push_back(c);
-                if (current_line.size() > 79) {
-                    // Find last space <= 79 for break.
-                    std::size_t brk = std::string::npos;
-                    for (std::size_t k = 79; k > 0; --k) {
-                        if (current_line[k] == ' ') { brk = k; break; }
-                    }
-                    if (brk != std::string::npos) {
-                        output_buffer.append(current_line, 0, brk);
-                        output_buffer.push_back('\n');
-                        std::string rest = current_line.substr(brk + 1);
-                        current_line = "  " + rest;
-                    }
-                }
+                continue;
             }
+            current_line.push_back(c);
+            if (current_line.size() <= 79) continue;
+
+            // Line now exceeds 79. First, attempt a backward scan in [2, 79] (0-based).
+            std::size_t brk = std::string::npos;
+            for (std::size_t k = 79; k >= 2; --k) {
+                if (current_line[k] == ' ') { brk = k; break; }
+            }
+            if (brk != std::string::npos) {
+                output_buffer.append(current_line, 0, brk);
+                output_buffer.push_back('\n');
+                std::string rest = current_line.substr(brk + 1);
+                current_line = "  " + rest;
+                continue;
+            }
+            // No backward break. Forward-scan per bibtex.web §15: if the char we just
+            // appended IS a whitespace and we're past col 79, break here.
+            if (c == ' ') {
+                // Break at the trailing space: emit everything before it, then indent.
+                std::size_t cut = current_line.size() - 1;
+                output_buffer.append(current_line, 0, cut);
+                output_buffer.push_back('\n');
+                current_line = "  "; // 2-space continuation indent per §15
+            }
+            // Otherwise the line keeps growing until we see a whitespace or a newline.
         }
     }
     void flush_line(bool emit_newline) {

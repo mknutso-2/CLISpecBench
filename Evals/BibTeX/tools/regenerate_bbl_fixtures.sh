@@ -13,6 +13,7 @@ EVAL_ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
 FIXTURES_DIR="$EVAL_ROOT/tests/fixtures"
 STYLES_DIR="$EVAL_ROOT/prompt/docs/authoritative"
 STYLES=(plain alpha unsrt abbrv)
+CORPORA=(refs refs-edge)
 
 USE_DOCKER=0
 if [[ "${1:-}" == "--docker" ]]; then
@@ -23,59 +24,63 @@ if [[ ! -d "$FIXTURES_DIR" ]]; then
     echo "error: fixtures dir missing: $FIXTURES_DIR" >&2
     exit 1
 fi
-if [[ ! -f "$FIXTURES_DIR/refs.bib" ]]; then
-    echo "error: refs.bib missing from $FIXTURES_DIR" >&2
-    exit 1
-fi
+for corpus in "${CORPORA[@]}"; do
+    if [[ ! -f "$FIXTURES_DIR/$corpus.bib" ]]; then
+        echo "error: $corpus.bib missing from $FIXTURES_DIR" >&2
+        exit 1
+    fi
+done
 
 run_bibtex_host() {
     local tmp="$1"
-    local style="$2"
-    (cd "$tmp" && bibtex refs) || {
-        echo "bibtex failed on style=$style" >&2
+    local stem="$2"
+    (cd "$tmp" && bibtex "$stem") || {
+        echo "bibtex failed on $stem" >&2
         exit 1
     }
 }
 
 run_bibtex_docker() {
     local tmp="$1"
-    local style="$2"
+    local stem="$2"
     docker run --rm \
         -v "$tmp":/work \
         -w /work \
         texlive/texlive:latest \
-        bibtex refs
+        bibtex "$stem"
 }
 
-for style in "${STYLES[@]}"; do
-    tmp="$(mktemp -d)"
-    trap 'rm -rf "$tmp"' EXIT
+for corpus in "${CORPORA[@]}"; do
+    for style in "${STYLES[@]}"; do
+        tmp="$(mktemp -d)"
+        trap 'rm -rf "$tmp"' EXIT
 
-    cp "$FIXTURES_DIR/refs.bib" "$tmp/refs.bib"
-    cp "$STYLES_DIR/$style.bst" "$tmp/$style.bst"
+        cp "$FIXTURES_DIR/$corpus.bib" "$tmp/$corpus.bib"
+        cp "$STYLES_DIR/$style.bst" "$tmp/$style.bst"
 
-    # Minimal .aux naming the style, the database, and every citation key.
-    {
-        echo "\\relax"
-        echo "\\bibstyle{$style}"
-        echo "\\bibdata{refs}"
-        while IFS= read -r key; do
-            [[ -z "$key" ]] && continue
-            [[ "$key" =~ ^# ]] && continue
-            echo "\\citation{$key}"
-        done < "$FIXTURES_DIR/refs.cites"
-    } > "$tmp/refs.aux"
+        # Minimal .aux naming the style, the database, and every citation key.
+        {
+            echo "\\relax"
+            echo "\\bibstyle{$style}"
+            echo "\\bibdata{$corpus}"
+            while IFS= read -r key; do
+                [[ -z "$key" ]] && continue
+                [[ "$key" =~ ^# ]] && continue
+                echo "\\citation{$key}"
+            done < "$FIXTURES_DIR/$corpus.cites"
+        } > "$tmp/$corpus.aux"
 
-    if (( USE_DOCKER )); then
-        run_bibtex_docker "$tmp" "$style"
-    else
-        run_bibtex_host "$tmp" "$style"
-    fi
+        if (( USE_DOCKER )); then
+            run_bibtex_docker "$tmp" "$corpus"
+        else
+            run_bibtex_host "$tmp" "$corpus"
+        fi
 
-    cp "$tmp/refs.bbl" "$FIXTURES_DIR/$style.expected.bbl"
-    echo "wrote $FIXTURES_DIR/$style.expected.bbl"
-    rm -rf "$tmp"
-    trap - EXIT
+        cp "$tmp/$corpus.bbl" "$FIXTURES_DIR/$style.$corpus.expected.bbl"
+        echo "wrote $FIXTURES_DIR/$style.$corpus.expected.bbl"
+        rm -rf "$tmp"
+        trap - EXIT
+    done
 done
 
 echo "all fixtures regenerated."

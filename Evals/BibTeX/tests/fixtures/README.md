@@ -9,15 +9,34 @@ styles against a realistic `.bib` database.
 
 ## Files
 
-- `refs.bib` — a reference `.bib` covering all entry types, name
-  grammar corners, `@string` macros, concatenation, and `crossref`
-  inheritance.
-- `refs.cites` — the citation list used for the runs.
-- `plain.expected.bbl` — the expected `.bbl` for `plain.bst` on
-  `refs.bib` / `refs.cites`.
-- `alpha.expected.bbl` — same for `alpha.bst`.
-- `unsrt.expected.bbl` — same for `unsrt.bst`.
-- `abbrv.expected.bbl` — same for `abbrv.bst`.
+Two curated `.bib` corpora × four canonical styles = 8 parity fixtures.
+
+### Corpus 1: `refs.bib` / `refs.cites` — core surface
+
+Covers all entry types, simple name grammar, `@string` macros,
+concatenation, and basic `crossref` inheritance.
+
+Expected `.bbl` outputs:
+
+- `plain.refs.expected.bbl`
+- `alpha.refs.expected.bbl`
+- `unsrt.refs.expected.bbl`
+- `abbrv.refs.expected.bbl`
+
+### Corpus 2: `refs-edge.bib` / `refs-edge.cites` — grammar edges
+
+Covers name-grammar edges (Form 2/3, tied tokens, brace-protected
+von), long author lists with `and others`, `@preamble`
+concatenation, case-insensitive `crossref` lookup, depth-1 LaTeX
+accents, predefined month macros, and complex `@string`-based
+concatenation.
+
+Expected `.bbl` outputs:
+
+- `plain.refs-edge.expected.bbl`
+- `alpha.refs-edge.expected.bbl`
+- `unsrt.refs-edge.expected.bbl`
+- `abbrv.refs-edge.expected.bbl`
 
 ## Regenerating fixtures against real BibTeX 0.99c
 
