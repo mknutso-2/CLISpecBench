@@ -68,8 +68,14 @@ The expected fixtures were generated with:
 A submission must match these `.bbl` files byte-for-byte, with two
 documented approximations per summary.md §8:
 
-1. `width$` values may differ from cmr10 within a stable monotone
-   ordering; tests exercise relative comparisons, not absolute.
+1. `width$` values may follow either the cmr10-exact table or the
+   summary.md §8.1 approximation. Deep unit tests pin absolute
+   values where both interpretations agree (e.g. `a=500`), a
+   set-of-acceptable values where they diverge (e.g. space ∈
+   {278, 250}), or the weaker ordering where a flat
+   approximation would flatten an exact distinction (`M >= m`).
+   The parity corpus here does not require byte-exact `width$`
+   output inside the `.bbl`.
 2. `change.case$` and `purify$` on nested LaTeX accent macros past
    depth 1 (e.g. `{{\"o}}`) are not asserted by parity tests; they
    are covered by narrower unit tests.

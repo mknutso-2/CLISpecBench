@@ -537,7 +537,8 @@ Semantically:
 ical parse --input <file.ics> --output <out.json>
 ```
 
-Writes a JSON object with keys (in this order):
+Writes a JSON object with the following top-level keys (JSON
+object-key order is not semantic; tests check the key SET):
 `calendar`, `events`, `todos`, `journals`, `freebusy`, `timezones`,
 `availabilities`, `warnings`. `availabilities` is the RFC 7953
 VAVAILABILITY top-level array (may be empty).
@@ -548,7 +549,8 @@ VAVAILABILITY top-level array (may be empty).
 ical expand --input <file.ics> --from <ISO> --to <ISO> --output <out.json>
 ```
 
-Writes a JSON object with keys (in this order):
+Writes a JSON object with the following top-level keys (JSON
+object-key order is not semantic; tests check the key SET):
 `occurrences`, `warnings`.
 
 `occurrences` is sorted ascending by `dtstart`. Each occurrence:

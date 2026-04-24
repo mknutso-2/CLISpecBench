@@ -269,8 +269,9 @@ def test_cancel_status_cancelled_case_insensitive(
 
 
 # ---------------------------------------------------------------------------
-# PUBLISH imposes no attendee-level iTIP requirement beyond the base
-# VEVENT minimum. A PUBLISH without ORGANIZER or ATTENDEE is fine.
+# PUBLISH (§3.2.1) requires ORGANIZER + DTSTART + SUMMARY and forbids
+# ATTENDEE. Absent ORGANIZER on a PUBLISH VEVENT is an RFC violation;
+# the test right below this block pins that rule explicitly.
 # ---------------------------------------------------------------------------
 
 

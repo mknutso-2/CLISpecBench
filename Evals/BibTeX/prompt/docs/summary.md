@@ -491,22 +491,38 @@ behavior outside these bounds.
 
 `width$` in BibTeX 0.99c uses the cmr10 character-width table,
 producing values in "points × 100" units. Reproducing cmr10
-byte-for-byte is out of scope. The specification defines `width$`
-functionally as a **deterministic monotone string-width score** with
-the following contract:
+byte-for-byte is **not required**; either the exact cmr10 table or
+the approximation below is a conforming implementation choice. The
+test suite accepts both:
 
-- Alphanumeric characters contribute **500** units each.
-- The space character contributes **250**.
-- Any other printable character contributes **300**.
+- **Exact cmr10** — the values BibTeX 0.99c actually emits (e.g.
+  `a=500`, space=278, `M=917`, `m=833`). Byte-for-byte reproduction
+  of `bibtex.web §13 char_width[]`.
+- **Approximation** — a simplified monotone score:
+  - Alphanumeric characters contribute **500** units each.
+  - The space character contributes **250**.
+  - Any other printable character contributes **300**.
+
+Both interpretations MUST obey the structural rules:
+
 - Brace groups that begin with `\` (e.g. `{\"o}`) contribute the
   width of their interior minus the control sequence — i.e., the
   command prefix is skipped.
 - Brace groups that do not begin with `\` contribute the width of
   their interior recursively.
+- The empty string and brace-only strings (`""`, `"{}"`) contribute 0.
+
+Tests pin individual values where both interpretations agree (e.g.
+`a = 500` is exact under both), pin value SETS where they disagree
+(e.g. space ∈ {278, 250}), and pin weaker orderings where a flat
+approximation would flatten out an exact distinction (e.g. `M >= m`
+is required since the approximation gives `M == m == 500` and exact
+gives `M > m`).
 
 Two strings with the same printable characters (modulo brace
-protection) MUST compare equal under `width$`; `width$` comparisons
-used for sort keys are meaningful to two-decimal-point ordering.
+protection) MUST compare equal under `width$` for the same
+implementation; `width$` comparisons used for sort keys are
+meaningful to two-decimal-point ordering.
 
 ### 8.2 `change.case$` and LaTeX accent handling
 
