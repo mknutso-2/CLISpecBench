@@ -369,34 +369,45 @@ Warning `kind` values emitted by this tool:
 
 The presence of any listed kind is semantic (tests will assert
 whether a given warning *kind* appears in the `warnings` array). The
-metadata fields (`uid`, `component`, `line`, `column`) are optional —
-tests must not fail on their absence.
+optional metadata fields (`uid`, `value`, `line`, `column`) in the
+warning object are optional — tests must not fail on their absence.
 
-**`message` content — general rule**: the specific `message` wording
-is NOT normally asserted.
+**`message` content — general rule**: most tests check only the
+warning `kind`. The specific `message` wording is not normally
+asserted.
 
-**`message` content — narrow exceptions**: a small set of tests
-DO assert on `message` substrings, but only when the same warning
-`kind` is emitted for multiple distinct RFC rules within a single
-component/method and a kind-only check cannot distinguish them.
-The current exceptions — all of them on `itip_missing_property` —
-pin the referenced property name and component, never the full
-sentence or its punctuation. A conforming implementation may use any
-wording it likes so long as the property and component names that
-appear in the message match the RFC terms. Concretely, for the
-component–property pairs listed below, the message MUST contain
-both identifiers as separate whole tokens (case-insensitive
-matching is acceptable):
+**`message` content — iTIP exception**: the `itip_missing_property`
+kind is reused across many distinct RFC 5546 rules within a single
+component×method cell (e.g. both "VTODO PUBLISH missing PRIORITY"
+and "VTODO PUBLISH missing SUMMARY" emit the same kind). To let
+tests distinguish those cases, the message MUST contain the
+following uppercase tokens as plain (ASCII, case-sensitive)
+substrings whenever one of these rules fires:
 
-- `itip_missing_property` messages for VTODO-specific rules —
-  `"PUBLISH VTODO"` + `"PRIORITY"`, `"REQUEST VTODO"` + `"PRIORITY"`
-  / `"SUMMARY"`, `"COUNTER VTODO"` + `"PRIORITY"` / `"SUMMARY"`.
-- `itip_missing_property` messages for VJOURNAL-specific rules —
-  `"PUBLISH VJOURNAL"` / `"ADD VJOURNAL"` + `"DESCRIPTION"` /
-  `"DTSTART"`.
-- `itip_missing_property` messages for VFREEBUSY — `"VFREEBUSY"`
-  appearing somewhere in the message for method-undefined and
-  DTSTART/DTEND violations.
+1. The **method name** the rule is tied to: one of
+   `PUBLISH`, `REQUEST`, `REPLY`, `ADD`, `CANCEL`, `REFRESH`,
+   `COUNTER`, `DECLINECOUNTER`.
+2. The **component name** when the rule is NOT on VEVENT: one of
+   `VTODO`, `VJOURNAL`, `VFREEBUSY`. (VEVENT rules do not need to
+   include `VEVENT` in the message; VEVENT is the default.)
+3. The **RFC property name** the rule references:
+   `UID` / `DTSTAMP` / `DTSTART` / `DTEND` / `ORGANIZER` /
+   `ATTENDEE` / `SEQUENCE` / `SUMMARY` / `PRIORITY` / `DESCRIPTION`
+   / `STATUS` / `PARTSTAT`.
+
+A conforming implementation may wrap those tokens in any prose it
+likes. Example messages that would all satisfy the
+"VTODO PUBLISH missing PRIORITY" rule:
+
+    "PUBLISH VTODO requires PRIORITY"
+    "Missing PRIORITY on PUBLISH VTODO"
+    "PRIORITY (required by §3.4.1) not set on PUBLISH VTODO"
+
+Non-conforming examples that would fail the tests:
+
+    "required property missing"                     (no method name)
+    "publish vtodo requires priority"               (lowercase tokens)
+    "method PUBLISH missing required property"     (no property name)
 
 Everywhere else the test suite checks only the warning `kind`.
 
