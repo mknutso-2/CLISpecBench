@@ -461,6 +461,44 @@ std::string emit_parse_json(const Calendar& cal) {
     for (std::size_t i = 0; i < cal.freebusy.size(); ++i) { if (i) o << ','; emit_freebusy(o, cal.freebusy[i]); }
     o << "],\"timezones\":[";
     for (std::size_t i = 0; i < cal.timezones.size(); ++i) { if (i) o << ','; emit_vtimezone(o, cal.timezones[i]); }
+    o << "],\"availabilities\":[";
+    for (std::size_t i = 0; i < cal.availabilities.size(); ++i) {
+        if (i) o << ',';
+        const auto& va = cal.availabilities[i];
+        o << "{\"uid\":"; jstr(o, va.uid);
+        o << ",\"dtstamp\":"; if (va.dtstamp) jstr(o, iso_format(*va.dtstamp)); else o << "null";
+        o << ",\"dtstart\":"; if (va.dtstart) emit_date_or_dt(o, *va.dtstart); else o << "null";
+        o << ",\"dtend\":"; if (va.dtend) emit_date_or_dt(o, *va.dtend); else o << "null";
+        o << ",\"duration\":"; if (va.duration) jstr(o, *va.duration); else o << "null";
+        o << ",\"summary\":"; if (va.summary) jstr(o, *va.summary); else o << "null";
+        o << ",\"description\":"; if (va.description) jstr(o, *va.description); else o << "null";
+        o << ",\"busytype\":"; if (va.busytype) jstr(o, *va.busytype); else o << "null";
+        o << ",\"priority\":"; if (va.priority) o << *va.priority; else o << "null";
+        o << ",\"organizer\":";
+        if (va.organizer) emit_cal_address(o, *va.organizer); else o << "null";
+        o << ",\"available\":[";
+        for (std::size_t j = 0; j < va.available.size(); ++j) {
+            if (j) o << ',';
+            const auto& av = va.available[j];
+            o << "{\"uid\":"; jstr(o, av.uid);
+            o << ",\"dtstamp\":"; if (av.dtstamp) jstr(o, iso_format(*av.dtstamp)); else o << "null";
+            o << ",\"dtstart\":"; if (av.dtstart) emit_date_or_dt(o, *av.dtstart); else o << "null";
+            o << ",\"dtend\":"; if (av.dtend) emit_date_or_dt(o, *av.dtend); else o << "null";
+            o << ",\"duration\":"; if (av.duration) jstr(o, *av.duration); else o << "null";
+            o << ",\"summary\":"; if (av.summary) jstr(o, *av.summary); else o << "null";
+            o << ",\"description\":"; if (av.description) jstr(o, *av.description); else o << "null";
+            o << ",\"rrule\":"; if (av.rrule) emit_rrule(o, *av.rrule); else o << "null";
+            o << ",\"rdate\":[";
+            for (std::size_t k = 0; k < av.rdate.size(); ++k) {
+                if (k) o << ',';
+                emit_rdate_entry(o, av.rdate[k]);
+            }
+            o << "],\"raw_properties\":"; emit_raw_properties(o, av.raw_properties);
+            o << '}';
+        }
+        o << "],\"raw_properties\":"; emit_raw_properties(o, va.raw_properties);
+        o << '}';
+    }
     o << "],\"warnings\":[";
     for (std::size_t i = 0; i < cal.warnings.size(); ++i) { if (i) o << ','; emit_warning(o, cal.warnings[i]); }
     o << "]}";

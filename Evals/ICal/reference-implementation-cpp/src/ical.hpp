@@ -251,6 +251,36 @@ struct VTimezone {
     std::vector<std::string> comment;           // §3.8.1.4 (can repeat)
 };
 
+// RFC 7953 §3.2 — an AVAILABLE sub-component inside VAVAILABILITY.
+struct Available {
+    std::string uid;
+    std::optional<DateTime> dtstamp;
+    std::optional<DateOrDateTime> dtstart;
+    std::optional<DateOrDateTime> dtend;
+    std::optional<std::string> duration;
+    std::optional<std::string> summary;
+    std::optional<std::string> description;
+    std::optional<RRule> rrule;
+    std::vector<RDateEntry> rdate;
+    std::vector<Property> raw_properties;
+};
+
+// RFC 7953 — VAVAILABILITY top-level component.
+struct VAvailability {
+    std::string uid;
+    std::optional<DateTime> dtstamp;
+    std::optional<DateOrDateTime> dtstart;
+    std::optional<DateOrDateTime> dtend;
+    std::optional<std::string> duration;
+    std::optional<std::string> summary;
+    std::optional<std::string> description;
+    std::optional<std::string> busytype;     // BUSY | BUSY-UNAVAILABLE | BUSY-TENTATIVE
+    std::optional<int> priority;
+    std::optional<CalAddress> organizer;
+    std::vector<Available> available;
+    std::vector<Property> raw_properties;
+};
+
 struct Calendar {
     std::string prodid, version;
     std::optional<std::string> calscale;
@@ -270,6 +300,7 @@ struct Calendar {
     std::vector<VJournal> journals;
     std::vector<VFreeBusy> freebusy;
     std::vector<VTimezone> timezones;
+    std::vector<VAvailability> availabilities;   // RFC 7953
     std::vector<Warning> warnings;
 };
 

@@ -78,16 +78,25 @@ lets us model it properly.
 Not shipping this means agents don't see the most-used modern iCal
 extension — a gap vs. "full spec".
 
-### A4 — RFC 9253: IANA Time Zone Parameter (November 2022)
+### A4 — RFC 9253: Support for iCalendar Relationships (August 2022)
 
-**Size**: ~10 KB, ~250 lines.
+**Size**: ~38 KB.
 **License**: IETF TLP 5.0.
-**Why**: Defines `TZIDALIASOF` parameter that lets TZID references
-track IANA aliases (`America/New_York` → `US/Eastern`). Small but
-relevant for VTIMEZONE historical tests.
+**Why**: Extends the RFC 5545 RELATED-TO grammar for richer
+inter-component relationships. Introduces LINK, GAP, structured
+categories, and additional RELTYPE values. Needed for any modern
+calendar that represents multi-event projects or agendas.
 
 **New surface**:
-- `TZIDALIASOF` parameter on `TZID` in VTIMEZONE.
+- `LINK` property (VEVENT / VTODO / VJOURNAL) — URI link with
+  `LINKREL` parameter classifying the relationship.
+- `GAP` parameter on RELATED-TO — ISO-8601 duration between a
+  parent and child component.
+- Expanded RELTYPE values on RELATED-TO:
+  `FINISHTOSTART`, `FINISHTOFINISH`, `STARTTOFINISH`,
+  `STARTTOSTART`, `FIRST`, `NEXT`, `DEPENDS-ON`, etc.
+- `STRUCTURED-CATEGORIES` property.
+- `CONCEPT` / `REFID` / `LOCATION-TYPE` additions.
 
 ### A5 — (optional) RFC 8607: Calendaring Availability Extensions
 

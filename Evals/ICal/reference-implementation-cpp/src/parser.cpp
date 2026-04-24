@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdlib>
+#include <set>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -753,9 +754,13 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
     VTimezone cur_tz;
     Observance cur_obs;
     VAlarm cur_alarm;
+    VAvailability cur_availability;
+    Available cur_available;
     bool in_vevent = false, in_vtodo = false, in_vjournal = false, in_vfreebusy = false;
     bool in_vtimezone = false, in_observance = false;
     bool in_valarm = false;
+    bool in_vavailability = false, in_available = false;
+    int skip_depth = 0;  // >0 when inside an unknown sub-component; skip property dispatch
     std::string observance_kind;  // "STANDARD" or "DAYLIGHT"
     // Pointer to the currently-"open" component's alarm list; null if none.
     std::vector<VAlarm>* cur_alarm_owner = nullptr;
@@ -807,6 +812,14 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
                 cur_freebusy = VFreeBusy{};
                 in_vfreebusy = true;
                 stack.push_back(name);
+            } else if (name == "VAVAILABILITY") {
+                cur_availability = VAvailability{};
+                in_vavailability = true;
+                stack.push_back(name);
+            } else if (in_vavailability && name == "AVAILABLE") {
+                cur_available = Available{};
+                in_available = true;
+                stack.push_back(name);
             } else if (name == "VTIMEZONE") {
                 cur_tz = VTimezone{};
                 in_vtimezone = true;
@@ -821,8 +834,9 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
                 in_valarm = true;
                 stack.push_back(name);
             } else {
-                // Unknown sub-component — skip until matching END.
+                // Unknown sub-component — skip all properties until matching END.
                 stack.push_back(name);
+                skip_depth++;
                 Warning w; w.kind = "unsupported_component";
                 w.message = "unrecognized component: " + name;
                 cal.warnings.push_back(std::move(w));
@@ -835,6 +849,16 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
                 return ParseError{ln.line_number, 1, "END:" + name + " without matching BEGIN"};
             }
             stack.pop_back();
+            // Did we just exit an unknown sub-component? Check whether this END
+            // is for one of the known component names; if not, decrement skip.
+            static const std::set<std::string> known_blocks = {
+                "VCALENDAR", "VEVENT", "VTODO", "VJOURNAL", "VFREEBUSY",
+                "VTIMEZONE", "STANDARD", "DAYLIGHT", "VALARM",
+                "VAVAILABILITY", "AVAILABLE"
+            };
+            if (known_blocks.count(name) == 0 && skip_depth > 0) {
+                skip_depth--;
+            }
             if (name == "VALARM") {
                 in_valarm = false;
                 // RFC 5545 §3.6.6: ACTION + TRIGGER are REQUIRED.
@@ -869,12 +893,63 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
                 else cur_tz.daylight.push_back(std::move(cur_obs));
                 cur_obs = Observance{};
             }
+            else if (name == "VAVAILABILITY") {
+                in_vavailability = false;
+                cal.availabilities.push_back(std::move(cur_availability));
+                cur_availability = VAvailability{};
+            }
+            else if (name == "AVAILABLE") {
+                in_available = false;
+                cur_availability.available.push_back(std::move(cur_available));
+                cur_available = Available{};
+            }
             continue;
         }
+
+        // Inside an unknown sub-component (PARTICIPANT, VLOCATION, VRESOURCE,
+        // or anything else we don't model): skip property dispatch so the
+        // parent component's fields aren't clobbered.
+        if (skip_depth > 0) continue;
 
         // Inside VALARM
         if (in_valarm) {
             apply_alarm_prop(cur_alarm, p, cal);
+            continue;
+        }
+
+        // Inside AVAILABLE sub-component (RFC 7953 §3.2)
+        if (in_available) {
+            cur_available.raw_properties.push_back(p);
+            if (p.name == "UID") cur_available.uid = p.value;
+            else if (p.name == "DTSTAMP") cur_available.dtstamp = parse_ical_datetime(p.value);
+            else if (p.name == "DTSTART") cur_available.dtstart = parse_dodt(p.value, p.params, cal.warnings, cur_available.uid);
+            else if (p.name == "DTEND") cur_available.dtend = parse_dodt(p.value, p.params, cal.warnings, cur_available.uid);
+            else if (p.name == "DURATION") cur_available.duration = p.value;
+            else if (p.name == "SUMMARY") cur_available.summary = unescape_text(p.value);
+            else if (p.name == "DESCRIPTION") cur_available.description = unescape_text(p.value);
+            else if (p.name == "RRULE") cur_available.rrule = parse_rrule(p.value);
+            else if (p.name == "RDATE") {
+                auto ds = parse_rdate_list(p.value, p.params, cal.warnings, cur_available.uid);
+                for (auto& d : ds) cur_available.rdate.push_back(std::move(d));
+            }
+            continue;
+        }
+
+        // Inside VAVAILABILITY (but not inside AVAILABLE)
+        if (in_vavailability) {
+            cur_availability.raw_properties.push_back(p);
+            if (p.name == "UID") cur_availability.uid = p.value;
+            else if (p.name == "DTSTAMP") cur_availability.dtstamp = parse_ical_datetime(p.value);
+            else if (p.name == "DTSTART") cur_availability.dtstart = parse_dodt(p.value, p.params, cal.warnings, cur_availability.uid);
+            else if (p.name == "DTEND") cur_availability.dtend = parse_dodt(p.value, p.params, cal.warnings, cur_availability.uid);
+            else if (p.name == "DURATION") cur_availability.duration = p.value;
+            else if (p.name == "SUMMARY") cur_availability.summary = unescape_text(p.value);
+            else if (p.name == "DESCRIPTION") cur_availability.description = unescape_text(p.value);
+            else if (p.name == "BUSYTYPE") cur_availability.busytype = p.value;
+            else if (p.name == "PRIORITY") {
+                try { cur_availability.priority = std::stoi(p.value); } catch (...) {}
+            }
+            else if (p.name == "ORGANIZER") cur_availability.organizer = parse_cal_address(p);
             continue;
         }
 

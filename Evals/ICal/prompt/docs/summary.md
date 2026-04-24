@@ -22,6 +22,23 @@
 >   *"VALARM" Extensions for iCalendar* (RFC 9074, August 2021) —
 >   `ACKNOWLEDGED`, `PROXIMITY`, `RELATED-TO`, snooze workflow,
 >   enhanced EMAIL alarm semantics. Updates RFC 5545 §3.6.6.
+> - [`authoritative/rfc7953.txt`](authoritative/rfc7953.txt) —
+>   *Calendar Availability* (RFC 7953, August 2016) — VAVAILABILITY
+>   top-level component for publishing recurring availability
+>   windows, AVAILABLE sub-component, `BUSYTYPE` parameter. Updates
+>   RFC 5545.
+> - [`authoritative/rfc9073.txt`](authoritative/rfc9073.txt) —
+>   *Event Publishing Extensions to iCalendar* (RFC 9073, August
+>   2021) — `PARTICIPANT` component, `VLOCATION` / `VRESOURCE`
+>   sub-components, `STRUCTURED-DATA`, `STYLED-DESCRIPTION`,
+>   `LOCATION-TYPE` parameter. Updates RFC 5545.
+> - [`authoritative/rfc9253.txt`](authoritative/rfc9253.txt) —
+>   *Support for iCalendar Relationships* (RFC 9253, August 2022) —
+>   `LINK` property with `LINKREL` parameter, `GAP` parameter on
+>   `RELATED-TO`, expanded `RELTYPE` values
+>   (`FINISHTOSTART` / `FINISHTOFINISH` / `STARTTOFINISH` /
+>   `STARTTOSTART` / `FIRST` / `NEXT` / `DEPENDS-ON` / …),
+>   `STRUCTURED-CATEGORIES`, `CONCEPT`, `REFID`. Updates RFC 5545.
 >
 > **Where this summary and the authoritative RFCs conflict, the RFCs
 > are authoritative.** Tests in this eval assert behavior that is

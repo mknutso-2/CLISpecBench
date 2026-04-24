@@ -11,7 +11,10 @@ SIMPLE = wrap_event("UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\
 
 def test_parse_top_level_keys(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(submission_command, SIMPLE, tmp_path)
-    assert set(out.keys()) == {
+    # Required top-level keys. Implementations MAY add extensions (e.g.,
+    # `availabilities` for RFC 7953 VAVAILABILITY) — so this is a
+    # superset check.
+    required = {
         "calendar",
         "events",
         "todos",
@@ -20,6 +23,7 @@ def test_parse_top_level_keys(submission_command: tuple[str, ...], tmp_path: Pat
         "timezones",
         "warnings",
     }
+    assert required.issubset(set(out.keys()))
 
 
 def test_parse_top_level_keys_all_present(
