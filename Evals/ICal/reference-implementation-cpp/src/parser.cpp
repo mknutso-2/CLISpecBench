@@ -491,6 +491,63 @@ void apply_common_prop(VEvent& ev, const Property& p, Calendar& cal) {
     else if (p.name == "SEQUENCE") {
         try { ev.sequence = std::stoi(p.value); } catch (...) {}
     }
+    // RFC 5545 fields previously promised by the schema but unmodeled:
+    else if (p.name == "PRIORITY") {
+        try { ev.priority = std::stoi(p.value); } catch (...) {}
+    }
+    else if (p.name == "TRANSP") ev.transp = p.value;
+    else if (p.name == "URL") ev.url = p.value;
+    else if (p.name == "GEO") {
+        // Format: "lat;lon" — two floats separated by semicolon.
+        auto semi = p.value.find(';');
+        bool ok = false;
+        if (semi != std::string::npos) {
+            try {
+                Geo g;
+                g.lat = std::stod(p.value.substr(0, semi));
+                g.lon = std::stod(p.value.substr(semi + 1));
+                ev.geo = g;
+                ok = true;
+            } catch (...) {
+                // Fall through to warning.
+            }
+        }
+        if (!ok) {
+            Warning w; w.kind = "malformed_value";
+            w.message = "GEO value is not two floats separated by ';'";
+            if (!ev.uid.empty()) w.uid = ev.uid;
+            w.value = p.value;
+            cal.warnings.push_back(std::move(w));
+        }
+    }
+    else if (p.name == "RESOURCES") {
+        for (const auto& r : split(p.value, ',')) ev.resources.push_back(unescape_text(r));
+    }
+    else if (p.name == "CONTACT") ev.contact = unescape_text(p.value);
+    else if (p.name == "CREATED") {
+        if (auto dt = parse_ical_datetime(p.value); dt) ev.created = iso_format(*dt);
+    }
+    else if (p.name == "LAST-MODIFIED") {
+        if (auto dt = parse_ical_datetime(p.value); dt) ev.last_modified = iso_format(*dt);
+    }
+    else if (p.name == "ATTACH") ev.attachments.push_back(parse_attach(p));
+    // RFC 7986 on VEVENT:
+    else if (p.name == "COLOR") ev.color = p.value;
+    else if (p.name == "IMAGE") {
+        ImageEntry img;
+        img.value = p.value;
+        auto f = p.params.find("FMTTYPE"); if (f != p.params.end()) img.fmttype = f->second;
+        auto e = p.params.find("ENCODING"); if (e != p.params.end()) img.encoding = e->second;
+        auto d = p.params.find("DISPLAY"); if (d != p.params.end()) img.display = d->second;
+        ev.images.push_back(std::move(img));
+    }
+    else if (p.name == "CONFERENCE") {
+        ConferenceEntry c;
+        c.value = p.value;
+        auto f = p.params.find("FEATURE"); if (f != p.params.end()) c.feature = f->second;
+        auto l = p.params.find("LABEL"); if (l != p.params.end()) c.label = l->second;
+        ev.conferences.push_back(std::move(c));
+    }
 }
 
 // --- VALARM body parsing ---
@@ -593,6 +650,28 @@ void validate_itip(Calendar& cal) {
 // Parse-time orphan override detection: each override event (one with
 // RECURRENCE-ID) must have a base event (same UID without RECURRENCE-ID) whose
 // recurrence set contains the override's recurrence-id value.
+// Detect multiple base (non-override) events with the same UID and emit
+// `duplicate_uid` warnings per RFC 5545 §3.8.4.7. Overrides (events with
+// RECURRENCE-ID) are expected to share UID with their base, so we only
+// flag duplicates among non-override events.
+void validate_duplicate_uids(Calendar& cal) {
+    std::unordered_map<std::string, int> seen;
+    for (const auto& e : cal.events) {
+        if (e.recurrence_id.has_value()) continue;
+        if (e.uid.empty()) continue;
+        seen[e.uid]++;
+    }
+    for (const auto& [uid, count] : seen) {
+        if (count > 1) {
+            Warning w; w.kind = "duplicate_uid";
+            w.message = "UID '" + uid + "' is used by " + std::to_string(count)
+                      + " non-override events";
+            w.uid = uid;
+            cal.warnings.push_back(std::move(w));
+        }
+    }
+}
+
 void validate_orphan_overrides(Calendar& cal) {
     // Index base events by UID.
     std::unordered_map<std::string, const VEvent*> base_by_uid;
@@ -812,6 +891,11 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
         // VTIMEZONE-level properties
         if (in_vtimezone && !in_observance) {
             if (p.name == "TZID") cur_tz.tzid = p.value;
+            else if (p.name == "LAST-MODIFIED") {
+                if (auto dt = parse_ical_datetime(p.value); dt) cur_tz.last_modified = iso_format(*dt);
+            }
+            else if (p.name == "TZURL") cur_tz.tzurl = p.value;
+            else if (p.name == "COMMENT") cur_tz.comment.push_back(unescape_text(p.value));
             continue;
         }
 
@@ -901,6 +985,9 @@ std::optional<ParseError> parse_ics(std::string_view source, Calendar& cal) {
 
     // Orphan override detection.
     validate_orphan_overrides(cal);
+
+    // Duplicate UID detection.
+    validate_duplicate_uids(cal);
 
     return std::nullopt;
 }

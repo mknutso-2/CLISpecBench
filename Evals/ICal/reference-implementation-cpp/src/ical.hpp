@@ -151,6 +151,27 @@ struct VAlarm {
     std::vector<Property> raw_properties;
 };
 
+// RFC 5545 §3.8.1.6 GEO: latitude;longitude floats.
+struct Geo {
+    double lat{0.0};
+    double lon{0.0};
+};
+
+// RFC 7986 §5.10 IMAGE entry (applies on VCALENDAR, VEVENT, VTODO, VJOURNAL).
+struct ImageEntry {
+    std::string value;
+    std::optional<std::string> fmttype;
+    std::optional<std::string> encoding;
+    std::optional<std::string> display;
+};
+
+// RFC 7986 §5.11 / §6.3 CONFERENCE entry.
+struct ConferenceEntry {
+    std::string value;
+    std::optional<std::string> feature;
+    std::optional<std::string> label;
+};
+
 struct VEvent {
     std::string uid;
     std::optional<DateTime> dtstamp;
@@ -172,6 +193,19 @@ struct VEvent {
     std::optional<CalAddress> organizer;
     std::vector<CalAddress> attendees;
     std::optional<int> sequence;
+    // Codex v1.0 review #2: fields promised by the schema but not modeled.
+    std::optional<int> priority;                     // §3.8.1.9 (0..9)
+    std::optional<std::string> transp;               // §3.8.2.7 OPAQUE | TRANSPARENT
+    std::optional<std::string> url;                  // §3.8.4.6
+    std::optional<Geo> geo;                          // §3.8.1.6
+    std::vector<std::string> resources;              // §3.8.1.10
+    std::optional<std::string> contact;              // §3.8.4.2
+    std::optional<std::string> created;              // §3.8.7.1 UTC ISO-8601
+    std::optional<std::string> last_modified;        // §3.8.7.3 UTC ISO-8601
+    std::vector<Attach> attachments;                 // §3.8.1.1
+    std::optional<std::string> color;                // RFC 7986 §5.9
+    std::vector<ImageEntry> images;                  // RFC 7986 §5.10 (if used on event)
+    std::vector<ConferenceEntry> conferences;        // RFC 7986 §6.3 (if used on event)
     std::vector<VAlarm> alarms;
     std::vector<Property> raw_properties;
 };
@@ -210,20 +244,9 @@ struct VTimezone {
     std::string tzid;
     std::vector<Observance> standard;
     std::vector<Observance> daylight;
-};
-
-// --- RFC 7986: calendar-level image / conference entries ---
-struct ImageEntry {
-    std::string value;
-    std::optional<std::string> fmttype;
-    std::optional<std::string> encoding;
-    std::optional<std::string> display;
-};
-
-struct ConferenceEntry {
-    std::string value;
-    std::optional<std::string> feature;
-    std::optional<std::string> label;
+    std::optional<std::string> last_modified;  // §3.6.5 optional
+    std::optional<std::string> tzurl;           // §3.8.3.5
+    std::vector<std::string> comment;           // §3.8.1.4 (can repeat)
 };
 
 struct Calendar {

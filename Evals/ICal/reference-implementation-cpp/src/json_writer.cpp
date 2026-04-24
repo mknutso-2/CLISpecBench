@@ -277,7 +277,44 @@ void emit_event_common(std::ostringstream& o, const VEvent& e) {
     o << "],\"exrule\":"; if (e.exrule) emit_rrule(o, *e.exrule); else o << "null";
     o << ",\"recurrence_id\":"; emit_recurrence_id(o, e);
     o << ",\"sequence\":"; if (e.sequence) o << *e.sequence; else o << "null";
-    o << ",\"alarms\":[";
+    // Codex v1.0 review #2: formerly-missing schema fields.
+    o << ",\"priority\":"; if (e.priority) o << *e.priority; else o << "null";
+    o << ",\"transp\":"; if (e.transp) jstr(o, *e.transp); else o << "null";
+    o << ",\"url\":"; if (e.url) jstr(o, *e.url); else o << "null";
+    o << ",\"geo\":";
+    if (e.geo) o << "{\"lat\":" << e.geo->lat << ",\"lon\":" << e.geo->lon << "}";
+    else o << "null";
+    o << ",\"resources\":[";
+    for (std::size_t i = 0; i < e.resources.size(); ++i) { if (i) o << ','; jstr(o, e.resources[i]); }
+    o << "],\"contact\":"; if (e.contact) jstr(o, *e.contact); else o << "null";
+    o << ",\"created\":"; if (e.created) jstr(o, *e.created); else o << "null";
+    o << ",\"last_modified\":"; if (e.last_modified) jstr(o, *e.last_modified); else o << "null";
+    o << ",\"attachments\":[";
+    for (std::size_t i = 0; i < e.attachments.size(); ++i) {
+        if (i) o << ',';
+        emit_attach(o, e.attachments[i]);
+    }
+    o << "],\"color\":"; if (e.color) jstr(o, *e.color); else o << "null";
+    o << ",\"images\":[";
+    for (std::size_t i = 0; i < e.images.size(); ++i) {
+        if (i) o << ',';
+        const auto& img = e.images[i];
+        o << "{\"value\":"; jstr(o, img.value);
+        o << ",\"fmttype\":"; if (img.fmttype) jstr(o, *img.fmttype); else o << "null";
+        o << ",\"encoding\":"; if (img.encoding) jstr(o, *img.encoding); else o << "null";
+        o << ",\"display\":"; if (img.display) jstr(o, *img.display); else o << "null";
+        o << '}';
+    }
+    o << "],\"conferences\":[";
+    for (std::size_t i = 0; i < e.conferences.size(); ++i) {
+        if (i) o << ',';
+        const auto& c = e.conferences[i];
+        o << "{\"value\":"; jstr(o, c.value);
+        o << ",\"feature\":"; if (c.feature) jstr(o, *c.feature); else o << "null";
+        o << ",\"label\":"; if (c.label) jstr(o, *c.label); else o << "null";
+        o << '}';
+    }
+    o << "],\"alarms\":[";
     for (std::size_t i = 0; i < e.alarms.size(); ++i) {
         if (i) o << ',';
         emit_alarm(o, e.alarms[i]);
@@ -359,7 +396,15 @@ void emit_observance(std::ostringstream& o, const Observance& obs) {
 
 void emit_vtimezone(std::ostringstream& o, const VTimezone& tz) {
     o << "{\"tzid\":"; jstr(o, tz.tzid);
-    o << ",\"standard\":[";
+    o << ",\"last_modified\":";
+    if (tz.last_modified) jstr(o, *tz.last_modified); else o << "null";
+    o << ",\"tzurl\":"; if (tz.tzurl) jstr(o, *tz.tzurl); else o << "null";
+    o << ",\"comment\":[";
+    for (std::size_t i = 0; i < tz.comment.size(); ++i) {
+        if (i) o << ',';
+        jstr(o, tz.comment[i]);
+    }
+    o << "],\"standard\":[";
     for (std::size_t i = 0; i < tz.standard.size(); ++i) { if (i) o << ','; emit_observance(o, tz.standard[i]); }
     o << "],\"daylight\":[";
     for (std::size_t i = 0; i < tz.daylight.size(); ++i) { if (i) o << ','; emit_observance(o, tz.daylight[i]); }
