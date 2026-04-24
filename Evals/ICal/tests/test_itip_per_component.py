@@ -133,6 +133,51 @@ def test_vjournal_add_requires_sequence_greater_than_zero(
     assert "itip_missing_property" in _warn_kinds(out)
 
 
+def test_vjournal_publish_requires_description(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.5.1 DESCRIPTION row is `1`. Iter 5 review flagged
+    that the prior VJOURNAL validator never checked DESCRIPTION."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # deliberately missing DESCRIPTION
+    )
+    out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("PUBLISH VJOURNAL" in m and "DESCRIPTION" in m for m in msgs), msgs
+
+
+def test_vjournal_publish_requires_dtstart(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.5.1 DTSTART row is `1`."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\nDESCRIPTION:Entry body\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # deliberately missing DTSTART
+    )
+    out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("PUBLISH VJOURNAL" in m and "DTSTART" in m for m in msgs), msgs
+
+
+def test_vjournal_add_requires_description_and_dtstart(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.5.2 both DESCRIPTION and DTSTART rows are `1`."""
+    body = (
+        "UID:j1\nDTSTAMP:20260101T120000Z\n"
+        "ORGANIZER:mailto:boss@example.com\nSEQUENCE:1\n"
+        # deliberately missing DESCRIPTION AND DTSTART
+    )
+    out = run_parse(submission_command, _vjournal_calendar("ADD", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("ADD VJOURNAL" in m and "DESCRIPTION" in m for m in msgs), msgs
+    assert any("ADD VJOURNAL" in m and "DTSTART" in m for m in msgs), msgs
+
+
 # ---------------------------------------------------------------------------
 # VTODO §3.4 — full matrix with distinctions from VEVENT
 # ---------------------------------------------------------------------------
@@ -211,6 +256,45 @@ def test_vtodo_publish_requires_organizer(
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_vtodo_publish_requires_priority(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.4.1 VTODO PUBLISH PRIORITY row is `1`. Missing
+    PRIORITY on VTODO PUBLISH is a matrix violation — this is a
+    VTODO-specific rule not present on VEVENT PUBLISH."""
+    body = (
+        "UID:t1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nSUMMARY:Task\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # missing PRIORITY
+    )
+    out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("PUBLISH VTODO" in m and "PRIORITY" in m for m in msgs), (
+        f"expected PRIORITY warning on VTODO PUBLISH; got {msgs!r}"
+    )
+
+
+def test_vtodo_request_requires_priority_and_summary(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.4.2 VTODO REQUEST: PRIORITY 1, SUMMARY 1, DTSTART 1.
+    Iter 5 adversarial review flagged that VEVENT REQUEST doesn't
+    require PRIORITY/SUMMARY but VTODO REQUEST does — so the
+    per-component validators must diverge here."""
+    body = (
+        "UID:t1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:a@example.com\n"
+        # deliberately missing PRIORITY AND SUMMARY
+    )
+    out = run_parse(submission_command, _vtodo_calendar("REQUEST", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("REQUEST VTODO" in m and "PRIORITY" in m for m in msgs), msgs
+    assert any("REQUEST VTODO" in m and "SUMMARY" in m for m in msgs), msgs
 
 
 # ---------------------------------------------------------------------------

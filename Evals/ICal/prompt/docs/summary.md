@@ -149,7 +149,13 @@ VEVENT properties surfaced in output:
 | `EXRULE` | deprecated; parsed but yields `exrule_deprecated` warning |
 | `RECURRENCE-ID` | identifies an override instance |
 | `SEQUENCE`, `TRANSP`, `PRIORITY` | metadata |
+| `RELATED-TO` | typed `[{value, reltype}]` array (§3.8.4.5) |
 | `VALARM` | nested alarm; surfaced as raw sub-component |
+
+`RELATED-TO` on VEVENT / VTODO / VJOURNAL / VFREEBUSY surfaces with
+the same structured `{value, reltype}` shape that VALARM uses. The
+RFC 9253 `GAP` parameter is preserved in `raw_properties` (typed
+exposure is a future enhancement).
 
 ### 2.4 VTODO / VJOURNAL / VFREEBUSY
 

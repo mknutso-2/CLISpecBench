@@ -640,19 +640,29 @@ void validate_itip(Calendar& cal) {
     //
     // UID and DTSTAMP are "1" (required) in every table including PUBLISH.
     auto check_vevent = [&](const VEvent& e) {
-        // VEVENT §3.2.x tables.
+        // VEVENT §3.2.x tables — enforced row-by-row for every "1"
+        // (required) row. "0 or 1" rows are permitted-but-optional;
+        // "0" rows are MUST NOT and we warn on presence.
         if (e.uid.empty()) emit("", "iTIP message requires UID");
         if (!e.dtstamp) emit(e.uid, "iTIP message requires DTSTAMP");
 
         if (m == "PUBLISH") {
-            // §3.2.1: Attendees MUST NOT be present. SEQUENCE is 0 or 1.
+            // §3.2.1: DTSTART 1, ORGANIZER 1, SUMMARY 1, UID 1, DTSTAMP 1;
+            // ATTENDEE 0 (MUST NOT). SEQUENCE is 0 or 1.
+            if (!e.dtstart) emit(e.uid, "PUBLISH requires DTSTART");
+            if (!e.organizer) emit(e.uid, "PUBLISH requires ORGANIZER");
+            if (!e.summary) emit(e.uid, "PUBLISH requires SUMMARY");
             if (!e.attendees.empty()) emit(e.uid, "PUBLISH MUST NOT include ATTENDEE");
         } else if (m == "REQUEST") {
-            // §3.2.2: ORGANIZER 1, ATTENDEE 1+. SEQUENCE 0 or 1 (optional).
+            // §3.2.2: ATTENDEE 1+, DTSTAMP 1, DTSTART 1, ORGANIZER 1,
+            // SUMMARY 1, UID 1. SEQUENCE 0 or 1.
+            if (!e.dtstart) emit(e.uid, "REQUEST requires DTSTART");
             if (!e.organizer) emit(e.uid, "REQUEST requires ORGANIZER");
+            if (!e.summary) emit(e.uid, "REQUEST requires SUMMARY");
             if (e.attendees.empty()) emit(e.uid, "REQUEST requires ATTENDEE");
         } else if (m == "REPLY") {
-            // §3.2.3: ORGANIZER 1, ATTENDEE 1 (with PARTSTAT). SEQUENCE 0 or 1.
+            // §3.2.3: ATTENDEE 1 (w/ PARTSTAT), DTSTAMP 1, ORGANIZER 1,
+            // UID 1. DTSTART/SUMMARY/etc. are 0 or 1 (optional).
             if (!e.organizer) emit(e.uid, "REPLY requires ORGANIZER");
             if (e.attendees.empty()) {
                 emit(e.uid, "REPLY requires ATTENDEE");
@@ -664,15 +674,20 @@ void validate_itip(Calendar& cal) {
                 if (!any_partstat) emit(e.uid, "REPLY attendee requires PARTSTAT");
             }
         } else if (m == "ADD") {
-            // §3.2.4: ORGANIZER 1, SEQUENCE 1 with value MUST be > 0.
+            // §3.2.4: DTSTAMP 1, DTSTART 1, ORGANIZER 1, SEQUENCE 1 (>0),
+            // SUMMARY 1, UID 1.
+            if (!e.dtstart) emit(e.uid, "ADD requires DTSTART");
             if (!e.organizer) emit(e.uid, "ADD requires ORGANIZER");
+            if (!e.summary) emit(e.uid, "ADD requires SUMMARY");
             if (!e.sequence) emit(e.uid, "ADD requires SEQUENCE");
             else if (*e.sequence == 0) emit(e.uid, "ADD requires SEQUENCE greater than 0");
         } else if (m == "CANCEL") {
-            // §3.2.5: ORGANIZER 1, SEQUENCE 1. STATUS is 0 or 1; when
-            // present on a whole-event cancel, MUST be CANCELLED. The
-            // prose of §3.2.5 allows METHOD:CANCEL alone to convey
-            // cancellation, so we do not warn on STATUS absence.
+            // §3.2.5: ATTENDEE 0+ (the Organizer may target Attendees to
+            // uninvite but it is not required), DTSTAMP 1, ORGANIZER 1,
+            // SEQUENCE 1, UID 1. STATUS is 0 or 1; when present on a
+            // whole-event cancel, MUST be CANCELLED. The prose of §3.2.5
+            // allows METHOD:CANCEL alone to convey cancellation, so we
+            // do not warn on STATUS absence.
             if (!e.organizer) emit(e.uid, "CANCEL requires ORGANIZER");
             if (!e.sequence) emit(e.uid, "CANCEL requires SEQUENCE");
             if (e.status) {
@@ -682,17 +697,20 @@ void validate_itip(Calendar& cal) {
                 }
             }
         } else if (m == "REFRESH") {
-            // §3.2.6: ORGANIZER 1, ATTENDEE 1. SEQUENCE 0 — MUST NOT be present.
+            // §3.2.6: ATTENDEE 1, DTSTAMP 1, ORGANIZER 1, UID 1.
+            // SEQUENCE 0 — MUST NOT be present.
             if (!e.organizer) emit(e.uid, "REFRESH requires ORGANIZER");
             if (e.attendees.empty()) emit(e.uid, "REFRESH requires ATTENDEE");
             if (e.sequence) emit(e.uid, "REFRESH MUST NOT include SEQUENCE");
         } else if (m == "COUNTER") {
-            // §3.2.7: ORGANIZER 1, SEQUENCE 1. ATTENDEE is 0+ (optional —
-            // "Can also be used to propose other Attendees").
+            // §3.2.7: DTSTAMP 1, DTSTART 1, ORGANIZER 1, SEQUENCE 1,
+            // SUMMARY 1, UID 1. ATTENDEE 0+ (optional — may propose others).
+            if (!e.dtstart) emit(e.uid, "COUNTER requires DTSTART");
             if (!e.organizer) emit(e.uid, "COUNTER requires ORGANIZER");
+            if (!e.summary) emit(e.uid, "COUNTER requires SUMMARY");
             if (!e.sequence) emit(e.uid, "COUNTER requires SEQUENCE");
         } else if (m == "DECLINECOUNTER") {
-            // §3.2.8: ORGANIZER 1, ATTENDEE 1+, SEQUENCE 1.
+            // §3.2.8: ATTENDEE 1+, DTSTAMP 1, ORGANIZER 1, SEQUENCE 1, UID 1.
             if (!e.organizer) emit(e.uid, "DECLINECOUNTER requires ORGANIZER");
             if (e.attendees.empty()) emit(e.uid, "DECLINECOUNTER requires ATTENDEE");
             if (!e.sequence) emit(e.uid, "DECLINECOUNTER requires SEQUENCE");
@@ -700,24 +718,32 @@ void validate_itip(Calendar& cal) {
     };
 
     auto check_vtodo = [&](const VEvent& t) {
-        // VTODO §3.4.x tables. Shares most shape with VEVENT but:
-        //  - PUBLISH requires ORGANIZER (VEVENT PUBLISH doesn't)
-        //  - COUNTER requires PRIORITY (§3.4.7) and SUMMARY (§3.4.7)
-        //  - DUE replaces DTEND (we don't validate DUE/DTSTART/DURATION
-        //    pairing here; parse-time structural checks handle that).
+        // VTODO §3.4.x tables — enforced row-by-row for every "1" row.
+        // Differs from VEVENT: PRIORITY is required on PUBLISH/REQUEST/
+        // ADD/COUNTER; REFRESH does NOT forbid SEQUENCE (§3.4.6 is 0 or 1,
+        // not 0 MUST NOT); DUE replaces DTEND in many tables.
         if (t.uid.empty()) emit("", "iTIP message requires UID");
         if (!t.dtstamp) emit(t.uid, "iTIP message requires DTSTAMP");
 
         if (m == "PUBLISH") {
-            // §3.4.1: ORGANIZER 1, ATTENDEE 0.
+            // §3.4.1: DTSTART 1, ORGANIZER 1, PRIORITY 1, SUMMARY 1,
+            // UID 1; ATTENDEE 0 (MUST NOT).
+            if (!t.dtstart) emit(t.uid, "PUBLISH VTODO requires DTSTART");
             if (!t.organizer) emit(t.uid, "PUBLISH VTODO requires ORGANIZER");
+            if (!t.priority) emit(t.uid, "PUBLISH VTODO requires PRIORITY");
+            if (!t.summary) emit(t.uid, "PUBLISH VTODO requires SUMMARY");
             if (!t.attendees.empty()) emit(t.uid, "PUBLISH VTODO MUST NOT include ATTENDEE");
         } else if (m == "REQUEST") {
-            // §3.4.2: ORGANIZER 1, ATTENDEE 1+, SEQUENCE 0 or 1.
+            // §3.4.2: ATTENDEE 1+, DTSTART 1, ORGANIZER 1, PRIORITY 1,
+            // SUMMARY 1. SEQUENCE 0 or 1.
+            if (!t.dtstart) emit(t.uid, "REQUEST VTODO requires DTSTART");
             if (!t.organizer) emit(t.uid, "REQUEST VTODO requires ORGANIZER");
+            if (!t.priority) emit(t.uid, "REQUEST VTODO requires PRIORITY");
+            if (!t.summary) emit(t.uid, "REQUEST VTODO requires SUMMARY");
             if (t.attendees.empty()) emit(t.uid, "REQUEST VTODO requires ATTENDEE");
         } else if (m == "REPLY") {
-            // §3.4.3: ORGANIZER 1, ATTENDEE 1+ with PARTSTAT.
+            // §3.4.3: ATTENDEE 1+ (w/ PARTSTAT), ORGANIZER 1, UID 1,
+            // DTSTAMP 1. DTSTART/SUMMARY/PRIORITY are 0 or 1.
             if (!t.organizer) emit(t.uid, "REPLY VTODO requires ORGANIZER");
             if (t.attendees.empty()) {
                 emit(t.uid, "REPLY VTODO requires ATTENDEE");
@@ -729,30 +755,33 @@ void validate_itip(Calendar& cal) {
                 if (!any_partstat) emit(t.uid, "REPLY VTODO attendee requires PARTSTAT");
             }
         } else if (m == "ADD") {
-            // §3.4.4: ORGANIZER 1, SEQUENCE 1 MUST > 0.
+            // §3.4.4: ORGANIZER 1, PRIORITY 1, SEQUENCE 1 (>0), SUMMARY 1.
             if (!t.organizer) emit(t.uid, "ADD VTODO requires ORGANIZER");
+            if (!t.priority) emit(t.uid, "ADD VTODO requires PRIORITY");
+            if (!t.summary) emit(t.uid, "ADD VTODO requires SUMMARY");
             if (!t.sequence) emit(t.uid, "ADD VTODO requires SEQUENCE");
             else if (*t.sequence == 0) emit(t.uid, "ADD VTODO requires SEQUENCE greater than 0");
         } else if (m == "CANCEL") {
-            // §3.4.5: ORGANIZER 1, SEQUENCE 1.
+            // §3.4.5: ORGANIZER 1, SEQUENCE 1, UID 1, DTSTAMP 1.
             if (!t.organizer) emit(t.uid, "CANCEL VTODO requires ORGANIZER");
             if (!t.sequence) emit(t.uid, "CANCEL VTODO requires SEQUENCE");
             if (t.status && to_upper(*t.status) != "CANCELLED") {
                 emit(t.uid, "CANCEL VTODO STATUS must be CANCELLED");
             }
         } else if (m == "REFRESH") {
-            // §3.4.6: ORGANIZER 1, ATTENDEE 1. (REFRESH VTODO does NOT have
-            // SEQUENCE "0" like VEVENT REFRESH — §3.4.6 shows SEQUENCE "0 or 1".)
+            // §3.4.6: ATTENDEE 1, ORGANIZER 1. SEQUENCE is "0 or 1"
+            // (optional) — UNLIKE VEVENT REFRESH which forbids SEQUENCE.
             if (!t.organizer) emit(t.uid, "REFRESH VTODO requires ORGANIZER");
             if (t.attendees.empty()) emit(t.uid, "REFRESH VTODO requires ATTENDEE");
         } else if (m == "COUNTER") {
-            // §3.4.7: ORGANIZER 1, ATTENDEE 1+, PRIORITY 1, SEQUENCE 0 or 1, SUMMARY 1.
+            // §3.4.7: ATTENDEE 1+, ORGANIZER 1, PRIORITY 1, SEQUENCE 0 or 1,
+            // SUMMARY 1.
             if (!t.organizer) emit(t.uid, "COUNTER VTODO requires ORGANIZER");
             if (t.attendees.empty()) emit(t.uid, "COUNTER VTODO requires ATTENDEE");
             if (!t.priority) emit(t.uid, "COUNTER VTODO requires PRIORITY");
             if (!t.summary) emit(t.uid, "COUNTER VTODO requires SUMMARY");
         } else if (m == "DECLINECOUNTER") {
-            // §3.4.8: ORGANIZER 1, ATTENDEE 1+, SEQUENCE 0 or 1.
+            // §3.4.8: ATTENDEE 1+, ORGANIZER 1, SEQUENCE 0 or 1.
             if (!t.organizer) emit(t.uid, "DECLINECOUNTER VTODO requires ORGANIZER");
             if (t.attendees.empty()) emit(t.uid, "DECLINECOUNTER VTODO requires ATTENDEE");
         }
@@ -765,16 +794,25 @@ void validate_itip(Calendar& cal) {
         if (!j.dtstamp) emit(j.uid, "iTIP message requires DTSTAMP");
 
         if (m == "PUBLISH") {
-            // §3.5.1: ORGANIZER 1, ATTENDEE 0, DTSTART 1, DESCRIPTION 1.
+            // §3.5.1: DESCRIPTION 1, DTSTART 1, ORGANIZER 1, UID 1,
+            // DTSTAMP 1; ATTENDEE 0 (MUST NOT).
+            if (!j.description) emit(j.uid, "PUBLISH VJOURNAL requires DESCRIPTION");
+            if (!j.dtstart) emit(j.uid, "PUBLISH VJOURNAL requires DTSTART");
             if (!j.organizer) emit(j.uid, "PUBLISH VJOURNAL requires ORGANIZER");
             if (!j.attendees.empty()) emit(j.uid, "PUBLISH VJOURNAL MUST NOT include ATTENDEE");
         } else if (m == "ADD") {
-            // §3.5.2: ORGANIZER 1, SEQUENCE 1 MUST > 0, ATTENDEE 0.
+            // §3.5.2: DESCRIPTION 1, DTSTAMP 1, DTSTART 1, ORGANIZER 1,
+            // SEQUENCE 1 (MUST > 0), UID 1; ATTENDEE 0.
+            if (!j.description) emit(j.uid, "ADD VJOURNAL requires DESCRIPTION");
+            if (!j.dtstart) emit(j.uid, "ADD VJOURNAL requires DTSTART");
             if (!j.organizer) emit(j.uid, "ADD VJOURNAL requires ORGANIZER");
             if (!j.sequence) emit(j.uid, "ADD VJOURNAL requires SEQUENCE");
             else if (*j.sequence == 0) emit(j.uid, "ADD VJOURNAL requires SEQUENCE greater than 0");
         } else if (m == "CANCEL") {
-            // §3.5.3: ORGANIZER 1, SEQUENCE 1.
+            // §3.5.3: DTSTAMP 1, ORGANIZER 1, SEQUENCE 1, UID 1.
+            // RECURRENCE-ID scope (whole-series vs instance) is context-
+            // dependent and enforced downstream via orphan_override
+            // detection — not at iTIP validation time.
             if (!j.organizer) emit(j.uid, "CANCEL VJOURNAL requires ORGANIZER");
             if (!j.sequence) emit(j.uid, "CANCEL VJOURNAL requires SEQUENCE");
             if (j.status && to_upper(*j.status) != "CANCELLED") {

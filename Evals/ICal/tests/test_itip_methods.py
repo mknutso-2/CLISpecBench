@@ -274,15 +274,66 @@ def test_cancel_status_cancelled_case_insensitive(
 # ---------------------------------------------------------------------------
 
 
-def test_publish_without_organizer_no_itip_warning(
+def test_publish_without_organizer_emits_itip_warning(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """METHOD:PUBLISH is a one-way broadcast; neither ORGANIZER nor
-    ATTENDEE is iTIP-mandatory for a PUBLISH calendar. No
-    `itip_missing_property` warning expected."""
-    ics = _wrap_with_method("PUBLISH", _BASE)
+    """RFC 5546 §3.2.1 prose: "The 'Organizer' MUST be present in a
+    published iCalendar component." The §3.2.1 constraint table
+    reinforces this with `ORGANIZER | 1`. A PUBLISH without ORGANIZER
+    MUST emit `itip_missing_property`.
+
+    (This test was previously asserting the opposite — that PUBLISH
+    without ORGANIZER was valid. That assertion contradicted RFC 5546
+    §3.2.1; the iter 5 adversarial review flagged it as a bug in the
+    test suite itself. The test now tracks the RFC.)"""
+    ics = _wrap_with_method("PUBLISH", _BASE)  # no ORGANIZER
+    out = run_parse(submission_command, ics, tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_publish_without_attendee_ok(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Complement to the test above: PUBLISH with ORGANIZER (as RFC
+    requires) and no ATTENDEE is legal. §3.2.1 says ATTENDEE MUST NOT
+    be present; omitting it is therefore compliant, not a warning."""
+    ics = _wrap_with_method("PUBLISH", _BASE_WITH_ORGANIZER)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
+
+
+def test_publish_without_dtstart_emits_warning(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.2.1 DTSTART row is `1`. Iter 5 flagged that the
+    prior VEVENT PUBLISH validator only forbade ATTENDEE and didn't
+    enforce DTSTART. A PUBLISH with UID/DTSTAMP/SUMMARY/ORGANIZER but
+    no DTSTART is a matrix violation."""
+    body = (
+        "UID:e1\nDTSTAMP:20260101T120000Z\n"
+        "SUMMARY:Sample\nSEQUENCE:0\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # deliberately missing DTSTART
+    )
+    ics = _wrap_with_method("PUBLISH", body)
+    out = run_parse(submission_command, ics, tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
+
+
+def test_publish_without_summary_emits_warning(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """RFC 5546 §3.2.1 SUMMARY row is `1` (can be null, but must be
+    present). A PUBLISH without SUMMARY is a matrix violation."""
+    body = (
+        "UID:e1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260305T100000Z\nSEQUENCE:0\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        # deliberately missing SUMMARY
+    )
+    ics = _wrap_with_method("PUBLISH", body)
+    out = run_parse(submission_command, ics, tmp_path)
+    assert "itip_missing_property" in _warn_kinds(out)
 
 
 # ---------------------------------------------------------------------------

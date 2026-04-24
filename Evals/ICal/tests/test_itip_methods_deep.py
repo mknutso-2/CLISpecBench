@@ -69,10 +69,12 @@ def test_publish_forbids_attendee(
 def test_publish_without_attendee_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A PUBLISH without ATTENDEE and without ORGANIZER is legal per RFC 5546."""
+    """A PUBLISH with all §3.2.1 "1" rows (UID, DTSTAMP, DTSTART,
+    ORGANIZER, SUMMARY) and no ATTENDEE is legal."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
         "SUMMARY:Event\n"
+        "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _wrap("PUBLISH", body), tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
@@ -98,11 +100,13 @@ def test_add_requires_organizer(
 def test_add_with_organizer_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """RFC 5546 §3.2.4: ADD requires SEQUENCE > 0. SEQUENCE:1 is the
-    canonical "first added instance" value and passes validation."""
+    """RFC 5546 §3.2.4 full matrix: DTSTAMP 1, DTSTART 1, ORGANIZER 1,
+    SEQUENCE 1 (>0), SUMMARY 1, UID 1. Fixture satisfies every "1"
+    row; SEQUENCE:1 is the canonical "first added instance" value."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
         "SEQUENCE:1\nRECURRENCE-ID:20260305T100000Z\n"
+        "SUMMARY:Added instance\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _wrap("ADD", body), tmp_path)
@@ -200,13 +204,15 @@ def test_counter_requires_organizer(
 def test_counter_does_not_require_attendee(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """RFC 5546 §3.2.7: ATTENDEE row is "0+" — the Attendee proposing the
-    counter is identified by ORGANIZER-inverse semantics, and optional
-    additional attendees MAY be proposed via ATTENDEE. A COUNTER with no
-    ATTENDEE line is valid."""
+    """RFC 5546 §3.2.7 VEVENT COUNTER matrix: ATTENDEE row is "0+" —
+    the Attendee proposing the counter is identified by inverting
+    ORGANIZER, and optional additional attendees MAY be proposed via
+    ATTENDEE. A COUNTER with no ATTENDEE but every other "1" row
+    satisfied (DTSTAMP, DTSTART, ORGANIZER, SEQUENCE, SUMMARY, UID)
+    is valid."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
-        "DTSTART:20260301T100000Z\n"
+        "DTSTART:20260301T100000Z\nSUMMARY:Counter proposal\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _wrap("COUNTER", body), tmp_path)
@@ -230,9 +236,11 @@ def test_counter_requires_sequence(
 def test_counter_with_both_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
+    """COUNTER VEVENT with every §3.2.7 "1" row satisfied plus an
+    optional ATTENDEE (propose another attendee)."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
-        "DTSTART:20260301T110000Z\n"
+        "DTSTART:20260301T110000Z\nSUMMARY:Alternate time\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE:mailto:a@example.com\n"
     )
@@ -316,11 +324,13 @@ def test_request_allows_omitted_sequence(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """RFC 5546 §3.2.2 SEQUENCE row is "0 or 1" (optional). A REQUEST
-    without SEQUENCE must not trigger itip_missing_property. This guards
-    against overstrict validators that require SEQUENCE on every non-
-    PUBLISH iTIP message."""
+    with every "1" row present (UID, DTSTAMP, DTSTART, ORGANIZER,
+    ATTENDEE, SUMMARY) and no SEQUENCE must not trigger
+    itip_missing_property. Guards against overstrict validators that
+    require SEQUENCE on every non-PUBLISH iTIP message."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
+        "SUMMARY:Team sync\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE;PARTSTAT=ACCEPTED:mailto:a@example.com\n"
         # no SEQUENCE — legal per §3.2.2 table
