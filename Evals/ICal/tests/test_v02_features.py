@@ -144,9 +144,15 @@ def test_recurrence_id_replaces_occurrence(
     assert "2026-03-06T10:00:00Z" in starts
 
 
-def test_recurrence_id_cancel_removes_occurrence(
+def test_recurrence_id_cancel_marks_occurrence_cancelled(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
+    """summary.md §7: an override with STATUS:CANCELLED marks the
+    occurrence as cancelled but does NOT drop it from the array.
+    §9.2's occurrence schema keeps every key present including the
+    `cancelled` boolean. The occurrence at 2026-03-07 10:00Z MUST be
+    in the output with `cancelled: true`, not silently removed —
+    consumers should observe the cancellation explicitly."""
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
         "BEGIN:VEVENT\n"
@@ -161,8 +167,17 @@ def test_recurrence_id_cancel_removes_occurrence(
     out = run_expand(
         submission_command, ics, "2026-03-01T00:00:00Z", "2026-03-15T00:00:00Z", tmp_path
     )
-    starts = starts_for(out["occurrences"], "e1")
-    assert "2026-03-07T10:00:00Z" not in starts
+    occs = out.get("occurrences") or []
+    cancelled_occs = [
+        o for o in occs
+        if o.get("uid") == "e1"
+        and o.get("dtstart") == "2026-03-07T10:00:00Z"
+    ]
+    assert len(cancelled_occs) == 1, (
+        f"expected the 2026-03-07 override occurrence to be emitted "
+        f"with cancelled=true per §9.2; got {cancelled_occs!r}"
+    )
+    assert cancelled_occs[0].get("cancelled") is True
 
 
 def test_override_flag_set(submission_command: tuple[str, ...], tmp_path: Path) -> None:

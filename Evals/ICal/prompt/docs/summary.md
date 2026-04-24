@@ -334,6 +334,13 @@ To resolve a zoned DATE-TIME (`TZID=X:YYYYMMDDTHHMMSS`):
    ≤ the local date-time being resolved**, and apply that
    observance's `TZOFFSETTO` to convert local to UTC:
    `UTC = local − TZOFFSETTO`.
+4. **Pre-first-observance fallback**: if the local date-time is
+   strictly before the earliest observance's `DTSTART`, no
+   transition has fired yet. In that case the tool MUST use the
+   earliest observance's `TZOFFSETFROM` (which describes the state
+   in effect BEFORE that observance began) to convert local to UTC.
+   This matches the RFC 5545 §3.8.3.1 reading that `TZOFFSETFROM`
+   on the earliest observance describes the prior-era offset.
 
 ### 5.1.1 DST-fold disambiguation (pinned)
 
@@ -508,8 +515,10 @@ rules:
 - If a base event (UID=X with no RECURRENCE-ID) and an override event
   (UID=X with RECURRENCE-ID=Y) both appear, the base's occurrence at
   time Y is **replaced** by the override in `expand` output.
-- An override with `STATUS:CANCELLED` removes that one occurrence
-  entirely.
+- An override with `STATUS:CANCELLED` marks that occurrence as
+  cancelled. Per §9.2, the occurrence is still present in the
+  `occurrences` array with `cancelled: true` (rather than silently
+  dropped) so the consumer can observe the cancellation.
 - `RECURRENCE-ID` with a `RANGE=THISANDFUTURE` parameter extends the
   override to all future occurrences (replaces the base's RRULE
   expansion from Y onwards). `RANGE=THISANDPRIOR` is deprecated.

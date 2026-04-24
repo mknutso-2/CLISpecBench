@@ -94,9 +94,19 @@ ITERATE {dump.entry}
 
 # Name probe: exercises format.name$ by dumping one name per line with its
 # four parts. Depends on `format.name$`, `num.names$`, `while$`, `<`, `>`,
-# `+`, `-`, `:=`, integer literals, `*`, `write$`, `newline$`. Does NOT use
+# `+`, `-`, `:=`, integer literals, `write$`, `newline$`. Does NOT use
 # `empty$` or conditional field output (those are in the field probe), so a
 # bug in `empty$` doesn't break name tests.
+#
+# The probe deliberately uses one-value-per-write$ (no `*` concatenation
+# in the output path). An earlier form used `"first=" … format.name$ *
+# write$ " " * write$` which underflowed the stack on the trailing
+# `" " *` — BibTeX 0.99c tolerates underflow with a substitution warning
+# (bibtex.web §7276 `pop_lit_stk`), but CLISpecBench's exit-1 contract
+# aborts the whole probe and masks every name-parsing test downstream.
+# Writing each literal separately keeps the stack invariant (each
+# `write$` pops exactly one string it just pushed) so the probe runs
+# under every conforming implementation.
 PROBE_STYLE_NAMES = r"""
 ENTRY { author }
   { }
@@ -105,15 +115,21 @@ ENTRY { author }
 INTEGERS { name.index name.total }
 
 FUNCTION {dump.one.name}
-{ "first=" author name.index "{ff}" format.name$ * write$ " " * write$
-  "von=" * author name.index "{vv}" format.name$ * write$ " " * write$
-  "last=" * author name.index "{ll}" format.name$ * write$ " " * write$
-  "jr=" * author name.index "{jj}" format.name$ * write$
+{ "first=" write$
+  author name.index "{ff}" format.name$ write$
+  " von=" write$
+  author name.index "{vv}" format.name$ write$
+  " last=" write$
+  author name.index "{ll}" format.name$ write$
+  " jr=" write$
+  author name.index "{jj}" format.name$ write$
   newline$
 }
 
 FUNCTION {dump.names}
-{ "key=" cite$ * write$ newline$
+{ "key=" write$
+  cite$ write$
+  newline$
   author num.names$ 'name.total :=
   #1 'name.index :=
   { name.index name.total > #0 = }

@@ -42,6 +42,22 @@ def _warn_messages(out: dict[str, Any]) -> list[str]:
     return [w.get("message", "") for w in cast(list[dict[str, Any]], raw)]
 
 
+def _warn_mentions_method_component_property(
+    messages: list[str], method: str, component: str, property_name: str
+) -> bool:
+    """Check the non-VEVENT iTIP warning contract per
+    technical-requirements-prompt.md §Warning-schema: a conforming
+    message MUST contain both the method and component tokens as
+    plain case-sensitive ASCII substrings (either order accepted),
+    plus the RFC property name token somewhere in the message.
+    Returns True if at least one message in `messages` satisfies all
+    three conditions."""
+    return any(
+        method in m and component in m and property_name in m
+        for m in messages
+    )
+
+
 # ---------------------------------------------------------------------------
 # VJOURNAL §3.5 — only PUBLISH / ADD / CANCEL
 # ---------------------------------------------------------------------------
@@ -161,7 +177,9 @@ def test_vjournal_publish_requires_description(
     )
     out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PUBLISH VJOURNAL" in m and "DESCRIPTION" in m for m in msgs), msgs
+    assert _warn_mentions_method_component_property(
+        msgs, "PUBLISH", "VJOURNAL", "DESCRIPTION"
+    ), msgs
 
 
 def test_vjournal_publish_requires_dtstart(
@@ -175,7 +193,7 @@ def test_vjournal_publish_requires_dtstart(
     )
     out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PUBLISH VJOURNAL" in m and "DTSTART" in m for m in msgs), msgs
+    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VJOURNAL", "DTSTART"), msgs
 
 
 def test_vjournal_add_requires_description_and_dtstart(
@@ -189,8 +207,8 @@ def test_vjournal_add_requires_description_and_dtstart(
     )
     out = run_parse(submission_command, _vjournal_calendar("ADD", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("ADD VJOURNAL" in m and "DESCRIPTION" in m for m in msgs), msgs
-    assert any("ADD VJOURNAL" in m and "DTSTART" in m for m in msgs), msgs
+    assert _warn_mentions_method_component_property(msgs, "ADD", "VJOURNAL", "DESCRIPTION"), msgs
+    assert _warn_mentions_method_component_property(msgs, "ADD", "VJOURNAL", "DTSTART"), msgs
 
 
 # ---------------------------------------------------------------------------
@@ -274,7 +292,7 @@ def test_vtodo_publish_requires_organizer(
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PUBLISH VTODO" in m and "ORGANIZER" in m for m in msgs), (
+    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VTODO", "ORGANIZER"), (
         f"expected an isolated ORGANIZER warning on VTODO PUBLISH; got {msgs!r}"
     )
 
@@ -293,7 +311,7 @@ def test_vtodo_publish_requires_priority(
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PUBLISH VTODO" in m and "PRIORITY" in m for m in msgs), (
+    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VTODO", "PRIORITY"), (
         f"expected PRIORITY warning on VTODO PUBLISH; got {msgs!r}"
     )
 
@@ -314,8 +332,8 @@ def test_vtodo_request_requires_priority_and_summary(
     )
     out = run_parse(submission_command, _vtodo_calendar("REQUEST", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("REQUEST VTODO" in m and "PRIORITY" in m for m in msgs), msgs
-    assert any("REQUEST VTODO" in m and "SUMMARY" in m for m in msgs), msgs
+    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VTODO", "PRIORITY"), msgs
+    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VTODO", "SUMMARY"), msgs
 
 
 # ---------------------------------------------------------------------------
@@ -378,7 +396,7 @@ def test_vfreebusy_publish_requires_dtstart_and_dtend(
     )
     out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PUBLISH VFREEBUSY" in m and "DTEND" in m for m in msgs), msgs
+    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VFREEBUSY", "DTEND"), msgs
 
 
 def test_vfreebusy_shared_check_messages_carry_adjacent_phrase(
@@ -402,8 +420,8 @@ def test_vfreebusy_shared_check_messages_carry_adjacent_phrase(
     )
     out = run_parse(submission_command, _vfreebusy_calendar("REQUEST", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("REQUEST VFREEBUSY" in m and "UID" in m for m in msgs), msgs
-    assert any("REQUEST VFREEBUSY" in m and "DTSTAMP" in m for m in msgs), msgs
+    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VFREEBUSY", "UID"), msgs
+    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VFREEBUSY", "DTSTAMP"), msgs
 
 
 def test_vfreebusy_publish_forbids_attendee(
@@ -418,7 +436,7 @@ def test_vfreebusy_publish_forbids_attendee(
     )
     out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("PUBLISH VFREEBUSY" in m and "ATTENDEE" in m for m in msgs)
+    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VFREEBUSY", "ATTENDEE"), msgs
 
 
 def test_vfreebusy_publish_well_formed_ok(

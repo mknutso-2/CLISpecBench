@@ -178,6 +178,31 @@ The text after the comma is `First`. The head is split into
 Only the first two commas are structural. Everything after the second
 comma is joined with commas preserved into `First`.
 
+### 2.6 `format.name$` inter-token separator
+
+When `format.name$` rejoins the tokens of a name part (the letters
+between `{`…`}` placeholders in the format string, e.g. `{ff}`,
+`{vv}`, `{ll}`, `{jj}`), adjacent tokens are joined with one of two
+separator characters:
+
+- **Literal `sep_char`.** If the source text placed a tie `~` or
+  hyphen `-` between two tokens, that character is preserved
+  literally in the output.
+- **Default separator.** Where the source used plain whitespace,
+  the joiner is a **tie `~`** when either of the following holds;
+  otherwise it is a single ASCII space:
+    1. The join happens at the **last** inter-token gap of the name
+       part (the gap immediately before the final token), OR
+    2. The accumulated rendered text up to and including the left
+       token is **shorter than three non-brace letters**
+       (`bibtex.web §10270` `enough_text_chars(long_token=3)`).
+
+Example: the author `"John Paul von~der Leyden"` rendered through
+`{ff}{vv}{ll}` yields `First="John~Paul"` (last gap), `von="von~der"`
+(literal tie from source), `Last="Leyden"`. An implementation MAY
+simplify to emit a single ASCII space at every gap; tests that
+exercise `format.name$` output accept either form.
+
 ## 3. `.bst` style file language
 
 A `.bst` file is a program for a stack machine that consumes a
@@ -352,6 +377,24 @@ algorithm has two phases:
 Lines explicitly ended by `newline$` do not get the 2-space indent
 on the following content.
 
+**Byte-fidelity of `write$` input**: characters passed to `write$`
+are preserved verbatim in the output buffer, INCLUDING any leading
+or trailing whitespace on the argument, as long as the line doesn't
+need to wrap. The line-wrap algorithm above may add or remove
+whitespace ONLY at the chosen break point (it inserts the
+2-space continuation indent and collapses the single whitespace it
+broke on). In particular: trailing spaces at the end of a short
+(unwrapped) line MUST be preserved — an implementation that strips
+trailing whitespace before emitting each line is non-conforming.
+
+End-of-run flushing: when the process exits with pending content
+in the output buffer (`write$` calls that were not followed by
+`newline$` or a wrap), that content MUST be flushed to the `.bbl`
+before exit. An implementation that only flushes on `newline$` /
+wrap and silently drops the trailing bare-write is non-conforming.
+(This invariant is exercised explicitly by
+`test_bare_write_flushes_at_end_of_run` in the test suite.)
+
 ### 3.7 Sort behavior
 
 `SORT` reorders the entry list by ascending `sort.key$` using a
@@ -412,6 +455,34 @@ JSON log:
   "warnings": [ <warning object> ]
 }
 ```
+
+Field semantics:
+
+- `entries_read`: count of distinct `.bib` entries that were
+  **selected for processing** by the `--cites` / `--aux` list and
+  successfully parsed. This is NOT the total number of entries in
+  the `.bib` database; an agent MUST NOT count un-cited entries
+  that were scanned-and-skipped. For a 3-entry `.bib` with 2 cited
+  keys (both found), `entries_read = 2`.
+- `entries_cited_found`: same value as `entries_read` under normal
+  operation; provided as a semantic alias for downstream code that
+  wants to distinguish "entries processed" from "entries requested".
+  If a cited key appears multiple times in the cite list, it is
+  counted once here (de-duplicated by key).
+- `entries_cited_missing`: cited keys that were NOT found in the
+  `.bib` database. The cite list MAY re-request a missing key
+  multiple times; this array de-duplicates.
+- `functions_defined`: count of `FUNCTION` declarations parsed from
+  the `.bst` file, NOT including built-ins.
+- `macros_defined`: names of `MACRO` declarations parsed from the
+  `.bst` file, plus the predefined month macros (`jan`…`dec`) that
+  the tool materializes when the `.bst` doesn't explicitly declare
+  them. Order is not asserted.
+- `iterations`: count of `ITERATE` commands executed. Each
+  `ITERATE` increments by 1 regardless of how many entries the
+  iteration processes. Similarly `REVERSE` commands would increment
+  `reverse_iterations` (optional, tool MAY include).
+- `sorts`: count of `SORT` commands executed.
 
 ### 5.3 Warning objects
 

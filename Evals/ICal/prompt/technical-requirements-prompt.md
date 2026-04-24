@@ -396,14 +396,15 @@ and "VTODO PUBLISH missing SUMMARY" emit the same kind). To let
 tests distinguish those cases, every `itip_missing_property`
 message on a non-VEVENT component MUST contain:
 
-1. **The adjacent phrase `<METHOD> <COMPONENT>`** as a plain
-   case-sensitive ASCII substring — method name and component
-   name separated by exactly one ASCII space, in that order.
-   Method is one of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`,
-   `CANCEL`, `REFRESH`, `COUNTER`, `DECLINECOUNTER`. Non-VEVENT
-   component is one of `VTODO`, `VJOURNAL`, `VFREEBUSY`. VEVENT
-   rules do not need `VEVENT` in the message (VEVENT is the
-   default); they only need the method name.
+1. **Both the method token and the non-VEVENT component token**
+   as plain case-sensitive ASCII substrings. Either order is
+   accepted: `"PUBLISH VTODO ..."` and `"... VTODO PUBLISH"` are
+   equally conforming. Method is one of `PUBLISH`, `REQUEST`,
+   `REPLY`, `ADD`, `CANCEL`, `REFRESH`, `COUNTER`,
+   `DECLINECOUNTER`. Non-VEVENT component is one of `VTODO`,
+   `VJOURNAL`, `VFREEBUSY`. VEVENT rules do not need `VEVENT` in
+   the message (VEVENT is the default); they only need the method
+   token.
 2. **The RFC property name** the rule references somewhere else
    in the message: `UID` / `DTSTAMP` / `DTSTART` / `DTEND` /
    `ORGANIZER` / `ATTENDEE` / `SEQUENCE` / `SUMMARY` / `PRIORITY`
@@ -419,16 +420,15 @@ surrounding prose. Example messages that would all satisfy the
 "VTODO PUBLISH missing PRIORITY" rule:
 
     "PUBLISH VTODO requires PRIORITY"
+    "VTODO PUBLISH requires PRIORITY"
     "PUBLISH VTODO: missing PRIORITY field"
-    "PRIORITY is required for PUBLISH VTODO per §3.4.1"
+    "PRIORITY is required for method=PUBLISH component=VTODO (§3.4.1)"
 
 Non-conforming examples that would fail the tests:
 
-    "required property missing"                       (no phrase, no property)
+    "required property missing"                       (no method, no component, no property)
     "publish vtodo requires priority"                 (lowercase tokens)
-    "VTODO PUBLISH requires PRIORITY"                 (wrong order — METHOD must come FIRST)
-    "method is PUBLISH and component is VTODO"        (tokens not adjacent)
-    "PUBLISH-style VTODO requires PRIORITY"           (hyphen between, not single space)
+    "CANCEL VJOURNAL needs ORGANIZER" for a VTODO     (wrong component token)
 
 Everywhere else the test suite checks only the warning `kind`.
 

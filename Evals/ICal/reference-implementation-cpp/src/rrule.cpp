@@ -505,6 +505,15 @@ std::vector<Occurrence> expand_events(
                         ov.consumed = true;
                         consumed_here = true;
                         if (ov.event->status && *ov.event->status == "CANCELLED") {
+                            // summary.md §7: STATUS:CANCELLED override marks
+                            // the occurrence as cancelled but does NOT drop
+                            // it from the array (§9.2 occurrence schema keeps
+                            // every key present including `cancelled`). Emit
+                            // at the ORIGINAL recurrence-id time with
+                            // cancelled=true so consumers can see which
+                            // instance was cancelled.
+                            emit_override(seed, iso_format(ov.target_utc),
+                                          ov.range, true);
                             break;
                         }
                         if (ov.event->dtstart) {
@@ -624,7 +633,15 @@ std::vector<Occurrence> expand_events(
                     if (compare_datetime(ov.target_utc, cmp) == 0) {
                         handled = true;
                         ov.consumed = true;
-                        if (ov.event->status && *ov.event->status == "CANCELLED") break;
+                        if (ov.event->status && *ov.event->status == "CANCELLED") {
+                            // summary.md §7 / §9.2: emit the occurrence at
+                            // its original time with cancelled=true rather
+                            // than dropping it from the array, so the
+                            // consumer can see the cancellation explicitly.
+                            emit_override(dt, iso_format(ov.target_utc),
+                                          ov.range, true);
+                            break;
+                        }
                         if (ov.event->dtstart) {
                             DateTime ov_dt = seed_of(*ov.event->dtstart);
                             if (ov.event->dtstart->tzid) {

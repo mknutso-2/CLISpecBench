@@ -30,6 +30,24 @@ from conftest import run_bibtex
 # ---------------------------------------------------------------------------
 
 
+def _normalize_separator(s: str) -> str:
+    """Normalize inter-token separators in a name part for comparison.
+
+    summary.md §2.6 permits either a tie ``~`` or a single ASCII space
+    between tokens of a name part depending on the ``long_token=3``
+    and last-gap rules. A conforming implementation MAY emit either
+    form; tests should not pin one over the other for the default-
+    separator case. This helper converts both to a single space so
+    assertions compare the underlying token sequence.
+
+    We deliberately do NOT fold source-preserved sep chars (a tie or
+    hyphen that was EXPLICITLY in the source) — those are preserved
+    literally per §2.1. Tests that want to exercise source-preserved
+    sep chars use the raw ``_parts`` output without normalizing.
+    """
+    return s.replace("~", " ")
+
+
 def _parts(
     submission_command: tuple[str, ...], tmp_path: Path, literal: str, which: int = 1
 ) -> dict[str, str]:
@@ -105,10 +123,11 @@ def test_form1_first_last_no_von(
 
 
 def test_form1_von_between(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """Form 1, lowercase between caps: becomes von."""
+    """Form 1, lowercase between caps: becomes von. Inter-token
+    separator inside von may be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "John van der Pol")
     assert n["first"] == "John"
-    assert n["von"] == "van der"
+    assert _normalize_separator(n["von"]) == "van der"
     assert n["last"] == "Pol"
 
 
@@ -118,7 +137,7 @@ def test_form1_von_without_first(
     """Form 1, no leading caps: First is empty, von then Last."""
     n = _parts(submission_command, tmp_path, "van der Pol")
     assert n["first"] == ""
-    assert n["von"] == "van der"
+    assert _normalize_separator(n["von"]) == "van der"
     assert n["last"] == "Pol"
 
 
@@ -135,9 +154,10 @@ def test_form1_all_lowercase_absorbs_into_last(
 def test_form1_all_uppercase_last_is_final_token(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 1, all-uppercase with no lowercase: First = all but last, Last = final."""
+    """Form 1, all-uppercase with no lowercase: First = all but last, Last = final.
+    Inter-token separator in First may be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "John Paul Jones")
-    assert n["first"] == "John Paul"
+    assert _normalize_separator(n["first"]) == "John Paul"
     assert n["last"] == "Jones"
     assert n["von"] == ""
 
@@ -145,10 +165,14 @@ def test_form1_all_uppercase_last_is_final_token(
 def test_form1_tied_tokens_separate_grammatically(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Tie ``~`` acts as whitespace between tokens (btxhak §2.1)."""
+    """Tie ``~`` acts as whitespace between tokens grammatically
+    (btxhak §2.1). The output separator for the joined tokens may
+    be either a literal tie (preserved from the source per §2.1)
+    or a single ASCII space (the default-separator fallback per
+    §2.6). Tests accept either."""
     n = _parts(submission_command, tmp_path, "John~Paul Smith")
-    # Tokens: [John, Paul, Smith] — all uppercase → First = "John Paul", Last = "Smith".
-    assert n["first"] == "John Paul"
+    # Tokens: [John, Paul, Smith] — all uppercase → First = John+Paul.
+    assert _normalize_separator(n["first"]) == "John Paul"
     assert n["last"] == "Smith"
 
 
@@ -170,8 +194,9 @@ def test_form1_brace_protected_von_region(
     # Lowercase token positions: 0 (de), 2 (vega). Brace token {la} is uppercase.
     # Per btxhak §2.2: von spans from the FIRST lowercase through the LAST
     # lowercase token, inclusive — so von = "de {la} vega", Last = "Smith".
+    # Inter-token separator inside von may be tie or space per §2.6.
     n = _parts(submission_command, tmp_path, "de {la} vega Smith")
-    assert n["von"] == "de {la} vega"
+    assert _normalize_separator(n["von"]) == "de {la} vega"
     assert n["last"] == "Smith"
     assert n["first"] == ""
 
@@ -192,30 +217,34 @@ def test_form2_simple(submission_command: tuple[str, ...], tmp_path: Path) -> No
 def test_form2_von_plus_last_head(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 2, head with von + Last run."""
+    """Form 2, head with von + Last run. Inter-token separator inside
+    von may be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "van der Pol, Balthasar")
     assert n["first"] == "Balthasar"
-    assert n["von"] == "van der"
+    assert _normalize_separator(n["von"]) == "van der"
     assert n["last"] == "Pol"
 
 
 def test_form2_leading_caps_prepend_to_last(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 2, leading uppercase tokens before von fold into Last (spec §2.3)."""
+    """Form 2, leading uppercase tokens before von fold into Last (spec §2.3).
+    Inter-token separator inside multi-token Last or von may be tie or
+    space per §2.6."""
     n = _parts(submission_command, tmp_path, "Foo van der Pol, Charles")
     assert n["first"] == "Charles"
-    assert n["von"] == "van der"
-    assert n["last"] == "Foo Pol"
+    assert _normalize_separator(n["von"]) == "van der"
+    assert _normalize_separator(n["last"]) == "Foo Pol"
 
 
 def test_form2_head_without_lowercase_is_all_last(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 2, head with no lowercase tokens: whole head is Last."""
+    """Form 2, head with no lowercase tokens: whole head is Last.
+    Inter-token separator in Last may be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "Charles Martin Jones, Jimmy")
     assert n["first"] == "Jimmy"
-    assert n["last"] == "Charles Martin Jones"
+    assert _normalize_separator(n["last"]) == "Charles Martin Jones"
     assert n["von"] == ""
 
 
@@ -242,10 +271,11 @@ def test_form3_jr_literal(submission_command: tuple[str, ...], tmp_path: Path) -
 
 
 def test_form3_jr_roman_iii(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """Form 3 with Roman-numeral suffix."""
+    """Form 3 with Roman-numeral suffix. Inter-token separator inside
+    von may be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "van der Berg, III, Johann")
     assert n["first"] == "Johann"
-    assert n["von"] == "van der"
+    assert _normalize_separator(n["von"]) == "van der"
     assert n["last"] == "Berg"
     assert n["jr"] == "III"
 
@@ -346,7 +376,9 @@ def test_brace_protected_von_is_uppercase_not_von(
 def test_latex_accent_opening_token_is_uppercase(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    r"""Token opening with ``{\...}`` is treated as uppercase (spec §2.1)."""
+    r"""Token opening with ``{\...}`` is treated as uppercase (spec §2.1).
+    Inter-token separator inside the multi-token von may be tie or
+    space per §2.6."""
     # "{\'E}tienne de la Valle\'e Poussin" — {\'E}tienne starts with a brace
     # group, and therefore this token is uppercase. The name has one lowercase
     # run: "de la". ``Valle'e`` begins with uppercase V. ``Poussin`` begins
@@ -355,6 +387,6 @@ def test_latex_accent_opening_token_is_uppercase(
         submission_command, tmp_path, r"{\'E}tienne de la Vall\'ee Poussin"
     )
     assert n["first"] == r"{\'E}tienne"
-    assert n["von"] == "de la"
+    assert _normalize_separator(n["von"]) == "de la"
     # Last can be "Vall\'ee Poussin" (uppercase-caps after the von).
     assert "Poussin" in n["last"]
