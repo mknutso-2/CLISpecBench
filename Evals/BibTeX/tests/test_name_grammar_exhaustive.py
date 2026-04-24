@@ -34,16 +34,16 @@ def _normalize_separator(s: str) -> str:
     """Normalize inter-token separators in a name part for comparison.
 
     summary.md §2.6 permits either a tie ``~`` or a single ASCII space
-    between tokens of a name part depending on the ``long_token=3``
-    and last-gap rules. A conforming implementation MAY emit either
-    form; tests should not pin one over the other for the default-
-    separator case. This helper converts both to a single space so
-    assertions compare the underlying token sequence.
+    between tokens of a name part rendered through ``format.name$`` —
+    both the default-separator case (§10270 ``long_token=3`` / last-gap
+    rule) and the doubled-form case (``{ff}``/``{vv}``/…) are allowed
+    to emit either character. This helper folds both forms to a space
+    so assertions compare the underlying token sequence.
 
-    We deliberately do NOT fold source-preserved sep chars (a tie or
-    hyphen that was EXPLICITLY in the source) — those are preserved
-    literally per §2.1. Tests that want to exercise source-preserved
-    sep chars use the raw ``_parts`` output without normalizing.
+    §2.6 is explicit that tests accept either form at any
+    default-separator gap in either letter-form; tests that need to
+    observe a source-preserved tie specifically (pre-`format.name$`)
+    should check the raw author string, not the ``format.name$`` output.
     """
     return s.replace("~", " ")
 

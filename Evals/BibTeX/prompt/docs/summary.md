@@ -180,28 +180,39 @@ comma is joined with commas preserved into `First`.
 
 ### 2.6 `format.name$` inter-token separator
 
-When `format.name$` rejoins the tokens of a name part (the letters
-between `{`…`}` placeholders in the format string, e.g. `{ff}`,
-`{vv}`, `{ll}`, `{jj}`), adjacent tokens are joined with one of two
-separator characters:
+When `format.name$` rejoins the tokens of a name part, the separator
+between adjacent tokens depends on (a) which letter-form the format
+string used and (b) what `bibtex.web §10270` decides based on
+accumulated-text length.
 
-- **Literal `sep_char`.** If the source text placed a tie `~` or
-  hyphen `-` between two tokens, that character is preserved
-  literally in the output.
-- **Default separator.** Where the source used plain whitespace,
-  the joiner is a **tie `~`** when either of the following holds;
-  otherwise it is a single ASCII space:
-    1. The join happens at the **last** inter-token gap of the name
-       part (the gap immediately before the final token), OR
-    2. The accumulated rendered text up to and including the left
-       token is **shorter than three non-brace letters**
-       (`bibtex.web §10270` `enough_text_chars(long_token=3)`).
+**The abbreviated form** (single-letter placeholders `{f}`, `{v}`,
+`{l}`, `{j}` — initials only) applies the `bibtex.web §10270`
+`enough_text_chars(long_token=3)` rule: the joiner is a tie `~`
+unless the accumulated rendered text in this name-part is at least
+three non-brace letters AND this is not the last inter-token gap,
+in which case it is a single ASCII space.
+
+**The doubled form** (spelled-out placeholders `{ff}`, `{vv}`,
+`{ll}`, `{jj}`) uses a single ASCII space as the inter-token
+separator in the common case. Implementations MAY preserve source
+`~` / `-` literally when the source text placed one between two
+tokens (following §2.1's literal-preservation rule), and MAY also
+apply the §10270 tie rule at the last gap or to short accumulated
+text — but these behaviors are not required for the doubled form.
+
+**Tests accept either form** (tie or space) at any default-separator
+gap in either letter-form. Tests that want to exercise the abbreviated
+form's tie behavior specifically cite this section and use the `{f}`
+placeholder explicitly. The helper `_normalize_separator` in
+`test_name_grammar_exhaustive.py` folds ties to spaces before
+comparison to encode this acceptance band.
 
 Example: the author `"John Paul von~der Leyden"` rendered through
-`{ff}{vv}{ll}` yields `First="John~Paul"` (last gap), `von="von~der"`
-(literal tie from source), `Last="Leyden"`. An implementation MAY
-simplify to emit a single ASCII space at every gap; tests that
-exercise `format.name$` output accept either form.
+`{ff}{vv}{ll}` may yield any of (a) `First="John~Paul"`, `von="von~der"`,
+(b) `First="John Paul"`, `von="von der"`, or mixed. All are conforming.
+A test that needs the source-preserved tie to round-trip SHOULD use a
+format string that does not invoke the `{ff}`-style name rendering
+— e.g. check the raw author field via `raw_properties`.
 
 ## 3. `.bst` style file language
 
