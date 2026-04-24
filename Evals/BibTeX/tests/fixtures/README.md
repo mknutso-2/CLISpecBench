@@ -58,8 +58,12 @@ The script writes `.expected.bbl` files back under `fixtures/`.
 
 The expected fixtures were generated with:
 
-- TeX Live YYYY (`texlive/texlive:latest` Docker image at the commit
-  pinned in `tools/regenerate_bbl_fixtures.sh`).
+- The current `texlive/texlive:latest` Docker image (`tools/regenerate_bbl_fixtures.sh`
+  uses the floating `latest` tag; re-running the script today pulls a
+  newer image than the last fixture-regeneration run. If a submission
+  ever diverges due to BibTeX upstream changes, re-run the script to
+  refresh the fixtures and commit the diff alongside the submission
+  update).
 - `plain.bst` / `alpha.bst` / `unsrt.bst` / `abbrv.bst` from CTAN,
   tagged as `bibtex-0.99c-*`.
 

@@ -108,8 +108,9 @@ def test_vjournal_publish_requires_organizer(
 def test_vjournal_publish_with_organizer_ok(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A PUBLISH VJOURNAL with ORGANIZER, no ATTENDEE, DTSTAMP, UID,
-    and DTSTART is a minimally valid §3.5.1 PUBLISH."""
+    """A PUBLISH VJOURNAL with every §3.5.1 "1" row present
+    (DESCRIPTION, DTSTAMP, DTSTART, ORGANIZER, UID) and no ATTENDEE
+    is a minimally valid §3.5.1 PUBLISH — no warnings expected."""
     body = (
         "UID:j1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T100000Z\nDESCRIPTION:Hello\n"
@@ -352,7 +353,10 @@ def test_vfreebusy_publish_requires_dtstart_and_dtend(
 ) -> None:
     """All three VFREEBUSY iTIP methods require DTSTART and DTEND
     (§3.3.1/§3.3.2/§3.3.3 tables). Missing DTEND on a PUBLISH is a
-    matrix violation."""
+    matrix violation. The message MUST carry the adjacent
+    `PUBLISH VFREEBUSY` phrase per the warning contract — earlier
+    impls emitted `"VFREEBUSY iTIP requires DTEND"` without the
+    method name, which violated the contract."""
     body = (
         "UID:f1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T000000Z\n"  # no DTEND
@@ -360,7 +364,32 @@ def test_vfreebusy_publish_requires_dtstart_and_dtend(
     )
     out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
     msgs = _warn_messages(out)
-    assert any("DTEND" in m for m in msgs)
+    assert any("PUBLISH VFREEBUSY" in m and "DTEND" in m for m in msgs), msgs
+
+
+def test_vfreebusy_shared_check_messages_carry_adjacent_phrase(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """The universal UID/DTSTAMP/ORGANIZER checks on VFREEBUSY must
+    ALSO include the method-plus-component adjacent phrase per the
+    iter 11 warning contract. Prior impls emitted bare
+    `"iTIP message requires UID"` — no method, no component — which
+    left tests unable to discriminate a missing-UID on a VFREEBUSY
+    from a missing-UID on any other component.
+
+    Fixture: empty UID + no DTSTAMP on a REQUEST VFREEBUSY. Both
+    warnings MUST start with the literal `REQUEST VFREEBUSY` phrase."""
+    body = (
+        # UID intentionally empty (trailing value),  no DTSTAMP.
+        "UID:\n"
+        "DTSTART:20260301T000000Z\nDTEND:20260302T000000Z\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "ATTENDEE:mailto:a@example.com\n"
+    )
+    out = run_parse(submission_command, _vfreebusy_calendar("REQUEST", body), tmp_path)
+    msgs = _warn_messages(out)
+    assert any("REQUEST VFREEBUSY" in m and "UID" in m for m in msgs), msgs
+    assert any("REQUEST VFREEBUSY" in m and "DTSTAMP" in m for m in msgs), msgs
 
 
 def test_vfreebusy_publish_forbids_attendee(

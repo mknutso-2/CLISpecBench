@@ -643,8 +643,13 @@ void validate_itip(Calendar& cal) {
         // VEVENT §3.2.x tables — enforced row-by-row for every "1"
         // (required) row. "0 or 1" rows are permitted-but-optional;
         // "0" rows are MUST NOT and we warn on presence.
-        if (e.uid.empty()) emit("", "iTIP message requires UID");
-        if (!e.dtstamp) emit(e.uid, "iTIP message requires DTSTAMP");
+        //
+        // Messages start with the METHOD name so test message-content
+        // discrimination works uniformly. (VEVENT rules don't include
+        // "VEVENT" in the message text — VEVENT is the default
+        // component per the warning-contract §.)
+        if (e.uid.empty()) emit("", m + " requires UID");
+        if (!e.dtstamp) emit(e.uid, m + " requires DTSTAMP");
 
         if (m == "PUBLISH") {
             // §3.2.1: DTSTART 1, ORGANIZER 1, SUMMARY 1, UID 1, DTSTAMP 1;
@@ -722,8 +727,12 @@ void validate_itip(Calendar& cal) {
         // Differs from VEVENT: PRIORITY is required on PUBLISH/REQUEST/
         // ADD/COUNTER; REFRESH does NOT forbid SEQUENCE (§3.4.6 is 0 or 1,
         // not 0 MUST NOT); DUE replaces DTEND in many tables.
-        if (t.uid.empty()) emit("", "iTIP message requires UID");
-        if (!t.dtstamp) emit(t.uid, "iTIP message requires DTSTAMP");
+        //
+        // All emitted messages start with the adjacent phrase
+        // "<METHOD> VTODO" to satisfy the warning-contract adjacency
+        // rule for non-VEVENT itip_missing_property warnings.
+        if (t.uid.empty()) emit("", m + " VTODO requires UID");
+        if (!t.dtstamp) emit(t.uid, m + " VTODO requires DTSTAMP");
 
         if (m == "PUBLISH") {
             // §3.4.1: DTSTART 1, ORGANIZER 1, PRIORITY 1, SUMMARY 1,
@@ -790,8 +799,11 @@ void validate_itip(Calendar& cal) {
     auto check_vjournal = [&](const VEvent& j) {
         // VJOURNAL §3.5 only defines PUBLISH / ADD / CANCEL. Any other
         // method on a VJOURNAL is an RFC 5546 violation.
-        if (j.uid.empty()) emit("", "iTIP message requires UID");
-        if (!j.dtstamp) emit(j.uid, "iTIP message requires DTSTAMP");
+        //
+        // All emitted messages start with "<METHOD> VJOURNAL" to satisfy
+        // the warning-contract adjacency rule for non-VEVENT messages.
+        if (j.uid.empty()) emit("", m + " VJOURNAL requires UID");
+        if (!j.dtstamp) emit(j.uid, m + " VJOURNAL requires DTSTAMP");
 
         if (m == "PUBLISH") {
             // §3.5.1: DESCRIPTION 1, DTSTART 1, ORGANIZER 1, UID 1,
@@ -825,12 +837,18 @@ void validate_itip(Calendar& cal) {
 
     auto check_vfreebusy = [&](const VFreeBusy& f) {
         // VFREEBUSY §3.3 only defines PUBLISH / REQUEST / REPLY.
-        if (f.uid.empty()) emit("", "iTIP message requires UID");
-        if (!f.dtstamp) emit(f.uid, "iTIP message requires DTSTAMP");
+        //
+        // All emitted messages start with "<METHOD> VFREEBUSY" to satisfy
+        // the warning-contract adjacency rule for non-VEVENT messages.
+        // Even shared checks (UID/DTSTAMP/ORGANIZER/DTSTART/DTEND) carry
+        // the method+component prefix so tests that discriminate by
+        // message content can always rely on the adjacent phrase.
+        if (f.uid.empty()) emit("", m + " VFREEBUSY requires UID");
+        if (!f.dtstamp) emit(f.uid, m + " VFREEBUSY requires DTSTAMP");
         // All three §3.3.x tables require DTSTART, DTEND, and ORGANIZER.
-        if (!f.organizer) emit(f.uid, "VFREEBUSY iTIP requires ORGANIZER");
-        if (!f.dtstart) emit(f.uid, "VFREEBUSY iTIP requires DTSTART");
-        if (!f.dtend) emit(f.uid, "VFREEBUSY iTIP requires DTEND");
+        if (!f.organizer) emit(f.uid, m + " VFREEBUSY requires ORGANIZER");
+        if (!f.dtstart) emit(f.uid, m + " VFREEBUSY requires DTSTART");
+        if (!f.dtend) emit(f.uid, m + " VFREEBUSY requires DTEND");
 
         if (m == "PUBLISH") {
             // §3.3.1: ATTENDEE 0.

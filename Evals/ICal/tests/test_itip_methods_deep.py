@@ -4,15 +4,17 @@ Closes Codex v1.0 adversarial-review finding #4. `test_itip_methods.py`
 covers REQUEST / REPLY / CANCEL / PUBLISH (the heavily-used methods).
 This file adds the less-common methods RFC 5546 §3.2 requires:
 
-  * ADD (§3.2.4) — adds a new recurrence to an existing VEVENT. Requires
-    ORGANIZER + UID + DTSTAMP + SEQUENCE. The new occurrence typically
-    carries RECURRENCE-ID.
+  * ADD (§3.2.4) — adds a new recurrence to an existing VEVENT. Required
+    rows: DTSTAMP, DTSTART, ORGANIZER, SEQUENCE (MUST be > 0), SUMMARY,
+    UID. The new occurrence typically carries RECURRENCE-ID.
   * REFRESH (§3.2.6) — attendee requests an updated iCal from the
-    organizer. Requires ORGANIZER + ATTENDEE + UID.
-  * COUNTER (§3.2.7) — attendee proposes a change. Requires the
-    proposed event details + ATTENDEE + ORGANIZER + UID.
-  * DECLINECOUNTER (§3.2.8) — organizer rejects a COUNTER. Requires
-    ORGANIZER + ATTENDEE + UID + SEQUENCE.
+    organizer. Required rows: ATTENDEE, DTSTAMP, ORGANIZER, UID.
+    SEQUENCE is "0" (MUST NOT be present).
+  * COUNTER (§3.2.7) — attendee proposes a change. Required rows:
+    DTSTAMP, DTSTART, ORGANIZER, SEQUENCE, SUMMARY, UID. ATTENDEE is
+    "0+" (optional — MAY be used to propose other attendees).
+  * DECLINECOUNTER (§3.2.8) — organizer rejects a COUNTER. Required
+    rows: ATTENDEE (1+), DTSTAMP, ORGANIZER, SEQUENCE, UID.
 
 Plus depth on PUBLISH requirements (§3.2.1) that weren't asserted before.
 
