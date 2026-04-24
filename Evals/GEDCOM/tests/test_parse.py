@@ -4,6 +4,8 @@ from pathlib import Path
 
 import pytest
 from gedcom_support import (
+    extended_sample_dataset,
+    extended_sample_gedcom_text,
     official_record_fragments,
     sample_dataset,
     sample_gedcom_text,
@@ -64,6 +66,41 @@ def test_render_preserves_multiline_and_escaped_payload_content(
     assert "1 NOTE Household record" in text
     assert "2 CONT for downtown apartment" in text
     assert "1 NOTE @@handle" in text
+
+
+def test_parses_extended_dataset_with_repository_source_and_multimedia_records(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    result, payload = run_gedcom(
+        submission_command,
+        {"action": "inspect", "gedcom_text": extended_sample_gedcom_text()},
+        tmp_path,
+    )
+    assert result.returncode == 0
+    assert payload is not None
+    assert payload["result"]["dataset"] == extended_sample_dataset()
+
+
+def test_roundtrip_preserves_extended_dataset_tree(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    dataset = extended_sample_dataset()
+    render_result, render_payload = run_gedcom(
+        submission_command,
+        {"action": "render", "dataset": dataset},
+        tmp_path,
+    )
+    assert render_result.returncode == 0
+    assert render_payload is not None
+
+    inspect_result, inspect_payload = run_gedcom(
+        submission_command,
+        {"action": "inspect", "gedcom_text": render_payload["result"]["gedcom_text"]},
+        tmp_path,
+    )
+    assert inspect_result.returncode == 0
+    assert inspect_payload is not None
+    assert inspect_payload["result"]["dataset"] == dataset
 
 
 @pytest.mark.parametrize(

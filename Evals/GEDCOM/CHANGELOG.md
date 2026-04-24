@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.1.0 — 2026-04-23
+
+- Added broader GEDCOM 7 structure-validation coverage derived from the checked-in
+  official grammar, including top-level record requirements, major record
+  required-child rules, and `Y|<NULL>` event payload checks.
+- Added nested structure validation for `HEAD/PLAC`, `CHAN`, `CREA`,
+  `ASSO/ROLE`, `NAME/TRAN`, `FILE/FORM`, `FILE/TRAN/FORM`, and `PLAC/MAP`.
+- Tightened pointer handling so hidden tests now check both pointer existence
+  and target record type while still allowing context-dependent non-pointer
+  structures such as `HEAD/SOUR` and family-event `HUSB` / `WIFE`.
+- Added a richer positive roundtrip corpus with repository, source, multimedia,
+  and association structures, plus new negative tests generated from the
+  official record-root and event grammar artifacts.
+
 ## v3.0.0 — 2026-04-22
 
 - Replaced the old profile-specific inspect/render contract with a generic

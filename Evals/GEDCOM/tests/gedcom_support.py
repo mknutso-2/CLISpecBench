@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from copy import deepcopy
 from pathlib import Path
 from typing import TypedDict, cast
 
@@ -142,7 +143,7 @@ def sample_dataset() -> ExpectedDataset:
                     node("NOTE", "Lead genealogist\nChicago office"),
                 ],
             ),
-            node("SNOTE", 'Shared note line 1\nShared note line 2', xref="@N1@"),
+            node("SNOTE", "Shared note line 1\nShared note line 2", xref="@N1@"),
             node(
                 "INDI",
                 xref="@I1@",
@@ -188,6 +189,165 @@ def sample_dataset() -> ExpectedDataset:
     }
 
 
+def extended_sample_gedcom_text() -> str:
+    return "\n".join(
+        [
+            "0 HEAD",
+            "1 GEDC",
+            "2 VERS 7.0",
+            "1 SOUR CLISpecBench",
+            "1 SUBM @U1@",
+            "0 @U1@ SUBM",
+            "1 NAME Example Researcher",
+            "1 LANG en",
+            "0 @R1@ REPO",
+            "1 NAME City Archive",
+            "1 EMAIL archive@example.com",
+            "0 @S1@ SOUR",
+            "1 TITL City Directory",
+            "1 REPO @R1@",
+            "2 CALN Box 12",
+            "0 @O1@ OBJE",
+            "1 FILE photos/john.jpg",
+            "2 FORM image/jpeg",
+            "3 MEDI photo",
+            "2 TITL John portrait",
+            "0 @N1@ SNOTE Shared note text",
+            "1 MIME text/plain",
+            "0 @I1@ INDI",
+            "1 NAME John /Doe/",
+            "2 GIVN John",
+            "2 SURN Doe",
+            "1 ASSO @I2@",
+            "2 ROLE witness",
+            "1 BIRT Y",
+            "2 DATE 1 JAN 1900",
+            "2 PLAC Boston, Massachusetts",
+            "3 FORM City, State",
+            "2 SOUR @S1@",
+            "2 OBJE @O1@",
+            "1 FAMS @F1@",
+            "0 @I2@ INDI",
+            "1 NAME Jane /Doe/",
+            "1 FAMS @F1@",
+            "0 @F1@ FAM",
+            "1 HUSB @I1@",
+            "1 WIFE @I2@",
+            "1 SUBM @U1@",
+            "1 NOTE Household record",
+            "0 TRLR",
+            "",
+        ]
+    )
+
+
+def extended_sample_dataset() -> ExpectedDataset:
+    return {
+        "records": [
+            node(
+                "HEAD",
+                children=[
+                    node("GEDC", children=[node("VERS", "7.0")]),
+                    node("SOUR", "CLISpecBench"),
+                    node("SUBM", "@U1@"),
+                ],
+            ),
+            node(
+                "SUBM",
+                xref="@U1@",
+                children=[node("NAME", "Example Researcher"), node("LANG", "en")],
+            ),
+            node(
+                "REPO",
+                xref="@R1@",
+                children=[
+                    node("NAME", "City Archive"),
+                    node("EMAIL", "archive@example.com"),
+                ],
+            ),
+            node(
+                "SOUR",
+                xref="@S1@",
+                children=[
+                    node("TITL", "City Directory"),
+                    node(
+                        "REPO",
+                        "@R1@",
+                        children=[node("CALN", "Box 12")],
+                    ),
+                ],
+            ),
+            node(
+                "OBJE",
+                xref="@O1@",
+                children=[
+                    node(
+                        "FILE",
+                        "photos/john.jpg",
+                        children=[
+                            node("FORM", "image/jpeg", children=[node("MEDI", "photo")]),
+                            node("TITL", "John portrait"),
+                        ],
+                    )
+                ],
+            ),
+            node(
+                "SNOTE",
+                xref="@N1@",
+                payload="Shared note text",
+                children=[node("MIME", "text/plain")],
+            ),
+            node(
+                "INDI",
+                xref="@I1@",
+                children=[
+                    node(
+                        "NAME",
+                        "John /Doe/",
+                        children=[node("GIVN", "John"), node("SURN", "Doe")],
+                    ),
+                    node(
+                        "ASSO",
+                        "@I2@",
+                        children=[node("ROLE", "witness")],
+                    ),
+                    node(
+                        "BIRT",
+                        "Y",
+                        children=[
+                            node("DATE", "1 JAN 1900"),
+                            node(
+                                "PLAC",
+                                "Boston, Massachusetts",
+                                children=[node("FORM", "City, State")],
+                            ),
+                            node("SOUR", "@S1@"),
+                            node("OBJE", "@O1@"),
+                        ],
+                    ),
+                    node("FAMS", "@F1@"),
+                ],
+            ),
+            node(
+                "INDI",
+                xref="@I2@",
+                children=[node("NAME", "Jane /Doe/"), node("FAMS", "@F1@")],
+            ),
+            node(
+                "FAM",
+                xref="@F1@",
+                children=[
+                    node("HUSB", "@I1@"),
+                    node("WIFE", "@I2@"),
+                    node("SUBM", "@U1@"),
+                    node("NOTE", "Household record"),
+                ],
+            ),
+            node("TRLR"),
+        ]
+    }
+
+
 def minimal_header_text() -> str:
     return "\n".join(
         [
@@ -196,6 +356,90 @@ def minimal_header_text() -> str:
             "2 VERS 7.0",
         ]
     )
+
+
+def clone_dataset(dataset: ExpectedDataset) -> ExpectedDataset:
+    return deepcopy(dataset)
+
+
+def document_text(*record_blocks: list[str], head_lines: list[str] | None = None) -> str:
+    header = ["0 HEAD", "1 GEDC", "2 VERS 7.0"] if head_lines is None else head_lines
+    lines = [*header]
+    for block in record_blocks:
+        lines.extend(block)
+    lines.append("0 TRLR")
+    return "\n".join([*lines, ""])
+
+
+def submitter_record_block(
+    *,
+    xref: str = "@U1@",
+    include_name: bool = True,
+    extra_lines: list[str] | None = None,
+) -> list[str]:
+    lines = [f"0 {xref} SUBM"]
+    if include_name:
+        lines.append("1 NAME Example Submitter")
+    if extra_lines is not None:
+        lines.extend(extra_lines)
+    return lines
+
+
+def repository_record_block(
+    *,
+    xref: str = "@R1@",
+    include_name: bool = True,
+    extra_lines: list[str] | None = None,
+) -> list[str]:
+    lines = [f"0 {xref} REPO"]
+    if include_name:
+        lines.append("1 NAME Example Repository")
+    if extra_lines is not None:
+        lines.extend(extra_lines)
+    return lines
+
+
+def multimedia_record_block(
+    *,
+    xref: str = "@O1@",
+    include_file: bool = True,
+    include_form: bool = True,
+    extra_lines: list[str] | None = None,
+) -> list[str]:
+    lines = [f"0 {xref} OBJE"]
+    if include_file:
+        lines.append("1 FILE photo.jpg")
+        if include_form:
+            lines.append("2 FORM image/jpeg")
+    if extra_lines is not None:
+        lines.extend(extra_lines)
+    return lines
+
+
+def shared_note_record_block(
+    *,
+    xref: str = "@N1@",
+    payload: str | None = "Shared note",
+    extra_lines: list[str] | None = None,
+) -> list[str]:
+    header = f"0 {xref} SNOTE"
+    if payload is not None:
+        header += f" {payload}"
+    lines = [header]
+    if extra_lines is not None:
+        lines.extend(extra_lines)
+    return lines
+
+
+def individual_record_block(
+    *,
+    xref: str = "@I1@",
+    extra_lines: list[str] | None = None,
+) -> list[str]:
+    lines = [f"0 {xref} INDI"]
+    if extra_lines is not None:
+        lines.extend(extra_lines)
+    return lines
 
 
 def wrap_record_fragment(fragment_text: str) -> str:

@@ -8,10 +8,11 @@ contract so the task can represent the broader standard instead of a small
 family-record profile.
 
 The current shipped surface covers GEDCOM line grammar, payload continuation and
-escaping rules, dataset-envelope validation, pointer resolution, and a curated
-set of official level-0 record fragments. Direct structure cardinality,
-enumeration validation, and more of the official grammar are the next expansion
-layers for this eval.
+escaping rules, dataset-envelope validation, pointer resolution and target-type
+checks, top-level record constraints, major record-level required-child rules,
+selected nested-structure cardinality rules, official `Y|<NULL>` event payload
+constraints, and the curated set of official level-0 record fragments extracted
+from the FamilySearch corpus.
 
 ## CLI Contract
 
