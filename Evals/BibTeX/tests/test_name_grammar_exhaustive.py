@@ -144,11 +144,13 @@ def test_form1_von_without_first(
 def test_form1_all_lowercase_absorbs_into_last(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 1, all-lowercase tokens: Last absorbs all, von emptied (spec §2.2)."""
+    """Form 1, all-lowercase tokens: Last absorbs all, von emptied
+    (spec §2.2). Inter-token separator in the multi-token Last may
+    be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "van de")
     assert n["first"] == ""
     assert n["von"] == ""
-    assert n["last"] == "van de"
+    assert _normalize_separator(n["last"]) == "van de"
 
 
 def test_form1_all_uppercase_last_is_final_token(
