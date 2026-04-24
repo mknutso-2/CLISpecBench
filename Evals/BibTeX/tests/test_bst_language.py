@@ -9,6 +9,24 @@ from conftest import run_bibtex
 MINI_BIB = '@article{a, author = "Smith", title = "TA", year = 2024}\n'
 
 
+def _maybe_flush(body: str) -> str:
+    """Append `newline$` to the body when it ends on a `write$` without a
+    following `newline$`. Guards the suite against Rule 3 cascade: a buggy
+    interpreter that only flushes its output buffer on `newline$` would
+    otherwise silently drop every test body that ends with bare `write$`,
+    converting one flush bug into ~200 cascading failures that have nothing
+    to do with the built-in the test is named for.
+
+    The bare-write$-flushes-at-exit rule is itself pinned by a separate
+    gate test in `test_output_buffer.py`; by appending `newline$` here we
+    keep the individual built-in tests measuring the built-in under test.
+    """
+    stripped = body.rstrip()
+    if stripped.endswith("write$"):
+        return body + " newline$"
+    return body
+
+
 def _run_with_body(
     submission_command: tuple[str, ...],
     tmp_path: Path,
@@ -18,6 +36,7 @@ def _run_with_body(
 ) -> str:
     """Run a .bst containing a single ITERATE-able function called `f` with
     the given body. Returns the .bbl text."""
+    body = _maybe_flush(body)
     style = f"""\
 ENTRY {{ author title year }} {{ }} {{ }}
 FUNCTION {{f}} {{ {body} }}
@@ -35,6 +54,7 @@ def _run_with_execute(
     bib: str = MINI_BIB,
 ) -> str:
     """Run EXECUTE on a function body (no current entry)."""
+    body = _maybe_flush(body)
     style = f"""\
 ENTRY {{ author }} {{ }} {{ }}
 FUNCTION {{f}} {{ {body} }}

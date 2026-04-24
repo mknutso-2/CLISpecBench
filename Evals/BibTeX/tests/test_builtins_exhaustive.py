@@ -38,6 +38,11 @@ def _exec(
 
     Returns (bbl_text, log_or_None).
     """
+    # Append newline$ when body ends on bare write$ — guards against a
+    # single-line flush bug cascading across every built-in test. See
+    # test_bst_language._maybe_flush for rationale.
+    if body.rstrip().endswith("write$"):
+        body = body + " newline$"
     style = f"""\
 ENTRY {{ {entry_fields} }} {{ }} {{ }}
 FUNCTION {{f}} {{ {body} }}

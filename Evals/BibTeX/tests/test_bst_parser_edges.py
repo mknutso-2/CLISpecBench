@@ -31,6 +31,12 @@ def _exec(
     entry_fields: str = "",
     expect_exit: int = 0,
 ) -> str:
+    # Append newline$ if body ends with bare write$ — see test_bst_language
+    # _maybe_flush for rationale. Guards the suite against a cascade where
+    # one missing end-of-run flush in the interpreter takes down every
+    # write$-terminated test body.
+    if body.rstrip().endswith("write$"):
+        body = body + " newline$"
     style = (
         f"ENTRY {{ {entry_fields} }} {{ }} {{ }}\n"
         f"FUNCTION {{f}} {{ {body} }}\n"

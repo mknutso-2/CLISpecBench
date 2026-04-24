@@ -28,6 +28,10 @@ def _exec(
     extra_entry: str = "{ }",
 ) -> str:
     """Build a style that EXECUTEs `body` (no ITERATE) and returns the .bbl."""
+    # Append newline$ when body ends on bare write$ — guards against the
+    # end-of-run flush cascade. See test_bst_language._maybe_flush.
+    if body.rstrip().endswith("write$"):
+        body = body + " newline$"
     style = f"""\
 ENTRY {{ author title }} {{ }} {extra_entry}
 FUNCTION {{f}} {{ {body} }}
