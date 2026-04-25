@@ -499,6 +499,90 @@ def test_inspect_marcxml_rejects_non_subfield_child(
     assert payload["error"]["code"] == "invalid_record"
 
 
+def test_inspect_marcxml_rejects_controlfield_missing_tag_attribute(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    marcxml = sample_marcxml().replace('<controlfield tag="001">', "<controlfield>", 1)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": marcxml},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+def test_inspect_marcxml_rejects_datafield_missing_tag_attribute(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    marcxml = sample_marcxml().replace('<datafield tag="245" ', "<datafield ", 1)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": marcxml},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+def test_inspect_marcxml_rejects_subfield_missing_code_attribute(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    marcxml = sample_marcxml().replace('<subfield code="a">', "<subfield>", 1)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": marcxml},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+def test_inspect_marcxml_rejects_wrong_root_element(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    marcxml = '<notarecord xmlns="http://www.loc.gov/MARC21/slim"/>'
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": marcxml},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+def test_inspect_marcxml_rejects_empty_collection(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    marcxml = '<collection xmlns="http://www.loc.gov/MARC21/slim"></collection>'
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": marcxml},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
+def test_inspect_marcxml_rejects_unknown_element_inside_record(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    marcxml = sample_marcxml().replace("</record>", "<junk/></record>", 1)
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "inspect_marcxml", "marcxml": marcxml},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload["error"]["code"] == "invalid_record"
+
+
 def test_inspect_marcxml_rejects_controlfield_after_datafield(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:

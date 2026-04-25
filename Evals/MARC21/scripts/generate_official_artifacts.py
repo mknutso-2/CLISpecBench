@@ -56,15 +56,21 @@ _FIXED_RULES: dict[str, object] = {
         "source": "bd007.html",
         "position_00": ["a", "c", "d", "f", "g", "h", "k", "m", "o", "q", "r", "s", "t", "v", "z"],
         "fill_disallowed_positions": [0],
+        # Fixed-length categories use minimum == maximum. Categories 'c' and
+        # 'm' are the two variable-length categories per bd007.html; the LOC
+        # pages describe their basic sets with permissive "should always be
+        # used" wording, so only positions 00-01 (Category of material and
+        # Specific material designation, defined for every category) are
+        # enforced as a minimum, plus the category maximum.
         "category_lengths": {
             "a": {"minimum": 8, "maximum": 8},
-            "c": {"minimum": 6, "maximum": 14},
+            "c": {"minimum": 2, "maximum": 14},
             "d": {"minimum": 6, "maximum": 6},
             "f": {"minimum": 10, "maximum": 10},
             "g": {"minimum": 9, "maximum": 9},
             "h": {"minimum": 13, "maximum": 13},
             "k": {"minimum": 6, "maximum": 6},
-            "m": {"minimum": 8, "maximum": 23},
+            "m": {"minimum": 2, "maximum": 23},
             "o": {"minimum": 2, "maximum": 2},
             "q": {"minimum": 2, "maximum": 2},
             "r": {"minimum": 11, "maximum": 11},

@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.8.0 — 2026-04-24
+
+- Added `prompt/docs/MARCXML_Slim.md`, a maintainer-authored MARCXML slim
+  structural reference, so that MARCXML-only rules (namespace, root elements,
+  element ordering, required `ind1`/`ind2` attributes, subfield-only children
+  of datafield, single-record collection wrapper, required `tag` on
+  controlfield/datafield, required `code` on subfield) are unambiguously
+  documented in the agent-visible docs corpus. Previously those rules were
+  only implied by the technical requirements examples.
+- Added MARCXML tests for the previously-undocumented-and-untested rejection
+  cases: missing `tag` attribute on controlfield, missing `tag` attribute on
+  datafield, missing `code` attribute on subfield, wrong root element,
+  empty `<collection>`, and unknown element directly inside `<record>`.
+- Moved the ISO 2709 UTF-8 validation behavior (reject records whose field
+  payload bytes are not valid UTF-8) from `technical-requirements-prompt.md`
+  into `base-prompt.md`, keeping only error-code scoping in the harness
+  contract. Aligns with the eval-authoring rule that behavioral requirements
+  belong in the base prompt or docs.
+- Relaxed the 007 variable-length category rules: categories `c` (electronic
+  resource) and `m` (motion picture) now only require at least positions
+  00-01 (both defined for every category) instead of the full basic-set
+  lengths previously asserted. The LOC docs describe those basic sets with
+  permissive "should always be used" wording, so asserting them violated the
+  unambiguous-tests rule. Maximum lengths and fixed-length category rules
+  are unchanged.
+
 ## v2.7.0 — 2026-04-24
 
 - Added maintainer-curated fixed-field rules for Leader, 006, 007, and 008 so

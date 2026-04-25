@@ -64,13 +64,12 @@ those positions back in from the actual serialized ISO 2709 record length and
 base address. `render_marcxml` must emit the normalized leader template because
 MARCXML has no ISO 2709 directory or base-address serialization.
 
-The ISO 2709 interchange scope for this eval is Unicode text encoded as UTF-8.
-For `inspect`, directory entries and the leader are ASCII structural bytes, and
-control-field and data-field payload text must decode as UTF-8. Return
-`invalid_record` for ISO 2709 field payload bytes that are not valid UTF-8.
-For `render_iso2709`, encode canonical JSON string values as UTF-8 field
-payload bytes. MARC-8 conversion is out of scope for this eval even when
-Leader/09 uses the blank code permitted by the MARC 21 leader documentation.
+The ISO 2709 interchange scope for this eval is Unicode text encoded as
+UTF-8; MARC-8 conversion is out of scope even when Leader/09 uses the blank
+code permitted by the MARC 21 leader documentation. The `base-prompt.md` and
+`docs/` files describe the UTF-8 and MARC validation behavior; the
+`invalid_record` error code below is the one reported when that validation
+rejects an `inspect` or `inspect_marcxml` input.
 
 ## Response schema
 
