@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from marc21_support import encode_iso2709, sample_marcxml, sample_record
+from marc21_support import encode_iso2709, sample_marcxml, sample_record, sample_record_control_only
 
 from conftest import b64, run_marc21
 
@@ -51,19 +51,21 @@ def test_inspect_rejects_leader_base_address_outside_record(
     assert payload["error"]["code"] == "invalid_record"
 
 
-def test_render_rejects_leader_position_09_not_equal_a(
+def test_render_accepts_leader_position_09_blank_marc8_indicator(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    record = sample_record()
-    record["leader_template"] = "00000nam 2200000 a 4500"
+    record = sample_record_control_only()
+    leader = list(record["leader_template"])
+    leader[9] = " "
+    record["leader_template"] = "".join(leader)
     result, payload = run_marc21(
         submission_command,
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
+    assert result.returncode == 0
     assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert payload["error"] is None
 
 
 def test_render_rejects_leader_positions_10_and_11_not_equal_22(

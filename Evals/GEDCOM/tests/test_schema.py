@@ -7,9 +7,7 @@ from gedcom_support import sample_dataset, sample_gedcom_text
 from conftest import run_gedcom
 
 
-def test_inspect_success_schema(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_inspect_success_schema(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     result, payload = run_gedcom(
         submission_command,
         {"action": "inspect", "gedcom_text": sample_gedcom_text()},
@@ -26,9 +24,7 @@ def test_inspect_success_schema(
     assert isinstance(head["children"], list)
 
 
-def test_render_success_schema(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_render_success_schema(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     result, payload = run_gedcom(
         submission_command,
         {"action": "render", "dataset": sample_dataset()},

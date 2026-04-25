@@ -1,5 +1,18 @@
 # Changelog
 
+## v3.2.0 — 2026-04-24
+
+- Added GEDZIP inspect/render coverage and reference support for ZIP archives
+  containing `gedcom.ged` plus local-file attachments.
+- Added generated maintainer data-rule artifacts that extract GEDCOM enumeration
+  sets from the official HTML corpus and curate datatype/GEDZIP section
+  summaries for hidden-test authors.
+- Expanded tests and reference validation for date, time, age, language, media
+  type, file path, email, coordinate, standard enum, and extension enum
+  payloads.
+- Reduced invalid-behavior test cascade risk by routing validation assertions
+  through defensive error-code helpers.
+
 ## v3.1.0 — 2026-04-23
 
 - Added broader GEDCOM 7 structure-validation coverage derived from the checked-in

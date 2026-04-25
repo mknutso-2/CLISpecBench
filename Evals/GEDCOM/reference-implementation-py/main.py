@@ -7,7 +7,12 @@ from pathlib import Path
 from typing import Any, cast
 
 from gedcom_model import GedcomDataset, GedcomError
-from gedcom_parser import parse_gedcom_text, render_gedcom_text
+from gedcom_parser import (
+    parse_gedcom_text,
+    parse_gedzip_base64,
+    render_gedcom_text,
+    render_gedzip_base64,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -51,6 +56,12 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any]:
             raise GedcomError("invalid_request", "inspect requires string field gedcom_text")
         dataset = parse_gedcom_text(text)
         return ok_response({"dataset": dataset.to_dict()})
+    if action == "inspect_gedzip":
+        encoded_archive = request.get("gedzip_b64")
+        if not isinstance(encoded_archive, str):
+            raise GedcomError("invalid_request", "inspect_gedzip requires string field gedzip_b64")
+        dataset, attachments = parse_gedzip_base64(encoded_archive)
+        return ok_response({"dataset": dataset.to_dict(), "attachments": attachments})
     if action == "render":
         dataset_obj = request.get("dataset")
         if not isinstance(dataset_obj, dict):
@@ -58,6 +69,24 @@ def handle_request(request: dict[str, Any]) -> dict[str, Any]:
         dataset = GedcomDataset.from_dict(cast(dict[str, Any], dataset_obj))
         text = render_gedcom_text(dataset)
         return ok_response({"gedcom_text": text})
+    if action == "render_gedzip":
+        dataset_obj = request.get("dataset")
+        attachments_obj = request.get("attachments", {})
+        attachments_map = (
+            cast(dict[str, object], attachments_obj) if isinstance(attachments_obj, dict) else {}
+        )
+        if not isinstance(dataset_obj, dict):
+            raise GedcomError("invalid_request", "render_gedzip requires object field dataset")
+        if not isinstance(attachments_obj, dict) or not all(
+            isinstance(value, str) for value in attachments_map.values()
+        ):
+            raise GedcomError("invalid_request", "render_gedzip requires string attachment map")
+        dataset = GedcomDataset.from_dict(cast(dict[str, Any], dataset_obj))
+        encoded_archive = render_gedzip_base64(
+            dataset,
+            cast(dict[str, str], attachments_map),
+        )
+        return ok_response({"gedzip_b64": encoded_archive})
     raise GedcomError("invalid_request", f"Unsupported action {action!r}")
 
 

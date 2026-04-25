@@ -1,11 +1,44 @@
 from __future__ import annotations
 
+import base64
+import binascii
+import io
+import json
 import re
+import zipfile
+from functools import lru_cache
+from pathlib import Path
+from typing import cast
+from urllib.parse import unquote, urlsplit
 
 from gedcom_model import GedcomDataset, GedcomError, GedcomNode
 
+_DATA_RULES_PATH = (
+    Path(__file__).resolve().parents[1] / "tests" / "generated" / "gedcom_data_rules.json"
+)
 _TAG_RE = re.compile(r"^(?:[A-Z][A-Z0-9_]*|_[A-Z0-9_]+)$")
 _XREF_RE = re.compile(r"^@[^@\s]+@$")
+_LANGUAGE_RE = re.compile(r"^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$")
+_MEDIA_TYPE_RE = re.compile(
+    r"^[!#$%&'*+\-.^_`|~0-9A-Za-z]+/[!#$%&'*+\-.^_`|~0-9A-Za-z]+"
+    r"(?:\s*;\s*[!#$%&'*+\-.^_`|~0-9A-Za-z]+="
+    r'(?:[!#$%&\'*+\-.^_`|~0-9A-Za-z]+|"[^"\r\n]*"))*$'
+)
+_TIME_RE = re.compile(
+    r"^(?P<hour>[0-9]|[01][0-9]|2[0-3]):(?P<minute>[0-5][0-9])"
+    r"(?::(?P<second>[0-5][0-9])(?:\.[0-9]+)?)?Z?$"
+)
+_AGE_RE = re.compile(r"^(?:[<>] )?(?:(?:[0-9]+y)(?: [0-9]+m)?(?: [0-9]+w)?(?: [0-9]+d)?|(?:[0-9]+m)(?: [0-9]+w)?(?: [0-9]+d)?|(?:[0-9]+w)(?: [0-9]+d)?|(?:[0-9]+d))$")
+_URL_WHITESPACE_RE = re.compile(r"\s")
+_GEDCOM_DATASET_ENTRY = "gedcom.ged"
+_SUPPORTED_FILE_SCHEMES = {"", "file", "ftp", "http", "https"}
+_MONTHS_BY_CALENDAR = {
+    "GREGORIAN": {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"},
+    "JULIAN": {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"},
+    "FRENCH_R": {"VEND", "BRUM", "FRIM", "NIVO", "PLUV", "VENT", "GERM", "FLOR", "PRAI", "MESS", "THER", "FRUC", "COMP"},
+    "HEBREW": {"TSH", "CSH", "KSL", "TVT", "SHV", "ADR", "ADS", "NSN", "IYR", "SVN", "TMZ", "AAV", "ELL"},
+}
+_DATE_RESTRICT_WORDS = {"FROM", "TO", "BET", "AND", "BEF", "AFT", "ABT", "CAL", "EST"}
 _TOP_LEVEL_RECORD_TAGS = {
     "HEAD",
     "FAM",
@@ -17,6 +50,26 @@ _TOP_LEVEL_RECORD_TAGS = {
     "SUBM",
     "TRLR",
 }
+
+
+@lru_cache(maxsize=1)
+def _data_rules() -> dict[str, object]:
+    try:
+        return cast(dict[str, object], json.loads(_DATA_RULES_PATH.read_text(encoding="utf-8")))
+    except OSError:
+        return {"enumerations": {}}
+
+
+def _enum_values(name: str, fallback: set[str]) -> set[str]:
+    enumerations_obj = _data_rules().get("enumerations")
+    if not isinstance(enumerations_obj, dict):
+        return fallback
+    enumerations = cast(dict[str, object], enumerations_obj)
+    values_obj = enumerations.get(name)
+    if not isinstance(values_obj, list):
+        return fallback
+    values = cast(list[object], values_obj)
+    return {value for value in values if isinstance(value, str)} or fallback
 _XREF_REQUIRED_TOP_LEVEL_TAGS = {
     "FAM",
     "INDI",
@@ -85,12 +138,70 @@ def parse_gedcom_text(text: str) -> GedcomDataset:
     return dataset
 
 
+def parse_gedzip_base64(payload: str) -> tuple[GedcomDataset, dict[str, str]]:
+    try:
+        archive_bytes = base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError) as exc:
+        raise GedcomError("invalid_document", f"GEDZIP payload is not valid base64: {exc}") from exc
+
+    try:
+        archive = zipfile.ZipFile(io.BytesIO(archive_bytes))
+    except zipfile.BadZipFile as exc:
+        raise GedcomError("invalid_document", f"GEDZIP payload is not a ZIP archive: {exc}") from exc
+
+    with archive:
+        names = archive.namelist()
+        if len(names) != len(set(names)):
+            raise GedcomError("invalid_document", "GEDZIP archive contains duplicate entry names")
+        if _GEDCOM_DATASET_ENTRY not in names:
+            raise GedcomError("invalid_document", "GEDZIP archive must contain gedcom.ged")
+        try:
+            text = archive.read(_GEDCOM_DATASET_ENTRY).decode("utf-8-sig")
+        except UnicodeDecodeError as exc:
+            raise GedcomError("invalid_document", f"gedcom.ged is not valid UTF-8: {exc}") from exc
+
+        dataset = parse_gedcom_text(text)
+        attachment_names = {name for name in names if name != _GEDCOM_DATASET_ENTRY and not name.endswith("/")}
+        _validate_gedzip_local_file_entries(dataset, attachment_names, request_code="invalid_document")
+        attachments = {
+            name: base64.b64encode(archive.read(name)).decode("ascii")
+            for name in sorted(attachment_names)
+        }
+    return dataset, attachments
+
+
 def render_gedcom_text(dataset: GedcomDataset) -> str:
     validate_dataset(dataset, request_code="invalid_request")
     lines: list[str] = []
     for record in dataset.records:
         _render_node(record, 0, lines)
     return "\n".join(lines) + "\n"
+
+
+def render_gedzip_base64(dataset: GedcomDataset, attachments: dict[str, str]) -> str:
+    text = render_gedcom_text(dataset)
+    decoded_attachments: dict[str, bytes] = {}
+    for name, encoded in attachments.items():
+        _validate_zip_entry_name(name, request_code="invalid_request")
+        try:
+            decoded_attachments[name] = base64.b64decode(encoded, validate=True)
+        except (binascii.Error, ValueError) as exc:
+            raise GedcomError(
+                "invalid_request", f"Attachment {name!r} is not valid base64: {exc}"
+            ) from exc
+
+    _validate_gedzip_local_file_entries(
+        dataset,
+        set(decoded_attachments),
+        request_code="invalid_request",
+    )
+
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(_GEDCOM_DATASET_ENTRY, text.encode("utf-8"))
+        for name in sorted(decoded_attachments):
+            archive.writestr(name, decoded_attachments[name])
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
 def validate_dataset(dataset: GedcomDataset, *, request_code: str = "invalid_document") -> None:
@@ -277,6 +388,7 @@ def _validate_node(
         xref_to_tag[node.xref] = node.tag
     if node.payload is not None:
         _validate_text_characters(node.payload, request_code=request_code)
+    _validate_payload_datatype(node, request_code=request_code, parent=parent)
 
     _validate_contextual_rules(
         node,
@@ -439,6 +551,269 @@ def _validate_contextual_rules(
             _require_child_count(node, "AGE", 1, 1, request_code=request_code)
 
 
+def _validate_payload_datatype(
+    node: GedcomNode,
+    *,
+    request_code: str,
+    parent: GedcomNode | None,
+) -> None:
+    payload = node.payload
+    if node.tag == "VERS" and parent is not None and parent.tag == "GEDC":
+        if payload not in {"7.0", "7.0.0"}:
+            raise GedcomError(request_code, "GEDC/VERS must identify GEDCOM 7.0")
+    elif node.tag == "DATE":
+        if parent is not None and parent.tag in {"CHAN", "CREA"}:
+            if payload is None or not _is_date_exact(payload):
+                raise GedcomError(request_code, "CHAN/CREA DATE requires an exact Gregorian date")
+        elif payload is not None and not _is_date_value(payload):
+            raise GedcomError(request_code, f"Invalid GEDCOM date payload {payload!r}")
+    elif node.tag == "TIME":
+        if payload is None or _TIME_RE.match(payload) is None:
+            raise GedcomError(request_code, f"Invalid GEDCOM time payload {payload!r}")
+    elif node.tag == "AGE":
+        if payload is not None and _AGE_RE.match(payload) is None:
+            raise GedcomError(request_code, f"Invalid GEDCOM age payload {payload!r}")
+    elif node.tag == "LANG":
+        if payload is None or _LANGUAGE_RE.match(payload) is None:
+            raise GedcomError(request_code, f"Invalid GEDCOM language payload {payload!r}")
+    elif node.tag in {"MIME"}:
+        _validate_media_type_payload(payload, request_code=request_code, tag=node.tag)
+    elif node.tag == "FORM" and parent is not None and parent.tag in {"FILE", "TRAN"}:
+        _validate_media_type_payload(payload, request_code=request_code, tag=node.tag)
+    elif node.tag == "FILE":
+        _validate_file_path_payload(payload, request_code=request_code)
+    elif node.tag == "WWW":
+        _validate_web_payload(payload, request_code=request_code)
+    elif node.tag == "TAG":
+        _validate_tag_definition_payload(payload, request_code=request_code)
+    elif node.tag == "LATI":
+        _validate_coordinate_payload(payload, "LATI", request_code=request_code)
+    elif node.tag == "LONG":
+        _validate_coordinate_payload(payload, "LONG", request_code=request_code)
+    elif node.tag == "SEX":
+        _validate_enum_payload(payload, "SEX", {"M", "F", "X", "U"}, request_code=request_code)
+    elif node.tag == "ADOP" and parent is not None and parent.tag == "FAMC":
+        _validate_enum_payload(payload, "ADOP", {"HUSB", "WIFE", "BOTH"}, request_code=request_code)
+    elif node.tag == "PEDI":
+        _validate_enum_payload(
+            payload,
+            "PEDI",
+            {"ADOPTED", "BIRTH", "FOSTER", "SEALING", "OTHER"},
+            request_code=request_code,
+        )
+    elif node.tag == "MEDI":
+        _validate_enum_payload(
+            payload,
+            "MEDI",
+            {
+                "AUDIO",
+                "BOOK",
+                "CARD",
+                "ELECTRONIC",
+                "FICHE",
+                "FILM",
+                "MAGAZINE",
+                "MANUSCRIPT",
+                "MAP",
+                "NEWSPAPER",
+                "PHOTO",
+                "TOMBSTONE",
+                "VIDEO",
+                "OTHER",
+            },
+            request_code=request_code,
+        )
+    elif node.tag == "QUAY":
+        _validate_enum_payload(payload, "QUAY", {"0", "1", "2", "3"}, request_code=request_code)
+    elif node.tag == "RESN":
+        _validate_enum_list_payload(
+            payload,
+            "RESN",
+            {"CONFIDENTIAL", "LOCKED", "PRIVACY"},
+            request_code=request_code,
+        )
+    elif node.tag == "ROLE":
+        _validate_enum_payload(
+            payload,
+            "ROLE",
+            {
+                "CHIL",
+                "CLERGY",
+                "FATH",
+                "FRIEND",
+                "GODP",
+                "HUSB",
+                "MOTH",
+                "MULTIPLE",
+                "NGHBR",
+                "OFFICIATOR",
+                "PARENT",
+                "SPOU",
+                "WIFE",
+                "WITN",
+                "OTHER",
+            },
+            request_code=request_code,
+        )
+    elif node.tag == "TYPE" and parent is not None and parent.tag == "NAME":
+        _validate_enum_payload(
+            payload,
+            "NAME-TYPE",
+            {"AKA", "BIRTH", "IMMIGRANT", "MAIDEN", "MARRIED", "PROFESSIONAL", "OTHER"},
+            request_code=request_code,
+        )
+
+
+def _validate_media_type_payload(payload: str | None, *, request_code: str, tag: str) -> None:
+    if payload is None or _MEDIA_TYPE_RE.match(payload) is None:
+        raise GedcomError(request_code, f"{tag} must contain a valid media type")
+
+
+def _validate_file_path_payload(payload: str | None, *, request_code: str) -> None:
+    if payload is None or payload == "":
+        raise GedcomError(request_code, "FILE must contain a file path payload")
+    _local_file_zip_name(payload, request_code=request_code)
+
+
+def _validate_web_payload(payload: str | None, *, request_code: str) -> None:
+    if payload is None or _URL_WHITESPACE_RE.search(payload):
+        raise GedcomError(request_code, "WWW must contain a valid URL")
+    parts = urlsplit(payload)
+    if parts.scheme not in {"http", "https", "ftp"} or not parts.netloc:
+        raise GedcomError(request_code, "WWW must contain an absolute web URL")
+
+
+def _validate_tag_definition_payload(payload: str | None, *, request_code: str) -> None:
+    if payload is None:
+        raise GedcomError(request_code, "TAG requires an extension tag and URI")
+    pieces = payload.split(" ", 1)
+    if len(pieces) != 2 or not pieces[0].startswith("_") or not _TAG_RE.match(pieces[0]):
+        raise GedcomError(request_code, "TAG must begin with an extension tag")
+    _validate_uri_reference(pieces[1], request_code=request_code, label="TAG URI")
+
+
+def _validate_uri_reference(payload: str, *, request_code: str, label: str) -> None:
+    if payload == "" or _URL_WHITESPACE_RE.search(payload):
+        raise GedcomError(request_code, f"{label} must be a URI reference")
+    parts = urlsplit(payload)
+    if parts.scheme and not re.match(r"^[A-Za-z][A-Za-z0-9+.-]*$", parts.scheme):
+        raise GedcomError(request_code, f"{label} has an invalid URI scheme")
+
+
+def _validate_coordinate_payload(payload: str | None, tag: str, *, request_code: str) -> None:
+    if payload is None or len(payload) < 2:
+        raise GedcomError(request_code, f"{tag} requires a coordinate payload")
+    hemisphere = payload[0]
+    limit = 90 if tag == "LATI" else 180
+    if hemisphere not in ({"N", "S"} if tag == "LATI" else {"E", "W"}):
+        raise GedcomError(request_code, f"{tag} has an invalid hemisphere")
+    number_text = payload[1:]
+    if not re.match(r"^(?:0|[1-9][0-9]*)(?:\.[0-9]+)?$", number_text):
+        raise GedcomError(request_code, f"{tag} has an invalid coordinate value")
+    if float(number_text) > limit:
+        raise GedcomError(request_code, f"{tag} coordinate is out of range")
+
+
+def _validate_enum_payload(
+    payload: str | None,
+    enum_set: str,
+    fallback: set[str],
+    *,
+    request_code: str,
+) -> None:
+    if payload is None or (payload not in _enum_values(enum_set, fallback) and not _is_ext_tag(payload)):
+        raise GedcomError(request_code, f"{enum_set} payload is not a permitted enum value")
+
+
+def _validate_enum_list_payload(
+    payload: str | None,
+    enum_set: str,
+    fallback: set[str],
+    *,
+    request_code: str,
+) -> None:
+    if payload is None:
+        raise GedcomError(request_code, f"{enum_set} requires an enum-list payload")
+    allowed = _enum_values(enum_set, fallback)
+    values = [piece.strip() for piece in payload.split(",")]
+    if not values or any(value not in allowed and not _is_ext_tag(value) for value in values):
+        raise GedcomError(request_code, f"{enum_set} payload contains an invalid enum value")
+
+
+def _is_date_value(payload: str) -> bool:
+    if payload == "":
+        return True
+    if "/" in payload:
+        return False
+    pieces = payload.split()
+    if not pieces:
+        return True
+    if pieces[0] in {"ABT", "CAL", "EST", "AFT", "BEF"}:
+        return _is_date_atom(pieces[1:])
+    if pieces[0] == "BET":
+        if "AND" not in pieces[1:]:
+            return False
+        index = pieces.index("AND", 1)
+        return _is_date_atom(pieces[1:index]) and _is_date_atom(pieces[index + 1 :])
+    if pieces[0] == "FROM":
+        if "TO" in pieces[1:]:
+            index = pieces.index("TO", 1)
+            return _is_date_atom(pieces[1:index]) and _is_date_atom(pieces[index + 1 :])
+        return _is_date_atom(pieces[1:])
+    if pieces[0] == "TO":
+        return _is_date_atom(pieces[1:])
+    return _is_date_atom(pieces)
+
+
+def _is_date_exact(payload: str) -> bool:
+    return _is_date_atom(payload.split(), allow_calendar=False, require_day=True)
+
+
+def _is_date_atom(
+    pieces: list[str],
+    *,
+    allow_calendar: bool = True,
+    require_day: bool = False,
+) -> bool:
+    if not pieces:
+        return False
+    calendar = "GREGORIAN"
+    if allow_calendar and pieces[0] in _MONTHS_BY_CALENDAR:
+        calendar = pieces.pop(0)
+    if pieces and pieces[-1] == "BCE":
+        if calendar not in {"GREGORIAN", "JULIAN"}:
+            return False
+        pieces = pieces[:-1]
+    if any(piece in _DATE_RESTRICT_WORDS for piece in pieces):
+        return False
+    if len(pieces) == 1:
+        return not require_day and _is_positive_integer(pieces[0])
+    if len(pieces) == 2:
+        month, year = pieces
+        return (
+            not require_day
+            and month in _MONTHS_BY_CALENDAR[calendar]
+            and _is_positive_integer(year)
+        )
+    if len(pieces) == 3:
+        day, month, year = pieces
+        return (
+            _is_positive_integer(day)
+            and 1 <= int(day) <= 36
+            and month in _MONTHS_BY_CALENDAR[calendar]
+            and _is_positive_integer(year)
+        )
+    return False
+
+
+def _is_positive_integer(value: str) -> bool:
+    return bool(re.match(r"^(?:0|[1-9][0-9]*)$", value)) and int(value) > 0
+
+
+def _is_ext_tag(value: str) -> bool:
+    return value.startswith("_") and _TAG_RE.match(value) is not None
+
+
 def _expected_pointer_targets(
     node: GedcomNode,
     *,
@@ -462,6 +837,81 @@ def _expected_pointer_targets(
 
 def _count_children(node: GedcomNode, tag: str) -> int:
     return sum(1 for child in node.children if child.tag == tag)
+
+
+def _iter_nodes(node: GedcomNode) -> list[GedcomNode]:
+    nodes = [node]
+    for child in node.children:
+        nodes.extend(_iter_nodes(child))
+    return nodes
+
+
+def _validate_gedzip_local_file_entries(
+    dataset: GedcomDataset,
+    attachment_names: set[str],
+    *,
+    request_code: str,
+) -> None:
+    required_names: set[str] = set()
+    for record in dataset.records:
+        for node in _iter_nodes(record):
+            if node.tag != "FILE" or node.payload is None:
+                continue
+            zip_name = _local_file_zip_name(
+                node.payload,
+                request_code=request_code,
+                inside_gedzip=True,
+            )
+            if zip_name is None:
+                continue
+            _validate_zip_entry_name(zip_name, request_code=request_code)
+            if zip_name == _GEDCOM_DATASET_ENTRY:
+                raise GedcomError(request_code, "GEDZIP local files may not be named gedcom.ged")
+            required_names.add(zip_name)
+    missing = sorted(required_names - attachment_names)
+    if missing:
+        raise GedcomError(request_code, f"GEDZIP archive is missing local file {missing[0]!r}")
+
+
+def _validate_zip_entry_name(name: str, *, request_code: str) -> None:
+    if name == "" or name.startswith("/") or "\\" in name:
+        raise GedcomError(request_code, f"Invalid GEDZIP entry name {name!r}")
+    if any(part in {"", ".", ".."} for part in name.split("/")):
+        raise GedcomError(request_code, f"Invalid GEDZIP entry path {name!r}")
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in name):
+        raise GedcomError(request_code, f"Invalid GEDZIP entry characters in {name!r}")
+
+
+def _local_file_zip_name(
+    file_path: str,
+    *,
+    request_code: str,
+    inside_gedzip: bool = False,
+) -> str | None:
+    if _URL_WHITESPACE_RE.search(file_path):
+        raise GedcomError(request_code, f"FILE path contains whitespace: {file_path!r}")
+    if "\\" in file_path or "%5c" in file_path.lower():
+        raise GedcomError(request_code, f"FILE path contains a reverse solidus: {file_path!r}")
+    parts = urlsplit(file_path)
+    if parts.scheme not in _SUPPORTED_FILE_SCHEMES:
+        raise GedcomError(request_code, f"Unsupported FILE path scheme {parts.scheme!r}")
+    if parts.scheme in {"http", "https", "ftp"}:
+        if not parts.netloc:
+            raise GedcomError(request_code, f"Absolute FILE URL lacks an authority: {file_path!r}")
+        return None
+    if parts.scheme == "file":
+        if inside_gedzip and parts.netloc in {"", "localhost"}:
+            raise GedcomError(request_code, "GEDZIP local FILE paths may not use file: URLs")
+        return None
+    if parts.netloc or parts.query or parts.fragment or parts.path.startswith("/"):
+        raise GedcomError(request_code, f"Unsupported local FILE path {file_path!r}")
+    decoded_path = unquote(parts.path)
+    decoded_segments = decoded_path.split("/")
+    if any(segment in {"", ".", ".."} for segment in decoded_segments):
+        raise GedcomError(request_code, f"Unsupported local FILE path {file_path!r}")
+    if any(ord(character) < 0x20 or ord(character) == 0x7F for character in decoded_path):
+        raise GedcomError(request_code, f"FILE path contains banned characters: {file_path!r}")
+    return decoded_path
 
 
 def _require_child_count(

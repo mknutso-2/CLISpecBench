@@ -148,6 +148,7 @@ _KNOWN_TASKS: dict[str, _RegisteredTask] = {
     **_register_language_tasks("bibtex", "Evals/BibTeX", ("cpp",)),
     **_register_language_tasks("ical", "Evals/ICal", ("cpp",)),
     **_register_language_tasks("gedcom", "Evals/GEDCOM", ("py",)),
+    **_register_language_tasks("las", "Evals/LAS", ("py",)),
     **_register_language_tasks("marc21", "Evals/MARC21", ("py",)),
 }
 

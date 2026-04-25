@@ -1,5 +1,56 @@
 # Changelog
 
+## v2.7.0 — 2026-04-24
+
+- Added maintainer-curated fixed-field rules for Leader, 006, 007, and 008 so
+  the official fixed-field documentation is exercised in addition to standard
+  field pages.
+- Added fixed-control-field and leader validation tests across render, ISO 2709
+  inspect, and MARCXML inspect paths.
+- Expanded fixed-field tests to cover every deterministic Leader position,
+  006/007/008 code table, and 007 category length rule in the bundled
+  fixed-field artifact.
+- Tightened 007 validation to use category-specific lengths and 008 validation
+  to check the universal modified-record and cataloging-source code tables.
+- Reworked parse roundtrip tests to validate rendered outputs with
+  evaluator-side decoders instead of feeding submission render output back
+  through submission inspect actions.
+- Corrected the Leader/09 fixed-field table so the MARC-8 blank value remains
+  accepted where the official Leader documentation permits it.
+- Made the Unicode/UTF-8 ISO 2709 interchange scope explicit in the
+  agent-visible prompt contract.
+- Made the official-example render tests hermetic by parsing rendered ISO 2709
+  and MARCXML outputs with evaluator-side decoders instead of feeding them back
+  through submission inspect actions.
+- Clarified that MARCXML inspection accepts a one-record collection wrapper and
+  that MARCXML rendering emits the normalized leader template.
+
+## v2.6.1 — 2026-04-24
+
+- Clarified the `leader_template` contract so inspect paths must return a
+  normalized leader with positions `00-04` and `12-16` zeroed and render paths
+  must fill those positions back in from the serialized record.
+- Made the inspect schema test hermetic by using bundled ISO 2709 fixture bytes
+  instead of depending on the submission's `render_iso2709` action.
+- Added a stable `001` control field to the official-example fixture records so
+  the corpus-driven example tests no longer depend on accepting data-only
+  records with no control fields.
+- Tightened the generated MARC21 rule-table contract so indicator and subfield
+  validation only uses fields whose extracted official HTML summaries were
+  parsed completely, instead of silently trusting partial extractions.
+
+## v2.6.0 — 2026-04-24
+
+- Added direct `inspect` and `inspect_marcxml` positive coverage for the
+  representative official field examples so the full checked-in LOC corpus now
+  exercises parse paths without depending on the submission's render behavior.
+- Added corpus-wide direct-parse validation coverage for official indicator
+  constraints, subfield membership constraints, and nonrepeatable subfield
+  rules across both ISO 2709 and MARCXML inspection paths.
+- Refactored the official-rule mutation fixtures in the MARC21 tests so the
+  same corpus-derived invalid records are exercised consistently across render,
+  ISO 2709 inspect, and MARCXML inspect actions.
+
 ## v2.5.0 — 2026-04-23
 
 - Reframed the eval as a full-corpus MARC 21 bibliographic task rather than an

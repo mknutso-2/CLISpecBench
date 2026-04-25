@@ -2,24 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from marc21_support import sample_marcxml, sample_record
+from marc21_support import encode_iso2709_record, sample_marcxml, sample_record
 
-from conftest import run_marc21
+from conftest import b64, run_marc21
 
 
-def test_inspect_success_schema(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    render_result, render_payload = run_marc21(
-        submission_command,
-        {"action": "render_iso2709", "record": sample_record()},
-        tmp_path,
-    )
-    assert render_result.returncode == 0
-    assert render_payload is not None
+def test_inspect_success_schema(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     inspect_result, inspect_payload = run_marc21(
         submission_command,
-        {"action": "inspect", "record_b64": render_payload["result"]["record_b64"]},
+        {"action": "inspect", "record_b64": b64(encode_iso2709_record(sample_record()))},
         tmp_path,
     )
     assert inspect_result.returncode == 0
@@ -44,9 +35,7 @@ def test_inspect_marcxml_success_schema(
     assert isinstance(payload["result"]["record"]["data_fields"], list)
 
 
-def test_render_iso2709_success_schema(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_render_iso2709_success_schema(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     result, payload = run_marc21(
         submission_command,
         {"action": "render_iso2709", "record": sample_record()},
@@ -57,9 +46,7 @@ def test_render_iso2709_success_schema(
     assert isinstance(payload["result"]["record_b64"], str)
 
 
-def test_render_marcxml_success_schema(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_render_marcxml_success_schema(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     result, payload = run_marc21(
         submission_command,
         {"action": "render_marcxml", "record": sample_record()},

@@ -95,16 +95,17 @@ def nonrepeatable_data_field_cases() -> list[tuple[str, dict[str, Any]]]:
 
 
 def record_for_official_example(tag: str, example_text: str) -> dict[str, Any]:
-    record: dict[str, Any] = {
-        "leader_template": _LEADER_TEMPLATE,
-        "control_fields": [],
-        "data_fields": [],
-    }
     if tag <= "009":
-        record["control_fields"].append({"tag": tag, "value": example_text})
-        return record
-    record["data_fields"].append(parse_data_field_example(tag, example_text))
-    return record
+        return {
+            "leader_template": _LEADER_TEMPLATE,
+            "control_fields": [{"tag": tag, "value": example_text}],
+            "data_fields": [],
+        }
+    return {
+        "leader_template": _LEADER_TEMPLATE,
+        "control_fields": [{"tag": "001", "value": f"example-{tag}"}],
+        "data_fields": [parse_data_field_example(tag, example_text)],
+    }
 
 
 def duplicate_nonrepeatable_field_record(tag: str) -> dict[str, Any]:
@@ -251,6 +252,8 @@ def _rule_has_unambiguous_indicators(rule: dict[str, Any]) -> bool:
         raw_values = rule.get(key)
         if raw_values is None:
             continue
+        if rule.get(f"{key}_complete") is not True:
+            return False
         if not isinstance(raw_values, list) or not raw_values:
             return False
         values = cast(list[Any], raw_values)
@@ -266,6 +269,8 @@ def _rule_has_unambiguous_indicators(rule: dict[str, Any]) -> bool:
 
 
 def _rule_has_unambiguous_subfields(rule: dict[str, Any]) -> bool:
+    if rule.get("subfields_complete") is not True:
+        return False
     raw_subfields = rule.get("subfields")
     if not isinstance(raw_subfields, list) or not raw_subfields:
         return False

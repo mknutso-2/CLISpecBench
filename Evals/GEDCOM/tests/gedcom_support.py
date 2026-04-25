@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 import json
 import re
+import zipfile
 from copy import deepcopy
+from io import BytesIO
 from pathlib import Path
 from typing import TypedDict, cast
 
@@ -210,7 +213,7 @@ def extended_sample_gedcom_text() -> str:
             "0 @O1@ OBJE",
             "1 FILE photos/john.jpg",
             "2 FORM image/jpeg",
-            "3 MEDI photo",
+            "3 MEDI PHOTO",
             "2 TITL John portrait",
             "0 @N1@ SNOTE Shared note text",
             "1 MIME text/plain",
@@ -219,7 +222,7 @@ def extended_sample_gedcom_text() -> str:
             "2 GIVN John",
             "2 SURN Doe",
             "1 ASSO @I2@",
-            "2 ROLE witness",
+            "2 ROLE WITN",
             "1 BIRT Y",
             "2 DATE 1 JAN 1900",
             "2 PLAC Boston, Massachusetts",
@@ -285,7 +288,7 @@ def extended_sample_dataset() -> ExpectedDataset:
                         "FILE",
                         "photos/john.jpg",
                         children=[
-                            node("FORM", "image/jpeg", children=[node("MEDI", "photo")]),
+                            node("FORM", "image/jpeg", children=[node("MEDI", "PHOTO")]),
                             node("TITL", "John portrait"),
                         ],
                     )
@@ -309,7 +312,7 @@ def extended_sample_dataset() -> ExpectedDataset:
                     node(
                         "ASSO",
                         "@I2@",
-                        children=[node("ROLE", "witness")],
+                        children=[node("ROLE", "WITN")],
                     ),
                     node(
                         "BIRT",
@@ -478,6 +481,21 @@ def official_record_fragments() -> list[tuple[str, str]]:
             continue
         entries.append((f"{section_id}::{source_block_id}", text))
     return entries
+
+
+def gedzip_b64(gedcom_text: str, attachments: dict[str, bytes] | None = None) -> str:
+    buffer = BytesIO()
+    with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr("gedcom.ged", gedcom_text.encode("utf-8"))
+        for name, data in sorted((attachments or {}).items()):
+            archive.writestr(name, data)
+    return base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def read_gedzip_b64(payload: str) -> dict[str, bytes]:
+    data = base64.b64decode(payload, validate=True)
+    with zipfile.ZipFile(BytesIO(data)) as archive:
+        return {name: archive.read(name) for name in archive.namelist()}
 
 
 def _ensure_head_has_gedc_vers(lines: list[str]) -> list[str]:

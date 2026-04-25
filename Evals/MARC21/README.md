@@ -9,14 +9,17 @@ official Library of Congress bibliographic corpus.
 The transport contract remains concrete and deterministic. It focuses on:
 
 - single-record ISO 2709 inputs
-- single-record MARCXML inputs
+- single-record MARCXML inputs, including a one-record MARCXML collection wrapper
 - UTF-8 / Unicode records only
-- leader and directory correctness
+- leader, 006, 007, 008, and directory correctness
 - canonical JSON inspection output
 - MARCXML inspection and rendering from the canonical JSON record model
 - field, indicator, subfield, and repeatability validation derived from the
   mirrored official bibliographic pages when those rules are unambiguous in the
-  public corpus
+  public corpus, across direct `inspect`, `inspect_marcxml`, and render paths
+- fixed-field validation for the official Leader, 006, 007, and 008 pages where
+  the checked-in corpus gives deterministic length, position, and code-table
+  requirements
 
 The initial runnable eval is Python-only for the same reason as the other new
 batch evals: it keeps four new tasks runnable and agent-evaluable without

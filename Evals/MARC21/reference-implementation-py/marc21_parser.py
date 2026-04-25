@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from base64 import b64decode, b64encode
 import json
+from base64 import b64decode, b64encode
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
@@ -13,8 +13,9 @@ FT = b"\x1e"
 RT = b"\x1d"
 SF = b"\x1f"
 NS = "http://www.loc.gov/MARC21/slim"
-# Regenerated from prompt/docs by Evals/MARC21/scripts/generate_official_artifacts.py.
+# Field artifacts are maintained by Evals/MARC21/scripts/generate_official_artifacts.py.
 _RULES_PATH = Path(__file__).resolve().parent / "generated" / "marc21_field_rules.json"
+_FIXED_RULES_PATH = Path(__file__).resolve().parent / "generated" / "marc21_fixed_field_rules.json"
 
 
 def inspect_record_bytes(data: bytes) -> Record:
@@ -57,7 +58,9 @@ def inspect_record_bytes(data: bytes) -> Record:
         if "001" <= tag <= "009":
             if seen_data_field:
                 raise MarcError("invalid_record", "Control fields must precede data fields")
-            control_fields.append(ControlField(tag=tag, value=_decode_utf8(payload, f"field {tag}")))
+            control_fields.append(
+                ControlField(tag=tag, value=_decode_utf8(payload, f"field {tag}"))
+            )
             continue
         seen_data_field = True
         if len(payload) < 2:
@@ -97,7 +100,10 @@ def inspect_marcxml(text: str) -> Record:
             continue
         if child.tag == f"{{{NS}}}controlfield":
             if seen_data_field:
-                raise MarcError("invalid_record", "MARCXML controlfield elements must precede datafield elements")
+                raise MarcError(
+                    "invalid_record",
+                    "MARCXML controlfield elements must precede datafield elements",
+                )
             tag = _parse_tag(
                 _required_attr(child, "tag", "controlfield"),
                 "controlfield tag",
@@ -121,7 +127,10 @@ def inspect_marcxml(text: str) -> Record:
             subfields: list[Subfield] = []
             for subfield in list(child):
                 if subfield.tag != f"{{{NS}}}subfield":
-                    raise MarcError("invalid_record", f"Unexpected MARCXML element inside field {tag}")
+                    raise MarcError(
+                        "invalid_record",
+                        f"Unexpected MARCXML element inside field {tag}",
+                    )
                 code = _required_attr(subfield, "code", "subfield")
                 _validate_subfield_code(code, tag, error_code="invalid_record")
                 subfields.append(Subfield(code=code, value=subfield.text or ""))
@@ -177,7 +186,7 @@ def render_marcxml(record: Record) -> str:
     ET.register_namespace("", NS)
     root = ET.Element(f"{{{NS}}}record")
     leader = ET.SubElement(root, f"{{{NS}}}leader")
-    leader.text = _build_leader(record.leader_template, 0, 0)
+    leader.text = _normalize_leader_template(record.leader_template)
     for field in record.control_fields:
         node = ET.SubElement(root, f"{{{NS}}}controlfield", {"tag": field.tag})
         node.text = field.value
@@ -205,7 +214,10 @@ def _resolve_marcxml_record(root: ET.Element) -> ET.Element:
         if len(records) != 1:
             raise MarcError("invalid_record", "MARCXML collection must contain exactly one record")
         return records[0]
-    raise MarcError("invalid_record", "MARCXML root must be record or collection in the MARC21 slim namespace")
+    raise MarcError(
+        "invalid_record",
+        "MARCXML root must be record or collection in the MARC21 slim namespace",
+    )
 
 
 def _parse_subfields(tag: str, data: bytes) -> list[Subfield]:
@@ -220,7 +232,9 @@ def _parse_subfields(tag: str, data: bytes) -> list[Subfield]:
             raise MarcError("invalid_record", f"Malformed subfield in field {tag}")
         code = chr(piece[0])
         _validate_subfield_code(code, tag, error_code="invalid_record")
-        subfields.append(Subfield(code=code, value=_decode_utf8(piece[1:], f"subfield {tag}${code}")))
+        subfields.append(
+            Subfield(code=code, value=_decode_utf8(piece[1:], f"subfield {tag}${code}"))
+        )
     return subfields
 
 
@@ -245,20 +259,32 @@ def _validate_marcxml_leader(leader: str) -> None:
 def _validate_leader_template_core(leader: str, *, error_code: str) -> None:
     if len(leader) != 24:
         raise MarcError(error_code, "Leader must be 24 bytes")
-    if leader[9] != "a":
-        raise MarcError(error_code, "Leader position 09 must be 'a'")
-    if leader[10] != "2" or leader[11] != "2":
-        raise MarcError(error_code, "Leader positions 10 and 11 must both be '2'")
-    if leader[20:24] != "4500":
-        raise MarcError(error_code, "Leader positions 20-23 must be 4500")
+    leader_rules = _fixed_rules()["leader"]
+    positions = cast(dict[str, list[str]], leader_rules["positions"])
+    for position_text, allowed_values in positions.items():
+        position = int(position_text)
+        allowed = {" " if value == "#" else value for value in allowed_values}
+        if leader[position] not in allowed:
+            raise MarcError(
+                error_code,
+                f"Leader position {position_text} value {leader[position]!r} is not defined",
+            )
+    if leader[20:24] != leader_rules["entry_map"]:
+        raise MarcError(error_code, f"Leader positions 20-23 must be {leader_rules['entry_map']}")
 
 
 def _build_leader(template: str, record_length: int, base_address: int) -> str:
     _validate_leader_template_core(template, error_code="invalid_request")
     if record_length and record_length > 99999:
-        raise MarcError("invalid_request", "Rendered record length exceeds the five-digit leader field")
+        raise MarcError(
+            "invalid_request",
+            "Rendered record length exceeds the five-digit leader field",
+        )
     if base_address and base_address > 99999:
-        raise MarcError("invalid_request", "Rendered base address exceeds the five-digit leader field")
+        raise MarcError(
+            "invalid_request",
+            "Rendered base address exceeds the five-digit leader field",
+        )
     leader = list(template)
     if record_length:
         leader[:5] = list(f"{record_length:05d}")
@@ -286,6 +312,7 @@ def _validate_record_fields(record: Record, *, error_code: str) -> None:
         if not ("001" <= tag <= "009"):
             raise MarcError(error_code, f"Control field tag {tag} must be in 001-009")
         _validate_field_text(field.value, f"control field {tag}", error_code=error_code)
+        _validate_fixed_control_field(tag, field.value, error_code=error_code)
         control_counts[tag] = control_counts.get(tag, 0) + 1
     for field in record.data_fields:
         tag = _parse_tag(field.tag, "data field tag", error_code=error_code)
@@ -297,8 +324,111 @@ def _validate_record_fields(record: Record, *, error_code: str) -> None:
             _validate_indicator_text(indicator, tag, error_code=error_code)
         for subfield in field.subfields:
             _validate_subfield_code(subfield.code, tag, error_code=error_code)
-            _validate_field_text(subfield.value, f"subfield {tag}${subfield.code}", error_code=error_code)
+            _validate_field_text(
+                subfield.value,
+                f"subfield {tag}${subfield.code}",
+                error_code=error_code,
+            )
     _validate_against_official_field_rules(record, control_counts, error_code=error_code)
+
+
+def _validate_fixed_control_field(tag: str, value: str, *, error_code: str) -> None:
+    if tag == "006":
+        _validate_006(value, error_code=error_code)
+    elif tag == "007":
+        _validate_007(value, error_code=error_code)
+    elif tag == "008":
+        _validate_008(value, error_code=error_code)
+
+
+def _validate_006(value: str, *, error_code: str) -> None:
+    rule = _fixed_rules()["006"]
+    if len(value) != rule["length"]:
+        raise MarcError(
+            error_code,
+            "Control field 006 must contain exactly 18 character positions",
+        )
+    if value[0] == "|":
+        raise MarcError(
+            error_code,
+            "Control field 006 position 00 may not contain the fill character",
+        )
+    allowed = set(cast(list[str], rule["position_00"]))
+    if value[0] not in allowed:
+        raise MarcError(
+            error_code,
+            f"Control field 006 position 00 value {value[0]!r} is not defined",
+        )
+
+
+def _validate_007(value: str, *, error_code: str) -> None:
+    rule = _fixed_rules()["007"]
+    if len(value) < 2:
+        raise MarcError(error_code, "Control field 007 must contain at least positions 00 and 01")
+    if value[0] == "|":
+        raise MarcError(
+            error_code,
+            "Control field 007 position 00 may not contain the fill character",
+        )
+    allowed = set(cast(list[str], rule["position_00"]))
+    if value[0] not in allowed:
+        raise MarcError(
+            error_code,
+            f"Control field 007 position 00 value {value[0]!r} is not defined",
+        )
+    category_lengths = cast(dict[str, dict[str, int]], rule["category_lengths"])
+    category_length = category_lengths[value[0]]
+    minimum_length = category_length["minimum"]
+    maximum_length = category_length["maximum"]
+    if len(value) < minimum_length or len(value) > maximum_length:
+        if minimum_length == maximum_length:
+            message = (
+                f"Control field 007 category {value[0]!r} must contain exactly "
+                f"{minimum_length} character positions"
+            )
+        else:
+            message = (
+                f"Control field 007 category {value[0]!r} must contain between "
+                f"{minimum_length} and {maximum_length} character positions"
+            )
+        raise MarcError(error_code, message)
+
+
+def _validate_008(value: str, *, error_code: str) -> None:
+    rule = _fixed_rules()["008"]
+    if len(value) != rule["length"]:
+        raise MarcError(
+            error_code,
+            "Control field 008 must contain exactly 40 character positions",
+        )
+    if "|" in value[:6]:
+        raise MarcError(
+            error_code,
+            "Control field 008 positions 00-05 may not contain the fill character",
+        )
+    if not value[:6].isdigit():
+        raise MarcError(
+            error_code,
+            "Control field 008 positions 00-05 must be six date-entered digits",
+        )
+    allowed_date_type = set(cast(list[str], rule["date_type_position_06"]))
+    if value[6] not in allowed_date_type:
+        raise MarcError(
+            error_code,
+            f"Control field 008 position 06 value {value[6]!r} is not defined",
+        )
+    position_code_tables = cast(dict[str, list[str]], rule["position_code_tables"])
+    for position_text, allowed_values in position_code_tables.items():
+        position = int(position_text)
+        allowed = {
+            " " if allowed_value == "#" else allowed_value for allowed_value in allowed_values
+        }
+        if value[position] not in allowed:
+            raise MarcError(
+                error_code,
+                f"Control field 008 position {position_text} value "
+                f"{value[position]!r} is not defined",
+            )
 
 
 def _validate_against_official_field_rules(
@@ -311,9 +441,15 @@ def _validate_against_official_field_rules(
     for tag, count in control_counts.items():
         rule = rules.get(tag)
         if rule is None:
-            raise MarcError(error_code, f"Control field tag {tag} is not recognized by the bundled MARC21 rule table")
+            raise MarcError(
+                error_code,
+                f"Control field tag {tag} is not recognized by the bundled MARC21 rule table",
+            )
         if rule.get("repeatable") is False and count > 1:
-            raise MarcError(error_code, f"Control field {tag} is not repeatable in the bundled MARC21 rule table")
+            raise MarcError(
+                error_code,
+                f"Control field {tag} is not repeatable in the bundled MARC21 rule table",
+            )
 
     data_counts: dict[str, int] = {}
     for field in record.data_fields:
@@ -321,26 +457,52 @@ def _validate_against_official_field_rules(
         data_counts[tag] = data_counts.get(tag, 0) + 1
         rule = rules.get(tag)
         if rule is None:
-            raise MarcError(error_code, f"Data field tag {tag} is not recognized by the bundled MARC21 rule table")
+            raise MarcError(
+                error_code,
+                f"Data field tag {tag} is not recognized by the bundled MARC21 rule table",
+            )
         _validate_official_indicators(field, rule, error_code=error_code)
         _validate_official_subfields(field, rule, error_code=error_code)
 
     for tag, count in data_counts.items():
         rule = rules.get(tag)
         if rule is not None and rule.get("repeatable") is False and count > 1:
-            raise MarcError(error_code, f"Data field {tag} is not repeatable in the bundled MARC21 rule table")
+            raise MarcError(
+                error_code,
+                f"Data field {tag} is not repeatable in the bundled MARC21 rule table",
+            )
 
 
-def _validate_official_indicators(field: DataField, rule: dict[str, object], *, error_code: str) -> None:
-    allowed_1 = _allowed_indicator_values(rule.get("indicator1"))
-    allowed_2 = _allowed_indicator_values(rule.get("indicator2"))
+def _validate_official_indicators(
+    field: DataField, rule: dict[str, object], *, error_code: str
+) -> None:
+    allowed_1 = (
+        _allowed_indicator_values(rule.get("indicator1"))
+        if rule.get("indicator1_complete") is True
+        else None
+    )
+    allowed_2 = (
+        _allowed_indicator_values(rule.get("indicator2"))
+        if rule.get("indicator2_complete") is True
+        else None
+    )
     if allowed_1 is not None and field.indicators[0] not in allowed_1:
-        raise MarcError(error_code, f"Indicator 1 value {field.indicators[0]!r} is not allowed in field {field.tag}")
+        raise MarcError(
+            error_code,
+            f"Indicator 1 value {field.indicators[0]!r} is not allowed in field {field.tag}",
+        )
     if allowed_2 is not None and field.indicators[1] not in allowed_2:
-        raise MarcError(error_code, f"Indicator 2 value {field.indicators[1]!r} is not allowed in field {field.tag}")
+        raise MarcError(
+            error_code,
+            f"Indicator 2 value {field.indicators[1]!r} is not allowed in field {field.tag}",
+        )
 
 
-def _validate_official_subfields(field: DataField, rule: dict[str, object], *, error_code: str) -> None:
+def _validate_official_subfields(
+    field: DataField, rule: dict[str, object], *, error_code: str
+) -> None:
+    if rule.get("subfields_complete") is not True:
+        return
     raw_entries = rule.get("subfields")
     if not isinstance(raw_entries, list) or not raw_entries:
         return
@@ -355,10 +517,17 @@ def _validate_official_subfields(field: DataField, rule: dict[str, object], *, e
     counts: dict[str, int] = {}
     for subfield in field.subfields:
         if subfield.code not in allowed:
-            raise MarcError(error_code, f"Subfield ${subfield.code} is not defined for field {field.tag} in the bundled MARC21 rule table")
+            raise MarcError(
+                error_code,
+                f"Subfield ${subfield.code} is not defined for field {field.tag} "
+                "in the bundled MARC21 rule table",
+            )
         counts[subfield.code] = counts.get(subfield.code, 0) + 1
         if allowed[subfield.code] is False and counts[subfield.code] > 1:
-            raise MarcError(error_code, f"Subfield ${subfield.code} is not repeatable in field {field.tag}")
+            raise MarcError(
+                error_code,
+                f"Subfield ${subfield.code} is not repeatable in field {field.tag}",
+            )
 
 
 def _allowed_indicator_values(value: object) -> set[str] | None:
@@ -376,11 +545,22 @@ def _field_rules() -> dict[str, dict[str, object]]:
     return json.loads(_RULES_PATH.read_text(encoding="utf-8"))
 
 
+@lru_cache(maxsize=1)
+def _fixed_rules() -> dict[str, dict[str, Any]]:
+    return json.loads(_FIXED_RULES_PATH.read_text(encoding="utf-8"))
+
+
 def _encode_directory_entry(tag: str, field_length: int, field_start: int) -> bytes:
     if field_length > 9999:
-        raise MarcError("invalid_request", f"Field {tag} is too long for the ISO 2709 directory length field")
+        raise MarcError(
+            "invalid_request",
+            f"Field {tag} is too long for the ISO 2709 directory length field",
+        )
     if field_start > 99999:
-        raise MarcError("invalid_request", f"Field {tag} starts beyond the ISO 2709 directory start field")
+        raise MarcError(
+            "invalid_request",
+            f"Field {tag} starts beyond the ISO 2709 directory start field",
+        )
     return tag.encode("ascii") + f"{field_length:04d}{field_start:05d}".encode("ascii")
 
 
@@ -412,7 +592,9 @@ def _parse_xml_indicator(value: str, tag: str) -> str:
     return value
 
 
-def _validate_indicator_text(indicator: str, tag: str, *, error_code: str = "invalid_request") -> None:
+def _validate_indicator_text(
+    indicator: str, tag: str, *, error_code: str = "invalid_request"
+) -> None:
     if len(indicator) != 1 or not indicator.isascii():
         raise MarcError(error_code, f"Indicators in field {tag} must be one ASCII character")
 

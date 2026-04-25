@@ -3,7 +3,10 @@ from __future__ import annotations
 from pathlib import Path
 
 from marc21_support import (
+    decode_iso2709_record,
+    decode_marcxml_record,
     encode_iso2709,
+    encode_iso2709_record,
     sample_marcxml,
     sample_marcxml_collection,
     sample_record,
@@ -17,17 +20,9 @@ from conftest import b64, run_marc21, unb64
 def test_inspect_parses_basic_iso2709_record(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    render_result, render_payload = run_marc21(
-        submission_command,
-        {"action": "render_iso2709", "record": sample_record()},
-        tmp_path,
-    )
-    assert render_result.returncode == 0
-    assert render_payload is not None
-
     inspect_result, inspect_payload = run_marc21(
         submission_command,
-        {"action": "inspect", "record_b64": render_payload["result"]["record_b64"]},
+        {"action": "inspect", "record_b64": b64(encode_iso2709_record(sample_record()))},
         tmp_path,
     )
     assert inspect_result.returncode == 0
@@ -49,15 +44,7 @@ def test_roundtrip_preserves_utf8_iso2709_record(
     )
     assert render_result.returncode == 0
     assert render_payload is not None
-
-    inspect_result, inspect_payload = run_marc21(
-        submission_command,
-        {"action": "inspect", "record_b64": render_payload["result"]["record_b64"]},
-        tmp_path,
-    )
-    assert inspect_result.returncode == 0
-    assert inspect_payload is not None
-    assert inspect_payload["result"]["record"] == record
+    assert decode_iso2709_record(unb64(render_payload["result"]["record_b64"])) == record
 
 
 def test_inspect_parses_hermetic_iso2709_fixture(
@@ -113,7 +100,7 @@ def test_inspect_marcxml_parses_collection_wrapper(
     assert payload["result"]["record"] == sample_record()
 
 
-def test_render_marcxml_roundtrips_via_inspect_marcxml(
+def test_render_marcxml_matches_evaluator_decoder(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     record = sample_record()
@@ -124,15 +111,7 @@ def test_render_marcxml_roundtrips_via_inspect_marcxml(
     )
     assert render_result.returncode == 0
     assert render_payload is not None
-
-    inspect_result, inspect_payload = run_marc21(
-        submission_command,
-        {"action": "inspect_marcxml", "marcxml": render_payload["result"]["marcxml"]},
-        tmp_path,
-    )
-    assert inspect_result.returncode == 0
-    assert inspect_payload is not None
-    assert inspect_payload["result"]["record"] == record
+    assert decode_marcxml_record(render_payload["result"]["marcxml"]) == record
 
 
 def test_roundtrip_preserves_utf8_record_with_cjk_and_combining_marks(
@@ -146,25 +125,13 @@ def test_roundtrip_preserves_utf8_record_with_cjk_and_combining_marks(
     )
     assert render_result.returncode == 0
     assert render_payload is not None
-
-    inspect_result, inspect_payload = run_marc21(
-        submission_command,
-        {"action": "inspect", "record_b64": render_payload["result"]["record_b64"]},
-        tmp_path,
-    )
-    assert inspect_result.returncode == 0
-    assert inspect_payload is not None
-    assert inspect_payload["result"]["record"] == record
+    assert decode_iso2709_record(unb64(render_payload["result"]["record_b64"])) == record
 
 
 def test_inspect_marcxml_accepts_xml_declaration_and_comment(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    marcxml = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        "<!--bibliographic record-->"
-        f"{sample_marcxml()}"
-    )
+    marcxml = f'<?xml version="1.0" encoding="UTF-8"?><!--bibliographic record-->{sample_marcxml()}'
     result, payload = run_marc21(
         submission_command,
         {"action": "inspect_marcxml", "marcxml": marcxml},
@@ -193,12 +160,4 @@ def test_roundtrip_preserves_data_field_without_subfields(
     )
     assert render_result.returncode == 0
     assert render_payload is not None
-
-    inspect_result, inspect_payload = run_marc21(
-        submission_command,
-        {"action": "inspect", "record_b64": render_payload["result"]["record_b64"]},
-        tmp_path,
-    )
-    assert inspect_result.returncode == 0
-    assert inspect_payload is not None
-    assert inspect_payload["result"]["record"] == record
+    assert decode_iso2709_record(unb64(render_payload["result"]["record_b64"])) == record

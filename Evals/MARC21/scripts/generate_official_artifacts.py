@@ -15,11 +15,93 @@ _RULES_OUTPUT_PATH = (
     / "generated"
     / "marc21_field_rules.json"
 )
+_FIXED_RULES_OUTPUT_PATH = (
+    Path(__file__).resolve().parents[1]
+    / "reference-implementation-py"
+    / "generated"
+    / "marc21_fixed_field_rules.json"
+)
 _PAGE_PATTERN = re.compile(r"^bd(\d{3})\.html$")
 _REPEATABILITY_PATTERN = re.compile(r"^(\d{3})\s*-\s*(.*?)\s*\((NR|R)\)$")
-_INDICATOR_VALUE_PATTERN = re.compile(r"([#0-9A-Za-z](?:-[0-9A-Za-z])?)\s*-")
 _SUBFIELD_ENTRY_PATTERN = re.compile(r"^\$([0-9a-z])\s*-\s*(.*?)\((NR|R)\)$")
 _SUBFIELD_FRAGMENT_PATTERN = re.compile(r"(?=\$[0-9a-z]\s*-)")
+# Fixed-field rules below are curated from the checked-in LOC fixed-field pages.
+# They cover unambiguous positional constraints that are not represented by the
+# standard data-field table extractor.
+_FIXED_RULES: dict[str, object] = {
+    "leader": {
+        "source": "bdleader.html",
+        "length": 24,
+        "positions": {
+            "05": ["a", "c", "d", "n", "p"],
+            "06": ["a", "c", "d", "e", "f", "g", "i", "j", "k", "m", "o", "p", "r", "t"],
+            "07": ["a", "b", "c", "d", "i", "m", "s"],
+            "08": ["#", "a"],
+            "09": ["#", "a"],
+            "10": ["2"],
+            "11": ["2"],
+            "17": ["#", "1", "2", "3", "4", "5", "7", "8", "u", "z"],
+            "18": ["#", "a", "c", "i", "n", "u"],
+            "19": ["#", "a", "b", "c"],
+        },
+        "entry_map": "4500",
+    },
+    "006": {
+        "source": "bd006.html",
+        "length": 18,
+        "position_00": ["a", "c", "d", "e", "f", "g", "i", "j", "k", "m", "o", "p", "r", "s", "t"],
+        "fill_disallowed_positions": [0],
+    },
+    "007": {
+        "source": "bd007.html",
+        "position_00": ["a", "c", "d", "f", "g", "h", "k", "m", "o", "q", "r", "s", "t", "v", "z"],
+        "fill_disallowed_positions": [0],
+        "category_lengths": {
+            "a": {"minimum": 8, "maximum": 8},
+            "c": {"minimum": 6, "maximum": 14},
+            "d": {"minimum": 6, "maximum": 6},
+            "f": {"minimum": 10, "maximum": 10},
+            "g": {"minimum": 9, "maximum": 9},
+            "h": {"minimum": 13, "maximum": 13},
+            "k": {"minimum": 6, "maximum": 6},
+            "m": {"minimum": 8, "maximum": 23},
+            "o": {"minimum": 2, "maximum": 2},
+            "q": {"minimum": 2, "maximum": 2},
+            "r": {"minimum": 11, "maximum": 11},
+            "s": {"minimum": 14, "maximum": 14},
+            "t": {"minimum": 2, "maximum": 2},
+            "v": {"minimum": 9, "maximum": 9},
+            "z": {"minimum": 2, "maximum": 2},
+        },
+    },
+    "008": {
+        "source": "bd008.html",
+        "length": 40,
+        "fill_disallowed_positions": [0, 1, 2, 3, 4, 5],
+        "date_entered_positions": [0, 1, 2, 3, 4, 5],
+        "date_type_position_06": [
+            "b",
+            "c",
+            "d",
+            "e",
+            "i",
+            "k",
+            "m",
+            "n",
+            "p",
+            "q",
+            "r",
+            "s",
+            "t",
+            "u",
+            "|",
+        ],
+        "position_code_tables": {
+            "38": ["#", "d", "o", "r", "s", "x", "|"],
+            "39": ["#", "c", "d", "u", "|"],
+        },
+    },
+}
 
 
 def _text_content(element: ET.Element) -> str:
@@ -41,13 +123,30 @@ def _expand_indicator_token(token: str) -> list[str]:
     return [token]
 
 
-def _indicator_values_from_cell(cell: ET.Element) -> list[str]:
+def _parse_indicator_label(text: str) -> list[str] | None:
+    if " - " not in text:
+        return None
+    token = text.split(" - ", 1)[0].strip()
+    if not token:
+        return None
+    return _expand_indicator_token(token)
+
+
+def _indicator_values_from_cell(cell: ET.Element) -> tuple[list[str], bool]:
     values: list[str] = []
-    for token in _INDICATOR_VALUE_PATTERN.findall(_collapse_whitespace(_text_content(cell))):
-        for expanded in _expand_indicator_token(token):
+    saw_labeled_value = False
+    for span in cell.findall(".//{*}span"):
+        text = _collapse_whitespace(_text_content(span))
+        if " - " not in text:
+            continue
+        saw_labeled_value = True
+        parsed = _parse_indicator_label(text)
+        if parsed is None:
+            return [], False
+        for expanded in parsed:
             if expanded not in values:
                 values.append(expanded)
-    return values
+    return values, saw_labeled_value
 
 
 def _find_indicator_cells(root: ET.Element) -> tuple[ET.Element, ET.Element] | None:
@@ -83,10 +182,15 @@ def _find_subfield_summary_table(root: ET.Element) -> ET.Element | None:
     return None
 
 
-def _iter_subfield_fragments(subfield_table: ET.Element) -> list[str]:
+def _iter_subfield_fragments(subfield_table: ET.Element) -> tuple[list[str], bool]:
     list_items = subfield_table.findall(".//{*}li")
     if list_items:
-        return [_collapse_whitespace(_text_content(item)) for item in list_items]
+        fragments = [
+            _collapse_whitespace(_text_content(item))
+            for item in list_items
+            if "$" in _collapse_whitespace(_text_content(item))
+        ]
+        return fragments, bool(fragments)
 
     fragments: list[str] = []
     for cell in subfield_table.findall(".//{*}td"):
@@ -97,7 +201,7 @@ def _iter_subfield_fragments(subfield_table: ET.Element) -> list[str]:
             cleaned = fragment.strip()
             if cleaned:
                 fragments.append(cleaned)
-    return fragments
+    return fragments, bool(fragments)
 
 
 def _text_without_emphasis(element: ET.Element) -> str:
@@ -130,19 +234,24 @@ def _extract_rule(root: ET.Element, tag: str) -> dict[str, object]:
 
     indicator_cells = _find_indicator_cells(root)
     if indicator_cells is not None:
-        indicator_1 = _indicator_values_from_cell(indicator_cells[0])
+        indicator_1, indicator_1_complete = _indicator_values_from_cell(indicator_cells[0])
+        rule["indicator1_complete"] = indicator_1_complete
         if indicator_1:
             rule["indicator1"] = indicator_1
-        indicator_2 = _indicator_values_from_cell(indicator_cells[1])
+        indicator_2, indicator_2_complete = _indicator_values_from_cell(indicator_cells[1])
+        rule["indicator2_complete"] = indicator_2_complete
         if indicator_2:
             rule["indicator2"] = indicator_2
 
     subfield_repeatability: dict[str, bool | None] = {}
     subfield_table = _find_subfield_summary_table(root)
     if subfield_table is not None:
-        for fragment in _iter_subfield_fragments(subfield_table):
+        fragments, saw_subfields = _iter_subfield_fragments(subfield_table)
+        subfields_complete = saw_subfields
+        for fragment in fragments:
             match = _SUBFIELD_ENTRY_PATTERN.match(fragment)
             if match is None:
+                subfields_complete = False
                 continue
             code = match.group(1)
             current = match.group(3) == "R"
@@ -153,6 +262,7 @@ def _extract_rule(root: ET.Element, tag: str) -> dict[str, object]:
                 subfield_repeatability[code] = current
             elif existing != current:
                 subfield_repeatability[code] = None
+        rule["subfields_complete"] = subfields_complete
     if subfield_repeatability:
         rule["subfields"] = [
             {"code": code, "repeatable": repeatable}
@@ -187,7 +297,11 @@ def _parse_root(path: Path) -> ET.Element:
         raise ValueError(f"Could not parse {path.name} as XML-compatible HTML") from exc
 
 
-def build_artifacts() -> tuple[dict[str, dict[str, object]], dict[str, list[dict[str, str]]]]:
+def build_artifacts() -> tuple[
+    dict[str, dict[str, object]],
+    dict[str, list[dict[str, str]]],
+    dict[str, object],
+]:
     rules: dict[str, dict[str, object]] = {}
     examples: dict[str, list[dict[str, str]]] = {}
 
@@ -202,7 +316,7 @@ def build_artifacts() -> tuple[dict[str, dict[str, object]], dict[str, list[dict
         if field_examples:
             examples[tag] = field_examples
 
-    return rules, examples
+    return rules, examples, _FIXED_RULES
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -211,12 +325,14 @@ def _write_json(path: Path, payload: object) -> None:
 
 
 def main() -> None:
-    rules, examples = build_artifacts()
+    rules, examples, fixed_rules = build_artifacts()
     _write_json(_RULES_OUTPUT_PATH, rules)
     _write_json(_EXAMPLES_OUTPUT_PATH, examples)
+    _write_json(_FIXED_RULES_OUTPUT_PATH, fixed_rules)
     print(
         f"Wrote {len(rules)} field rules to {_RULES_OUTPUT_PATH} and "
-        f"{len(examples)} example groups to {_EXAMPLES_OUTPUT_PATH}"
+        f"{len(examples)} example groups to {_EXAMPLES_OUTPUT_PATH} and "
+        f"{len(fixed_rules)} fixed-field rule groups to {_FIXED_RULES_OUTPUT_PATH}"
     )
 
 

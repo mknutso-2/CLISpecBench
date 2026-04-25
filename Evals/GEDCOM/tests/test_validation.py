@@ -44,9 +44,7 @@ def test_missing_head_is_invalid(submission_command: tuple[str, ...], tmp_path: 
         {"action": "inspect", "gedcom_text": "0 TRLR\n"},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_missing_trailer_is_invalid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -56,9 +54,7 @@ def test_missing_trailer_is_invalid(submission_command: tuple[str, ...], tmp_pat
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_head_requires_gedc_and_vers(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -68,9 +64,7 @@ def test_head_requires_gedc_and_vers(submission_command: tuple[str, ...], tmp_pa
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_second_head_record_is_invalid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -81,9 +75,7 @@ def test_second_head_record_is_invalid(submission_command: tuple[str, ...], tmp_
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_second_trailer_record_is_invalid(
@@ -95,9 +87,7 @@ def test_second_trailer_record_is_invalid(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_conc_is_invalid_in_gedcom7(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -110,9 +100,7 @@ def test_conc_is_invalid_in_gedcom7(submission_command: tuple[str, ...], tmp_pat
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_trailer_may_not_have_children(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -122,9 +110,7 @@ def test_trailer_may_not_have_children(submission_command: tuple[str, ...], tmp_
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_multiple_spaces_between_components_are_invalid(
@@ -136,9 +122,7 @@ def test_multiple_spaces_between_components_are_invalid(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_duplicate_xref_is_invalid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -148,9 +132,7 @@ def test_duplicate_xref_is_invalid(submission_command: tuple[str, ...], tmp_path
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_dangling_pointer_is_invalid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -160,9 +142,7 @@ def test_dangling_pointer_is_invalid(submission_command: tuple[str, ...], tmp_pa
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_void_pointer_is_allowed(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -185,9 +165,7 @@ def test_unescaped_leading_at_in_non_pointer_payload_is_invalid(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_illegal_level_jump_is_invalid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -197,9 +175,7 @@ def test_illegal_level_jump_is_invalid(submission_command: tuple[str, ...], tmp_
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_banned_control_character_is_invalid(
@@ -211,9 +187,7 @@ def test_banned_control_character_is_invalid(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_invalid_line_syntax_is_invalid(
@@ -225,9 +199,7 @@ def test_invalid_line_syntax_is_invalid(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_render_rejects_non_list_records(
@@ -238,9 +210,7 @@ def test_render_rejects_non_list_records(
         {"action": "render", "dataset": {"records": {"tag": "HEAD"}}},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_node_with_non_string_tag(
@@ -264,9 +234,7 @@ def test_render_rejects_node_with_non_string_tag(
         },
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_duplicate_xref_in_dataset(
@@ -279,9 +247,7 @@ def test_render_rejects_duplicate_xref_in_dataset(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_escapes_leading_at_in_non_pointer_payload(
@@ -316,9 +282,7 @@ def test_render_rejects_explicit_conc_node(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_banned_control_character(
@@ -331,9 +295,7 @@ def test_render_rejects_banned_control_character(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_unknown_top_level_record_tag_is_invalid(
@@ -345,9 +307,7 @@ def test_unknown_top_level_record_tag_is_invalid(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_top_level_record_types_from_official_grammar_require_xref(
@@ -402,9 +362,7 @@ def test_head_payload_is_invalid(submission_command: tuple[str, ...], tmp_path: 
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_shared_note_record_requires_payload(
@@ -416,9 +374,7 @@ def test_shared_note_record_requires_payload(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_header_place_requires_form(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -437,9 +393,7 @@ def test_header_place_requires_form(submission_command: tuple[str, ...], tmp_pat
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_header_place_may_not_have_payload(
@@ -461,9 +415,7 @@ def test_header_place_may_not_have_payload(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_submitter_requires_name(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -473,9 +425,7 @@ def test_submitter_requires_name(submission_command: tuple[str, ...], tmp_path: 
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_repository_requires_name(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -485,9 +435,7 @@ def test_repository_requires_name(submission_command: tuple[str, ...], tmp_path:
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_multimedia_record_requires_file(
@@ -499,9 +447,7 @@ def test_multimedia_record_requires_file(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_file_requires_form(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -511,9 +457,7 @@ def test_file_requires_form(submission_command: tuple[str, ...], tmp_path: Path)
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_file_tran_requires_form(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -523,9 +467,7 @@ def test_file_tran_requires_form(submission_command: tuple[str, ...], tmp_path: 
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_change_date_requires_date(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -535,9 +477,7 @@ def test_change_date_requires_date(submission_command: tuple[str, ...], tmp_path
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_creation_date_requires_date(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -547,9 +487,7 @@ def test_creation_date_requires_date(submission_command: tuple[str, ...], tmp_pa
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_association_requires_role(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -559,9 +497,7 @@ def test_association_requires_role(submission_command: tuple[str, ...], tmp_path
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_place_map_requires_lati(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -580,9 +516,7 @@ def test_place_map_requires_lati(submission_command: tuple[str, ...], tmp_path: 
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_place_map_requires_long(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -601,9 +535,7 @@ def test_place_map_requires_long(submission_command: tuple[str, ...], tmp_path: 
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_name_translation_requires_lang(
@@ -622,9 +554,7 @@ def test_name_translation_requires_lang(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_individual_even_tag_requires_type(
@@ -636,9 +566,7 @@ def test_individual_even_tag_requires_type(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_family_event_husb_requires_age(
@@ -660,9 +588,7 @@ def test_family_event_husb_requires_age(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_child_link_is_only_valid_under_family_records(
@@ -677,9 +603,7 @@ def test_child_link_is_only_valid_under_family_records(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_individual_fact_requires_type(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -689,9 +613,7 @@ def test_individual_fact_requires_type(submission_command: tuple[str, ...], tmp_
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_place_translation_requires_lang(
@@ -711,9 +633,7 @@ def test_place_translation_requires_lang(
         {"action": "inspect", "gedcom_text": text},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_document"
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_adoption_famc_substructure_allows_enum_payload(
@@ -799,9 +719,7 @@ def test_render_rejects_name_translation_without_lang(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_multimedia_record_without_file_form(
@@ -819,9 +737,7 @@ def test_render_rejects_multimedia_record_without_file_form(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_multimedia_record_with_top_level_titl(
@@ -846,9 +762,7 @@ def test_render_rejects_multimedia_record_with_top_level_titl(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_submitter_without_name(
@@ -866,6 +780,4 @@ def test_render_rejects_submitter_without_name(
         {"action": "render", "dataset": dataset},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")

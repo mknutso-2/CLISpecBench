@@ -15,8 +15,10 @@ replacement for reading the surrounding official prose.
 import json
 import re
 from dataclasses import dataclass, field
+from html import unescape
 from html.parser import HTMLParser
 from pathlib import Path
+from typing import cast
 
 _DOC_PATH = Path(__file__).resolve().parents[1] / "prompt" / "docs" / "FamilySearchGEDCOMv7.html"
 _OUTPUT_DIR = Path(__file__).resolve().parents[1] / "tests" / "generated"
@@ -270,10 +272,105 @@ class _GedcomSpecParser(HTMLParser):
 
 
 def build_artifacts() -> tuple[dict[str, str], list[dict[str, object]]]:
+    html = _DOC_PATH.read_text(encoding="utf-8")
     parser = _GedcomSpecParser()
-    parser.feed(_DOC_PATH.read_text(encoding="utf-8"))
+    parser.feed(html)
     parser.close()
-    return parser.finalize()
+    structures, examples = parser.finalize()
+    return structures, examples
+
+
+def build_data_rules() -> dict[str, object]:
+    html = _DOC_PATH.read_text(encoding="utf-8")
+    return {
+        "datatypes": {
+            "Age": {
+                "section_id": "age",
+                "allows_empty": True,
+                "grammar": "Age = [[ageBound D] ageDuration]",
+            },
+            "DateValue": {
+                "section_id": "date",
+                "allows_empty": True,
+                "restrict_words": ["FROM", "TO", "BET", "AND", "BEF", "AFT", "ABT", "CAL", "EST"],
+                "calendars": ["GREGORIAN", "JULIAN", "FRENCH_R", "HEBREW"],
+            },
+            "FilePath": {
+                "section_id": "file-path",
+                "local_forbidden_prefixes": ["/"],
+                "local_forbidden_segments": [".."],
+                "gedzip_reserved_names": ["gedcom.ged", "MANIFEST.MF", "META-INF/"],
+                "supported_schemes": ["", "file", "ftp", "http", "https"],
+            },
+            "Language": {
+                "section_id": "language",
+                "source": "BCP 47 language tag",
+            },
+            "Latitude": {
+                "section_id": "latitude",
+                "hemispheres": ["N", "S"],
+                "max_degrees": 90,
+            },
+            "Longitude": {
+                "section_id": "longitude",
+                "hemispheres": ["E", "W"],
+                "max_degrees": 180,
+            },
+            "MediaType": {
+                "section_id": "media-type",
+                "source": "RFC 2045 section 5.1 plus HTTP-style parameters",
+            },
+            "TagDef": {
+                "section_id": "tag-definition",
+                "grammar": "TagDef = extTag D URI-reference",
+            },
+            "Time": {
+                "section_id": "time",
+                "utc_suffix": "Z",
+                "allows_24_hour": False,
+                "allows_leap_second": False,
+            },
+            "URI": {
+                "section_id": "uri",
+                "source": "RFC 3986 URI-reference",
+            },
+        },
+        "enumerations": _extract_enum_sets(html),
+        "gedzip": {
+            "section_id": "gedzip",
+            "format": "ZIP archive",
+            "dataset_entry": "gedcom.ged",
+            "file_extension": ".gdz",
+            "entry_names_are_utf8_case_sensitive": True,
+            "local_file_payloads_must_have_matching_entries": True,
+            "zip_entry_names_are_not_percent_escaped": True,
+        },
+    }
+
+
+def _extract_enum_sets(html: str) -> dict[str, list[str]]:
+    enum_sets: dict[str, list[str]] = {}
+    for match in re.finditer(
+        r'<section id="enumset-([^"]+)"[^>]*>(.*?)(?=<section id="enumset-|<section id="gedzip")',
+        html,
+        flags=re.DOTALL,
+    ):
+        name = unescape(match.group(1))
+        section_html = match.group(2)
+        values: list[str] = []
+        for row_match in re.finditer(r"<tr\b[^>]*>(.*?)</tr>", section_html, flags=re.DOTALL):
+            row_html = row_match.group(1)
+            cells = re.findall(r"<td\b[^>]*>(.*?)</td>", row_html, flags=re.DOTALL)
+            if not cells:
+                continue
+            code_match = re.search(r"<code\b[^>]*>(.*?)</code>", cells[0], flags=re.DOTALL)
+            if code_match is None:
+                continue
+            value = _collapse_whitespace(re.sub(r"<[^>]+>", "", unescape(code_match.group(1))))
+            if value:
+                values.append(value)
+        enum_sets[name] = values
+    return enum_sets
 
 
 def _write_json(path: Path, payload: object) -> None:
@@ -283,11 +380,15 @@ def _write_json(path: Path, payload: object) -> None:
 
 def main() -> None:
     structures, examples = build_artifacts()
+    data_rules = build_data_rules()
+    enum_sets = cast(dict[str, object], data_rules["enumerations"])
     _write_json(_OUTPUT_DIR / "gedcom_structure_grammar.json", structures)
     _write_json(_OUTPUT_DIR / "gedcom_examples.json", examples)
+    _write_json(_OUTPUT_DIR / "gedcom_data_rules.json", data_rules)
     print(
         "Wrote "
-        f"{len(structures)} structure definitions and {len(examples)} GEDCOM code blocks "
+        f"{len(structures)} structure definitions, {len(examples)} GEDCOM code blocks, "
+        f"and {len(enum_sets)} enum sets "
         f"to {_OUTPUT_DIR}"
     )
 

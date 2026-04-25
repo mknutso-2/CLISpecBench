@@ -26,6 +26,9 @@ The input file is always a JSON object with an `action` field.
 }
 ```
 
+The MARCXML input may also be a MARC21 slim `<collection>` element containing
+exactly one `<record>` child.
+
 ### `render_iso2709`
 
 ```json
@@ -51,6 +54,23 @@ The input file is always a JSON object with an `action` field.
   }
 }
 ```
+
+The canonical JSON `record` shape always uses `leader_template` as a normalized
+24-character leader template. On successful `inspect` and `inspect_marcxml`
+results, positions `00-04` and `12-16` must be returned as `00000` in
+`leader_template` even though the source ISO 2709 record or MARCXML leader
+contains concrete length and base-address digits. `render_iso2709` must fill
+those positions back in from the actual serialized ISO 2709 record length and
+base address. `render_marcxml` must emit the normalized leader template because
+MARCXML has no ISO 2709 directory or base-address serialization.
+
+The ISO 2709 interchange scope for this eval is Unicode text encoded as UTF-8.
+For `inspect`, directory entries and the leader are ASCII structural bytes, and
+control-field and data-field payload text must decode as UTF-8. Return
+`invalid_record` for ISO 2709 field payload bytes that are not valid UTF-8.
+For `render_iso2709`, encode canonical JSON string values as UTF-8 field
+payload bytes. MARC-8 conversion is out of scope for this eval even when
+Leader/09 uses the blank code permitted by the MARC 21 leader documentation.
 
 ## Response schema
 

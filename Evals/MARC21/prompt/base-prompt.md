@@ -10,3 +10,10 @@ Please build a command-line program that can:
 
 The MARC rules for this task are in the `docs/` directory. The request and
 response file contract is in `technical-requirements-prompt.md`.
+
+I only need Unicode MARC records for this tool. ISO 2709 payloads should be
+treated as UTF-8 encoded text; do not implement MARC-8 character-set conversion.
+
+When the MARC 21 bibliographic documentation for a field defines indicator
+values, subfield codes, or repeatability, treat those definitions as validation
+rules and reject records that violate them.

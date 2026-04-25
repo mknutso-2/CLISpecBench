@@ -24,6 +24,9 @@ Current files:
   `text`, `section_id`, `source_block_id`, `context_classes`, `lead_text`,
   `context_text`, `classification_hint`, `starts_at_level_zero`, `has_head`,
   `has_trlr`, and `is_full_dataset`.
+- `gedcom_data_rules.json`: maintainer-only data-rule helper containing
+  enumeration sets extracted from the official HTML plus curated datatype and
+  GEDZIP section summaries used to guide hidden-test coverage.
 
 `classification_hint` is heuristic. It helps triage which official code blocks
 look like counterexamples, note snippets, record fragments, or full datasets,

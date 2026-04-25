@@ -13,6 +13,9 @@ _STRUCTURES_PATH = (
     _REPO_ROOT / "Evals" / "GEDCOM" / "tests" / "generated" / "gedcom_structure_grammar.json"
 )
 _EXAMPLES_PATH = _REPO_ROOT / "Evals" / "GEDCOM" / "tests" / "generated" / "gedcom_examples.json"
+_DATA_RULES_PATH = (
+    _REPO_ROOT / "Evals" / "GEDCOM" / "tests" / "generated" / "gedcom_data_rules.json"
+)
 
 
 def _load_generator_module() -> ModuleType:
@@ -42,6 +45,21 @@ def test_gedcom_generated_artifacts_are_up_to_date() -> None:
 
     assert actual_structures == expected_structures
     assert actual_examples == expected_examples
+
+
+def test_gedcom_generated_data_rules_are_up_to_date() -> None:
+    module = _load_generator_module()
+    build_data_rules = cast(
+        Callable[[], dict[str, object]],
+        module.build_data_rules,
+    )
+    expected_rules = build_data_rules()
+    actual_rules = cast(
+        dict[str, object],
+        json.loads(_DATA_RULES_PATH.read_text(encoding="utf-8")),
+    )
+
+    assert actual_rules == expected_rules
 
 
 def test_gedcom_block_classifier_marks_full_dataset() -> None:

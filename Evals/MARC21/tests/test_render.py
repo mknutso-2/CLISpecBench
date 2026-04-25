@@ -66,6 +66,24 @@ def test_render_iso2709_recomputes_leader_length_and_base_address(
     assert leader[12:17] != "99999"
 
 
+def test_render_marcxml_emits_normalized_leader_template(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    record = sample_record()
+    record["leader_template"] = "99999nam a2299999 a 4500"
+    result, payload = run_marc21(
+        submission_command,
+        {"action": "render_marcxml", "record": record},
+        tmp_path,
+    )
+    assert result.returncode == 0
+    assert payload is not None
+    root = ET.fromstring(payload["result"]["marcxml"])
+    leader = root.find(f"{{{NS}}}leader")
+    assert leader is not None
+    assert leader.text == "00000nam a2200000 a 4500"
+
+
 def test_render_marcxml_escapes_special_characters(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
