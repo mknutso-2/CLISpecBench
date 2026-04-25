@@ -3,19 +3,12 @@ from __future__ import annotations
 import base64
 import binascii
 import io
-import json
 import re
 import zipfile
-from functools import lru_cache
-from pathlib import Path
-from typing import cast
 from urllib.parse import unquote, urlsplit
 
 from gedcom_model import GedcomDataset, GedcomError, GedcomNode
 
-_DATA_RULES_PATH = (
-    Path(__file__).resolve().parents[1] / "tests" / "generated" / "gedcom_data_rules.json"
-)
 _TAG_RE = re.compile(r"^(?:[A-Z][A-Z0-9_]*|_[A-Z0-9_]+)$")
 _XREF_RE = re.compile(r"^@[^@\s]+@$")
 _LANGUAGE_RE = re.compile(r"^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$")
@@ -52,24 +45,6 @@ _TOP_LEVEL_RECORD_TAGS = {
 }
 
 
-@lru_cache(maxsize=1)
-def _data_rules() -> dict[str, object]:
-    try:
-        return cast(dict[str, object], json.loads(_DATA_RULES_PATH.read_text(encoding="utf-8")))
-    except OSError:
-        return {"enumerations": {}}
-
-
-def _enum_values(name: str, fallback: set[str]) -> set[str]:
-    enumerations_obj = _data_rules().get("enumerations")
-    if not isinstance(enumerations_obj, dict):
-        return fallback
-    enumerations = cast(dict[str, object], enumerations_obj)
-    values_obj = enumerations.get(name)
-    if not isinstance(values_obj, list):
-        return fallback
-    values = cast(list[object], values_obj)
-    return {value for value in values if isinstance(value, str)} or fallback
 _XREF_REQUIRED_TOP_LEVEL_TAGS = {
     "FAM",
     "INDI",
@@ -717,24 +692,23 @@ def _validate_coordinate_payload(payload: str | None, tag: str, *, request_code:
 def _validate_enum_payload(
     payload: str | None,
     enum_set: str,
-    fallback: set[str],
+    allowed: set[str],
     *,
     request_code: str,
 ) -> None:
-    if payload is None or (payload not in _enum_values(enum_set, fallback) and not _is_ext_tag(payload)):
+    if payload is None or (payload not in allowed and not _is_ext_tag(payload)):
         raise GedcomError(request_code, f"{enum_set} payload is not a permitted enum value")
 
 
 def _validate_enum_list_payload(
     payload: str | None,
     enum_set: str,
-    fallback: set[str],
+    allowed: set[str],
     *,
     request_code: str,
 ) -> None:
     if payload is None:
         raise GedcomError(request_code, f"{enum_set} requires an enum-list payload")
-    allowed = _enum_values(enum_set, fallback)
     values = [piece.strip() for piece in payload.split(",")]
     if not values or any(value not in allowed and not _is_ext_tag(value) for value in values):
         raise GedcomError(request_code, f"{enum_set} payload contains an invalid enum value")

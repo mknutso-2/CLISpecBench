@@ -37,16 +37,17 @@ def test_render_success_schema(submission_command: tuple[str, ...], tmp_path: Pa
     assert isinstance(payload["result"]["gedcom_text"], str)
 
 
-def test_error_schema_for_invalid_document(
+def test_error_response_schema_for_invalid_request(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     result, payload = run_gedcom(
         submission_command,
-        {"action": "inspect", "gedcom_text": "0 TRLR\n"},
+        {"action": "not_a_real_action"},
         tmp_path,
     )
     assert result.returncode == 1
     assert payload is not None
     assert payload["status"] == "error"
-    assert payload["error"]["code"] == "invalid_document"
+    assert payload["error"]["code"] == "invalid_request"
+    assert isinstance(payload["error"]["message"], str)
     assert payload["result"] is None

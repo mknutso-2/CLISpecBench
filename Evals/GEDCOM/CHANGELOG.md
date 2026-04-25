@@ -1,5 +1,28 @@
 # Changelog
 
+## v3.2.1 — 2026-04-24
+
+- Removed `tests/test_official_data_rules.py`; the maintainer-only
+  `tests/generated/` artifact is already policed by the repo-level drift test at
+  `src/clispecbench/tests/test_gedcom_generated_artifacts.py` and does not
+  belong in the agent-scoring suite.
+- Mentioned GEDZIP archive inspect/produce as a domain-expert need in
+  `prompt/base-prompt.md` so the behavioral scope is not smuggled through the
+  technical-requirements contract prompt.
+- Removed the reference implementation's cross-directory dependency on
+  `tests/generated/gedcom_data_rules.json`. Enumeration sets now come from the
+  inlined tables the ref impl already carried as fallbacks.
+- Parametrized four previously aggregated validation tests so each spec case
+  (xref-required record tags, Y-or-NULL event tags, and inspect/render pointer
+  target types) fails independently.
+- Rewrote the error-envelope schema test in `test_schema.py` to trigger
+  `invalid_request` via an unsupported action, so it no longer overlaps with
+  the missing-HEAD validation test.
+- Split the official-fragment parse/render test in `test_parse.py` into a
+  parse-only test and a roundtrip test with independent failure modes.
+- Documented in the eval README why GEDCOM ships a Python-only reference
+  implementation.
+
 ## v3.2.0 — 2026-04-24
 
 - Added GEDZIP inspect/render coverage and reference support for ZIP archives

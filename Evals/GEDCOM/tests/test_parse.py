@@ -124,6 +124,28 @@ def test_official_record_fragments_parse_when_wrapped_as_dataset(
     assert inspect_result.returncode == 0
     assert inspect_payload is not None
 
+
+@pytest.mark.parametrize(
+    ("label", "fragment_text"),
+    official_record_fragments(),
+    ids=lambda value: value if isinstance(value, str) else None,
+)
+def test_official_record_fragments_roundtrip_when_wrapped_as_dataset(
+    label: str,
+    fragment_text: str,
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+) -> None:
+    del label
+    dataset_text = wrap_record_fragment(fragment_text)
+    inspect_result, inspect_payload = run_gedcom(
+        submission_command,
+        {"action": "inspect", "gedcom_text": dataset_text},
+        tmp_path,
+    )
+    if inspect_result.returncode != 0 or inspect_payload is None:
+        pytest.skip("parse failed; covered by the parse-only test")
+
     render_result, render_payload = run_gedcom(
         submission_command,
         {"action": "render", "dataset": inspect_payload["result"]["dataset"]},

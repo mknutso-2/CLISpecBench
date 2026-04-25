@@ -34,6 +34,14 @@ Supported actions:
 See [prompt/technical-requirements-prompt.md](prompt/technical-requirements-prompt.md)
 for the exact request and response schema.
 
+## Reference Language
+
+GEDCOM ships only with a Python reference implementation. The GEDCOM 7 contract
+leans heavily on text line grammar, ZIP archive handling, BCP 47 and RFC 2045
+style payload validation, and URL/URI parsing. Python's standard library covers
+all of this without external dependencies, so a C++ reference implementation
+would be disproportionately large for no additional coverage.
+
 ## Running Tests
 
 ```bash

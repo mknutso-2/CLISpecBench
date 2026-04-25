@@ -9,5 +9,10 @@ Please build a command-line program that can:
 - render that canonical tree representation back into GEDCOM text
 - reject malformed datasets with a clear structured error
 
+I also exchange GEDZIP archives with collaborators — these bundle a GEDCOM
+dataset together with the local media files it references. The tool should be
+able to inspect an incoming GEDZIP archive and produce one from a dataset plus
+attachments, following the archive rules in the GEDCOM documentation.
+
 The GEDCOM rules for this task are in the `docs/` directory. The request and
 response file contract is described in `technical-requirements-prompt.md`.

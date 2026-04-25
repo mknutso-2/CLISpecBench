@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import cast
 
+import pytest
 from gedcom_spec_support import record_root_specs, y_or_null_event_cases
 from gedcom_support import (
     clone_dataset,
@@ -24,6 +25,16 @@ _XREF_REQUIRED_RECORD_TAGS = sorted(
     entry.tag for entry in _RECORD_ROOT_SPECS if entry.xref_token is not None
 )
 _Y_OR_NULL_EVENT_CASES = y_or_null_event_cases()
+
+_XREF_REQUIRED_RECORD_BLOCKS: dict[str, list[str]] = {
+    "FAM": ["0 FAM"],
+    "INDI": ["0 INDI"],
+    "OBJE": ["0 OBJE", "1 FILE photo.jpg", "2 FORM image/jpeg"],
+    "REPO": ["0 REPO", "1 NAME Example Repository"],
+    "SNOTE": ["0 SNOTE Shared note"],
+    "SOUR": ["0 SOUR", "1 TITL Example Source"],
+    "SUBM": ["0 SUBM", "1 NAME Example Submitter"],
+}
 
 
 def _unexpected_result(
@@ -310,49 +321,44 @@ def test_unknown_top_level_record_tag_is_invalid(
     assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
-def test_top_level_record_types_from_official_grammar_require_xref(
-    submission_command: tuple[str, ...], tmp_path: Path
+@pytest.mark.parametrize("record_tag", _XREF_REQUIRED_RECORD_TAGS)
+def test_top_level_record_type_from_official_grammar_requires_xref(
+    submission_command: tuple[str, ...], tmp_path: Path, record_tag: str
 ) -> None:
-    block_by_tag = {
-        "FAM": ["0 FAM"],
-        "INDI": ["0 INDI"],
-        "OBJE": ["0 OBJE", "1 FILE photo.jpg", "2 FORM image/jpeg"],
-        "REPO": ["0 REPO", "1 NAME Example Repository"],
-        "SNOTE": ["0 SNOTE Shared note"],
-        "SOUR": ["0 SOUR", "1 TITL Example Source"],
-        "SUBM": ["0 SUBM", "1 NAME Example Submitter"],
-    }
-    failures: list[str] = []
-    for tag in _XREF_REQUIRED_RECORD_TAGS:
-        result, payload = run_gedcom(
-            submission_command,
-            {"action": "inspect", "gedcom_text": document_text(block_by_tag[tag])},
-            tmp_path,
-        )
-        if _unexpected_result(result.returncode, payload, "invalid_document"):
-            failures.append(tag)
-    assert not failures, f"Top-level xref requirement failures: {', '.join(failures)}"
+    result, payload = run_gedcom(
+        submission_command,
+        {
+            "action": "inspect",
+            "gedcom_text": document_text(_XREF_REQUIRED_RECORD_BLOCKS[record_tag]),
+        },
+        tmp_path,
+    )
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
-def test_official_y_or_null_event_tags_reject_other_payloads(
-    submission_command: tuple[str, ...], tmp_path: Path
+@pytest.mark.parametrize(
+    ("record_tag", "event_tag"),
+    _Y_OR_NULL_EVENT_CASES,
+    ids=[f"{record}-{event}" for record, event in _Y_OR_NULL_EVENT_CASES],
+)
+def test_official_y_or_null_event_tag_rejects_other_payload(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+    record_tag: str,
+    event_tag: str,
 ) -> None:
-    failures: list[str] = []
-    for record_tag, event_tag in _Y_OR_NULL_EVENT_CASES:
-        text = document_text(
-            [
-                f"0 @{record_tag}1@ {record_tag}",
-                f"1 {event_tag} N",
-            ]
-        )
-        result, payload = run_gedcom(
-            submission_command,
-            {"action": "inspect", "gedcom_text": text},
-            tmp_path,
-        )
-        if _unexpected_result(result.returncode, payload, "invalid_document"):
-            failures.append(f"{record_tag}:{event_tag}")
-    assert not failures, f"Y-or-null payload failures: {', '.join(failures)}"
+    text = document_text(
+        [
+            f"0 @{record_tag}1@ {record_tag}",
+            f"1 {event_tag} N",
+        ]
+    )
+    result, payload = run_gedcom(
+        submission_command,
+        {"action": "inspect", "gedcom_text": text},
+        tmp_path,
+    )
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
 def test_head_payload_is_invalid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -658,55 +664,67 @@ def test_adoption_famc_substructure_allows_enum_payload(
     assert payload is not None
 
 
+_INSPECT_POINTER_TARGET_CASES: list[tuple[str, str, list[str]]] = [
+    ("FAMS", "@N1@", shared_note_record_block(xref="@N1@", payload="Shared note")),
+    ("SUBM", "@I2@", individual_record_block(xref="@I2@")),
+    ("SNOTE", "@I2@", individual_record_block(xref="@I2@")),
+    ("OBJE", "@I2@", individual_record_block(xref="@I2@")),
+    ("SOUR", "@I2@", individual_record_block(xref="@I2@")),
+]
+
+
+@pytest.mark.parametrize(
+    ("pointer_tag", "reference", "target_block"),
+    _INSPECT_POINTER_TARGET_CASES,
+    ids=[case[0] for case in _INSPECT_POINTER_TARGET_CASES],
+)
 def test_inspect_rejects_pointer_to_wrong_record_type(
     submission_command: tuple[str, ...],
     tmp_path: Path,
+    pointer_tag: str,
+    reference: str,
+    target_block: list[str],
 ) -> None:
-    cases = [
-        ("FAMS", "@N1@", shared_note_record_block(xref="@N1@", payload="Shared note")),
-        ("SUBM", "@I2@", individual_record_block(xref="@I2@")),
-        ("SNOTE", "@I2@", individual_record_block(xref="@I2@")),
-        ("OBJE", "@I2@", individual_record_block(xref="@I2@")),
-        ("SOUR", "@I2@", individual_record_block(xref="@I2@")),
-    ]
-    failures: list[str] = []
-    for tag, reference, target_block in cases:
-        text = document_text(
-            individual_record_block(extra_lines=[f"1 {tag} {reference}"]),
-            target_block,
-        )
-        result, payload = run_gedcom(
-            submission_command,
-            {"action": "inspect", "gedcom_text": text},
-            tmp_path,
-        )
-        if _unexpected_result(result.returncode, payload, "invalid_document"):
-            failures.append(tag)
-    assert not failures, f"Inspect pointer target failures: {', '.join(failures)}"
+    text = document_text(
+        individual_record_block(extra_lines=[f"1 {pointer_tag} {reference}"]),
+        target_block,
+    )
+    result, payload = run_gedcom(
+        submission_command,
+        {"action": "inspect", "gedcom_text": text},
+        tmp_path,
+    )
+    assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
+_RENDER_POINTER_TARGET_CASES: list[tuple[str, str]] = [
+    ("FAMS", "@N1@"),
+    ("SUBM", "@I1@"),
+    ("SNOTE", "@I1@"),
+    ("OBJE", "@I1@"),
+    ("SOUR", "@I1@"),
+]
+
+
+@pytest.mark.parametrize(
+    ("pointer_tag", "reference"),
+    _RENDER_POINTER_TARGET_CASES,
+    ids=[case[0] for case in _RENDER_POINTER_TARGET_CASES],
+)
 def test_render_rejects_pointer_to_wrong_record_type(
     submission_command: tuple[str, ...],
     tmp_path: Path,
+    pointer_tag: str,
+    reference: str,
 ) -> None:
-    failures: list[str] = []
-    for tag, reference in [
-        ("FAMS", "@N1@"),
-        ("SUBM", "@I1@"),
-        ("SNOTE", "@I1@"),
-        ("OBJE", "@I1@"),
-        ("SOUR", "@I1@"),
-    ]:
-        dataset = clone_dataset(sample_dataset())
-        dataset["records"][3]["children"].append(node(tag, reference))
-        result, payload = run_gedcom(
-            submission_command,
-            {"action": "render", "dataset": dataset},
-            tmp_path,
-        )
-        if _unexpected_result(result.returncode, payload, "invalid_request"):
-            failures.append(tag)
-    assert not failures, f"Render pointer target failures: {', '.join(failures)}"
+    dataset = clone_dataset(sample_dataset())
+    dataset["records"][3]["children"].append(node(pointer_tag, reference))
+    result, payload = run_gedcom(
+        submission_command,
+        {"action": "render", "dataset": dataset},
+        tmp_path,
+    )
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
 
 
 def test_render_rejects_name_translation_without_lang(
