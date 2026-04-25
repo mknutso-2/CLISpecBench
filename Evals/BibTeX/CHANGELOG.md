@@ -1,5 +1,33 @@
 # BibTeX Eval Changelog
 
+## v1.2.1 — 2026-04-24
+
+Documentation and prompt-contract cleanup from eval-authoring review.
+
+- `prompt/docs/summary.md` now makes `width$` unambiguously
+  cmr10-exact, removing the previous flat-width allowance and
+  matching the byte-exact `alpha.bst` parity contract.
+- Removed pytest/test-helper references from `prompt/docs/summary.md`;
+  domain-facing docs now describe conformance rules without exposing
+  evaluator internals.
+- Moved warning trigger behavior out of
+  `technical-requirements-prompt.md`; the technical prompt now lists
+  canonical warning-kind strings and points to `summary.md` §5.3 for
+  behavior.
+- Reconciled the `--log` schema between the technical prompt and
+  `summary.md` by documenting `reverse_iterations` and
+  `execute_calls` consistently, and updated the reference
+  implementation to emit both counters (previously `REVERSE` was
+  miscounted under `iterations` and `EXECUTE` went uncounted).
+- Cleaned up the `width$` row in `summary.md` §3.4 so its
+  description agrees with the cmr10-exact §8.1 contract rather
+  than describing the width as "approximate".
+- Renamed the reference implementation's `width$` helper to reflect
+  its cmr10-exact behavior.
+- Refreshed `README.md` for v1.2.1, the full test-file list, current
+  375-test collection count, `summary.md` references, and the
+  byte-exact reference-style parity contract.
+
 ## v1.2.0 — 2026-04-24
 
 Eval-authoring rule-3 hardening from a 136-failure classification

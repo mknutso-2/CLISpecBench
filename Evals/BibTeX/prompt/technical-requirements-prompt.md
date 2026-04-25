@@ -59,28 +59,24 @@ Where each warning is:
   "field": "string?", "line": "integer?", "column": "integer?"}
 ```
 
-Top-level JSON key order is not asserted — tests use `.get()`.
+Top-level JSON key order is semantically insignificant.
 Warning arrays preserve the chronological order in which warnings
 were generated.
 
 Warning `kind` values emitted by this tool. The tool emits one of
-these canonical kind strings for every warning; tests assert on
-these exact strings, so a submission that uses a synonym (e.g.
-`"crossref_missing"` instead of `"unresolved_crossref"`) will fail
-the warning-kind checks.
+these canonical kind strings for every warning; these exact strings
+are part of the output contract, so do not use synonyms (for
+example, use `"unresolved_crossref"`, not `"crossref_missing"`).
+The behavioral conditions that produce each warning are specified
+in `docs/summary.md` §5.3.
 
-- `unresolved_crossref` — `crossref` points at a non-existent key.
-- `crossref_cycle` — `crossref` chain contains a cycle.
-- `unresolved_macro` — reference to an unresolved `@string` macro.
-- `duplicate_key` — two `.bib` entries share a citation key.
-- `bst_type_error` — stack type error at runtime on a built-in;
-  the built-in recovers by pushing a default value rather than
-  aborting the run (so tests see the warning and still get a
-  well-formed `.bbl`).
-- `bst_undefined_field` — a `.bst` program accessed a field not
-  declared in the entry type or absent from the current entry.
-- `bst_undefined_function` — a `.bst` program called or assigned
-  to an identifier that was never declared.
+- `unresolved_crossref`
+- `crossref_cycle`
+- `unresolved_macro`
+- `duplicate_key`
+- `bst_type_error`
+- `bst_undefined_field`
+- `bst_undefined_function`
 
 ## Exit codes
 

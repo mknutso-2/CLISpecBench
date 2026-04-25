@@ -77,6 +77,8 @@ std::string emit_log_json(const BstResult& result) {
     }
     o << "],\"iterations\":" << result.log.iterations;
     o << ",\"sorts\":" << result.log.sorts;
+    o << ",\"reverse_iterations\":" << result.log.reverse_iterations;
+    o << ",\"execute_calls\":" << result.log.execute_calls;
     o << ",\"warnings\":[";
     for (std::size_t i = 0; i < result.warnings.size(); ++i) {
         if (i) o << ',';

@@ -217,6 +217,8 @@ struct LogInfo {
     std::vector<std::string> macros_defined;
     std::size_t iterations{0};
     std::size_t sorts{0};
+    std::size_t reverse_iterations{0};
+    std::size_t execute_calls{0};
 };
 
 struct BstResult {

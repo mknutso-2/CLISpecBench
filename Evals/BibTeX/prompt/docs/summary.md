@@ -198,14 +198,10 @@ adds non-trivial state for marginal value when the consuming style
 file usually rewrites the rendered name with explicit separators
 anyway (`plain.bst` / `alpha.bst` / `unsrt.bst` / `abbrv.bst` all
 do this). Implementations MAY emit a single ASCII space at every
-inter-token gap regardless of the §10270 rule. The test suite
-encodes this relaxation explicitly: every multi-token name-part
-assertion folds tie to space before comparison (via the
-`_normalize_separator` helper in `test_name_grammar_exhaustive.py`,
-or via `parse_name_dump` in `conftest.py` for the shared name
-probe). Source-preserved tie / hyphen behavior is exercised by
-the parity-fixture tests in `test_reference_styles.py`, which run
-the historic BibTeX 0.99c output as the reference.
+inter-token gap regardless of the §10270 rule. This relaxation
+applies to direct `format.name$` output for multi-token name parts;
+styles that explicitly insert their own separators still govern the
+final `.bbl` text they write.
 
 Example: the author `"John Paul von~der Leyden"` rendered through
 `{ff}{vv}{ll}` may yield any of (a) `First="John~Paul"`, `von="von~der"`
@@ -312,7 +308,7 @@ The 37 built-in functions:
 | `substring$` | `(str int int → str)` | Pop length, start. Extract substring of `length` chars starting at `start` (1-based). Negative start counts from end. Out-of-range returns an empty string. |
 | `text.length$` | `(str → int)` | Push the "text length" — number of characters, treating brace groups and `\foo{...}` specials as length-1, excluding enclosing braces. |
 | `text.prefix$` | `(str int → str)` | Return the first `n` text-characters (same counting as `text.length$`). |
-| `width$` | `(str → int)` | Push an approximate typeset width in "points-times-100" using a built-in character-width table; used for sort keys. Ignores `\foo` specials, counts brace contents. |
+| `width$` | `(str → int)` | Push the typeset width in "points-times-100" using the cmr10 character-width table (see §8.1); used for sort keys and label sizing. Brace-protected control sequences contribute only their interior width. |
 | `purify$` | `(str → str)` | Strip non-alphanumeric characters, replacing spaces with single spaces. Brace contents are kept (purified recursively). Used for generating labels. |
 
 #### Name formatting
@@ -362,7 +358,7 @@ The 37 built-in functions:
 | Name | Stack effect | Description |
 |---|---|---|
 | `quote$` | `( → str)` | Push the one-character string `"`. |
-| `top$` | `( → )` | Print the stack (for debugging). Silent in v0.2 harness use — a no-op is acceptable. |
+| `top$` | `( → )` | Print the stack for debugging. Debug stack output is not part of the `.bbl`; a no-op is acceptable. |
 | `stack$` | `( → )` | Same as `top$` but pop everything. |
 | `warning$` | `(str → )` | Emit a warning message; continue. |
 
@@ -403,8 +399,6 @@ in the output buffer (`write$` calls that were not followed by
 `newline$` or a wrap), that content MUST be flushed to the `.bbl`
 before exit. An implementation that only flushes on `newline$` /
 wrap and silently drops the trailing bare-write is non-conforming.
-(This invariant is exercised explicitly by
-`test_bare_write_flushes_at_end_of_run` in the test suite.)
 
 ### 3.7 Sort behavior
 
@@ -463,6 +457,8 @@ JSON log:
   "macros_defined": ["name", ...],
   "iterations": integer,
   "sorts": integer,
+  "reverse_iterations": integer,
+  "execute_calls": integer,
   "warnings": [ <warning object> ]
 }
 ```
@@ -488,19 +484,23 @@ Field semantics:
 - `macros_defined`: names of `MACRO` declarations parsed from the
   `.bst` file, plus the predefined month macros (`jan`…`dec`) that
   the tool materializes when the `.bst` doesn't explicitly declare
-  them. Order is not asserted.
+  them. Order is not semantically significant.
 - `iterations`: count of `ITERATE` commands executed. Each
   `ITERATE` increments by 1 regardless of how many entries the
-  iteration processes. Similarly `REVERSE` commands would increment
-  `reverse_iterations` (optional, tool MAY include).
+  iteration processes.
 - `sorts`: count of `SORT` commands executed.
+- `reverse_iterations`: count of `REVERSE` commands executed. Each
+  `REVERSE` increments by 1 regardless of how many entries it
+  processes.
+- `execute_calls`: count of `EXECUTE` commands executed.
 
 ### 5.3 Warning objects
 
 Warnings shape:
 
 ```json
-{"kind": "string", "message": "string", "key": "string?", "field": "string?"}
+{"kind": "string", "message": "string", "key": "string?",
+  "field": "string?", "line": "integer?", "column": "integer?"}
 ```
 
 Warning kinds:
@@ -520,7 +520,7 @@ Warning kinds:
 
 A cited key that does not appear in the `.bib` database is not
 emitted as a warning; instead the key appears in the JSON log
-under `entries_cited_missing` (§5.1), and the iteration skips
+under `entries_cited_missing` (§5.2), and the iteration skips
 or includes it per the style file's own logic.
 
 ### 5.4 Line endings
@@ -567,27 +567,22 @@ exact behavior is documented only by the WEB source. Where the
 source behavior is either tedious to reproduce or unilluminating for
 the stack-interpreter skill this eval measures, this specification
 deliberately approximates. Implementations SHOULD follow the
-approximation rules given here; tests will only assert on behavior
-stated in this section or in §3.5, not on undocumented BibTeX source
-behavior outside these bounds.
+approximation rules given here. Behavior outside this section, §3.5,
+and the authoritative sources is intentionally outside the required
+contract.
 
 ### 8.1 `width$`
 
 `width$` in BibTeX 0.99c uses the cmr10 character-width table,
-producing values in "points × 100" units. Reproducing cmr10
-byte-for-byte is **not required**; either the exact cmr10 table or
-the approximation below is a conforming implementation choice. The
-test suite accepts both:
+producing values in "points × 100" units. Implementations MUST use
+the exact cmr10 values BibTeX 0.99c emits (for example `a=500`,
+space=278, `M=917`, `m=833`) from `bibtex.web` §13
+`char_width[]`. A simplified monotone width approximation is not
+conforming, because the canonical `alpha.bst` style uses `width$`
+to choose the longest bibliography label and that choice is visible
+in `.bbl` output.
 
-- **Exact cmr10** — the values BibTeX 0.99c actually emits (e.g.
-  `a=500`, space=278, `M=917`, `m=833`). Byte-for-byte reproduction
-  of `bibtex.web §13 char_width[]`.
-- **Approximation** — a simplified monotone score:
-  - Alphanumeric characters contribute **500** units each.
-  - The space character contributes **250**.
-  - Any other printable character contributes **300**.
-
-Both interpretations MUST obey the structural rules:
+The exact implementation MUST obey the structural rules:
 
 - Brace groups that begin with `\` (e.g. `{\"o}`) contribute the
   width of their interior minus the control sequence — i.e., the
@@ -596,30 +591,10 @@ Both interpretations MUST obey the structural rules:
   their interior recursively.
 - The empty string and brace-only strings (`""`, `"{}"`) contribute 0.
 
-Tests pin individual values where both interpretations agree (e.g.
-`a = 500` is exact under both), pin value SETS where they disagree
-(e.g. space ∈ {278, 250}), and pin weaker orderings where a flat
-approximation would flatten out an exact distinction (e.g. `M >= m`
-is required since the approximation gives `M == m == 500` and exact
-gives `M > m`).
-
 Two strings with the same printable characters (modulo brace
 protection) MUST compare equal under `width$` for the same
 implementation; `width$` comparisons used for sort keys are
 meaningful to two-decimal-point ordering.
-
-**Reference-style parity caveat.** `alpha.bst` uses `width$` to pick
-the widest entry label for the `\begin{thebibliography}{longest}`
-line in the `.bbl` output, so the `width$` implementation choice
-actually changes which label string gets embedded. The parity
-fixtures in `tests/fixtures/` were regenerated against BibTeX 0.99c
-(cmr10-exact); an implementation that uses the §8.1 approximation
-table will emit a different `longest-label` argument and fail
-byte-exact parity on the `alpha.*.expected.bbl` fixtures even
-though the deep `width$` unit tests pass. Put differently:
-passing both the deep unit tests AND the `alpha` parity tests
-requires cmr10-exact values in `width$`. Submissions that only aim
-for the deep-unit-tests subset may use the approximation freely.
 
 ### 8.2 `change.case$` and LaTeX accent handling
 
@@ -629,8 +604,8 @@ into the content of `{\foo{Bar}}` and case-changes only the inner
 `{Bar}` contents, not the `\foo` control sequence. This
 specification does **not** require that depth of recursion.
 Implementations MAY preserve entire brace groups verbatim regardless
-of whether they begin with `\`. Tests will not assert on the deep
-LaTeX-accent case.
+of whether they begin with `\`. Deep LaTeX-accent case-changing is
+outside this specification's required contract.
 
 **Title-mode (`t`) capitalization rules.** In `t` mode, BibTeX
 preserves (does not lowercase) the first letter of the string AND
@@ -656,7 +631,7 @@ converted to a single ASCII space:
   visual spacing meaning in the typeset form. `-` (hyphen) and
   `~` (non-breaking space tie) are the two sentinel characters
   the historic BibTeX converts to spaces per `bibtex.web §10602`.
-  The test suite pins these two.
+  These two conversions are required.
 
 Brace group handling:
 
@@ -684,7 +659,7 @@ Brace group handling:
   Behavior for control sequences NOT in the table above
   (e.g. `{\foo}`) is not pinned by this spec — bibtex.web has
   intricate rules for single-letter vs multi-letter CS parsing
-  that tests do not exercise.
+  outside this specification's required contract.
 
 - Inside a brace group that begins with `\<name>` followed by its
   own brace-delimited argument (e.g. `{\"o}` for ö), the leading
@@ -696,8 +671,7 @@ Brace group handling:
   contribute nothing.
 
 These rules match the historic BibTeX 0.99c behavior on the
-`btxhak`-documented inputs and are what the parity fixtures
-were generated against.
+`btxhak`-documented inputs.
 
 ### 8.4 `text.length$`
 
@@ -708,11 +682,11 @@ recursively. The outer braces themselves contribute 0.
 
 ### 8.5 `.bbl` output: semantic vs. byte-exact
 
-The tool's `.bbl` output MUST match the spec's semantics — correct
+The tool's `.bbl` output MUST match the spec's semantics: correct
 line wrapping at 79 columns (§3.6), correct output from `write$` /
 `newline$`, correct sort order, correct name formatting per
-`format.name$`. It is **not** required to be byte-for-byte
-compatible with the historic BibTeX 0.99c binary on the above
-approximation points. Tests will avoid constructing inputs whose
-expected output depends on the specific cmr10 width table or on
-deeply nested LaTeX-accent case-changing.
+`format.name$`, and cmr10-exact `width$` behavior (§8.1). This
+section does not grant a general "close enough" compatibility mode:
+the only allowed divergences from historic BibTeX behavior are the
+explicit bounded approximations in this section, such as the deep
+LaTeX-accent case-changing relaxation in §8.2.

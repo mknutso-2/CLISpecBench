@@ -310,7 +310,7 @@ constexpr int kCmr10Width[128] = {
 //  - a `{\foo...}` special-character group at brace-level 1 contributing the
 //    width of its interior (with the specials `\ss`, `\ae`, `\oe`, `\AE`,
 //    `\OE` mapped to the five predefined widths 500, 722, 778, 903, 1014).
-int approximate_width(std::string_view s) {
+int cmr10_width(std::string_view s) {
     auto special_width = [](std::string_view ctrl) -> int {
         if (ctrl == "ss") return 500;
         if (ctrl == "ae") return 722;
@@ -350,7 +350,7 @@ int approximate_width(std::string_view s) {
                     // group (after the control word) recursively.
                     std::size_t end = (k < s.size()) ? k : s.size();
                     std::string_view inner = s.substr(j, end - j);
-                    total += approximate_width(inner);
+                    total += cmr10_width(inner);
                 }
                 i = (k < s.size()) ? k + 1 : k;
                 continue;
@@ -834,7 +834,7 @@ struct Interpreter {
         };
         builtins["width$"] = [this]{
             auto s = pop_str();
-            push(BstValue::make_integer(approximate_width(s.str)));
+            push(BstValue::make_integer(cmr10_width(s.str)));
         };
         builtins["purify$"] = [this]{
             auto s = pop_str();
@@ -1161,6 +1161,7 @@ struct Interpreter {
                 case BstProgram::CommandKind::Execute:
                     has_current_entry = false;
                     invoke_function(cmd.target);
+                    result.log.execute_calls++;
                     break;
                 case BstProgram::CommandKind::Iterate:
                     if (!read_done) return ParseError{"bst", cmd.line, cmd.column, "ITERATE before READ"};
@@ -1180,7 +1181,7 @@ struct Interpreter {
                         invoke_function(cmd.target);
                     }
                     has_current_entry = false;
-                    result.log.iterations++;
+                    result.log.reverse_iterations++;
                     break;
                 case BstProgram::CommandKind::Sort: {
                     if (!read_done) return ParseError{"bst", cmd.line, cmd.column, "SORT before READ"};
