@@ -47,9 +47,7 @@ class _StubAdapter(AgentAdapter):
     def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
         return {}
 
-    def invoke_command(
-        self, prompt_path: PurePosixPath, work_dir: PurePosixPath
-    ) -> list[str]:
+    def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         return ["codex", "exec"]
 
     def parse_token_usage(self, container_fs: Path, container_logs: str = "") -> None:

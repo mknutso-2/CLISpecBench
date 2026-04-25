@@ -16,7 +16,9 @@ log = logging.getLogger(__name__)
 
 DOCKERFILE = (
     Path(__file__).resolve().parent.parent.parent.parent
-    / "docker" / "agents" / "copilot-cli.Dockerfile"
+    / "docker"
+    / "agents"
+    / "copilot-cli.Dockerfile"
 )
 
 # Path inside the container where OTel data is written as JSON-lines
@@ -81,7 +83,9 @@ class CopilotCLIAdapter(AgentAdapter):
         return self._effort
 
     def invoke_command(
-        self, prompt_path: PurePosixPath, work_dir: PurePosixPath,
+        self,
+        prompt_path: PurePosixPath,
+        work_dir: PurePosixPath,
     ) -> list[str]:
         # Copilot CLI's -p flag takes a literal text argument (not stdin),
         # so we use command substitution to read the prompt file.
@@ -91,7 +95,8 @@ class CopilotCLIAdapter(AgentAdapter):
         if self._effort:
             flags += f' --effort "{self._effort}"'
         return [
-            "bash", "-c",
+            "bash",
+            "-c",
             f'cd "{work_dir}" && copilot -p "$(cat {prompt_path})" {flags}',
         ]
 
@@ -500,9 +505,7 @@ def _extract_otel_metrics(record: Any) -> list[dict[str, Any]]:
         payload = record_d.get(wrapped)
         if isinstance(payload, list):
             payload_list = cast(list[Any], payload)
-            metrics.extend(
-                [cast(dict[str, Any], m) for m in payload_list if isinstance(m, dict)]
-            )
+            metrics.extend([cast(dict[str, Any], m) for m in payload_list if isinstance(m, dict)])
     return metrics
 
 
@@ -546,9 +549,7 @@ def _extract_otel_spans(record: Any) -> list[dict[str, Any]]:
             spans.append(cast(dict[str, Any], payload))
         elif isinstance(payload, list):
             payload_list = cast(list[Any], payload)
-            spans.extend(
-                [cast(dict[str, Any], s) for s in payload_list if isinstance(s, dict)]
-            )
+            spans.extend([cast(dict[str, Any], s) for s in payload_list if isinstance(s, dict)])
     return spans
 
 
@@ -615,7 +616,9 @@ def _discover_gh_token() -> str | None:
     try:
         result = subprocess.run(
             ["gh", "auth", "token"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         token = result.stdout.strip()
         if result.returncode == 0 and token:

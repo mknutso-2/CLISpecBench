@@ -14,7 +14,9 @@ log = logging.getLogger(__name__)
 
 DOCKERFILE = (
     Path(__file__).resolve().parent.parent.parent.parent
-    / "docker" / "agents" / "gemini-cli.Dockerfile"
+    / "docker"
+    / "agents"
+    / "gemini-cli.Dockerfile"
 )
 
 
@@ -77,17 +79,17 @@ class GeminiCLIAdapter(AgentAdapter):
         # Copy staged auth files into a writable ~/.gemini/ and seed
         # projects.json before running gemini.
         setup = (
-            'mkdir -p /root/.gemini'
-            ' && cp /tmp/gemini-auth/* /root/.gemini/'
-            ' && echo \'{"projects":{}}\' > /root/.gemini/projects.json'
+            "mkdir -p /root/.gemini"
+            " && cp /tmp/gemini-auth/* /root/.gemini/"
+            " && echo '{\"projects\":{}}' > /root/.gemini/projects.json"
         )
         flags = "--yolo --output-format stream-json"
         if self._model:
             flags += f' --model "{self._model}"'
         return [
-            "bash", "-c",
-            f'{setup} && cd "{work_dir}" && cat "{prompt_path}" '
-            f"| gemini {flags}",
+            "bash",
+            "-c",
+            f'{setup} && cd "{work_dir}" && cat "{prompt_path}" | gemini {flags}',
         ]
 
     def parse_token_usage(

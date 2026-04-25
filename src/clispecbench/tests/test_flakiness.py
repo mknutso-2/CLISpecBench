@@ -19,8 +19,7 @@ from clispecbench.harness.results import (
 def _make_run(outcomes: dict[str, str]) -> RunResult:
     """Build a minimal RunResult with the given {node_id: outcome} tests."""
     tests = [
-        TestOutcome(node_id=nid, outcome=o, duration_seconds=0.0)
-        for nid, o in outcomes.items()
+        TestOutcome(node_id=nid, outcome=o, duration_seconds=0.0) for nid, o in outcomes.items()
     ]
     summary = TestSummary()
     for t in tests:

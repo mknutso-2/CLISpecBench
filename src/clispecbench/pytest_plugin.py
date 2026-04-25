@@ -141,8 +141,7 @@ def eval_language(request: pytest.FixtureRequest) -> str:
     language = cast(str | None, request.config.getoption("--language"))
     if language is None:
         raise pytest.UsageError(
-            "--language is required. Choose one of: "
-            + ", ".join(SUPPORTED_LANGUAGES)
+            "--language is required. Choose one of: " + ", ".join(SUPPORTED_LANGUAGES)
         )
     return language
 

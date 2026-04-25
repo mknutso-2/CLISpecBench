@@ -47,8 +47,7 @@ class TestComputeSubscores:
         """The point of storing numerator+denominator: 0/28 is diagnostic,
         0.000 is not."""
         tests = [
-            _outcome(f"tests/test_cutter_radius_compensation.py::t{i}", "failed")
-            for i in range(28)
+            _outcome(f"tests/test_cutter_radius_compensation.py::t{i}", "failed") for i in range(28)
         ]
         scores = compute_subscores(tests)
         assert scores["subscore.cutter_radius_compensation.passed"] == 0.0

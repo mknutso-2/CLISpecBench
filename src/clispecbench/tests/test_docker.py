@@ -27,9 +27,7 @@ class TestContainerConfig:
 
     def test_volumes_can_be_set(self) -> None:
         vols = {"/host/path": {"bind": "/container/path", "mode": "ro"}}
-        config = ContainerConfig(
-            image="test", environment={}, command=["echo"], volumes=vols
-        )
+        config = ContainerConfig(image="test", environment={}, command=["echo"], volumes=vols)
         assert config.volumes == vols
 
 
@@ -97,9 +95,10 @@ class TestResolveDockerClient:
             Mock(return_value=tcp_client),
         )
 
-        with caplog.at_level(logging.WARNING), pytest.raises(
-            docker_errors.DockerException
-        ) as exc_info:
+        with (
+            caplog.at_level(logging.WARNING),
+            pytest.raises(docker_errors.DockerException) as exc_info,
+        ):
             _resolve_docker_client()
 
         message = str(exc_info.value)
@@ -124,9 +123,10 @@ class TestResolveDockerClient:
             Mock(side_effect=default_error),
         )
 
-        with caplog.at_level(logging.WARNING), pytest.raises(
-            docker_errors.DockerException
-        ) as exc_info:
+        with (
+            caplog.at_level(logging.WARNING),
+            pytest.raises(docker_errors.DockerException) as exc_info,
+        ):
             _resolve_docker_client()
 
         message = str(exc_info.value)
@@ -203,9 +203,7 @@ class TestStartAndWait:
         assert run.timed_out is True
         container.kill.assert_called_once_with()
 
-    def test_wait_connection_error_with_urllib3_read_timeout_is_reported_as_timeout(
-        self
-    ) -> None:
+    def test_wait_connection_error_with_urllib3_read_timeout_is_reported_as_timeout(self) -> None:
         timeout_error = requests_exceptions.ConnectionError("timed out")
         timeout_error.__cause__ = urllib3_exceptions.ReadTimeoutError(
             cast(Any, None),

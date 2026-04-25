@@ -70,6 +70,7 @@ def _run_in_container(
     if user:
         # Use base64 encoding to avoid shell quoting issues with su -c
         import base64
+
         encoded = base64.b64encode(command.encode()).decode()
         cmd = ["bash", "-c", f"echo {encoded} | base64 -d | su {user} -s /bin/bash"]
     else:
@@ -128,7 +129,9 @@ class TestClaudeCodeBashTool:
     def test_agent_can_run_basic_commands(self) -> None:
         """The agent user can execute simple shell commands."""
         exit_code, logs = _run_in_container(
-            CLAUDE_IMAGE, "echo hello && whoami", user="agent",
+            CLAUDE_IMAGE,
+            "echo hello && whoami",
+            user="agent",
         )
         assert exit_code == 0, f"Basic command failed: {logs}"
         assert "hello" in logs
@@ -170,7 +173,8 @@ class TestClaudeCodeBashTool:
                 image=CLAUDE_IMAGE,
                 environment={},
                 command=[
-                    "bash", "-c",
+                    "bash",
+                    "-c",
                     # Ensure the .claude dir exists and is owned by agent,
                     # then verify both: credential is readable and session-env
                     # can be created.
@@ -193,14 +197,15 @@ class TestClaudeCodeBashTool:
             exit_code, logs = sandbox.run_oneshot(config, timeout_seconds=15)
 
         assert exit_code == 0, (
-            f"session-env creation failed with credential file mount "
-            f"(exit={exit_code}): {logs}"
+            f"session-env creation failed with credential file mount (exit={exit_code}): {logs}"
         )
 
     def test_agent_can_run_cmake(self) -> None:
         """cmake is available to the agent user."""
         exit_code, logs = _run_in_container(
-            CLAUDE_IMAGE, "cmake --version", user="agent",
+            CLAUDE_IMAGE,
+            "cmake --version",
+            user="agent",
         )
         assert exit_code == 0, f"cmake not available: {logs}"
         assert "cmake version" in logs
@@ -208,7 +213,9 @@ class TestClaudeCodeBashTool:
     def test_agent_can_run_gpp(self) -> None:
         """g++ is available to the agent user."""
         exit_code, logs = _run_in_container(
-            CLAUDE_IMAGE, "g++-14 --version", user="agent",
+            CLAUDE_IMAGE,
+            "g++-14 --version",
+            user="agent",
         )
         assert exit_code == 0, f"g++ not available: {logs}"
         assert "g++" in logs.lower()
@@ -221,19 +228,22 @@ class TestClaudeCodeBashTool:
         with tempfile.TemporaryDirectory(prefix="cpp-test-") as td:
             src = Path(td) / "test.cpp"
             src.write_text(
-                '#include <iostream>\n'
-                'int main() { std::cout << "compiled ok" << std::endl; }\n'
+                '#include <iostream>\nint main() { std::cout << "compiled ok" << std::endl; }\n'
             )
 
             config = ContainerConfig(
                 image=CLAUDE_IMAGE,
                 environment={},
-                command=["bash", "-c", (
-                    "chown agent:agent /tmp/test.cpp"
-                    " && su agent -c '"
-                    "g++-14 -std=c++20 -o /tmp/test /tmp/test.cpp && /tmp/test"
-                    "'"
-                )],
+                command=[
+                    "bash",
+                    "-c",
+                    (
+                        "chown agent:agent /tmp/test.cpp"
+                        " && su agent -c '"
+                        "g++-14 -std=c++20 -o /tmp/test /tmp/test.cpp && /tmp/test"
+                        "'"
+                    ),
+                ],
                 network_mode="none",
             )
             sandbox = DockerSandbox()
@@ -312,12 +322,16 @@ class TestBaseImageToolchain:
         config = ContainerConfig(
             image=BASE_IMAGE,
             environment={},
-            command=["bash", "-c", (
-                "cd /tmp/proj/build"
-                " && cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1"
-                " && cmake --build . 2>&1"
-                " && ./smoke"
-            )],
+            command=[
+                "bash",
+                "-c",
+                (
+                    "cd /tmp/proj/build"
+                    " && cmake .. -DCMAKE_BUILD_TYPE=Release 2>&1"
+                    " && cmake --build . 2>&1"
+                    " && ./smoke"
+                ),
+            ],
             network_mode="none",
         )
 

@@ -159,7 +159,8 @@ def publish_result(
     target_dir.mkdir(parents=True, exist_ok=True)
 
     target_path = (
-        existing if (existing and force)
+        existing
+        if (existing and force)
         else target_dir / f"run{next_published_run_number(target_dir)}.json"
     )
 

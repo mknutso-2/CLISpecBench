@@ -24,9 +24,15 @@ from clispecbench.harness.results import (
 )
 
 
-def _make_result_file(path: Path, *, run_uid: str, task: str = "rs274-cpp",
-                     agent: str = "claude-code", model: str | None = "claude-opus-4-7",
-                     effort: str | None = "max") -> RunResult:
+def _make_result_file(
+    path: Path,
+    *,
+    run_uid: str,
+    task: str = "rs274-cpp",
+    agent: str = "claude-code",
+    model: str | None = "claude-opus-4-7",
+    effort: str | None = "max",
+) -> RunResult:
     """Write a minimal RunResult to ``path`` and return it."""
     result = RunResult(
         metadata=RunMetadata(
@@ -92,9 +98,7 @@ def test_publish_writes_first_run_file_and_strips_artifacts(tmp_path: Path) -> N
         last_message="Claims complete; built cleanly.",
     )
 
-    expected = (
-        published_root / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max" / "run1.json"
-    )
+    expected = published_root / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max" / "run1.json"
     assert target == expected
     payload = json.loads(target.read_text(encoding="utf-8"))
     assert payload["metadata"]["run_uid"] == "uid-1"
@@ -144,7 +148,10 @@ def test_publish_with_force_overwrites_duplicate(tmp_path: Path) -> None:
     first = tmp_path / "a" / "result.json"
     _make_result_file(first, run_uid="shared-uid")
     first_target = publish_result(
-        first, published_root, status="Complete", last_message="first",
+        first,
+        published_root,
+        status="Complete",
+        last_message="first",
     )
 
     second = tmp_path / "b" / "result.json"
@@ -188,9 +195,7 @@ def test_find_duplicate_publication_tolerates_corrupt_files(tmp_path: Path) -> N
     (published / "run1.json").write_text("not json at all")
     (published / "run2.json").write_text("[]")
     (published / "run3.json").write_text('{"metadata": null}')
-    (published / "run4.json").write_text(
-        json.dumps({"metadata": {"run_uid": "present-uid"}})
-    )
+    (published / "run4.json").write_text(json.dumps({"metadata": {"run_uid": "present-uid"}}))
 
     assert find_duplicate_publication(tmp_path / "published", "missing") is None
     assert find_duplicate_publication(tmp_path / "published", "present-uid") == (
@@ -208,7 +213,10 @@ def test_publish_ignores_corrupt_neighbors_when_scanning(tmp_path: Path) -> None
     source = tmp_path / "t" / "result.json"
     _make_result_file(source, run_uid="fresh-uid")
     target = publish_result(
-        source, published_root, status="Complete", last_message="clean publish",
+        source,
+        published_root,
+        status="Complete",
+        last_message="clean publish",
     )
     assert target.exists()
     assert target.name == "run2.json"  # run1.json is the corrupt one; we skip to run2
@@ -234,7 +242,11 @@ def test_publish_rejects_when_invariant_broken(tmp_path: Path) -> None:
 
     with pytest.raises(PublishError, match="more than one published file"):
         publish_result(
-            source, published_root, status="Complete", last_message="x", force=True,
+            source,
+            published_root,
+            status="Complete",
+            last_message="x",
+            force=True,
         )
 
 
@@ -254,7 +266,8 @@ def test_find_duplicate_publications_returns_all_matches(tmp_path: Path) -> None
 
 
 def test_publish_warns_on_missing_commentary(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     """Unknown commentary slug warns but does not block (same-PR workflow)."""
     import logging
@@ -272,13 +285,12 @@ def test_publish_warns_on_missing_commentary(
         )
 
     messages = [r.getMessage() for r in caplog.records]
-    assert any(
-        "commentary slug" in m and "does-not-exist" in m for m in messages
-    )
+    assert any("commentary slug" in m and "does-not-exist" in m for m in messages)
 
 
 def test_publish_with_matching_commentary_does_not_warn(
-    tmp_path: Path, caplog: pytest.LogCaptureFixture,
+    tmp_path: Path,
+    caplog: pytest.LogCaptureFixture,
 ) -> None:
     import logging
 
@@ -292,7 +304,10 @@ def test_publish_with_matching_commentary_does_not_warn(
 
     with caplog.at_level(logging.WARNING, logger="clispecbench.harness.publish"):
         publish_result(
-            source, published_root, status="Complete", last_message="x",
+            source,
+            published_root,
+            status="Complete",
+            last_message="x",
             commentary="my-slug",
         )
 

@@ -123,10 +123,18 @@ def _cmd_run(args: argparse.Namespace) -> None:
             # Write a progress file next to the results so external observers
             # can tell the eval is alive and how far along it is without
             # parsing stdout.
-            progress_path = result_path(
-                output_dir, task.task_id, adapter.name,
-                run_number, adapter.model, adapter.effort, eval_num,
-            ).parent.parent / "progress.txt"
+            progress_path = (
+                result_path(
+                    output_dir,
+                    task.task_id,
+                    adapter.name,
+                    run_number,
+                    adapter.model,
+                    adapter.effort,
+                    eval_num,
+                ).parent.parent
+                / "progress.txt"
+            )
             progress_path.write_text(
                 f"run {run_number}/{num_runs} completed\n"
                 f"last: {result.test_summary.passed}/{result.test_summary.total} "
@@ -282,8 +290,7 @@ def _print_flakiness(results: list[tuple[RunResult, Path]]) -> None:
             if "E" in pattern:
                 note = "  (likely a crashed run, not per-test flakiness)"
             print(
-                f"  {len(report.flaky)} tests all flipped identically "
-                f"with pattern {pattern}{note}"
+                f"  {len(report.flaky)} tests all flipped identically with pattern {pattern}{note}"
             )
             print(
                 f"  ({report.stable_count} stable, {len(report.flaky)} flaky "
@@ -392,8 +399,7 @@ def _cmd_results(args: argparse.Namespace) -> None:
             _print_breakdown(results)
         else:
             print(
-                f"--breakdown does not support --format {args.format} "
-                "(use 'table' or 'csv')",
+                f"--breakdown does not support --format {args.format} (use 'table' or 'csv')",
                 file=sys.stderr,
             )
             sys.exit(2)
@@ -518,8 +524,10 @@ def _cmd_backfill_subscores(args: argparse.Namespace) -> None:
 
     print()
     verb = "would update" if args.dry_run else "updated"
-    print(f"{verb}: {n_updated}   skipped-existing: {n_skipped_existing}   "
-          f"skipped-empty: {n_skipped_notests}   errors: {n_errors}")
+    print(
+        f"{verb}: {n_updated}   skipped-existing: {n_skipped_existing}   "
+        f"skipped-empty: {n_skipped_notests}   errors: {n_errors}"
+    )
 
 
 def _cmd_hash(args: argparse.Namespace) -> None:
