@@ -586,28 +586,19 @@ def test_full_circle_arc_duration(
     assert len(arc_entries) == 4
 
 
-def test_full_circle_arc_no_axis_words(
+def test_full_circle_arc_with_explicit_axis_words_returns_to_start(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    """Center-format arc with no in-plane axis words → full circle.
+    """Center-format arc with endpoint equal to current point → full circle.
 
-    Input: ``G2 I-1 J0`` with no X or Y word. Expected behavior: endpoint
-    equals start point, producing a full circle.
-
-    PASS-RATE NOTE (2026-04-18): 25 passes / 243 attempts across all
-    models (see CHANGELOG "Proposed"). This test contradicts the prose
-    spec: RS274 §3.5.3.2 explicitly lists "X and Y are both omitted" as
-    a hard error for G17 center-format arcs. A spec-conformant agent
-    rejects this input; the test assumes an unstated "when both in-plane
-    axis words are omitted, the endpoint equals the current point"
-    rule. (The previous docstring cited "§3.5.17.3", but §3.5.17 is
-    "Set Distance Mode — G90 and G91" and has no subsections relevant
-    to arcs.)
+    RS274 §3.5.3.2 permits the endpoint to equal the current point, but
+    G17 center-format arcs still require at least one in-plane axis word.
+    This input names the return point explicitly with X1 Y0.
     """
     _, _, trace = run_rs274_trace(
         submission_command,
-        input_gcode="G0 X1\nG2 I-1 J0 F60\n",
+        input_gcode="G0 X1\nG2 X1 Y0 I-1 J0 F60\n",
         trace_time_step=2.0,
         tmp_path=tmp_path,
     )

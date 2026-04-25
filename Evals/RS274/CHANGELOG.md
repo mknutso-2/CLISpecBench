@@ -2,34 +2,6 @@
 
 ## Proposed (not yet applied)
 
-### Resolve full-circle arc inconsistency with §3.5.3.2
-
-`test_trace_stepping.py::test_full_circle_arc_no_axis_words` passed 25 /
-243 times across all models. The test runs `G2 I-1 J0` with no X or Y
-word and expects a full circle (endpoint = start point). RS274
-§3.5.3.2 explicitly lists "X and Y are both omitted" as a hard error
-for G17 center-format arcs (`RS274NGC.md` lines 1659–1660). The test's
-prior docstring cited "§3.5.17.3," but §3.5.17 is "Set Distance Mode —
-G90 and G91" and has no bearing on arcs. A spec-conformant agent
-rejects this input as an error and fails this test.
-
-Proposed options (not yet chosen):
-
-- **Option A — remove the test.** Drop `test_full_circle_arc_no_axis_words`.
-  Agents cannot be asked to rederive full-circle-when-axes-omitted from
-  the spec as given.
-- **Option B — document the simulator convention.** Add a sentence to
-  `base-prompt.md` or `technical-requirements-prompt.md` that under this
-  simulator, when both in-plane axis words are omitted on a center-format
-  arc, the endpoint equals the current point (full circle). This would
-  justify the test without editing `RS274NGC.md`.
-- **Option C — change the test input.** Replace `G2 I-1 J0` with
-  `G2 X1 Y0 I-1 J0` so it exercises full-circle timing/stepping with
-  explicit axes.
-
-Documentation-only under Options B and C; a test removal under Option A.
-Not applied yet.
-
 ### Clarify G87 back-boring behavior when I/J/K are omitted
 
 `test_trace_stepping.py::test_g87_back_boring_sub_motions` passed 16 /
@@ -265,6 +237,24 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.3 — 2026-04-25
+
+### Changed
+
+- Updated full-circle center-format arc success tests to name the
+  start/end point explicitly with in-plane axis words, e.g.
+  `G2 X1 Y0 I-1 J0`, instead of using `G2 I-1 J0` with both X and Y
+  omitted.
+- Applied the same correction to the position-tracking G2/G3 full-circle
+  cases and renamed their IDs from `*-no-axis-words` to
+  `*-explicit-endpoint`.
+
+### Fixed
+
+- Removed an inconsistency with RS274 §3.5.3.2, which allows a
+  center-format arc endpoint to equal the current point but still requires
+  at least one selected-plane axis word.
 
 ## v3.1.2 — 2026-04-25
 

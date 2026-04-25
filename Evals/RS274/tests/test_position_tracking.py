@@ -298,23 +298,23 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
         {"x": 4.0, "y": 0.0, "z": 1.0},
     ),
     (
-        "g2-center-format-full-circle-no-axis-words",
+        "g2-center-format-full-circle-explicit-endpoint",
         ZERO_OFFSET_P1_SETUP
         +
         "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
-        "G2 I-1.0 J0.0 F60\n",
+        "G2 X1.0 Y0.0 I-1.0 J0.0 F60\n",
         {"x": 1.0, "y": 0.0, "z": 5.0},
     ),
     (
-        "g3-center-format-full-circle-no-axis-words",
+        "g3-center-format-full-circle-explicit-endpoint",
         ZERO_OFFSET_P1_SETUP
         +
         "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0\n"
-        "G3 I-1.0 J0.0 F60\n",
+        "G3 X1.0 Y0.0 I-1.0 J0.0 F60\n",
         {"x": 1.0, "y": 0.0, "z": 5.0},
     ),
     (
