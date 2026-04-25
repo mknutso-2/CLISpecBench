@@ -7,8 +7,11 @@
 #
 # Auth files:
 #   ~/.claude/.credentials.json  — OAuth tokens
-#   ~/.claude.json               — config file (must be mounted or stdout
-#                                  gets warning messages mixed into output)
+#
+# Note: ~/.claude.json is deliberately NOT mounted — it caches the user's
+# claude.ai connector list (Gmail / GCal / Drive) and would leak `mcp__*`
+# tools into the agent's tool catalog, contaminating eval runs. The CLI
+# runs cleanly without it on current versions.
 #
 # Run from Git Bash:
 #   bash scripts/smoke-test-claude.sh
@@ -20,7 +23,6 @@ source "$SCRIPT_DIR/smoke-test-common.sh"
 echo "--- Testing: Claude Code ---"
 $DOCKER_CMD run --rm \
     -v "${WIN_HOME}/.claude:/root/.claude:ro" \
-    -v "${WIN_HOME}/.claude.json:/root/.claude.json:ro" \
     clispecbench-claude-code:latest \
     claude --print 'respond with just the word hello'
 echo "PASS: Claude Code"

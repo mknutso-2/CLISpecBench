@@ -277,13 +277,21 @@ agent has different requirements (verified via smoke testing):
 
 | Agent | Host files | Mount strategy |
 |-------|-----------|----------------|
-| Claude Code | `~/.claude/` (read-only), `~/.claude.json` (read-only) | Direct `:ro` bind mounts |
+| Claude Code | `~/.claude/.credentials.json` (read-only), `~/.claude/settings.json` (read-only) | Mount the two files individually `:ro` |
 | Codex CLI | `~/.codex/auth.json` (read-only, file only) | Mount single file `:ro`; rest of `.codex/` stays writable |
 | Gemini CLI | `~/.gemini/oauth_creds.json`, `google_accounts.json`, `settings.json` | Copy to writable dir at startup; seed `projects.json` |
 
 Notes:
-- Claude Code needs `~/.claude.json` (config file) mounted or its warning
-  messages corrupt stdout.
+- Claude Code: `~/.claude.json` is deliberately **not** mounted. That host
+  file caches the user's claude.ai connector registrations (Gmail / GCal /
+  Drive MCP servers under `claudeAiMcpEverConnected`); mounting it leaked
+  those connector names into the in-container session's `tools` list and
+  `mcp_servers` advertisement, contaminating eval runs. Verified empirically
+  that the CLI runs cleanly without the file (claude-code 2.1.120) — no
+  warnings on stdout/stderr, `mcp_servers:[]`, no `mcp__*` tools advertised.
+- Mounting `~/.claude/` as a directory is also avoided: the CLI needs to
+  create `session-env/` under it at runtime, so the directory itself must
+  stay writable. Hence the per-file mount strategy.
 - Codex requires `ca-certificates` and `git` installed in the container.
 - Gemini CLI needs a writable `~/.gemini/` directory (writes `projects.json`
   at startup), so auth files are copied in rather than mounted read-only.

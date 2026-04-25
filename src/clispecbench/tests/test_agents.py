@@ -58,9 +58,10 @@ class TestClaudeCodeCredentialMounts:
         # Settings
         assert "/home/user/.claude/settings.json" in mounts
         assert mounts["/home/user/.claude/settings.json"]["mode"] == "ro"
-        # Legacy config
-        assert "/home/user/.claude.json" in mounts
-        assert mounts["/home/user/.claude.json"]["bind"] == "/home/agent/.claude.json"
+        # ~/.claude.json must NOT be mounted — it caches the host's claude.ai
+        # connector list (Gmail / GCal / Drive) which would leak as advertised
+        # `mcp__*` tools into the in-container session.
+        assert "/home/user/.claude.json" not in mounts
 
 
 class TestCodexCLICredentialMounts:

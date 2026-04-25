@@ -113,16 +113,20 @@ class ClaudeCodeAdapter(AgentAdapter):
         # Claude Code needs to create ~/.claude/session-env/ at runtime, so
         # the directory itself must be writable.  Mounting the dir as ro
         # causes every Bash tool invocation to fail with ENOENT.
+        #
+        # Deliberately do NOT mount ~/.claude.json. That host file caches the
+        # user's claude.ai connector list (Gmail / GCal / Drive MCP servers)
+        # under `claudeAiMcpEverConnected`; mounting it leaks those connector
+        # names into the in-container session's `tools` and `mcp_servers`
+        # advertisements, contaminating the eval. Empirically (verified at
+        # claude-code 2.1.120) the CLI runs cleanly without the file — no
+        # warnings on stdout/stderr, `mcp_servers:[]`, no `mcp__*` tools.
         mounts: dict[str, dict[str, str]] = {}
         for filename in (".credentials.json", "settings.json"):
             mounts[(host_home / ".claude" / filename).as_posix()] = {
                 "bind": f"{home}/.claude/{filename}",
                 "mode": "ro",
             }
-        mounts[(host_home / ".claude.json").as_posix()] = {
-            "bind": f"{home}/.claude.json",
-            "mode": "ro",
-        }
         return mounts
 
     @property
