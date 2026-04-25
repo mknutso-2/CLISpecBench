@@ -21,9 +21,8 @@ Summary of the §3.2 matrix pinned here:
                         §3.2.5 prose (METHOD alone conveys cancellation).
 
 When required iTIP properties are missing or inconsistent, the parser
-SHOULD emit an `itip_missing_property` warning. The specific `message`
-wording is not asserted generically; tests that DO pin message content
-(e.g. CANCEL STATUS) call it out explicitly.
+SHOULD emit an `itip_missing_property` warning. Warning `message`
+wording is informational and is not asserted.
 
 The calendar-level METHOD is surfaced as `calendar.method` in the JSON
 schema (see v0.2 feature tests) so that downstream tooling can

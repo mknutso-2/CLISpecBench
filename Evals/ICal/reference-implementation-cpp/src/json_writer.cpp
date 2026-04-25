@@ -117,6 +117,9 @@ void emit_warning(std::ostringstream& o, const Warning& w) {
     o << ",\"message\":"; jstr(o, w.message);
     if (w.uid.has_value()) { o << ",\"uid\":"; jstr(o, *w.uid); }
     if (w.value.has_value()) { o << ",\"value\":"; jstr(o, *w.value); }
+    if (w.method.has_value()) { o << ",\"method\":"; jstr(o, *w.method); }
+    if (w.component.has_value()) { o << ",\"component\":"; jstr(o, *w.component); }
+    if (w.property.has_value()) { o << ",\"property\":"; jstr(o, *w.property); }
     o << '}';
 }
 

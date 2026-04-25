@@ -14,12 +14,12 @@ reused that matrix for VTODO and VJOURNAL — which is wrong:
 
 These tests exercise the three new per-component matrices. All of
 them assert on the `itip_missing_property` warning kind (same kind
-for every iTIP rule violation; the message differentiates them).
+for every iTIP rule violation; structured warning metadata
+differentiates the individual RFC table rows).
 """
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 from typing import Any, cast
 
@@ -30,76 +30,34 @@ TAIL = "END:VCALENDAR\n"
 
 
 def _warn_kinds(out: dict[str, Any]) -> list[str]:
-    raw = out.get("warnings") or []
+    raw = out.get("warnings")
     if not isinstance(raw, list):
         return []
     return [w.get("kind", "") for w in cast(list[dict[str, Any]], raw)]
 
 
-def _warn_messages(out: dict[str, Any]) -> list[str]:
-    raw = out.get("warnings") or []
+def _warnings(out: dict[str, Any]) -> list[dict[str, Any]]:
+    raw = out.get("warnings")
     if not isinstance(raw, list):
         return []
-    return [w.get("message", "") for w in cast(list[dict[str, Any]], raw)]
+    return cast(list[dict[str, Any]], raw)
 
 
-_ALL_ITIP_PROPERTY_TOKENS = (
-    "UID", "DTSTAMP", "DTSTART", "DTEND", "ORGANIZER", "ATTENDEE",
-    "SEQUENCE", "SUMMARY", "PRIORITY", "DESCRIPTION", "STATUS",
-    "PARTSTAT",
-)
-
-# Compile once: token-boundary regex for each property identifier.
-# We use a NEGATIVE look-around for ``[\w-]`` on both sides rather
-# than Python's built-in ``\b``. The built-in is wrong here because
-# ``-`` counts as a NON-word character, so ``\bPRIORITY\b`` still
-# matches inside ``X-PRIORITY`` (hyphen-word boundary is a ``\b``
-# match point). Real RFC 5545 property names can start with ``X-``
-# for vendor extensions, and we want those to be rejected as
-# property-token hits. The custom lookaround treats both underscore
-# (``_``) and hyphen (``-``) as token-continuation chars.
-_TOKEN_RES: dict[str, re.Pattern[str]] = {
-    tok: re.compile(r"(?<![\w-])" + tok + r"(?![\w-])")
-    for tok in _ALL_ITIP_PROPERTY_TOKENS
-}
-
-
-def _warn_mentions_method_component_property(
-    messages: list[str], method: str, component: str, property_name: str
+def _has_itip_warning(
+    warnings: list[dict[str, Any]],
+    method: str,
+    component: str,
+    property_name: str | None = None,
 ) -> bool:
-    """Check the non-VEVENT iTIP warning contract per
-    technical-requirements-prompt.md §Warning-schema. A conforming
-    message MUST:
-
-      1. Contain the adjacent two-word phrase ``<METHOD> <COMPONENT>``
-         OR ``<COMPONENT> <METHOD>`` (single ASCII space between).
-      2. Contain the specific RFC property name token under test, as
-         a word-boundary-delimited whole word (so ``X-PRIORITY`` or
-         ``GUID`` do NOT count as PRIORITY / UID hits).
-      3. Contain EXACTLY ONE property token from the allowed list —
-         this rules out the "omnibus message" failure mode where a
-         single warning lists every possible required property and
-         would spuriously satisfy every property-specific test
-         (one warning per missing rule, not one warning per
-         component×method cell).
-
-    Returns True if at least one message in `messages` satisfies all
-    three conditions for the given (method, component, property_name).
-    """
-    pair_a = f"{method} {component}"
-    pair_b = f"{component} {method}"
-    target_re = _TOKEN_RES[property_name]
-    for m in messages:
-        # Rule 1: adjacent phrase, either order.
-        if pair_a not in m and pair_b not in m:
+    for warning in warnings:
+        if warning.get("kind") != "itip_missing_property":
             continue
-        # Rule 2: the specific property under test must appear as a
-        # whole word (not a substring of a longer ident like X-PRIORITY).
-        if not target_re.search(m):
+        if warning.get("method") != method or warning.get("component") != component:
             continue
-        # Rule 3: exactly one property token in the message overall.
-        token_hits = sum(1 for rx in _TOKEN_RES.values() if rx.search(m))
-        if token_hits != 1:
+        if property_name is None:
+            if "property" in warning:
+                continue
+        elif warning.get("property") != property_name:
             continue
         return True
     return False
@@ -125,21 +83,15 @@ def test_vjournal_request_is_undefined_method(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """RFC 5546 §3.5 does not define REQUEST for VJOURNAL. Emitting
-    METHOD:REQUEST on a VJOURNAL-bearing calendar MUST warn. Per
-    the warning contract in tech-reqs, undefined-method messages
-    only need the component name as a substring — the method name
-    is optional for that message variant — so we only require
-    `"VJOURNAL"` here."""
+    METHOD:REQUEST on a VJOURNAL-bearing calendar MUST warn."""
     body = (
         "UID:j1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T100000Z\nSUMMARY:Entry\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _vjournal_calendar("REQUEST", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert any("VJOURNAL" in m for m in msgs), (
-        f"expected a warning mentioning VJOURNAL; got {msgs!r}"
-    )
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "REQUEST", "VJOURNAL"), warnings
 
 
 def test_vjournal_refresh_is_undefined_method(
@@ -148,24 +100,16 @@ def test_vjournal_refresh_is_undefined_method(
     """Same rule for REFRESH — not in the §3.5 table. Fixture
     carries DTSTART, ORGANIZER, and DESCRIPTION so if the impl
     were to fall back to PUBLISH-style validation, it would
-    emit no property-missing warnings. The warning that fires
-    must therefore include the "not defined" wording.
-
-    Note: `itip_missing_property` is the warning kind for BOTH
-    missing-property and undefined-method cases — the method
-    name and "not defined" in the message differentiate them.
-    We check the message text here to isolate the
-    undefined-method path."""
+    emit no property-missing warnings. The structured warning
+    metadata isolates the undefined-method path."""
     body = (
         "UID:j1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T100000Z\nDESCRIPTION:Retro notes\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _vjournal_calendar("REFRESH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert any("VJOURNAL" in m and "not defined" in m for m in msgs), (
-        f"expected a 'not defined for VJOURNAL' warning; got {msgs!r}"
-    )
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "REFRESH", "VJOURNAL"), warnings
 
 
 def test_vjournal_publish_requires_organizer(
@@ -223,10 +167,8 @@ def test_vjournal_publish_requires_description(
         # deliberately missing DESCRIPTION
     )
     out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(
-        msgs, "PUBLISH", "VJOURNAL", "DESCRIPTION"
-    ), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "PUBLISH", "VJOURNAL", "DESCRIPTION"), warnings
 
 
 def test_vjournal_publish_requires_dtstart(
@@ -239,8 +181,8 @@ def test_vjournal_publish_requires_dtstart(
         # deliberately missing DTSTART
     )
     out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VJOURNAL", "DTSTART"), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "PUBLISH", "VJOURNAL", "DTSTART"), warnings
 
 
 def test_vjournal_add_requires_description_and_dtstart(
@@ -253,9 +195,9 @@ def test_vjournal_add_requires_description_and_dtstart(
         # deliberately missing DESCRIPTION AND DTSTART
     )
     out = run_parse(submission_command, _vjournal_calendar("ADD", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "ADD", "VJOURNAL", "DESCRIPTION"), msgs
-    assert _warn_mentions_method_component_property(msgs, "ADD", "VJOURNAL", "DTSTART"), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "ADD", "VJOURNAL", "DESCRIPTION"), warnings
+    assert _has_itip_warning(warnings, "ADD", "VJOURNAL", "DTSTART"), warnings
 
 
 # ---------------------------------------------------------------------------
@@ -279,9 +221,7 @@ def test_vtodo_counter_requires_priority(
 ) -> None:
     """RFC 5546 §3.4.7 COUNTER VTODO PRIORITY row is `1`. A VTODO
     COUNTER without PRIORITY is a matrix violation — this is a VTODO-
-    specific rule not present on VEVENT COUNTER. Warning MUST carry
-    the `COUNTER VTODO` adjacent phrase plus the PRIORITY property
-    token per the warning contract."""
+    specific rule not present on VEVENT COUNTER."""
     body = (
         "UID:t1\nDTSTAMP:20260101T120000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
@@ -290,10 +230,8 @@ def test_vtodo_counter_requires_priority(
         # deliberately missing PRIORITY
     )
     out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(
-        msgs, "COUNTER", "VTODO", "PRIORITY"
-    ), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "COUNTER", "VTODO", "PRIORITY"), warnings
 
 
 def test_vtodo_counter_requires_summary(
@@ -308,10 +246,8 @@ def test_vtodo_counter_requires_summary(
         # deliberately missing SUMMARY
     )
     out = run_parse(submission_command, _vtodo_calendar("COUNTER", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(
-        msgs, "COUNTER", "VTODO", "SUMMARY"
-    ), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "COUNTER", "VTODO", "SUMMARY"), warnings
 
 
 def test_vtodo_counter_with_priority_and_summary_ok(
@@ -342,9 +278,9 @@ def test_vtodo_publish_requires_organizer(
         # deliberately missing ORGANIZER — all other required rows present
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VTODO", "ORGANIZER"), (
-        f"expected an isolated ORGANIZER warning on VTODO PUBLISH; got {msgs!r}"
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "PUBLISH", "VTODO", "ORGANIZER"), (
+        f"expected an isolated ORGANIZER warning on VTODO PUBLISH; got {warnings!r}"
     )
 
 
@@ -361,9 +297,9 @@ def test_vtodo_publish_requires_priority(
         # missing PRIORITY
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VTODO", "PRIORITY"), (
-        f"expected PRIORITY warning on VTODO PUBLISH; got {msgs!r}"
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "PUBLISH", "VTODO", "PRIORITY"), (
+        f"expected PRIORITY warning on VTODO PUBLISH; got {warnings!r}"
     )
 
 
@@ -382,9 +318,9 @@ def test_vtodo_request_requires_priority_and_summary(
         # deliberately missing PRIORITY AND SUMMARY
     )
     out = run_parse(submission_command, _vtodo_calendar("REQUEST", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VTODO", "PRIORITY"), msgs
-    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VTODO", "SUMMARY"), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "REQUEST", "VTODO", "PRIORITY"), warnings
+    assert _has_itip_warning(warnings, "REQUEST", "VTODO", "SUMMARY"), warnings
 
 
 # ---------------------------------------------------------------------------
@@ -413,8 +349,8 @@ def test_vfreebusy_cancel_is_undefined_method(
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _vfreebusy_calendar("CANCEL", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert any("VFREEBUSY" in m for m in msgs)
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "CANCEL", "VFREEBUSY"), warnings
 
 
 def test_vfreebusy_request_requires_attendee(
@@ -436,35 +372,28 @@ def test_vfreebusy_publish_requires_dtstart_and_dtend(
 ) -> None:
     """All three VFREEBUSY iTIP methods require DTSTART and DTEND
     (§3.3.1/§3.3.2/§3.3.3 tables). Missing DTEND on a PUBLISH is a
-    matrix violation. Per the warning contract, the message MUST
-    carry the adjacent two-word phrase `PUBLISH VFREEBUSY` (or
-    `VFREEBUSY PUBLISH`) plus the property name, with at most one
-    property token in the message — earlier impls emitted
-    `"VFREEBUSY iTIP requires DTEND"` without the method name, which
-    violated the contract."""
+    matrix violation."""
     body = (
         "UID:f1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T000000Z\n"  # no DTEND
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VFREEBUSY", "DTEND"), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "PUBLISH", "VFREEBUSY", "DTEND"), warnings
 
 
-def test_vfreebusy_shared_check_messages_carry_adjacent_phrase(
+def test_vfreebusy_shared_checks_carry_structured_metadata(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """The universal UID/DTSTAMP/ORGANIZER checks on VFREEBUSY must
-    ALSO include the method-plus-component adjacent phrase per the
-    warning contract. Prior impls emitted bare
-    `"iTIP message requires UID"` — no method, no component — which
-    left tests unable to discriminate a missing-UID on a VFREEBUSY
-    from a missing-UID on any other component.
+    include method/component/property warning metadata so tests can
+    discriminate a missing UID on a VFREEBUSY from the same rule on
+    another component.
 
     Fixture: empty UID + no DTSTAMP on a REQUEST VFREEBUSY. Both
-    warnings MUST contain the adjacent phrase `REQUEST VFREEBUSY`
-    (or `VFREEBUSY REQUEST`) plus exactly one property token."""
+    warnings must identify REQUEST, VFREEBUSY, and the missing
+    property."""
     body = (
         # UID intentionally empty (trailing value),  no DTSTAMP.
         "UID:\n"
@@ -473,9 +402,9 @@ def test_vfreebusy_shared_check_messages_carry_adjacent_phrase(
         "ATTENDEE:mailto:a@example.com\n"
     )
     out = run_parse(submission_command, _vfreebusy_calendar("REQUEST", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VFREEBUSY", "UID"), msgs
-    assert _warn_mentions_method_component_property(msgs, "REQUEST", "VFREEBUSY", "DTSTAMP"), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "REQUEST", "VFREEBUSY", "UID"), warnings
+    assert _has_itip_warning(warnings, "REQUEST", "VFREEBUSY", "DTSTAMP"), warnings
 
 
 def test_vfreebusy_publish_forbids_attendee(
@@ -489,8 +418,8 @@ def test_vfreebusy_publish_forbids_attendee(
         "ATTENDEE:mailto:a@example.com\n"  # MUST NOT be present
     )
     out = run_parse(submission_command, _vfreebusy_calendar("PUBLISH", body), tmp_path)
-    msgs = _warn_messages(out)
-    assert _warn_mentions_method_component_property(msgs, "PUBLISH", "VFREEBUSY", "ATTENDEE"), msgs
+    warnings = _warnings(out)
+    assert _has_itip_warning(warnings, "PUBLISH", "VFREEBUSY", "ATTENDEE"), warnings
 
 
 def test_vfreebusy_publish_well_formed_ok(

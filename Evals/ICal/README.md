@@ -37,7 +37,11 @@ prompt/
       rfc5546.txt                   # iTIP scheduling
       rfc6868.txt                   # parameter value escaping
       rfc7529.txt                   # non-Gregorian RSCALE
+      rfc7953.txt                   # calendar availability
       rfc7986.txt                   # new calendar properties
+      rfc9073.txt                   # event publishing extensions
+      rfc9074.txt                   # VALARM extensions
+      rfc9253.txt                   # iCalendar relationships
 tests/
   conftest.py                       # EVAL_CONFIG + helpers
   test_build.py                     # smoke: binary builds
@@ -157,9 +161,10 @@ In scope (v1.0):
 
 ## References
 
-- [`prompt/docs/authoritative/rfc5545.txt`](prompt/docs/authoritative/rfc5545.txt)
-  through [`rfc7986.txt`](prompt/docs/authoritative/rfc7986.txt) —
-  the authoritative specs shipped verbatim.
+- `prompt/docs/authoritative/rfc5545.txt`, `rfc5546.txt`,
+  `rfc6868.txt`, `rfc7529.txt`, `rfc7953.txt`, `rfc7986.txt`,
+  `rfc9073.txt`, `rfc9074.txt`, and `rfc9253.txt` — the
+  authoritative specs shipped verbatim.
 - [`prompt/docs/summary.md`](prompt/docs/summary.md) — navigation
   index over the above.
 - [`prompt/docs/LICENSES.md`](prompt/docs/LICENSES.md) — IETF TLP

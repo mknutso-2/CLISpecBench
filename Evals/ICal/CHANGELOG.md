@@ -1,5 +1,24 @@
 # ICal Eval Changelog
 
+## v3.0.0 — 2026-04-25
+
+Fixes eval-authoring review findings around documentation and warning
+contracts.
+
+**Breaking**: `itip_missing_property` warnings now carry structured
+`method`, `component`, and `property` metadata when applicable.
+Tests use those fields to identify the RFC 5546 table row under test
+instead of asserting on warning `message` wording. Undefined-method
+iTIP warnings carry `method` and `component` and omit `property`.
+
+Documentation fixes:
+
+- `base-prompt.md`, `README.md`, and `prompt/docs/LICENSES.md` now
+  list all nine shipped authoritative RFCs.
+- `prompt/docs/summary.md` now unambiguously requires fold=0 /
+  pre-transition offset resolution for ambiguous fall-back local
+  times, matching the existing tests.
+
 ## v2.0.0 — 2026-04-24
 
 **Breaking**: the occurrence schema for `STATUS:CANCELLED` overrides

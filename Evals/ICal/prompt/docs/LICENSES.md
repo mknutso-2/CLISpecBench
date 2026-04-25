@@ -5,7 +5,11 @@ redistributed verbatim. Each carries its own license, which is
 independent of (and not superseded by) the MIT license on the
 CLISpecBench harness code.
 
-## IETF RFCs (`authoritative/rfc5545.txt`, `rfc5546.txt`, `rfc6868.txt`, `rfc7529.txt`, `rfc7986.txt`)
+## IETF RFCs
+
+Files: `authoritative/rfc5545.txt`, `rfc5546.txt`, `rfc6868.txt`,
+`rfc7529.txt`, `rfc7953.txt`, `rfc7986.txt`, `rfc9073.txt`,
+`rfc9074.txt`, `rfc9253.txt`.
 
 Copyright © IETF Trust. Redistributed under the terms of
 [IETF Trust Legal Provisions 5.0](https://trustee.ietf.org/documents/trust-legal-provisions/tlp-5/),

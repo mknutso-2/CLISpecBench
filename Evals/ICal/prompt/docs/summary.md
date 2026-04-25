@@ -358,10 +358,9 @@ occurrence of the ambiguous local time, matching PEP 495's
 out naturally from "latest observance whose DTSTART ≤ local time":
 at local 01:30 on fall-back day, the STANDARD observance
 (DTSTART=02:00 local) has not yet started, so the active
-observance is still DAYLIGHT. An implementation returning the
-post-transition offset (EST in the US case) for ambiguous fall-back
-times is conformant ONLY if it also documents `fold=1` as its
-default; the reference implementation uses `fold=0`.
+observance is still DAYLIGHT. Implementations MUST use this
+pre-transition offset (`fold=0`, the first occurrence of the
+ambiguous local time).
 
 **Spring-forward gap (local time does not exist).** When clocks
 spring forward, local times like `02:30` in the gap never occur in
