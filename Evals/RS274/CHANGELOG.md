@@ -2,25 +2,6 @@
 
 ## Proposed (not yet applied)
 
-### Clarify G87 back-boring behavior when I/J/K are omitted
-
-`test_trace_stepping.py::test_g87_back_boring_sub_motions` passed 16 /
-243 times. The input `G87 X1 Z-1 R0 F60` omits I, J, and K. RS274
-§3.5.16.8 lists `I… J… K…` in the G87 prototype but specifies no
-defaults and does not explicitly say omission is an error.
-
-CHANGELOG v1.0.1 already acknowledged this ambiguity by removing the
-"error when I/J/K omitted" tests on the same grounds, but no
-clarification was added telling agents what G87 does in that case. This
-success test requires the agent to assume I = J = K = 0 (or some other
-simulator-chosen default) without any prompt guidance.
-
-Proposed clarification: add a sentence to `base-prompt.md` or
-`technical-requirements-prompt.md` specifying the default for omitted
-I/J/K on G87 (e.g., "I, J, and K default to 0 when omitted"). A clean
-patch bump; the reference implementation already encodes whatever
-default the test assumes.
-
 ### Clarify G88 retract behavior in a non-interactive simulator
 
 `test_trace_stepping.py::test_g88_boring_rapid_retract` passed 21 / 243
@@ -237,6 +218,21 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.4 — 2026-04-25
+
+### Changed
+
+- Added a normative clarification in `prompt/docs/Clarifications.md`
+  that omitted I, J, and K words on G87 default to 0 for this eval.
+- Updated G87-related test comments and docstrings to cite the
+  clarification instead of treating omitted I/J/K behavior as unresolved.
+
+### Fixed
+
+- Resolved the documentation gap behind
+  `test_trace_stepping.py::test_g87_back_boring_sub_motions`, which
+  exercises a G87 block with omitted I, J, and K words.
 
 ## v3.1.3 — 2026-04-25
 

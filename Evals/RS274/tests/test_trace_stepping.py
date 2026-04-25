@@ -1168,18 +1168,12 @@ def test_g87_back_boring_sub_motions(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    """G87 back boring: rapid to Z depth, feed up to R, rapid retract to clear.
+    """G87 with omitted I/J/K uses zero defaults and returns to clear Z.
 
-    Sub-motion order is reversed vs. normal boring cycles.
-
-    PASS-RATE NOTE (2026-04-18): 16 passes / 243 attempts across all
-    models (see CHANGELOG "Proposed"). The input `G87 X1 Z-1 R0 F60`
-    omits I/J/K. RS274 §3.5.16.8 lists `I… J… K…` in the G87 prototype
-    but specifies no defaults and never explicitly says omission is an
-    error. CHANGELOG v1.0.1 already acknowledged this ambiguity by
-    removing the "error when I/J/K omitted" tests; this success test
-    inherits the same unresolved question and requires the agent to
-    assume I=J=K=0 (or equivalent) without prompt guidance.
+    Clarifications.md defines omitted G87 I/J/K as zero. In this setup,
+    G90 makes defaulted K equivalent to absolute Z0, so the feed-up move
+    from Z-1 to Z0 is observable. G98 then retracts to the pre-cycle Z
+    value.
     """
     setup = "G90\nG98\nG0 X0 Y0 Z2\n"
     _, _, trace = run_rs274_trace(

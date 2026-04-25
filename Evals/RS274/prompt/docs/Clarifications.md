@@ -2,7 +2,7 @@
 
 This document records disambiguations of `RS274NGC.md` where the spec text
 admits multiple defensible readings. Each item is a normative rule for
-this eval; agents should treat these on equal footing with the spec.
+this simulator and should be treated on equal footing with the spec.
 
 ## Cutter radius compensation: arc input semantics
 
@@ -28,3 +28,22 @@ continuation move:
 - I, J are offsets from the current tool-tip location (per §B.1.1's
   world-model convention) to that shared center — not from the previous
   programmed contour endpoint.
+
+## G87 back boring: omitted I, J, and K words
+
+§3.5.16.8 of `RS274NGC.md` describes the I, J, and K words used by G87
+but does not state whether omitting any of them is an error or what value
+an omitted word has. In this simulator, omitted I, J, and K words on a
+G87 block default to 0.
+
+Defaulted I and J are zero offsets from the programmed in-plane hole
+position, following §3.5.16.8's rule that I and J are always increments.
+A defaulted K is the numeric K value 0 interpreted by §3.5.16.8's same
+distance-mode rule as an explicit K0: absolute Z coordinate 0 in G90, or
+a zero increment from the cycle's resolved Z target position in G91.
+
+This default defines simulator behavior for omitted words. It does not
+change §3.5.16.8's programming guidance that explicit I and J values
+should be chosen to provide tool clearance in a real back-boring setup.
+If a defaulted word makes a G87 sub-motion zero-length, that sub-motion
+follows the general zero-duration trace rule and produces no trace entry.

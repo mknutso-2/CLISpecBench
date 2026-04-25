@@ -207,12 +207,8 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
     ),
     # Removed in RS274 v1.0.1: G87 I/J/K requirement tests. Section 3.5.16.8
     # lists I, J, K in the G87 prototype but never explicitly says omitting them
-    # is an error. The general rule in section 3.5 ("items not described as
-    # optional are required") is not consistently applied across canned cycles.
-    # I and J are incremental offsets where 0 is a valid (if physically
-    # nonsensical) default; K in absolute mode specifies a Z-axis target that
-    # could also default to 0. Since the spec does not unambiguously require
-    # these as error conditions, these tests are removed.
+    # is an error. Clarifications.md now defines omitted G87 I/J/K words as
+    # zero defaults, so these missing-word cases are valid for this eval.
     #
     # (
     #     "g87-requires-i",
@@ -293,9 +289,10 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
 # Section 3.5.16.3 requires non-negative P for G82, and section 3.5.16.4
 # requires positive Q for G83. Section 3.5.16.5 requires the spindle to be
 # turning clockwise before G84. Section 3.5.16.7 requires the spindle to be
-# turning before G86. Section 3.5.16.8 requires I, J, and K for G87. Sections
-# 3.5.16.7, 3.5.16.9, and 3.5.16.10 define G86, G88, and G89 as P-using
-# cycles, so the same explicit non-negative-P requirement applies.
+# turning before G86. Clarifications.md defines omitted G87 I/J/K words as
+# zero defaults, so no missing-I/J/K error is asserted. Sections 3.5.16.7,
+# 3.5.16.9, and 3.5.16.10 define G86, G88, and G89 as P-using cycles, so the
+# same explicit non-negative-P requirement applies.
 @pytest.mark.parametrize(
     "input_gcode",
     [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],
