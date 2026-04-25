@@ -93,20 +93,9 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
             "G41",
             1,
         ),
-        # RS274 Appendix B.2.4 also allows D0; with zero radius, compensation
-        # stays logically on but the spindle center remains on the programmed
-        # contour.
-        #
-        # PASS-RATE NOTE (2026-04-18): the two D0 cases below each passed
-        # 33 / 255 times across all models, and they cascade into
-        # test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30
-        # (26 / 255 each, M2 and M30). The expected_d_number here is 0
-        # (explicit zero), but technical-requirements-prompt.md says the
-        # serialized field is "the active D number, or null if no explicit
-        # cutter radius compensation number is active." D0 fits both
-        # readings — "D=0 is explicit" and "D0 deactivates the CRC
-        # number" — and the prompt does not disambiguate. See CHANGELOG
-        # "Proposed".
+        # RS274 Appendix B.2.4 allows D0; Clarifications.md defines this as
+        # active zero-radius compensation. The D number serializes as explicit
+        # 0, and the tool-center path remains on the programmed contour.
         (
             "G17 G90 G94 F60\nG0 X0.0 Y0.0\nG41 D0 G1 X5.0 Y0.0\nG1 X6.0 Y0.0\n",
             6.0,

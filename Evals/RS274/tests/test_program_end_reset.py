@@ -27,6 +27,11 @@ from rs274_support import (
 
 PROGRAM_END_CODES = ("M2", "M30")
 
+ZERO_RADIUS_CRC_TOOL_TABLE = """POCKET FMS TLO DIAMETER
+
+1 1 0.0 0.0
+"""
+
 
 # RS274 section 3.6.1 says M2 and M30 have the following effects:
 # - "Selected plane is set to CANON_PLANE_XY (like G17)."
@@ -90,17 +95,8 @@ def test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_inval
 
 
 # RS274 section 3.6.1 explicitly says M2 and M30 turn cutter compensation off.
-#
-# PASS-RATE NOTE (2026-04-18): M2 and M30 parametrizations each passed
-# 26 / 255 times across all models (see CHANGELOG "Proposed"). The
-# input starts with `G41 D0`, which inherits the D0 interpretation
-# ambiguity documented in
-# test_cutter_radius_compensation.py near the D0 cases: a model that
-# returns null for "active D number" when D0 is programmed fails the
-# D0-in-CRC tests AND this cascade test. This test is named for M2/M30
-# resetting CRC (spec-clear from §3.6.1), but failures here are
-# dominated by the upstream D0 interpretation — an independent-failure-
-# mode violation (skills/eval-authoring/SKILL.md).
+# This setup uses a zero-radius D1 tool-table entry, not D0, so the test is
+# about the program-end reset rather than D0 serialization.
 @pytest.mark.parametrize("program_end_code", PROGRAM_END_CODES)
 def test_application_turns_cutter_compensation_off_on_m2_and_m30(
     submission_command: tuple[str, ...],
@@ -110,8 +106,9 @@ def test_application_turns_cutter_compensation_off_on_m2_and_m30(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            f"G17 G90 G94\nG0 X0.0 Y0.0\nG41 D0 G1 X5.0 Y0.0\n{program_end_code}\nG42 D0\n"
+            f"G17 G90 G94 F60\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\n{program_end_code}\nG42 D1\n"
         ),
+        tool_table_content=ZERO_RADIUS_CRC_TOOL_TABLE,
         tmp_path=tmp_path,
     )
 

@@ -2,39 +2,6 @@
 
 ## Proposed (not yet applied)
 
-### Clarify `cutter_radius_compensation_number` semantics for D0
-
-Four tests share this issue:
-
-- `test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-d0-keeps-spindle-center-on-programmed-path]` (33 / 255)
-- `test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-d0-keeps-spindle-center-on-programmed-path]` (33 / 255)
-- `test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30[M2]` (26 / 255)
-- `test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30[M30]` (26 / 255)
-
-The D0 cases expect `cutter_radius_compensation_number == 0` (explicit
-zero) when `G41 D0` or `G42 D0` is active.
-`technical-requirements-prompt.md` says the field is "the active D
-number, or null if no explicit cutter radius compensation number is
-active." D0 fits both readings — "D=0 is explicit" and "D0 deactivates
-the CRC number" — and the prompt does not disambiguate. The two M2/M30
-tests use `G41 D0` as setup, so a model that picks the null reading
-fails both D0-in-CRC tests AND the program-end-reset cascade tests —
-the program-end-reset tests then score the upstream D0 interpretation
-mistake rather than M2/M30 behavior, violating the independent-failure-
-mode rule in `skills/eval-authoring/SKILL.md`.
-
-Secondary ambiguity: §B.6's first-move tangent-circle construction
-degenerates at radius 0 (the circle collapses to a point). The spec
-does not say whether D0 skips the construction and places the tool on
-the programmed contour, or applies the degenerate construction.
-
-Proposed clarification: amend the
-`technical-requirements-prompt.md` line defining
-`cutter_radius_compensation_number` to say explicitly that D0 is
-treated as an explicit zero and serializes as 0 (not null), and that
-the null value is reserved for "no active CRC" (i.e., G40 mode or
-never turned on). Documentation-only; a patch bump.
-
 ### Additional independent-failure-mode cascades (test independence audit)
 
 Sweep against the independent-failure-modes rule in
@@ -202,6 +169,27 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.6 — 2026-04-25
+
+### Changed
+
+- Clarified in `technical-requirements-prompt.md` that an explicit D0 is
+  an active cutter radius compensation number and serializes as 0, not
+  null.
+- Added a `prompt/docs/Clarifications.md` section defining D0 as active
+  zero-radius cutter radius compensation whose tool-center path coincides
+  with the programmed contour.
+- Changed the M2/M30 cutter-compensation reset test to establish active
+  cutter compensation with an explicit zero-radius D1 tool-table entry
+  instead of D0, reducing cascade from D0 serialization mistakes.
+- Added an explicit feed rate to that reset test's setup move so the test
+  is not dependent on default feed-rate behavior.
+
+### Fixed
+
+- Resolved the documentation gap behind the D0 cutter radius compensation
+  cases and the related program-end reset cascade.
 
 ## v3.1.5 — 2026-04-25
 

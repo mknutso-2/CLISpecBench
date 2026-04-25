@@ -50,7 +50,9 @@
   Serialize rotary axes A, B, and C in degrees, without G20/G21 unit conversion or modulo
   normalization.
   Serialize "cutter_radius_compensation_number" as the active D number, or null if no explicit
-  cutter radius compensation number is active.
+  cutter radius compensation number is active. An explicit D0 is an active D number and
+  serializes as 0, not null. Use null only when there is no active cutter radius compensation
+  number, such as before cutter radius compensation is turned on or after G40 turns it off.
   Serialize "tool_length_offset_index" as the active H number, or null if no tool length offset
   index is active.
   Serialize "selected_tool" as the currently selected T number, or null if no tool has been

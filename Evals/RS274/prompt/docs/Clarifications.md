@@ -29,6 +29,18 @@ continuation move:
   world-model convention) to that shared center — not from the previous
   programmed contour endpoint.
 
+## Cutter radius compensation: D0 and zero radius
+
+§3.5.10 and §B.2.4 of `RS274NGC.md` say that G41 and G42 may use D0,
+and that D0 gives a cutter radius of zero. When G41 D0 or G42 D0 is
+active, cutter radius compensation remains active with D set to zero. G40
+is still required to turn cutter radius compensation off.
+
+With a zero cutter radius, the compensated tool-center path coincides
+with the programmed contour. A first compensated move with zero radius
+therefore ends at the programmed endpoint, rather than applying a
+nonzero tangent-circle offset.
+
 ## G87 back boring: omitted I, J, and K words
 
 §3.5.16.8 of `RS274NGC.md` describes the I, J, and K words used by G87
