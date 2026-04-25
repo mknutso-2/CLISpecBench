@@ -301,94 +301,232 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
 # auxiliary programmed arc with the programmed center point and programmed end
 # point, while keeping the tool tangent to that auxiliary arc throughout.
 #
-# These cases pick center-format G17 arcs with center O = (0, 0) and tool
-# radius r = 3 so the compensated endpoints are easy to audit:
-# - for G42 on a CCW arc or G41 on a CW arc, the tool is on the outside of the
-#   programmed arc, so the tool-center radius is 4 + 3 = 7
-# - the programmed endpoints are the quarter-circle points (0, 4) and (-4, 0)
-# - the compensated tool-center endpoints are therefore (0, 7) and (-7, 0),
-#   or the mirrored CW values (0, -7) and (-7, 0)
-# The same expected endpoints apply whether that auxiliary arc is programmed in
-# center format (I/J) or radius format (R).
+# These cases pick center-format G17 arcs with auxiliary center O = (0, 0)
+# and tool radius r = 3 so the compensated endpoints are easy to audit, and
+# they cover both side-selection geometries:
+# - Outside-tangent (G42-right CCW or G41-left CW): aux radius 4, tool outside, so the
+#   tool-center radius is 4 + 3 = 7. Programmed endpoints are the quarter-
+#   circle points (0, ±4).
+# - Inside-tangent (G41 CCW or G42 CW): aux radius 10, tool inside, so the
+#   tool-center radius is 10 - 3 = 7. Programmed endpoints are (0, ±10).
+# In every first-arc case the compensated tool-center endpoint is on the
+# radius-7 circle around the origin at (0, ±7); subsequent-arc cases land
+# at (-7, 0). The same expected endpoints apply whether the auxiliary arc
+# is programmed in center format (I/J) or radius format (R). In radius
+# format, R names the path (traveled) arc radius (7), not the auxiliary
+# arc radius (4 or 10) — §3.5.3 explicitly defers to Appendix B under CRC,
+# so "the arc" of §3.5.3 refers to the path the tool traces.
+# Assume you'd like to perform a CCW arc move where the tool tip cuts a
+# radius-7 path with a radius-3 tool, starting at (7, 0) and ending at
+# (0, 7). With CRC enabled via G42 (tool right of programmed contour),
+# §B.6's auxiliary-arc construction places the programmed contour at
+# radius 4 around (0, 0), so the spec is clear that the input is
+# G42 G3 X0.0 Y4.0 J0.0. What is NOT clear is what value R and I take.
 #
-# PASS-RATE NOTE (2026-04-18): across ~255 runs spanning every model, each of
-# these 8 cases had 0 or 1 passes. A review of the spec vs. the test inputs
-# identified four interpretive leaps required to reach the expected answers
-# that are not stated in the prose spec (see CHANGELOG "Proposed"):
-#   1. §B.6's auxiliary-arc rule must silently override §3.5.3.2's
-#      "distance from current point to center differs from distance to end
-#      point" error check. Inputs below have current-point (7,0) at radius 7
-#      and programmed endpoint (0,±4) at radius 4 — a 3-unit mismatch that
-#      §3.5.3.2 normally rejects.
-#   2. For the radius-format cases the programmed arc is geometrically
-#      impossible under the normal R rule (chord √65 ≈ 8.06 > 2r = 8). The
-#      tests assume R becomes the auxiliary-arc radius, but §B.6 never
-#      states this and §3.5.3.1 says nothing about CRC.
-#   3. Under CRC, I/J offset from the programmed contour point, not from
-#      the compensated tool center. §3.5.3.2 only says "the current
-#      location"; under CRC the two diverge.
-#   4. G41/G42 side selection on a CCW arc (G42 CCW ⇒ outside) must be
-#      inferred from the tangent-direction convention; §B.6 only says "on
-#      the appropriate side."
-# These are defensible choices the reference implementation encodes, but a
-# model working only from the prose docs cannot uniquely recover them.
+# §3.5.3 says: "If cutter radius compensation is active, the motion
+# will differ from what is described here. See Appendix B." That
+# sentence defers the *motion* to Appendix B but does not redefine
+# the *input semantics* of R/I/J under CRC, and Appendix B describes
+# the geometric construction without ever explicitly restating what
+# R/I/J mean — which is what leaves the following ambiguity open.
+#
+# Compounding this, every CRC example in the spec (Tables 12 and 13,
+# §B.4) enables CRC with a straight (G1) move and only uses arcs
+# *after* CRC is already active. §B.6 textually accommodates "if the
+# first move after cutter radius compensation has been turned on is
+# an arc," but no example demonstrates it — so the very case these
+# tests probe (G2/G3 as the entry move under CRC) is described in
+# prose but never illustrated, which is part of why the R/I/J
+# semantics for it are unsettled.
+#
+# Three readings are defensible:
+#
+# - Path-arc reading: R names the radius of the path the tool tip
+#   actually traces (R=7), and I names the offset from the current
+#   tool-tip location to the path-arc center (I=-7).
+#   This is consistent with R and I/J retaining their non-CRC meanings
+#   (radius and offset to center of the arc the tool traces), with
+#   X/Y reinterpreted as the programmed contour endpoint per §B.6.
+#
+# - Contour reading with I/J relative to the tool-tip: R names the
+#   radius of the programmed/auxiliary arc (R=4 in this outside-tangent
+#   case; R=10 in the inside-tangent case where Y=10 is programmed
+#   instead), but I still names the offset from the current tool-tip
+#   location to the shared center (I=-7 in either case, since at the
+#   first move the tool-tip and the contour-current coincide). §B.1.1
+#   notes that the world model tracks the tool-tip center under CRC,
+#   which makes the tool-tip a natural referent for "current location"
+#   here, though it is not explicitly required by §3.5.3.2.
+#   This would be consistent with the idea that the arc R is a programmed
+#   as though CRC is already active, but the I/J offsets are programmed
+#   as though CRC is not active.
+#
+# - Contour reading with I/J relative to a tangent-point on the aux
+#   arc: R is the auxiliary-arc radius as above, and I names the
+#   offset from the tangent point on the aux arc to the aux-arc
+#   center (I=-4 outside-tangent, I=-10 inside-tangent).
+#   This would be consistent with the idea that the programming the arc
+#   on CRC enabling is the same as programming the arc once CRC is
+#   already active.
+#
+# §B.6 + §3.5.3 + §B.1.1 do not unambiguously settle which reading
+# is intended.
+#
+# This is why the following text is in prompt/docs/Clarifications.md
+# (picking the path-arc reading: R and I/J keep their non-CRC meanings,
+# X/Y is reinterpreted per §B.6 as the programmed contour endpoint,
+# preserving the simplest semantic continuity with non-CRC arcs):
+#
+# > Under cutter radius compensation, on a G2/G3 arc move — whether
+# > the move is the entry move (first compensated motion after G41 or
+# > G42) or a continuation move:
+# >  - X, Y name the programmed contour endpoint (the auxiliary-arc
+# >    endpoint per §B.6), not the position the tool tip will reach.
+# >  - R names the radius of the path the tool tip actually traces
+# >    (the "generated arc" per §B.6, which shares its center with
+# >    the auxiliary arc).
+# >  - I, J are offsets from the current tool-tip location (per
+# >    §B.1.1's world-model convention) to that shared center — not
+# >    from the previous programmed contour endpoint.
+
 CRC_ARC_CASES = [
-    # In preliminary testing, no model passes any of the 8 arc CRC cases below.
-    # Appendix B.6 defines compensated arc geometry: the tool-center arc radius
-    # is the programmed arc radius +/- the tool radius depending on which side
-    # of the contour the tool is on.
+    # the side per §3.5.10 + §4.3.11).
     (
-        "g42-first-arc-move",
+        # From §3.5.3.2
+        # "In the center format, the coordinates of the end point of the arc in the selected plane
+        # are specified along with the offsets of the center of the arc from the current location."
+        # Per §B.6, the "auxiliary arc" lies on the circle centered at (0, 0) with radius 4.
+        # Thus this command results in the tool traveling CCW from (7, 0) to (0, 7) with the center
+        # of the arc at (0, 0).
+        "g42-ccw-first-center-format-arc-move-tangent-outside-arc",
         "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\n",
         {"x": 0.0, "y": 7.0, "z": 0.0},
         "G42",
         1,
     ),
     (
-        "g42-first-radius-format-arc-move",
-        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 R4.0\n",
+        # Same as above, but now with G41 to stay "inside" the auxiliary arc which requires changing
+        # Y from 4 to 10.
+        # The "auxiliary arc" from Appendix B.6 lies on the circle centered at (0, 0) with radius
+        # 10.
+        "g41-ccw-first-center-format-arc-move-tangent-inside-arc",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G3 X0.0 Y10.0 I-7.0 J0.0\n",
+        {"x": 0.0, "y": 7.0, "z": 0.0},
+        "G41",
+        1,
+    ),
+    (
+        # From §3.5.3.1
+        # "In the radius format, the coordinates of the end point of the arc in the selected plane
+        # are specified along with the radius of the arc"
+        # Per §B.6, the "auxiliary arc" lies on the circle centered at (0, 0) with radius 4. The
+        # R value names the radius of the path (traveled) arc the tool tip cuts (7), not the
+        # auxiliary arc radius (4).
+        # Thus this command results in the tool traveling CCW from (7, 0) to (0, 7) with the center
+        # of the arc at (0, 0).
+        "g42-ccw-first-radius-format-arc-move-tangent-outside-arc",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 R7.0\n",
         {"x": 0.0, "y": 7.0, "z": 0.0},
         "G42",
         1,
     ),
     (
+        # Same as above, but now with G41 to stay "inside" the auxiliary arc which requires changing
+        # Y from 4 to 10.
+        # The "auxiliary arc" from Appendix B.6 lies on the circle centered at (0, 0) with radius
+        # 10. The R value still names the path (traveled) arc radius (7), not the auxiliary arc
+        # radius (10).
+        "g41-ccw-first-radius-format-arc-move-tangent-inside-arc",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G3 X0.0 Y10.0 R7.0\n",
+        {"x": 0.0, "y": 7.0, "z": 0.0},
+        "G41",
+        1,
+    ),
+    (
+        # An argument could be made that this test should be removed per Writing Tests:
+        # Golden Rule 3: Independent tests.
+        # However, I'm not sure how else to easily test that the arc move *after* the first
+        # behaves properly.
         "g42-subsequent-arc-move",
-        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\nG3 X-4.0 Y0.0 I0.0 J-4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\nG3 X-4.0 Y0.0 I0.0 J-7.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G42",
         1,
     ),
     (
+        # An argument could be made that this test should be removed per Writing Tests:
+        # Golden Rule 3: Independent tests.
+        # However, I'm not sure how else to easily test that the arc move *after* the first
+        # behaves properly.
         "g42-subsequent-radius-format-arc-move",
-        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\nG3 X-4.0 Y0.0 R4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G3 X0.0 Y4.0 I-7.0 J0.0\nG3 X-4.0 Y0.0 R7.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G42",
         1,
     ),
     (
-        "g41-first-arc-move",
+        # CW mirror of g42-ccw-first-center-format-arc-move-tangent-outside-arc.
+        # Per §B.6, the "auxiliary arc" lies on the circle centered at (0, 0) with radius 4.
+        # Thus this command results in the tool traveling CW from (7, 0) to (0, -7) with the center
+        # of the arc at (0, 0).
+        "g41-cw-first-center-format-arc-move-tangent-outside-arc",
         "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\n",
         {"x": 0.0, "y": -7.0, "z": 0.0},
         "G41",
         1,
     ),
     (
-        "g41-first-radius-format-arc-move",
-        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 R4.0\n",
+        # CW mirror of g41-ccw-first-center-format-arc-move-tangent-inside-arc. G42 stays "inside"
+        # the auxiliary arc which requires changing Y from -4 to -10.
+        # The "auxiliary arc" from Appendix B.6 lies on the circle centered at (0, 0) with radius
+        # 10.
+        "g42-cw-first-center-format-arc-move-tangent-inside-arc",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G2 X0.0 Y-10.0 I-7.0 J0.0\n",
+        {"x": 0.0, "y": -7.0, "z": 0.0},
+        "G42",
+        1,
+    ),
+    (
+        # CW mirror of g42-ccw-first-radius-format-arc-move-tangent-outside-arc.
+        # Per §B.6, the "auxiliary arc" lies on the circle centered at (0, 0) with radius 4. The
+        # R value names the radius of the path (traveled) arc the tool tip cuts (7), not the
+        # auxiliary arc radius (4).
+        "g41-cw-first-radius-format-arc-move-tangent-outside-arc",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 R7.0\n",
         {"x": 0.0, "y": -7.0, "z": 0.0},
         "G41",
         1,
     ),
     (
+        # CW mirror of g41-ccw-first-radius-format-arc-move-tangent-inside-arc. G42 stays "inside"
+        # the auxiliary arc which requires changing Y from -4 to -10.
+        # The "auxiliary arc" from Appendix B.6 lies on the circle centered at (0, 0) with radius
+        # 10. The R value still names the path (traveled) arc radius (7), not the auxiliary arc
+        # radius (10).
+        "g42-cw-first-radius-format-arc-move-tangent-inside-arc",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG42 D1 G2 X0.0 Y-10.0 R7.0\n",
+        {"x": 0.0, "y": -7.0, "z": 0.0},
+        "G42",
+        1,
+    ),
+    (
+        # An argument could be made that this test should be removed per Writing Tests:
+        # Golden Rule 3: Independent tests.
+        # However, I'm not sure how else to easily test that the arc move *after* the first
+        # behaves properly.
         "g41-subsequent-arc-move",
-        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\nG2 X-4.0 Y0.0 I0.0 J4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\nG2 X-4.0 Y0.0 I0.0 J7.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G41",
         1,
     ),
     (
+        # An argument could be made that this test should be removed per Writing Tests:
+        # Golden Rule 3: Independent tests.
+        # However, I'm not sure how else to easily test that the arc move *after* the first
+        # behaves properly.
         "g41-subsequent-radius-format-arc-move",
-        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\nG2 X-4.0 Y0.0 R4.0\n",
+        "G17 G90 G94\nG0 X7.0 Y0.0\nG41 D1 G2 X0.0 Y-4.0 I-7.0 J0.0\nG2 X-4.0 Y0.0 R7.0\n",
         {"x": -7.0, "y": 0.0, "z": 0.0},
         "G41",
         1,

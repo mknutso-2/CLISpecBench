@@ -2210,60 +2210,71 @@ class Interpreter:
 
         # CRC for arcs: only applies on G17 plane.
         if self.state.cutter_comp in ("G41", "G42") and plane == "G17":
-            # Compute programmed center (cx,cy) and programmed radius arc_r.
-            if "r" in word_dict:
-                ex = new_prog.x
-                ey = new_prog.y
-                arc_r = abs(to_inches(word_dict["r"], self.state.units))
-                if self.state.crc_first_move:
-                    # Center is at distance arc_r from (ex,ey) and distance
-                    # arc_r +/- tool_r from current spindle (sx0, sy0),
-                    # depending on inside/outside.
-                    sx0 = self.state.programmed.x
-                    sy0 = self.state.programmed.y
-                    inside_first = (
-                        (mode == "G3" and self.state.cutter_comp == "G41")
-                        or (mode == "G2" and self.state.cutter_comp == "G42")
-                    )
-                    spindle_dist = (
-                        arc_r - self.state.crc_radius_inches
-                        if inside_first
-                        else arc_r + self.state.crc_radius_inches
-                    )
-                    cx, cy = _two_circle_intersection_pick(
-                        ex, ey, arc_r, sx0, sy0, spindle_dist, mode
-                    )
-                else:
-                    sx0 = self.state.crc_contour_x
-                    sy0 = self.state.crc_contour_y
-                    cx, cy = _arc_center_from_radius(sx0, sy0, ex, ey, word_dict["r"], mode)
-            else:
-                if self.state.crc_first_move:
-                    sx0 = self.state.programmed.x
-                    sy0 = self.state.programmed.y
-                else:
-                    sx0 = self.state.crc_contour_x
-                    sy0 = self.state.crc_contour_y
-                cx = sx0 + i_val
-                cy = sy0 + j_val
-                ex = new_prog.x
-                ey = new_prog.y
-                arc_r = math.hypot(ex - cx, ey - cy)
-
-            # Determine which side of the contour the tool is on for this arc.
-            # CCW arc (G3): inside = LEFT of tangent direction → G41 inside.
-            # CW arc (G2): inside = RIGHT of tangent direction → G42 inside.
+            # Under CRC, §3.5.3 defers to Appendix B: the input describes
+            # the arc the tool tip traces (the "generated" arc per §B.6),
+            # which shares its center with the auxiliary arc.
+            # - I/J = offsets from the current tool-tip location
+            #   (§3.5.3.2 + §B.1.1) to that shared center
+            # - R = radius of the path the tool tip traces
+            # - X/Y = programmed contour endpoint (on the auxiliary arc)
+            # The same construction applies to first and continuation arcs;
+            # §B.6's "stays tangent to the programmed path" rule for
+            # continuation arcs is just the steady-state of this construction.
+            ex = new_prog.x
+            ey = new_prog.y
+            sx0 = self.state.programmed.x
+            sy0 = self.state.programmed.y
+            tool_r = self.state.crc_radius_inches
+            # Side selection (§3.5.10 left/right of programmed path,
+            # combined with G2/G3 traversal direction):
+            # CCW (G3) + G41 = inside; CW (G2) + G42 = inside; else outside.
             inside = (
                 (mode == "G3" and self.state.cutter_comp == "G41")
                 or (mode == "G2" and self.state.cutter_comp == "G42")
             )
-            tool_r = self.state.crc_radius_inches
-            if inside and tool_r >= arc_r - 1e-9:
-                raise NgcError(
-                    "tool radius not less than arc radius with cutter radius compensation"
+            if "r" in word_dict:
+                path_r = abs(to_inches(word_dict["r"], self.state.units))
+                aux_r = (path_r + tool_r) if inside else (path_r - tool_r)
+                if aux_r <= 1e-9:
+                    raise NgcError(
+                        "tool radius not less than arc radius with cutter radius compensation"
+                    )
+                # The center sits at distance aux_r from the programmed end
+                # (on the auxiliary arc per §B.6) and at distance path_r
+                # from the current tool-tip. For two distinct intersections
+                # (and a non-degenerate path arc), |aux_r - path_r| < chord
+                # < aux_r + path_r. Border cases collapse to a single point
+                # and produce a zero-length path arc; reject those as the
+                # analogue of §3.5.3.1's "end point of the arc is the same
+                # as the current point."
+                chord = math.hypot(ex - sx0, ey - sy0)
+                if chord > aux_r + path_r + 1e-9:
+                    raise NgcError(
+                        "first cutter compensation arc cannot be constructed"
+                    )
+                if chord <= abs(aux_r - path_r) + 1e-9:
+                    raise NgcError(
+                        "tool radius not less than arc radius with cutter radius compensation"
+                    )
+                cx, cy = _two_circle_intersection_pick(
+                    ex, ey, aux_r, sx0, sy0, path_r, mode
                 )
+                arc_r = aux_r
+            else:
+                cx = sx0 + i_val
+                cy = sy0 + j_val
+                arc_r = math.hypot(ex - cx, ey - cy)
+                if inside and tool_r >= arc_r - 1e-9:
+                    raise NgcError(
+                        "tool radius not less than arc radius with cutter radius compensation"
+                    )
+
+            # The path arc and auxiliary arc share a center. The path
+            # radius is aux_r +/- tool_r depending on which side the
+            # tool is on; the tool tip ends on the path arc at the
+            # outward (or inward, for inside-tangent) ray from center
+            # through the programmed end.
             tool_arc_r = (arc_r - tool_r) if inside else (arc_r + tool_r)
-            # Compute tool-center end position: scale (ex-cx, ey-cy) to tool_arc_r.
             dxv = ex - cx
             dyv = ey - cy
             d = math.hypot(dxv, dyv)

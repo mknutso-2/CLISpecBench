@@ -207,27 +207,38 @@ CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
         "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X3.0 Y-2.0 I-2.0 J0.0\n",
         None,
     ),
-    # The same inward-arc condition should be rejected in radius format.
+    # Radius-format border-tangent case under the Clarifications.md path-arc
+    # reading: tool-tip at (5, 3), programmed end (2, 3), inside-tangent G41
+    # CCW gives aux_r = path_r + tool_r = 6 with path_r = R = 3, and the
+    # chord between tool-tip and programmed end is 3 = |aux_r - path_r|.
+    # The two-circle intersection is internally tangent — the resulting
+    # path arc has zero length (tool-tip start = end), the analog of
+    # §3.5.3.1's "end point of the arc is the same as the current point."
     (
-        "g41-tool-radius-not-less-than-radius-format-arc-radius-with-comp",
+        "g41-degenerate-radius-format-crc-arc-zero-length",
         "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG3 X2.0 Y3.0 R3.0\n",
         None,
     ),
-    # Mirror-image radius-format inward arc for G42.
+    # Mirror-image border-tangent radius-format case for G42 CW.
     (
-        "g42-tool-radius-not-less-than-radius-format-arc-radius-with-comp",
+        "g42-degenerate-radius-format-crc-arc-zero-length",
         "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X2.0 Y-3.0 R3.0\n",
         None,
     ),
-    # Smaller-than-tool radius variant in radius format.
+    # Radius-format geometrically-impossible case under the path-arc reading:
+    # path_r = R = 2, aux_r = 5 (inside-tangent), chord between tool-tip
+    # (5, 3) and programmed end (3, 2) is sqrt(5) ≈ 2.24, which is strictly
+    # less than |aux_r - path_r| = 3. No path-arc center exists that places
+    # tool-tip on the path arc and programmed end on the aux arc, so the
+    # input must be rejected.
     (
-        "g41-tool-radius-greater-than-radius-format-arc-radius-with-comp",
+        "g41-impossible-radius-format-crc-arc-chord-too-short",
         "G17 G90 G94\nG0 X0.0 Y0.0\nG41 D1 G1 X5.0 Y0.0\nG3 X3.0 Y2.0 R2.0\n",
         None,
     ),
-    # Mirror-image radius-format inward arc with programmed radius 2.0.
+    # Mirror-image impossible-chord radius-format case for G42 CW.
     (
-        "g42-tool-radius-greater-than-radius-format-arc-radius-with-comp",
+        "g42-impossible-radius-format-crc-arc-chord-too-short",
         "G17 G90 G94\nG0 X0.0 Y0.0\nG42 D1 G1 X5.0 Y0.0\nG2 X3.0 Y-2.0 R2.0\n",
         None,
     ),

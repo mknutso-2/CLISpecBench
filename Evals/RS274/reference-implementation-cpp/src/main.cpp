@@ -2556,68 +2556,76 @@ void apply_cutter_compensated_arc_xy_motion(MachineState& state, const ParsedLin
         throw InputError("Cutter radius compensation currently supports only G2/G3 XY arcs");
     }
 
-    const Point2D programmed_start = resolve_current_programmed_xy(state);
+    // Under CRC, §3.5.3 defers to Appendix B: the input describes the
+    // path arc the tool tip traces (the "generated" arc per §B.6),
+    // which shares its center with the auxiliary arc. I/J = offsets
+    // from the current tool-tip location (§3.5.3.2 + §B.1.1) to that
+    // shared center; R = radius of the path arc; X/Y = programmed
+    // contour endpoint (on the auxiliary arc). The same construction
+    // applies to first and continuation arcs.
+    const Point2D current_tool_tip{state.machine_position.x, state.machine_position.y};
     const Point2D programmed_endpoint = resolve_programmed_xy_endpoint(parsed_line, state);
     const double tool_radius = active_cutter_radius(state);
     const bool offsets_outward =
         cutter_comp_arc_offsets_outward(current_motion->second, state.cutter_comp_side);
     Point2D programmed_center{};
-    double programmed_arc_radius = 0.0;
+    double tool_center_arc_radius = 0.0;
     if (parsed_line.r.has_value()) {
-        programmed_arc_radius = std::abs(*parsed_line.r);
-        const double tool_center_arc_radius =
-            compensated_arc_radius(programmed_arc_radius, tool_radius, offsets_outward);
-        programmed_center = state.pending_first_cutter_comp_move
-            ? resolve_first_cutter_comp_radius_format_arc_center(
-                  Point2D{state.machine_position.x, state.machine_position.y},
-                  programmed_endpoint,
-                  programmed_arc_radius,
-                  tool_center_arc_radius,
-                  *parsed_line.r,
-                  current_motion->second
-              )
-            : resolve_radius_format_arc_center(
-                  programmed_start,
-                  programmed_endpoint,
-                  *parsed_line.r,
-                  current_motion->second
-              );
-        const double endpoint_center_distance = std::hypot(
-            programmed_endpoint.x - programmed_center.x,
-            programmed_endpoint.y - programmed_center.y
-        );
-        if (endpoint_center_distance <= kNearIntegerTolerance) {
-            throw InputError("Arc endpoint may not be at the arc center");
+        const double path_arc_radius = std::abs(*parsed_line.r);
+        // Auxiliary arc radius = path arc radius -/+ tool radius, depending on side.
+        const double auxiliary_arc_radius = offsets_outward
+            ? path_arc_radius - tool_radius
+            : path_arc_radius + tool_radius;
+        if (auxiliary_arc_radius <= kNearIntegerTolerance) {
+            throw InputError("Tool radius not less than arc radius with comp");
         }
-        const double scale = tool_center_arc_radius / endpoint_center_distance;
-        if (state.pending_first_cutter_comp_move) {
-            state.pending_first_cutter_comp_move = false;
-        }
-        state.machine_position.x =
-            programmed_center.x + ((programmed_endpoint.x - programmed_center.x) * scale);
-        state.machine_position.y =
-            programmed_center.y + ((programmed_endpoint.y - programmed_center.y) * scale);
-        state.cutter_comp_programmed_xy = programmed_endpoint;
-        state.cutter_comp_last_linear_direction = std::nullopt;
-        return;
-    } else {
-        programmed_center = resolve_center_format_arc_center(programmed_start, parsed_line);
-        programmed_arc_radius = std::hypot(
-            programmed_endpoint.x - programmed_center.x,
-            programmed_endpoint.y - programmed_center.y
+        // For two distinct intersections (and a non-degenerate path arc),
+        // |aux_r - path_r| < chord < aux_r + path_r. Border cases
+        // collapse to a single point and produce a zero-length path arc;
+        // reject those as the analogue of §3.5.3.1's "end point of the
+        // arc is the same as the current point."
+        const double chord = std::hypot(
+            programmed_endpoint.x - current_tool_tip.x,
+            programmed_endpoint.y - current_tool_tip.y
         );
-    }
-    const double tool_center_arc_radius =
-        compensated_arc_radius(programmed_arc_radius, tool_radius, offsets_outward);
-
-    if (state.pending_first_cutter_comp_move) {
-        const double current_center_distance = std::hypot(
-            state.machine_position.x - programmed_center.x,
-            state.machine_position.y - programmed_center.y
-        );
-        if (std::abs(current_center_distance - tool_center_arc_radius) > kNearIntegerTolerance) {
+        if (chord > auxiliary_arc_radius + path_arc_radius + kNearIntegerTolerance) {
             throw InputError("First cutter compensation arc cannot be constructed");
         }
+        if (chord <= std::abs(auxiliary_arc_radius - path_arc_radius) + kNearIntegerTolerance) {
+            throw InputError("Tool radius not less than arc radius with comp");
+        }
+        programmed_center = resolve_first_cutter_comp_radius_format_arc_center(
+            current_tool_tip,
+            programmed_endpoint,
+            auxiliary_arc_radius,
+            path_arc_radius,
+            *parsed_line.r,
+            current_motion->second
+        );
+        tool_center_arc_radius = path_arc_radius;
+    } else {
+        programmed_center = resolve_center_format_arc_center(current_tool_tip, parsed_line);
+        const double auxiliary_arc_radius = std::hypot(
+            programmed_endpoint.x - programmed_center.x,
+            programmed_endpoint.y - programmed_center.y
+        );
+        if (auxiliary_arc_radius <= kNearIntegerTolerance) {
+            throw InputError("Arc endpoint may not be at the arc center");
+        }
+        tool_center_arc_radius =
+            compensated_arc_radius(auxiliary_arc_radius, tool_radius, offsets_outward);
+        // Verify the input I/J is consistent with the resolved path
+        // geometry: |tool-tip - center| (= hypot(I, J)) must equal the
+        // derived path-arc radius (= aux_r +/- tool_r).
+        const double current_center_distance = std::hypot(
+            current_tool_tip.x - programmed_center.x,
+            current_tool_tip.y - programmed_center.y
+        );
+        if (std::abs(current_center_distance - tool_center_arc_radius) > kNearIntegerTolerance) {
+            throw InputError("Cutter compensation arc inconsistent: I/J implies a path radius that does not match the auxiliary arc radius +/- tool radius");
+        }
+    }
+    if (state.pending_first_cutter_comp_move) {
         state.pending_first_cutter_comp_move = false;
     }
 

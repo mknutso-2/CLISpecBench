@@ -2,16 +2,13 @@
 
 ## Proposed (not yet applied)
 
-### Clarify cutter-radius-compensation (CRC) arc and first-move semantics
+### Clarify cutter-radius-compensation (CRC) first-move semantics
 
 Pass-rate analysis across ~255 runs (every model, every language variant,
 run via `scripts/per-test-pass-rate.py`) shows that 21 of the 23
 `test_cutter_radius_compensation.py` cases passed ≤5 times and 6 passed
 never:
 
-- **Arc endpoints (8 cases, 0 or 1 passes each)**: all of
-  `test_application_tracks_cutter_radius_compensated_arc_endpoints`
-  (g41/g42 × first-arc / subsequent-arc × center-format / radius-format).
 - **Entry-move straight line (4 cases, 1–4 passes)**:
   `test_application_tracks_cutter_radius_compensated_spindle_center`
   parametrizations `g41-first-straight-move-left`,
@@ -22,59 +19,12 @@ never:
   g40-then-g42-restarts, and tool-change-while-comp-on parametrizations
   of the same spindle-center test.
 
-The continuation failures are a cascade: every continuation test depends
-on the agent first computing the entry-move endpoint correctly, so a
-single side-selection flip (or first-move geometry mistake) scores N
-times across tests named for independent behaviors. This is the cascade
-pattern warned against in `skills/eval-authoring/SKILL.md`.
-
-Review of `RS274NGC.md` §B.6 and §3.5.3 against the test inputs identified
-four interpretive leaps that are required to reach the expected answers
-but are **not stated in the prose spec**:
-
-1. **§B.6 silently overrides §3.5.3.2's distance-mismatch error.** The
-   first-arc inputs place the tool at (7, 0) with the programmed arc
-   center at (0, 0) and end at (0, ±4) — current-to-center distance 7,
-   end-to-center distance 4. §3.5.3.2 says such a mismatch is a hard
-   error; §B.6 never says it's waived under CRC.
-2. **Radius-format first-arc is geometrically impossible under normal R
-   rules.** `G42 D1 G3 X0 Y4 R4` from (7, 0) has chord √65 ≈ 8.06 > 2r =
-   8, so no center exists. The tests assume R becomes the *auxiliary*
-   arc radius; §B.6 says "actual computations differ ... see 3.5.3" and
-   §3.5.3.1 says nothing about CRC.
-3. **"Current location" for I/J under CRC is undefined.** §3.5.3.2 says
-   I/J are offsets from "the current location." Under CRC the tool
-   center and programmed contour diverge. The continuation tests only
-   pass if I/J are read relative to the programmed contour.
-4. **G41/G42 side selection on a CCW arc is not stated.** Deciding that
-   G42 on CCW puts the tool on the outside (tool-center radius =
-   programmed + tool) requires reasoning from the tangent-direction
-   convention. §B.6 only says "on the appropriate side."
-
-Plus a chain cascade: continuation tests named for independent behaviors
-(convex corner, colinear follow-on, G40 transition) all fail when the
-agent gets the first move wrong, violating the independent-failure-modes
-rule in `skills/eval-authoring/SKILL.md`.
-
-Proposed options (not yet chosen):
-
-- **Option A — expand `technical-requirements-prompt.md` / `base-prompt.md`.**
-  Add a short "CRC arc entry and continuation rules" paragraph that spells
-  out (1)–(4) above, without editing `RS274NGC.md`. This preserves the
-  tests and measures implementation skill against a specified contract.
-- **Option B — remove or weaken the arc-endpoint tests.** Keep only the
-  straight-move first-move and continuation tests; drop the 8 arc cases.
-  Accept a lower suite size in exchange for tests that are derivable from
-  the spec alone.
-- **Option C — keep as-is.** Accept that these probe inference beyond the
-  prose spec and treat the eval's practical ceiling as ≈98.9% rather
-  than 100%.
-
-None of these is applied yet; VERSION, content hashes, and test behavior
-are unchanged. See the PASS-RATE NOTE comment blocks in
-`Evals/RS274/tests/test_cutter_radius_compensation.py` (above
-`CRC_ARC_CASES` and above the straight-move `@pytest.mark.parametrize`)
-for the in-code version of the same analysis.
+The continuation cluster is the structural concern. Every continuation
+test depends on the agent first computing the entry-move endpoint
+correctly, so a single side-selection flip (or first-move geometry
+mistake) scores N times across tests named for independent behaviors.
+This is the cascade pattern warned against in
+`skills/eval-authoring/SKILL.md`.
 
 ### Resolve full-circle arc inconsistency with §3.5.3.2
 
@@ -339,6 +289,110 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.1 — 2026-04-25
+
+### Added
+
+- **`prompt/docs/Clarifications.md`** — a new document for normative
+  disambiguations of `RS274NGC.md` where the spec admits multiple
+  defensible readings. The first entry resolves CRC arc input
+  semantics, applying to both the entry move (first compensated
+  motion after G41 or G42) and continuation moves:
+  - X, Y name the programmed contour endpoint (the auxiliary-arc
+    endpoint per §B.6), not the position the tool tip will reach.
+  - R names the radius of the path the tool tip actually traces
+    (the "generated arc" per §B.6, which shares its center with the
+    auxiliary arc).
+  - I, J are offsets from the current tool-tip location (per §B.1.1's
+    world-model convention) to that shared center — not from the
+    previous programmed contour endpoint.
+
+### Changed
+
+- **`base-prompt.md`** updated to point agents at `docs/Clarifications.md`
+  and to call out that its content is normative for this task.
+
+  Background: §3.5.3 says "If cutter radius compensation is active,
+  the motion will differ from what is described here. See Appendix B,"
+  but §3.5.3 + §B.6 + §B.1.1 do not unambiguously settle which point
+  serves as the I/J reference under CRC, nor whether R names the path-
+  arc radius or the auxiliary-arc radius. Three readings are defensible
+  (path-arc; contour-radius with tool-tip-relative I/J; contour-radius
+  with tangent-point-relative I/J); this release picks the first
+  (path-arc throughout) for the simplest semantic continuity with
+  non-CRC arcs and uniform first/continuation handling. The full
+  analysis is documented in the comment block above `CRC_ARC_CASES`
+  in `tests/test_cutter_radius_compensation.py`.
+
+### Notes
+
+- The agent's prompt corpus changes (new `docs/Clarifications.md` file
+  and updated `base-prompt.md`), so the contract is observably
+  different. Test inputs and reference implementations are unchanged;
+  the existing tests already align with the picked reading.
+
+## v3.1.0 — 2026-04-25
+
+### Changed
+
+- **CRC arc tests — corrected geometry under the §3.5.3 path-arc reading.**
+  `test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints`
+  inputs were geometrically inconsistent under the only spec-consistent
+  reading: §3.5.3 explicitly defers to Appendix B under CRC, so "the
+  arc" of §3.5.3.1/§3.5.3.2 refers to the path the tool actually
+  traces, not the input X/Y/I/J literally. R names the path-arc radius;
+  I/J name the path-arc center offset from the tool-tip current
+  position. Specifically:
+  - Four radius-format first-arc cases changed `R4.0 → R7.0` (R = path
+    arc radius 7, not auxiliary arc radius 4).
+  - Two subsequent-arc cases changed `J±4.0 → J±7.0` (I/J = path arc
+    center offset from tool-tip current, paralleling the R reading).
+  - The §3.5.3.2 → §3.5.3.1 section reference on the
+    radius-format-outside-tangent comment was a paste error in the
+    prior version; corrected.
+
+### Added
+
+- **Four CRC inside-tangent arc test cases.** The prior suite covered
+  only outside-tangent geometries (G42 CCW, G41 CW). Added the
+  inside-tangent variants (G41 CCW, G42 CW) for both center-format and
+  radius-format first arcs, with programmed endpoint at (0, ±10) and
+  auxiliary arc radius 10, giving the same compensated tool-center
+  endpoint (0, ±7). Total CRC arc cases now 12 (was 8); total
+  `test_cutter_radius_compensation.py` cases now 28 (was 23).
+
+- **Test ID renames for clarity.** Existing CRC arc test IDs gained
+  explicit traversal direction and tangency descriptors:
+  `g42-first-arc-move` →
+  `g42-ccw-first-center-format-arc-move-tangent-outside-arc`, and
+  similar for the other first-arc tests.
+
+- **Per-test comment blocks** on all CRC arc test cases explaining the
+  auxiliary arc geometry, the side-selection rule, and (for radius-
+  format) the path-arc-radius reading of R. Comments mirror cleanly
+  between CCW and CW, outside- and inside-tangent variants.
+
+### Notes
+
+- This release does **not** modify `RS274NGC.md`; the spec is consistent
+  on these cases under careful reading of §3.5.3 + §3.5.10 + §4.3.11 +
+  Appendix B.
+- Reference implementations (`reference-implementation-py/main.py` and
+  `reference-implementation-cpp/src/main.cpp`) were updated in this
+  release to compute the CRC arc geometry under the path-arc reading.
+  Both implementations:
+  - Use the current tool-tip location (not the previous programmed
+    contour endpoint) as the reference for I/J on every CRC arc
+    (including continuation arcs).
+  - For radius format, treat R as the path-arc radius and derive
+    `aux_r = path_r -/+ tool_r` based on side selection, then locate
+    the shared center via the same two-circle intersection used for
+    first arcs (no separate continuation branch).
+  - Reject geometrically degenerate inputs where the chord between
+    tool-tip and programmed end falls at or below `|aux_r - path_r|`
+    (the analogue of §3.5.3.1's "end point of the arc is the same as
+    the current point" error under the path-arc reading).
 
 ## v3.0.0 — 2026-04-20
 
