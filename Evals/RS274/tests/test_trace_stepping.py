@@ -1356,19 +1356,11 @@ def test_g88_boring_rapid_retract(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    """G88 (boring, manual retract) sub-motions: like G86 with spindle on.
+    """G88 uses the non-interactive manual-retract convention.
 
-    SM1: rapid XY, SM2: rapid to R, SM3: feed to Z, SM4: rapid retract.
-
-    PASS-RATE NOTE (2026-04-18): 21 passes / 243 attempts across all
-    models (see CHANGELOG "Proposed"). RS274 §3.5.16.9 step 4 says
-    "Stop the program so the operator can retract the spindle
-    manually" — incompatible with a non-interactive simulator. The
-    test adopts a simulator-specific convention (rapid retract to
-    initial Z, treating G88 "like G86 with spindle on"), but neither
-    `base-prompt.md` nor `technical-requirements-prompt.md` states this
-    convention. A spec-literal agent either errors out or leaves the
-    tool at Z=-1; this test rewards a specific unwritten interpretation.
+    Clarifications.md maps G88's manual operator retract to an automatic
+    rapid retract to the canned-cycle clear level. Under G98 here, clear
+    Z is the pre-cycle Z value because it is above R0.
     """
     tool_table = "POCKET FMS TLO DIAMETER\n\n1 1 0.0 0.0\n"
     setup = "T1\nM6\nM3\nG90\nG98\nG0 X0 Y0 Z1\n"

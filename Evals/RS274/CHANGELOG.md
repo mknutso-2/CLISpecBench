@@ -2,22 +2,6 @@
 
 ## Proposed (not yet applied)
 
-### Clarify G88 retract behavior in a non-interactive simulator
-
-`test_trace_stepping.py::test_g88_boring_rapid_retract` passed 21 / 243
-times. RS274 §3.5.16.9 step 4 says G88 must "Stop the program so the
-operator can retract the spindle manually" — incompatible with this
-simulator, which runs to completion without operator interaction. The
-test adopts a specific simulator convention (G88 behaves like G86 with
-the spindle left on: rapid retract to initial Z at the end), but no
-prompt file states this convention.
-
-Proposed clarification: add a sentence to
-`technical-requirements-prompt.md` saying that since this simulator is
-non-interactive, G88's "manual retract" step is performed as a rapid
-retract to initial Z (G98) or R (G99) — matching whatever convention
-the reference implementation encodes. Documentation-only.
-
 ### Clarify `cutter_radius_compensation_number` semantics for D0
 
 Four tests share this issue:
@@ -218,6 +202,23 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.5 — 2026-04-25
+
+### Changed
+
+- Added a normative clarification in `prompt/docs/Clarifications.md`
+  that G88's manual operator retract is modeled as an automatic rapid
+  retract to the canned-cycle clear level in this non-interactive
+  simulator.
+- Updated G88-related test comments and docstrings to cite that
+  clarification instead of treating the retract convention as unstated.
+
+### Fixed
+
+- Resolved the documentation gap behind
+  `test_trace_stepping.py::test_g88_boring_rapid_retract`, which
+  exercises a G88 rapid retract in trace output.
 
 ## v3.1.4 — 2026-04-25
 

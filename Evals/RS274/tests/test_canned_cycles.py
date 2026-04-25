@@ -348,10 +348,8 @@ def test_application_tracks_initial_canned_cycle_behavior(
 # RS274 section 3.5.16 says sticky R and depth-word behavior applies to canned
 # cycles generally, not only to G81. These two cases extend the repeat
 # coverage to supported cycles with no extra non-sticky arguments. G88 has
-# separate limited success-path coverage below for its observable spindle
-# restart behavior, but it is intentionally omitted from this sticky-word
-# matrix because its operator-stop/manual retract position is not representable
-# in the current single-run payload.
+# separate success-path coverage below for its non-interactive manual-retract
+# convention and observable spindle restart behavior.
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -408,10 +406,10 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
     assert payload["spindle_direction"] == expected_spindle_direction
 
 
-# RS274 section 3.5.16.9 makes two line-end outcomes explicit that the current
-# payload can observe even though the operator's manual retract position is not
-# deterministic: the active motion mode is G88, and after the stop/retract
-# sequence the spindle is restarted in the direction it was going beforehand.
+# RS274 section 3.5.16.9 defines G88's operator stop and spindle restart.
+# Clarifications.md maps the manual retract to an automatic rapid retract for
+# this non-interactive simulator; these cases check the observable final
+# spindle direction after that stop/retract sequence.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_spindle_direction"),
     [

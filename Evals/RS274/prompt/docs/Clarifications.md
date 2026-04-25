@@ -47,3 +47,15 @@ change §3.5.16.8's programming guidance that explicit I and J values
 should be chosen to provide tool clearance in a real back-boring setup.
 If a defaulted word makes a G87 sub-motion zero-length, that sub-motion
 follows the general zero-duration trace rule and produces no trace entry.
+
+## G88 boring: non-interactive manual retract
+
+§3.5.16.9 of `RS274NGC.md` says that G88 stops the program so the
+operator can retract the spindle manually. During command-line execution,
+that manual retract is modeled as an automatic rapid retract to the
+canned-cycle clear level defined by §3.5.16 and §3.5.20.
+
+The intermediate program stop and temporary spindle stop/restart are not
+modeled as pauses, errors, or separate trace/output state transitions.
+During the automatic retract and after the cycle, the observable spindle
+direction remains the direction that was active before the G88 cycle.
