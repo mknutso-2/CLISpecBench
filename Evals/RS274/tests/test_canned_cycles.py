@@ -289,9 +289,9 @@ REPEATED_CANNED_CYCLE_CASES: list[RepeatedCannedCycleCase] = [
 # direction" parametrizations each pass at ~20–24%, and so do the two
 # `test_g88_restores_the_prior_spindle_direction_after_the_cycle` cases.
 # These are five test IDs for one underlying behavior: "track the
-# pre-cycle spindle direction and restore it after the cycle." Named per
-# cycle but dominated by one mechanism — see CHANGELOG "Proposed:
-# Additional independent-failure-mode cascades."
+# pre-cycle spindle direction and restore it after the cycle." The tests stay
+# separated by cycle because the observable end state still depends on each
+# cycle's own motion and spindle semantics.
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -379,8 +379,8 @@ def test_application_tracks_initial_canned_cycle_behavior(
 # [g81-reuses-sticky-r-and-z-on-following-line]` (56/255, 22%) is the
 # third member of the same cluster. Three test IDs for one behavior:
 # "retain R and the selected-plane depth word across consecutive blocks
-# of the same cycle." See CHANGELOG "Proposed: Additional independent-
-# failure-mode cascades."
+# of the same cycle." The duplicated precondition is intentional because each
+# cycle still has separate endpoint and spindle expectations.
 def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
     submission_command: tuple[str, ...],
     input_gcode: str,
@@ -465,11 +465,7 @@ def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "G80\n"
-            "G10 L2 P2 X4.0 Y5.0 Z6.0\n"
-            "G92 X7.0\n"
-        ),
+        input_gcode=("G80\nG10 L2 P2 X4.0 Y5.0 Z6.0\nG92 X7.0\n"),
         tmp_path=tmp_path,
     )
 
@@ -506,8 +502,5 @@ def test_return_mode_change_affects_later_repeats_of_an_active_canned_cycle(
     assert completed.returncode == 0, completed.stderr
     assert payload["error"] is None
     assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == "G81"
-    assert (
-        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
-        == "G99"
-    )
+    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES] == "G99"
     assert payload["machine_position"] == with_default_rotary_axes({"x": 6.0, "y": 7.0, "z": 2.8})

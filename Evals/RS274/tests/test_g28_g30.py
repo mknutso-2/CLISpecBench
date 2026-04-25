@@ -17,39 +17,42 @@ from rs274_parameters import (
     G30_HOME_Z_PARAMETER,
 )
 from rs274_support import (
-    build_parameter_file,
     get_parameter_value,
     run_rs274,
     with_default_rotary_axes,
 )
 
 
+def parameter_assignment_lines(values: dict[int, float]) -> str:
+    return "".join(f"#{parameter_index}={value}\n" for parameter_index, value in values.items())
+
+
 # RS274 section 3.5.8 says G28 and G30 use home positions defined by
 # parameters 5161-5166 and 5181-5186, that those parameter values are in the
 # absolute coordinate system, and that all axis words on the G28/G30 line are
-# optional. Section 3.2.1 says the interpreter reads the parameter file at
-# startup. The payload exposes only the final controlled-point position, so
-# these tests assert the final home endpoint rather than the intermediate
-# traverse segment.
-def test_application_returns_to_g28_home_loaded_from_input_parameter_file(
+# optional. Home parameters are set by in-program parameter assignments here so
+# these tests do not depend on the parameter-file parser. The payload exposes
+# only the final controlled-point position, so these tests assert the final home
+# endpoint rather than the intermediate traverse segment.
+def test_application_returns_to_g28_home_set_by_parameters(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+            parameter_assignment_lines(
+                {
+                    G28_HOME_X_PARAMETER: 40.0,
+                    G28_HOME_Y_PARAMETER: 50.0,
+                    G28_HOME_Z_PARAMETER: 60.0,
+                }
+            )
+            + "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
             "G90\n"
             "G0 X1.0 Y2.0 Z3.0\n"
             "G28\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G28_HOME_X_PARAMETER: 40.0,
-                G28_HOME_Y_PARAMETER: 50.0,
-                G28_HOME_Z_PARAMETER: 60.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -71,18 +74,18 @@ def test_application_returns_to_g28_home_after_intermediate_programmed_position(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+            parameter_assignment_lines(
+                {
+                    G28_HOME_X_PARAMETER: 40.0,
+                    G28_HOME_Y_PARAMETER: 50.0,
+                    G28_HOME_Z_PARAMETER: 60.0,
+                }
+            )
+            + "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
             "G90\n"
             "G0 X4.0 Y5.0 Z6.0\n"
             "G28 X1.0 Y2.0 Z3.0\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G28_HOME_X_PARAMETER: 40.0,
-                G28_HOME_Y_PARAMETER: 50.0,
-                G28_HOME_Z_PARAMETER: 60.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -97,25 +100,25 @@ def test_application_returns_to_g28_home_after_intermediate_programmed_position(
     assert get_parameter_value(payload, G28_HOME_Z_PARAMETER) == 60.0
 
 
-def test_application_returns_to_g30_secondary_home_loaded_from_input_parameter_file(
+def test_application_returns_to_g30_secondary_home_set_by_parameters(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+            parameter_assignment_lines(
+                {
+                    G30_HOME_X_PARAMETER: 70.0,
+                    G30_HOME_Y_PARAMETER: 80.0,
+                    G30_HOME_Z_PARAMETER: 90.0,
+                }
+            )
+            + "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
             "G90\n"
             "G0 X4.0 Y5.0 Z6.0\n"
             "G30 X1.0 Y2.0 Z3.0\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G30_HOME_X_PARAMETER: 70.0,
-                G30_HOME_Y_PARAMETER: 80.0,
-                G30_HOME_Z_PARAMETER: 90.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -137,18 +140,18 @@ def test_application_returns_to_g30_secondary_home_without_axis_words(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
+            parameter_assignment_lines(
+                {
+                    G30_HOME_X_PARAMETER: 70.0,
+                    G30_HOME_Y_PARAMETER: 80.0,
+                    G30_HOME_Z_PARAMETER: 90.0,
+                }
+            )
+            + "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
             "G54\n"
             "G90\n"
             "G0 X1.0 Y2.0 Z3.0\n"
             "G30\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G30_HOME_X_PARAMETER: 70.0,
-                G30_HOME_Y_PARAMETER: 80.0,
-                G30_HOME_Z_PARAMETER: 90.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -163,23 +166,23 @@ def test_application_returns_to_g30_secondary_home_without_axis_words(
     assert get_parameter_value(payload, G30_HOME_Z_PARAMETER) == 90.0
 
 
-def test_application_returns_to_g28_rotary_home_loaded_from_input_parameter_file(
+def test_application_returns_to_g28_rotary_home_set_by_parameters(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G90\n"
+            parameter_assignment_lines(
+                {
+                    G28_HOME_A_PARAMETER: 40.0,
+                    G28_HOME_B_PARAMETER: 50.0,
+                    G28_HOME_C_PARAMETER: 60.0,
+                }
+            )
+            + "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
             "G28 A4.0 B5.0 C6.0\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G28_HOME_A_PARAMETER: 40.0,
-                G28_HOME_B_PARAMETER: 50.0,
-                G28_HOME_C_PARAMETER: 60.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -201,16 +204,16 @@ def test_application_returns_to_g28_rotary_home_without_axis_words(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G90\n"
+            parameter_assignment_lines(
+                {
+                    G28_HOME_A_PARAMETER: 40.0,
+                    G28_HOME_B_PARAMETER: 50.0,
+                    G28_HOME_C_PARAMETER: 60.0,
+                }
+            )
+            + "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
             "G28\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G28_HOME_A_PARAMETER: 40.0,
-                G28_HOME_B_PARAMETER: 50.0,
-                G28_HOME_C_PARAMETER: 60.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -232,16 +235,16 @@ def test_application_returns_to_g30_rotary_home_without_axis_words(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G90\n"
+            parameter_assignment_lines(
+                {
+                    G30_HOME_A_PARAMETER: 70.0,
+                    G30_HOME_B_PARAMETER: 80.0,
+                    G30_HOME_C_PARAMETER: 90.0,
+                }
+            )
+            + "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
             "G30\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G30_HOME_A_PARAMETER: 70.0,
-                G30_HOME_B_PARAMETER: 80.0,
-                G30_HOME_C_PARAMETER: 90.0,
-            }
         ),
         tmp_path=tmp_path,
     )
@@ -263,16 +266,16 @@ def test_application_returns_to_g30_rotary_home_after_intermediate_programmed_po
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            "G90\n"
+            parameter_assignment_lines(
+                {
+                    G30_HOME_A_PARAMETER: 70.0,
+                    G30_HOME_B_PARAMETER: 80.0,
+                    G30_HOME_C_PARAMETER: 90.0,
+                }
+            )
+            + "G90\n"
             "G0 A1.0 B2.0 C3.0\n"
             "G30 A4.0 B5.0 C6.0\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G30_HOME_A_PARAMETER: 70.0,
-                G30_HOME_B_PARAMETER: 80.0,
-                G30_HOME_C_PARAMETER: 90.0,
-            }
         ),
         tmp_path=tmp_path,
     )

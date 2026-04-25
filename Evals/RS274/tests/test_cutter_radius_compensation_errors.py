@@ -83,23 +83,10 @@ GCODE_BODIES_INVALID_WHILE_CRC_IS_ACTIVE = [
 
 # Added in RS274 v1.0.1: replaces the g92-1/g92-2/g92-3 entries above.
 # Appendix B.5 error 1: "Cannot change axis offsets with cutter radius comp."
-# Section 3.5.18 defines G92.1/G92.2/G92.3 as axis-offset commands. Each case
-# establishes a nonzero G92 offset before enabling CRC so that the G92.x
-# command unambiguously changes active axis offsets.
-CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES: list[tuple[str, str]] = [
-    (
-        "g92-1-with-cutter-radius-compensation-active",
-        "G17 G90 G94\nG92 X5.0\nG41 D1\nG92.1\n",
-    ),
-    (
-        "g92-2-with-cutter-radius-compensation-active",
-        "G17 G90 G94\nG92 X5.0\nG41 D1\nG92.2\n",
-    ),
-    (
-        "g92-3-with-cutter-radius-compensation-active",
-        "G17 G90 G94\nG92 X5.0\nG92.1\nG41 D1\nG92.3\n",
-    ),
-]
+# Section 3.5.18 defines G92.1/G92.2/G92.3 as axis-offset commands. G92.1 is
+# the representative CRC precondition case here; G92.2 and G92.3 behavior is
+# covered independently by the G92 tests.
+CRC_AXIS_OFFSET_WHILE_ACTIVE_INPUT = "G17 G90 G94\nG92 X5.0\nG41 D1\nG92.1\n"
 
 
 CRC_ERROR_CASES: list[tuple[str, str, int | None]] = [
@@ -347,29 +334,17 @@ def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_i
     )
 
 
-@pytest.mark.parametrize(
-    "input_gcode",
-    [input_gcode for _, input_gcode in CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES],
-    ids=[case_id for case_id, _ in CRC_AXIS_OFFSET_WHILE_ACTIVE_CASES],
-)
 def test_application_rejects_axis_offset_changes_while_cutter_compensation_is_active(
     submission_command: tuple[str, ...],
-    input_gcode: str,
     tmp_path: Path,
 ) -> None:
-    """Check that G92.1/G92.2/G92.3 are rejected while CRC is active.
+    """Check that a G92.x axis-offset change is rejected while CRC is active.
 
     Governing section: RS274 Appendix B.5, error 1.
-
-    PASS-RATE NOTE (2026-04-19): the three parametrizations each pass at
-    23%. They test one rule (axis-offset change while CRC on = error)
-    with three variants; a model that either fires or skips the error
-    once fails or passes all three. See CHANGELOG "Proposed: Additional
-    independent-failure-mode cascades."
     """
     run_rs274_invalid_input(
         submission_command,
-        input_gcode=input_gcode,
+        input_gcode=CRC_AXIS_OFFSET_WHILE_ACTIVE_INPUT,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
     )

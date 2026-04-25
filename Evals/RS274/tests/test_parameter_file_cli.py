@@ -12,7 +12,6 @@ from rs274_parameters import (
     G92_Y_OFFSET_PARAMETER,
     G92_Z_OFFSET_PARAMETER,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
-    coordinate_system_xyz_parameter_indices,
     coordinate_system_xyzabc_parameter_indices,
 )
 from rs274_support import (
@@ -60,46 +59,43 @@ def test_application_accepts_parameter_file_cli_arguments(
 
 
 # RS274 section 3.2.1 says the interpreter reads the parameter file when it
-# starts up, and section 3.3.2.2 says parameter values are read from the
-# numbered parameter slots.
-#
-# PASS-RATE NOTE (2026-04-19): the four tests in this file
-# (`initializes_coordinate_system_offsets_from_input_file`,
-# `initializes_g92_offsets_from_input_file`,
-# `uses_selected_coordinate_system_loaded_from_input_file`,
-# `uses_parameter_values_loaded_from_input_file`) all pass at 20–25%,
-# along with `test_g28_g30.py::*_loaded_from_input_parameter_file`
-# (~20%). Six tests named for distinct loaded-state semantics, all
-# depending on the same RS274 §3.2.1 parameter-file parser. A single
-# parser bug cascades across the set. See CHANGELOG "Proposed:
-# Additional independent-failure-mode cascades."
-def test_application_uses_parameter_values_loaded_from_input_file(
+# starts up, Table 2 defines coordinate-system and G92 stored parameters, and
+# section 3.2.2 says parameter 5220 selects the active startup coordinate
+# system. Keep these loaded-state checks together so a single parameter-file
+# parser defect does not create several independent-looking failures.
+def test_application_initializes_startup_state_from_parameter_input_file(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
+    (
+        cs2_x_parameter,
+        cs2_y_parameter,
+        cs2_z_parameter,
+        cs2_a_parameter,
+        cs2_b_parameter,
+        cs2_c_parameter,
+    ) = coordinate_system_xyzabc_parameter_indices(2)
     completed, payload = run_rs274(
         submission_command,
-        input_gcode="G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X#1\n",
-        parameter_input_content=build_parameter_file({1: 4.25}),
-        tmp_path=tmp_path,
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.25, "y": 0.0, "z": 0.0})
-    assert get_parameter_value(payload, 1) == 4.25
-
-
-# RS274 section 3.2.2 says startup selects the active coordinate system from
-# parameter 5220.
-def test_application_uses_selected_coordinate_system_loaded_from_input_file(
-    submission_command: tuple[str, ...],
-    tmp_path: Path,
-) -> None:
-    completed, payload = run_rs274(
-        submission_command,
-        input_gcode="",
-        parameter_input_content=build_parameter_file({SELECTED_COORDINATE_SYSTEM_PARAMETER: 2.0}),
+        input_gcode="G92.3\nG90\nG0 X#1 Y2.0 Z3.0 A4.0 B5.0 C6.0\n",
+        parameter_input_content=build_parameter_file(
+            {
+                1: 4.25,
+                SELECTED_COORDINATE_SYSTEM_PARAMETER: 2.0,
+                cs2_x_parameter: 10.0,
+                cs2_y_parameter: 20.0,
+                cs2_z_parameter: 30.0,
+                cs2_a_parameter: 40.0,
+                cs2_b_parameter: 50.0,
+                cs2_c_parameter: 60.0,
+                G92_X_OFFSET_PARAMETER: 1.0,
+                G92_Y_OFFSET_PARAMETER: 2.0,
+                G92_Z_OFFSET_PARAMETER: 3.0,
+                G92_A_OFFSET_PARAMETER: 4.0,
+                G92_B_OFFSET_PARAMETER: 5.0,
+                G92_C_OFFSET_PARAMETER: 6.0,
+            }
+        ),
         tmp_path=tmp_path,
     )
 
@@ -108,79 +104,13 @@ def test_application_uses_selected_coordinate_system_loaded_from_input_file(
     active_modal_g_codes = payload["active_modal_g_codes"]
     assert isinstance(active_modal_g_codes, dict)
     assert active_modal_g_codes["12"] == "G55"
+    assert get_parameter_value(payload, 1) == 4.25
     assert get_parameter_value(payload, SELECTED_COORDINATE_SYSTEM_PARAMETER) == 2.0
-
-
-# RS274 section 3.2.1 says the coordinate-system origin parameters in Table 2
-# are required startup state, and section 3.2.2 says the selected coordinate
-# system is defined by those stored parameters.
-def test_application_initializes_coordinate_system_offsets_from_input_file(
-    submission_command: tuple[str, ...],
-    tmp_path: Path,
-) -> None:
-    cs2_x_parameter, cs2_y_parameter, cs2_z_parameter = coordinate_system_xyz_parameter_indices(2)
-    (_, _, _, cs2_a_parameter, cs2_b_parameter, cs2_c_parameter) = (
-        coordinate_system_xyzabc_parameter_indices(2)
-    )
-    completed, payload = run_rs274(
-        submission_command,
-        input_gcode="G55\nG90\nG0 X1.0 Y2.0 Z3.0 A4.0 B5.0 C6.0\n",
-        parameter_input_content=build_parameter_file(
-            {
-                cs2_x_parameter: 10.0,
-                cs2_y_parameter: 20.0,
-                cs2_z_parameter: 30.0,
-                cs2_a_parameter: 40.0,
-                cs2_b_parameter: 50.0,
-                cs2_c_parameter: 60.0,
-            }
-        ),
-        tmp_path=tmp_path,
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
     assert payload["coordinate_system_offsets"]["2"] == with_default_rotary_axes(
         {"x": 10.0, "y": 20.0, "z": 30.0, "a": 40.0, "b": 50.0, "c": 60.0}
     )
     assert payload["machine_position"] == with_default_rotary_axes(
-        {"x": 11.0, "y": 22.0, "z": 33.0, "a": 44.0, "b": 55.0, "c": 66.0}
-    )
-
-
-# RS274 section 3.2.1 says parameters 5211-5216 are part of the required
-# startup parameter state, and section 3.5.18 says those values define the
-# axis offsets used by G92.3.
-def test_application_initializes_g92_offsets_from_input_file(
-    submission_command: tuple[str, ...],
-    tmp_path: Path,
-) -> None:
-    completed, payload = run_rs274(
-        submission_command,
-        input_gcode=(
-            "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\n"
-            "G54\n"
-            "G92.3\n"
-            "G90\n"
-            "G0 X1.0 Y2.0 Z3.0 A4.0 B5.0 C6.0\n"
-        ),
-        parameter_input_content=build_parameter_file(
-            {
-                G92_X_OFFSET_PARAMETER: 10.0,
-                G92_Y_OFFSET_PARAMETER: 20.0,
-                G92_Z_OFFSET_PARAMETER: 30.0,
-                G92_A_OFFSET_PARAMETER: 40.0,
-                G92_B_OFFSET_PARAMETER: 50.0,
-                G92_C_OFFSET_PARAMETER: 60.0,
-            }
-        ),
-        tmp_path=tmp_path,
-    )
-
-    assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
-        {"x": 11.0, "y": 22.0, "z": 33.0, "a": 44.0, "b": 55.0, "c": 66.0}
+        {"x": 15.25, "y": 24.0, "z": 36.0, "a": 48.0, "b": 60.0, "c": 72.0}
     )
 
 
