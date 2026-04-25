@@ -2,30 +2,6 @@
 
 ## Proposed (not yet applied)
 
-### Clarify cutter-radius-compensation (CRC) first-move semantics
-
-Pass-rate analysis across ~255 runs (every model, every language variant,
-run via `scripts/per-test-pass-rate.py`) shows that 21 of the 23
-`test_cutter_radius_compensation.py` cases passed ≤5 times and 6 passed
-never:
-
-- **Entry-move straight line (4 cases, 1–4 passes)**:
-  `test_application_tracks_cutter_radius_compensated_spindle_center`
-  parametrizations `g41-first-straight-move-left`,
-  `g42-first-straight-move-right`, `g41-omitted-d-uses-tool-in-spindle`,
-  `g41-first-rapid-move-left`.
-- **Continuation / transition (9 cases, 1–2 passes each)**: the colinear-
-  follow-on, convex-corner, convex-90-degree, g40-follow-on,
-  g40-then-g42-restarts, and tool-change-while-comp-on parametrizations
-  of the same spindle-center test.
-
-The continuation cluster is the structural concern. Every continuation
-test depends on the agent first computing the entry-move endpoint
-correctly, so a single side-selection flip (or first-move geometry
-mistake) scores N times across tests named for independent behaviors.
-This is the cascade pattern warned against in
-`skills/eval-authoring/SKILL.md`.
-
 ### Resolve full-circle arc inconsistency with §3.5.3.2
 
 `test_trace_stepping.py::test_full_circle_arc_no_axis_words` passed 25 /
@@ -289,6 +265,23 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.2 — 2026-04-25
+
+### Changed
+
+- Added explicit `F60` feed setup to
+  `test_application_tracks_cutter_radius_compensated_spindle_center`
+  inputs so these CRC geometry tests do not also depend on whether an
+  implementation accepts feed motion before a feed rate is set in G94 mode.
+- Kept the hard Appendix B.6 `(3.2, +/-2.4)` first-move geometry only in
+  the cases that explicitly test that construction.
+- Switched the omitted-D, first-rapid, continuation, G40, convex-corner,
+  and tool-change cases to tangential CRC setup moves that land at obvious
+  compensated centers `(5, 3)` or `(5, -3)`, reducing the number of
+  downstream tests that fail from one first-entry geometry mistake.
+- Clarified the test comments to state that G41/G42 left/right selection is
+  not ambiguous for these left-to-right paths.
 
 ## v3.1.1 — 2026-04-25
 
