@@ -1,5 +1,39 @@
 # Changelog
 
+## v1.2.0 — 2026-04-25
+
+- Added a `superseded` VLR/EVLR kind covering the LASF_Spec record-id 7 marker
+  the spec defines for negating an existing VLR/EVLR; the JSON surface
+  round-trips its payload as `data_b64`, and the reference and harness handle
+  inspect/render symmetrically. New inspect and render tests cover both the
+  VLR and EVLR placements.
+- Refactored validation tests so a single error-envelope regression no longer
+  cascades. Most tests now assert only that the input was rejected via a
+  permissive `_was_rejected` check; the exact `invalid_document` /
+  `invalid_request` distinction is pinned by a small set of routing tests in
+  `test_schema.py` (envelope-shape gates plus a malformed-base64 routing
+  test).
+- Reorganized the inspect header tests so format-invariant fields (identity,
+  scale/offset, fixed-value fields like `header_size`) are parametrized by
+  field on a single representative point format instead of running 11 times
+  per format; format-varying fields (counters, layout offsets, extents) keep
+  per-format coverage where the format genuinely changes the value.
+- Split `test_inspect_point_format_record_blocks` into separate VLR and EVLR
+  tests so VLR decoding bugs and EVLR placement bugs report independently.
+- Tightened the base prompt to make "malformed standard LASF_Spec or
+  LASF_Projection record" an `invalid_document`, removing the ambiguity that
+  the spec line about Extra Bytes mismatch could be read as silently
+  downgrading the bad record to opaque metadata.
+- Reworded the waveform-absent serialization contract in
+  `technical-requirements-prompt.md` to read as a JSON-to-bytes serialization
+  rule (descriptor index 0 + zero waveform fields) rather than free-floating
+  behavior, and explicitly narrowed the contract so intra-packet waveform
+  layout (per-packet sample alignment and the spec's even-byte padding rule)
+  and the ESRI WKT dialect are out of scope. Mirrored that scope note in the
+  agent-facing base prompt and the LAS README.
+- Added a "Reference language" section to the LAS README explaining why LAS
+  intentionally ships only a Python reference.
+
 ## v1.1.0 — 2026-04-24
 
 - Changed inspect behavior to preserve stored public-header fields and validate

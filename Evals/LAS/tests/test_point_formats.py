@@ -48,25 +48,111 @@ def _populated_legacy_returns(points: list[dict[str, Any]]) -> list[int]:
     return returns
 
 
+# Public-header fields whose stored value does not depend on the chosen point
+# format — testing them once on a representative format is enough; running
+# all 11 formats would fail 11 times for the same parser bug.
+_HEADER_FORMAT_INVARIANT_FIELDS = (
+    "file_source_id",
+    "project_id",
+    "version_major",
+    "version_minor",
+    "system_identifier",
+    "generating_software",
+    "file_creation_day_of_year",
+    "file_creation_year",
+    "header_size",
+    "x_scale_factor",
+    "y_scale_factor",
+    "z_scale_factor",
+    "x_offset",
+    "y_offset",
+    "z_offset",
+)
+# Public-header fields whose value or interpretation legitimately depends on
+# the point format (legacy vs modern counters, waveform-only offsets, the
+# format byte itself, extents that vary with `point_for_format(...)`).
+_HEADER_FORMAT_LAYOUT_FIELDS = (
+    "global_encoding",
+    "point_data_record_format",
+    "point_data_record_length",
+    "offset_to_point_data",
+    "number_of_variable_length_records",
+    "number_of_extended_variable_length_records",
+    "start_of_first_extended_variable_length_record",
+    "start_of_waveform_data_packet_record",
+)
+_HEADER_COUNTER_FIELDS = (
+    "legacy_number_of_point_records",
+    "legacy_number_of_points_by_return",
+    "number_of_point_records",
+    "number_of_points_by_return",
+)
+_HEADER_EXTENT_FIELDS = (
+    "max_x",
+    "min_x",
+    "max_y",
+    "min_y",
+    "max_z",
+    "min_z",
+)
+
+
+def _inspect_header(
+    submission_command: Sequence[str], tmp_path: Path, point_format: int
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    dataset = dataset_for_point_format(point_format)
+    _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
+    assert payload is not None
+    actual = cast(dict[str, Any], payload_dataset(payload)["header"])
+    expected = cast(dict[str, Any], canonical_dataset(dataset)["header"])
+    return actual, expected
+
+
+@pytest.mark.parametrize("field", _HEADER_FORMAT_INVARIANT_FIELDS)
+def test_inspect_header_format_invariant_field(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    field: str,
+) -> None:
+    """Parametrize by *field* (not by format) so a single misread offset for
+    `system_identifier` fails one named test, not 11 copies of the same fact.
+    Format 6 is representative for the format-invariant fields tested here."""
+
+    actual, expected = _inspect_header(submission_command, tmp_path, 6)
+    assert actual[field] == expected[field]
+
+
 @pytest.mark.parametrize("point_format", list(range(11)))
-def test_inspect_point_format_header_summary(
+def test_inspect_header_format_layout_fields(
     submission_command: Sequence[str],
     tmp_path: Path,
     point_format: int,
 ) -> None:
-    dataset = dataset_for_point_format(point_format)
-    result, payload = run_las(
-        submission_command,
-        encode_request_for_inspect(dataset),
-        tmp_path,
-    )
+    actual, expected = _inspect_header(submission_command, tmp_path, point_format)
+    for field in _HEADER_FORMAT_LAYOUT_FIELDS:
+        assert actual[field] == expected[field], field
 
-    assert result.returncode == 0
-    assert payload is not None
-    assert payload["status"] == "ok"
-    actual = payload_dataset(payload)
-    expected = canonical_dataset(dataset)
-    assert cast(dict[str, Any], actual["header"]) == cast(dict[str, Any], expected["header"])
+
+@pytest.mark.parametrize("point_format", list(range(11)))
+def test_inspect_header_counter_fields(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    point_format: int,
+) -> None:
+    actual, expected = _inspect_header(submission_command, tmp_path, point_format)
+    for field in _HEADER_COUNTER_FIELDS:
+        assert actual[field] == expected[field], field
+
+
+@pytest.mark.parametrize("point_format", list(range(11)))
+def test_inspect_header_extent_fields(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    point_format: int,
+) -> None:
+    actual, expected = _inspect_header(submission_command, tmp_path, point_format)
+    for field in _HEADER_EXTENT_FIELDS:
+        assert actual[field] == expected[field], field
 
 
 @pytest.mark.parametrize("point_format", list(range(11)))
@@ -76,39 +162,41 @@ def test_inspect_point_format_point_payload(
     point_format: int,
 ) -> None:
     dataset = dataset_for_point_format(point_format)
-    result, payload = run_las(
-        submission_command,
-        encode_request_for_inspect(dataset),
-        tmp_path,
-    )
+    _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
 
-    assert result.returncode == 0
     assert payload is not None
-    assert payload["status"] == "ok"
     actual = payload_dataset(payload)
     expected = canonical_dataset(dataset)
     assert actual["points"] == expected["points"]
 
 
 @pytest.mark.parametrize("point_format", list(range(11)))
-def test_inspect_point_format_record_blocks(
+def test_inspect_point_format_vlrs(
     submission_command: Sequence[str],
     tmp_path: Path,
     point_format: int,
 ) -> None:
     dataset = dataset_for_point_format(point_format)
-    result, payload = run_las(
-        submission_command,
-        encode_request_for_inspect(dataset),
-        tmp_path,
-    )
+    _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
 
-    assert result.returncode == 0
     assert payload is not None
-    assert payload["status"] == "ok"
     actual = payload_dataset(payload)
     expected = canonical_dataset(dataset)
     assert actual["vlrs"] == expected["vlrs"]
+
+
+@pytest.mark.parametrize("point_format", list(range(11)))
+def test_inspect_point_format_evlrs(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    point_format: int,
+) -> None:
+    dataset = dataset_for_point_format(point_format)
+    _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
+
+    assert payload is not None
+    actual = payload_dataset(payload)
+    expected = canonical_dataset(dataset)
     assert actual["evlrs"] == expected["evlrs"]
 
 

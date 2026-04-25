@@ -533,6 +533,10 @@ def _decode_record(
         record["kind"] = "waveform_data_packets"
         record["data_b64"] = base64.b64encode(payload).decode("ascii")
         return _DecodedRecord(record=record, kind="waveform_data_packets", payload=payload)
+    if (user_id, record_id) == (LASF_SPEC, 7):
+        record["kind"] = "superseded"
+        record["data_b64"] = base64.b64encode(payload).decode("ascii")
+        return _DecodedRecord(record=record, kind="superseded", payload=payload)
     if (user_id, record_id) == (LASF_PROJECTION, 2111):
         record["kind"] = "wkt_math_transform"
         record["text"] = _decode_null_terminated_utf8(payload, "wkt_math_transform", payload_offset)
@@ -1627,6 +1631,13 @@ def _canonicalize_render_record(record: Any, *, is_evlr: bool) -> _RenderedRecor
         payload = _decode_base64_text(
             _get_str(record_dict, "data_b64"),
             "waveform_data_packets.data_b64",
+        )
+    elif kind == "superseded":
+        if (user_id, record_id) != (LASF_SPEC, 7):
+            raise LasError("invalid_request", "superseded records must use LASF_Spec / 7")
+        payload = _decode_base64_text(
+            _get_str(record_dict, "data_b64"),
+            "superseded.data_b64",
         )
     else:
         raise LasError("invalid_request", f"Unsupported record kind: {kind}")

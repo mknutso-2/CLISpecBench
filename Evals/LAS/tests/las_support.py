@@ -307,6 +307,16 @@ def opaque_vlr(
     }
 
 
+def superseded_vlr(data: bytes = b"\x00\x01", *, description: str = "Superseded") -> dict[str, Any]:
+    return {
+        "user_id": LASF_SPEC,
+        "record_id": 7,
+        "description": description,
+        "kind": "superseded",
+        "data_b64": b64encode_bytes(data),
+    }
+
+
 def point_for_format(point_format: int, *, extra_bytes: bytes = b"") -> dict[str, Any]:
     point: dict[str, Any] = {
         "x": 100 + point_format,
@@ -489,6 +499,18 @@ def dataset_with_unknown_records() -> dict[str, Any]:
     dataset["evlrs"].append(
         opaque_vlr("TEST_USER", 88, b"\x10\x11\x12\x13", description="OpaqueEVLR")
     )
+    return dataset
+
+
+def dataset_with_superseded_record() -> dict[str, Any]:
+    dataset = dataset_for_point_format(6)
+    dataset["vlrs"].append(superseded_vlr())
+    return dataset
+
+
+def dataset_with_superseded_evlr() -> dict[str, Any]:
+    dataset = dataset_for_point_format(6)
+    dataset["evlrs"].append(superseded_vlr(b"\x10\x20\x30", description="SupersededEVLR"))
     return dataset
 
 
@@ -706,6 +728,10 @@ def _canonical_record_payload(
             raise ValueError("waveform_data_packets must be placed in evlrs")
         if (user_id, record_id) != (LASF_SPEC, 65535):
             raise ValueError("waveform_data_packets records must use LASF_Spec / 65535")
+        payload = b64decode_text(_ensure_string(current["data_b64"], "record.data_b64"))
+    elif kind == "superseded":
+        if (user_id, record_id) != (LASF_SPEC, 7):
+            raise ValueError("superseded records must use LASF_Spec / 7")
         payload = b64decode_text(_ensure_string(current["data_b64"], "record.data_b64"))
     else:
         raise ValueError(f"unsupported record kind: {kind}")

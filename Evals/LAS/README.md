@@ -44,8 +44,23 @@ opaque blobs wherever the LAS 1.4 specification defines them directly:
 - all point formats 0 through 10
 - standard LASF_Projection CRS records
 - LASF_Spec records for classification lookup, text area description, extra
-  bytes, waveform packet descriptors, and waveform data packets
+  bytes, waveform packet descriptors, waveform data packets, and the
+  `Superseded` (LASF_Spec / 7) sentinel
 - unknown VLR/EVLR payloads as base64
 
 GeoTIFF key contents are modeled at the LAS-layer record structure level rather
 than by implementing the full external GeoTIFF standard.
+
+The intra-packet padding rule for waveform data (the spec line that requires
+non-byte-aligned waveform samples to pad each packet to an even byte boundary)
+is intentionally out of scope: the canonical JSON treats waveform packet bytes
+as opaque, so packet-internal alignment is not validated.
+
+## Reference language
+
+LAS ships a Python reference implementation only. C++ is the CLISpecBench
+default, but LAS 1.4 inspect/render needs little raw byte-twiddling beyond
+`struct` and base64; a Python reference keeps the corpus readable, matches the
+language footprint of the existing Python-only evals (GEDCOM, MARC21), and
+avoids dragging in CMake just to demonstrate a parser. Adding a C++ reference
+later is welcome; it is not required to evaluate Python submissions.

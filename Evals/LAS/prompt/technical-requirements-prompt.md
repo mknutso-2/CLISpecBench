@@ -164,8 +164,9 @@ For point formats 4, 5, 9, and 10:
   - `yt`
   - `zt`
 
-If `waveform` is absent for a waveform-capable format, render it as an all-zero
-waveform block.
+When serializing a point in formats 4, 5, 9, or 10 that omits the optional
+`waveform` object, write descriptor index 0 followed by zero-valued waveform
+fields into the corresponding point-record bytes.
 
 For point formats 6 through 10:
 
@@ -236,6 +237,14 @@ Supported `kind` values and payload fields:
   - `digitizer_offset`
 - `waveform_data_packets`
   - `data_b64`
+  - The waveform packet payload bytes are surfaced opaquely. Intra-packet
+    structure (per-packet sample layout, per-packet padding to even byte
+    boundaries when bits-per-sample is not a multiple of 8) is not validated
+    by inspect or render and the bytes round-trip unchanged.
+- `superseded`
+  - `data_b64`
+  - LASF_Spec / 7 marker used to negate a previously-written VLR or EVLR.
+    Treated as a tagged opaque payload: `data_b64` round-trips unchanged.
 
 ## Response schema
 

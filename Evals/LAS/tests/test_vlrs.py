@@ -15,6 +15,8 @@ from .las_support import (
     dataset_with_extra_bytes_type,
     dataset_with_geotiff_triplet,
     dataset_with_multiple_evlrs,
+    dataset_with_superseded_evlr,
+    dataset_with_superseded_record,
     dataset_with_unknown_records,
     dataset_with_wkt_pair,
     encode_dataset,
@@ -266,4 +268,62 @@ def test_render_waveform_dataset(
     rendered = payload_las_bytes(payload)
     expected = encode_dataset(dataset)
     assert _vlr_payloads(rendered) == _vlr_payloads(expected)
+    assert _evlr_payloads(rendered) == _evlr_payloads(expected)
+
+
+def test_inspect_superseded_vlr_round_trips_as_tagged_kind(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+) -> None:
+    dataset = dataset_with_superseded_record()
+    result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
+
+    assert result.returncode == 0
+    assert payload is not None
+    observed = payload_dataset(payload)
+    expected = canonical_dataset(dataset)
+    assert _vlrs_from(observed)[-1] == _vlrs_from(expected)[-1]
+    assert _vlrs_from(observed)[-1]["kind"] == "superseded"
+
+
+def test_inspect_superseded_evlr_round_trips_as_tagged_kind(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+) -> None:
+    dataset = dataset_with_superseded_evlr()
+    result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
+
+    assert result.returncode == 0
+    assert payload is not None
+    observed = payload_dataset(payload)
+    expected = canonical_dataset(dataset)
+    assert _evlrs_from(observed)[-1] == _evlrs_from(expected)[-1]
+    assert _evlrs_from(observed)[-1]["kind"] == "superseded"
+
+
+def test_render_superseded_vlr_payload_round_trips(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+) -> None:
+    dataset = dataset_with_superseded_record()
+    result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)
+
+    assert result.returncode == 0
+    assert payload is not None
+    rendered = payload_las_bytes(payload)
+    expected = encode_dataset(dataset)
+    assert _vlr_payloads(rendered) == _vlr_payloads(expected)
+
+
+def test_render_superseded_evlr_payload_round_trips(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+) -> None:
+    dataset = dataset_with_superseded_evlr()
+    result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)
+
+    assert result.returncode == 0
+    assert payload is not None
+    rendered = payload_las_bytes(payload)
+    expected = encode_dataset(dataset)
     assert _evlr_payloads(rendered) == _evlr_payloads(expected)
