@@ -33,20 +33,32 @@ const ERROR_BAR_OPTIONS = [
 
 const TABLE_SORT_OPTIONS = {
   summary: [
+    { id: '', label: 'No ordering' },
+    { id: 'pair', label: 'Agent/model' },
+    { id: 'eval_language', label: 'Eval-Lang' },
+    { id: 'runs', label: 'Runs' },
     { id: 'percent', label: 'Pass rate' },
     { id: 'cost', label: 'Cost' },
     { id: 'wall', label: 'Wall time' },
-    { id: 'runs', label: 'Runs' },
-    { id: 'pair', label: 'Agent/model' },
+    { id: 'tokens', label: 'Tokens' },
+    { id: 'tools', label: 'Tools' },
+    { id: 'loc', label: 'LOC' },
   ],
   runs: [
-    { id: 'eval', label: 'Eval' },
-    { id: 'language', label: 'Language' },
+    { id: '', label: 'No ordering' },
+    { id: 'eval_language', label: 'Eval-Lang' },
     { id: 'pair', label: 'Agent/model' },
+    { id: 'run', label: 'Run' },
+    { id: 'version', label: 'Version' },
+    { id: 'exit_reason', label: 'Exit' },
     { id: 'percent', label: 'Pass rate' },
     { id: 'cost', label: 'Cost' },
     { id: 'wall', label: 'Wall time' },
-    { id: 'exit_reason', label: 'Exit' },
+    { id: 'tokens', label: 'Tokens' },
+    { id: 'tools', label: 'Tools' },
+    { id: 'files', label: 'Files' },
+    { id: 'loc', label: 'LOC' },
+    { id: 'last_message', label: 'Last Message' },
   ],
 };
 
@@ -115,8 +127,8 @@ const METRICS = {
   loc: {
     label: 'LOC',
     parse: (row) => row.loc,
-    formatMean: (value) => formatCount(value),
-    formatSummary: (s) => `${formatCount(s.mean)} (min ${formatCount(s.min)}, max ${formatCount(s.max)})`,
+    formatMean: (value) => formatLocCount(value),
+    formatSummary: (s) => `${formatLocCount(s.mean)} (min ${formatLocCount(s.min)}, max ${formatLocCount(s.max)})`,
     minClamp: 0,
   },
   files: {
@@ -168,6 +180,8 @@ const PALETTE = [
   '#0891b2',
 ];
 
+const LAST_MESSAGE_CACHE = new Map();
+
 const STATE = {
   rows: [],
   excludedRows: [],
@@ -182,12 +196,15 @@ const STATE = {
   errorBarMode: 'std',
   tableMode: 'summary',
   tableGroupBy: 'pair',
-  tableSortBy: 'percent',
-  tableSortDirection: 'desc',
+  tableSortBy: '',
+  tableSortDirection: 'asc',
   tableShowExcluded: false,
+  controlsCollapsed: false,
   hiddenColorKeys: new Set(),
 };
 
+const dashboardLayout = document.getElementById('dashboard-layout');
+const controlsToggleButton = document.getElementById('controls-toggle');
 const viewModeEl = document.getElementById('view-mode');
 const pairListEl = document.getElementById('pair-list');
 const pairUnavailableHintEl = document.getElementById('pair-unavailable-hint');
@@ -228,6 +245,8 @@ const tooltip = document.getElementById('tooltip');
 document.addEventListener('DOMContentLoaded', () => {
   if (
     !viewModeEl ||
+    !dashboardLayout ||
+    !controlsToggleButton ||
     !pairListEl ||
     !pairSelectAllButton ||
     !pairUnselectAllButton ||
@@ -293,6 +312,7 @@ function initializeDashboard(data, sourceName, { preserveView = false } = {}) {
   }
   STATE.rows = dataset.rows;
   STATE.excludedRows = dataset.excludedRows;
+  LAST_MESSAGE_CACHE.clear();
   initSelectionDefaults({ preserveView });
   buildControls();
   render();
@@ -315,6 +335,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         tableSortBy: STATE.tableSortBy,
         tableSortDirection: STATE.tableSortDirection,
         tableShowExcluded: STATE.tableShowExcluded,
+        controlsCollapsed: STATE.controlsCollapsed,
       }
     : null;
 
@@ -350,6 +371,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.tableSortBy = previousView.tableSortBy;
     STATE.tableSortDirection = previousView.tableSortDirection;
     STATE.tableShowExcluded = previousView.tableShowExcluded;
+    STATE.controlsCollapsed = previousView.controlsCollapsed;
   } else {
     STATE.viewMode = 'graph';
     STATE.xAxis = 'cost';
@@ -359,9 +381,10 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.errorBarMode = getDefaultErrorBarMode();
     STATE.tableMode = 'summary';
     STATE.tableGroupBy = 'pair';
-    STATE.tableSortBy = 'percent';
-    STATE.tableSortDirection = 'desc';
+    STATE.tableSortBy = '';
+    STATE.tableSortDirection = 'asc';
     STATE.tableShowExcluded = false;
+    STATE.controlsCollapsed = false;
   }
 }
 
@@ -375,9 +398,18 @@ function buildControls() {
   renderTableControls();
   updateAxisSelectors();
   syncViewModeControls();
+  syncControlsColumn();
 }
 
 function attachEvents() {
+  controlsToggleButton.addEventListener('click', () => {
+    STATE.controlsCollapsed = !STATE.controlsCollapsed;
+    syncControlsColumn();
+    if (STATE.rows.length) {
+      window.requestAnimationFrame(() => render());
+    }
+  });
+
   viewModeEl.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-view-mode]');
     if (!button) return;
@@ -507,6 +539,10 @@ function attachEvents() {
 
   tableSortBySelect.addEventListener('change', () => {
     STATE.tableSortBy = tableSortBySelect.value;
+    if (!STATE.tableSortBy) {
+      STATE.tableSortDirection = 'asc';
+      renderTableControls();
+    }
     render();
   });
 
@@ -703,9 +739,10 @@ function renderTableControls() {
     tableSortBySelect.appendChild(option);
   });
   if (!TABLE_SORT_OPTIONS[STATE.tableMode].some((option) => option.id === STATE.tableSortBy)) {
-    STATE.tableSortBy = STATE.tableMode === 'runs' ? 'eval' : 'percent';
+    STATE.tableSortBy = '';
   }
   tableSortBySelect.value = STATE.tableSortBy;
+  tableSortDirectionSelect.disabled = !STATE.tableSortBy;
 
   tableSummaryControls.forEach((el) => {
     el.classList.toggle('hidden', STATE.tableMode !== 'summary');
@@ -728,6 +765,12 @@ function syncViewModeControls() {
   });
   graphPanel.classList.toggle('hidden', STATE.viewMode !== 'graph');
   tablePanel.classList.toggle('hidden', STATE.viewMode !== 'table');
+}
+
+function syncControlsColumn() {
+  dashboardLayout.classList.toggle('controls-collapsed', STATE.controlsCollapsed);
+  controlsToggleButton.setAttribute('aria-expanded', STATE.controlsCollapsed ? 'false' : 'true');
+  controlsToggleButton.textContent = STATE.controlsCollapsed ? 'Show controls' : 'Hide controls';
 }
 
 function getDefaultErrorBarMode() {
@@ -874,6 +917,9 @@ function renderTableView() {
   const columns = STATE.tableMode === 'runs' ? getRunTableColumns() : getSummaryTableColumns();
   const sortedRows = sortTableRows(rows);
   renderResultsTable(columns, sortedRows);
+  if (STATE.tableMode === 'runs') {
+    primeLastMessageTooltips(sortedRows);
+  }
 
   if (!sortedRows.length) {
     tableEmpty.textContent = 'No matching rows for the current filters.';
@@ -901,21 +947,29 @@ function buildSummaryTableRows() {
     const summaries = summarizePointDetails(group.rows);
     const evals = Array.from(new Set(group.rows.map((row) => row.eval).filter(Boolean))).sort();
     const languages = Array.from(new Set(group.rows.map((row) => row.language).filter(Boolean))).sort();
+    const evalLabel = group.evalLabel || formatListLabel(evals, 'All selected');
+    const languageLabel = group.languageLabel || formatListLabel(languages, 'All selected');
+    const evalLanguageLabel = formatEvalLanguageLabel(evalLabel, languageLabel);
     return {
       type: 'summary',
       pairId: group.pairId,
-      evalLabel: group.evalLabel || formatListLabel(evals, 'All selected'),
-      languageLabel: group.languageLabel || formatListLabel(languages, 'All selected'),
+      evalLabel,
+      languageLabel,
+      evalLanguageLabel,
       runs: group.rows.length,
       evals,
       languages,
       summaries,
       sortValues: {
         pair: group.pairId,
+        eval_language: evalLanguageLabel,
         runs: group.rows.length,
         percent: summaries.percent?.mean,
         cost: summaries.cost?.mean,
         wall: summaries.wall?.mean,
+        tokens: summaries.tokens_total?.mean,
+        tools: summaries.tools?.mean,
+        loc: summaries.loc?.mean,
       },
     };
   });
@@ -959,13 +1013,20 @@ function buildRunTableRows() {
 
 function getRunSortValues(row) {
   return {
-    eval: row.eval || '',
-    language: row.language || '',
+    eval_language: formatEvalLanguageLabel(row.eval || 'Unknown', row.language || 'n/a'),
     pair: rowPairId(row),
+    run: toNumber(row.run_id),
+    version: row.eval_version || '',
     percent: row.score_pct,
     cost: row.cost_usd,
     wall: row.wall_min,
+    tokens: row.input_tokens + row.output_tokens,
+    tools: row.tools,
+    files: row.files,
+    loc: row.loc,
+    link: row.result_link || '',
     exit_reason: row.exit_reason || '',
+    last_message: getLastMessageDisplay(row),
   };
 }
 
@@ -980,9 +1041,18 @@ function getRowsForCurrentSelection(rows) {
 
 function getSummaryTableColumns() {
   return [
-    { key: 'pair', label: 'Agent / Model', render: (row) => row.pairId },
-    { key: 'evals', label: 'Eval', render: (row) => row.evalLabel },
-    { key: 'languages', label: 'Language', render: (row) => row.languageLabel },
+    {
+      key: 'pair',
+      label: 'Agent / Model',
+      render: (row) => formatAgentModelShort(row.pairId),
+      title: (row) => row.pairId,
+    },
+    {
+      key: 'eval_language',
+      label: 'Eval-Lang',
+      render: (row) => row.evalLanguageLabel,
+      title: (row) => `${row.evalLabel} / ${row.languageLabel}`,
+    },
     { key: 'runs', label: 'Runs', numeric: true, render: (row) => formatCount(row.runs) },
     {
       key: 'percent',
@@ -1025,13 +1095,22 @@ function getSummaryTableColumns() {
 
 function getRunTableColumns() {
   return [
-    { key: 'eval', label: 'Eval', render: (row) => row.eval || 'Unknown' },
-    { key: 'language', label: 'Lang', render: (row) => row.language || 'n/a' },
-    { key: 'pair', label: 'Agent / Model', render: (row) => rowPairId(row) },
+    {
+      key: 'eval_language',
+      label: 'Eval-Lang',
+      render: (row) => formatEvalLanguageLabel(row.eval || 'Unknown', row.language || 'n/a'),
+      title: (row) => `${row.eval || 'Unknown'} / ${row.language || 'n/a'}`,
+    },
+    {
+      key: 'pair',
+      label: 'Agent / Model',
+      render: (row) => formatAgentModelShort(rowPairId(row)),
+      title: (row) => rowPairId(row),
+    },
     { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
     { key: 'version', label: 'Version', render: (row) => row.eval_version || 'n/a' },
     { key: 'exit', label: 'Exit', render: (row) => row.exit_reason || (row.isExcluded ? 'excluded' : 'completed') },
-    { key: 'score', label: 'Score', numeric: true, render: (row) => formatScore(row) },
+    { key: 'score', sortKey: 'percent', label: 'Score', numeric: true, render: (row) => formatScore(row) },
     { key: 'cost', label: 'Cost', numeric: true, render: (row) => formatAxisValue('cost', row.cost_usd) },
     { key: 'wall', label: 'Wall', numeric: true, render: (row) => formatAxisValue('wall', row.wall_min) },
     { key: 'tokens', label: 'Tokens', numeric: true, render: (row) => formatRunTokens(row) },
@@ -1039,7 +1118,13 @@ function getRunTableColumns() {
     { key: 'files', label: 'Files', numeric: true, render: (row) => formatAxisValue('files', row.files) },
     { key: 'loc', label: 'LOC', numeric: true, render: (row) => formatAxisValue('loc', row.loc) },
     { key: 'link', label: 'Link', render: (row) => buildResultLink(row) },
-    { key: 'last_message', label: 'Last Message', className: 'table-message', render: (row) => row.last_message || row.failure_class || 'n/a' },
+    {
+      key: 'last_message',
+      label: 'Last Message',
+      className: 'table-message',
+      render: (row) => getLastMessageDisplay(row),
+      title: (row) => getLastMessageTooltip(row),
+    },
   ];
 }
 
@@ -1049,8 +1134,22 @@ function renderResultsTable(columns, rows) {
   const headRow = document.createElement('tr');
   columns.forEach((column) => {
     const th = document.createElement('th');
-    th.textContent = column.label;
     if (column.numeric) th.classList.add('numeric');
+    const sortKey = column.sortKey ?? column.key;
+    th.setAttribute('aria-sort', getHeaderAriaSort(sortKey));
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'table-sort-button';
+    button.title = `Sort by ${column.label}`;
+    button.addEventListener('click', () => cycleTableSort(sortKey));
+    const label = document.createElement('span');
+    label.textContent = column.label;
+    button.appendChild(label);
+    const indicator = document.createElement('span');
+    indicator.className = 'sort-indicator';
+    indicator.textContent = getHeaderSortIndicator(sortKey);
+    button.appendChild(indicator);
+    th.appendChild(button);
     headRow.appendChild(th);
   });
   thead.appendChild(headRow);
@@ -1063,6 +1162,11 @@ function renderResultsTable(columns, rows) {
       const td = document.createElement('td');
       if (column.numeric) td.classList.add('numeric');
       if (column.className) td.classList.add(column.className);
+      const title = column.title ? column.title(row) : '';
+      if (title && title !== 'n/a') td.title = title;
+      if (column.key === 'last_message' && row.result_link) {
+        td.dataset.resultLink = row.result_link;
+      }
       const value = column.render(row);
       if (value instanceof Node) {
         td.appendChild(value);
@@ -1076,7 +1180,78 @@ function renderResultsTable(columns, rows) {
   tableEl.appendChild(tbody);
 }
 
+function cycleTableSort(sortKey) {
+  if (!sortKey) return;
+  if (STATE.tableSortBy !== sortKey) {
+    STATE.tableSortBy = sortKey;
+    STATE.tableSortDirection = 'asc';
+  } else if (STATE.tableSortDirection === 'asc') {
+    STATE.tableSortDirection = 'desc';
+  } else {
+    STATE.tableSortBy = '';
+    STATE.tableSortDirection = 'asc';
+  }
+  renderTableControls();
+  render();
+}
+
+function getHeaderAriaSort(sortKey) {
+  if (!sortKey || STATE.tableSortBy !== sortKey) return 'none';
+  return STATE.tableSortDirection === 'desc' ? 'descending' : 'ascending';
+}
+
+function getHeaderSortIndicator(sortKey) {
+  if (!sortKey || STATE.tableSortBy !== sortKey) return '';
+  return STATE.tableSortDirection === 'desc' ? 'desc' : 'asc';
+}
+
+function getLastMessageDisplay(row) {
+  return firstPresent(row.last_message, row.failure_class, 'n/a');
+}
+
+function getLastMessageTooltip(row) {
+  return firstPresent(
+    row.last_message_verbatim,
+    row.result_link ? LAST_MESSAGE_CACHE.get(row.result_link) : '',
+    row.last_message,
+    row.failure_class,
+    '',
+  );
+}
+
+function primeLastMessageTooltips(rows) {
+  const links = Array.from(new Set(
+    rows
+      .map((row) => row.result_link)
+      .filter((link) => link && !LAST_MESSAGE_CACHE.has(link)),
+  ));
+  if (!links.length) {
+    updateLastMessageTooltips();
+    return;
+  }
+
+  Promise.all(links.map(async (link) => {
+    try {
+      const response = await fetch(link);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      LAST_MESSAGE_CACHE.set(link, firstPresent(payload?.metadata?.agent_last_message, null));
+    } catch {
+      LAST_MESSAGE_CACHE.set(link, null);
+    }
+  })).then(updateLastMessageTooltips);
+}
+
+function updateLastMessageTooltips() {
+  tableEl.querySelectorAll('td.table-message[data-result-link]').forEach((cell) => {
+    const link = cell.dataset.resultLink;
+    const cachedMessage = link ? LAST_MESSAGE_CACHE.get(link) : '';
+    if (cachedMessage) cell.title = cachedMessage;
+  });
+}
+
 function sortTableRows(rows) {
+  if (!STATE.tableSortBy) return [...rows];
   const direction = STATE.tableSortDirection === 'asc' ? 1 : -1;
   return [...rows].sort((a, b) => {
     const aValue = a.sortValues?.[STATE.tableSortBy];
@@ -1103,15 +1278,62 @@ function isMissingSortValue(value) {
 
 function formatSummaryMetric(metricId, summary) {
   if (!summary?.hasData) return 'n/a';
-  const mean = formatAxisValue(metricId, summary.mean);
-  if (!Number.isFinite(summary.stdDev) || summary.stdDev <= 0) return mean;
-  return `${mean} +/- ${formatAxisValue(metricId, summary.stdDev)}`;
+  if (!Number.isFinite(summary.stdDev) || summary.stdDev <= 0) {
+    return formatAxisValue(metricId, summary.mean);
+  }
+  const precision = getMeasuredValuePrecision(summary.stdDev);
+  const useLocThousands =
+    metricId === 'loc' &&
+    (Math.abs(summary.mean) >= 1000 || Math.abs(summary.stdDev) >= 1000);
+  const mean = useLocThousands
+    ? formatLocCountAtDecimalPlaces(summary.mean, precision.decimalPlaces, true)
+    : formatAxisValueWithDecimalPlaces(metricId, summary.mean, precision.decimalPlaces);
+  const stdDev = useLocThousands
+    ? formatLocCountAtDecimalPlaces(summary.stdDev, precision.decimalPlaces, true)
+    : formatAxisValueWithDecimalPlaces(metricId, summary.stdDev, precision.decimalPlaces);
+  return `${mean} +/- ${stdDev}`;
 }
 
 function formatListLabel(items, fallback) {
   if (!items.length) return fallback;
   if (items.length <= 3) return items.join(', ');
   return `${items.length} selected`;
+}
+
+function formatEvalLanguageLabel(evalLabel, languageLabel) {
+  return `${evalLabel || 'Unknown'}-${languageLabel || 'n/a'}`;
+}
+
+function formatAgentModelShort(pairId) {
+  const { agent, model } = splitPairId(pairId);
+  return `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+}
+
+function abbreviateAgent(agent) {
+  const normalized = String(agent || '').toLowerCase();
+  if (normalized === 'claude-code') return 'CC';
+  if (normalized === 'codex-cli') return 'C';
+  if (normalized === 'gemini-cli') return 'G';
+  const parts = normalized.split(/[-_\s]+/).filter(Boolean);
+  return parts.length
+    ? parts.map((part) => part[0]).join('').toUpperCase()
+    : 'n/a';
+}
+
+function abbreviateModel(model) {
+  const normalized = String(model || '').toLowerCase();
+  const claudeMatch = normalized.match(/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)/);
+  if (claudeMatch) {
+    return `${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${claudeMatch[3]}`;
+  }
+  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)/);
+  if (gptMatch) return `GPT-${gptMatch[1]}`;
+  const geminiMatch = normalized.match(/^gemini-(\d+(?:\.\d+)?)(?:-[^-]+)*?(flash|pro)?/);
+  if (geminiMatch) {
+    const tier = geminiMatch[2] ? `-${geminiMatch[2][0].toUpperCase()}` : '';
+    return `G-${geminiMatch[1]}${tier}`;
+  }
+  return model || 'n/a';
 }
 
 function formatScore(row) {
@@ -2434,9 +2656,22 @@ function formatAxisValue(axisId, value) {
     return formatTokenCount(value);
   }
   if (axisId === 'wall') return formatWallTime(value);
-  if (axisId === 'tools' || axisId === 'loc' || axisId === 'files') return formatCount(value);
+  if (axisId === 'loc') return formatLocCount(value);
+  if (axisId === 'tools' || axisId === 'files') return formatCount(value);
   if (axisId === 'cost') return formatMoney(value);
   return String(value.toFixed(2));
+}
+
+function formatAxisValueWithDecimalPlaces(axisId, value, decimalPlaces) {
+  if (!Number.isFinite(value)) return 'n/a';
+  if (axisId === 'percent') return `${formatNumberAtDecimalPlaces(value, decimalPlaces)}%`;
+  if (axisId === 'tokens_input' || axisId === 'tokens_output' || axisId === 'tokens_total') {
+    return formatTokenCountAtDecimalPlaces(value, decimalPlaces);
+  }
+  if (axisId === 'wall') return formatWallTimeAtDecimalPlaces(value, decimalPlaces);
+  if (axisId === 'loc') return formatLocCountAtDecimalPlaces(value, decimalPlaces);
+  if (axisId === 'cost') return formatMoneyAtDecimalPlaces(value, decimalPlaces);
+  return formatNumberAtDecimalPlaces(value, decimalPlaces);
 }
 
 function formatMoney(value) {
@@ -2451,10 +2686,46 @@ function formatMoney(value) {
   return `${sign}$${integer}.${decimalRaw}`;
 }
 
+function formatMoneyAtDecimalPlaces(value, decimalPlaces) {
+  if (!Number.isFinite(value)) return 'n/a';
+  const rounded = normalizeRoundedZero(roundToDecimalPlaces(value, decimalPlaces));
+  const fractionDigits = getFractionDigitCount(decimalPlaces);
+  const sign = rounded < 0 ? '-' : '';
+  const amount = Math.abs(rounded).toLocaleString('en-US', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+  return `${sign}$${amount}`;
+}
+
 function formatCount(value) {
   if (!Number.isFinite(value)) return 'n/a';
   const rounded = Number.isInteger(value) ? value : Number(value.toFixed(2));
   return rounded.toLocaleString('en-US');
+}
+
+function formatLocCount(value) {
+  if (!Number.isFinite(value)) return 'n/a';
+  if (Math.abs(value) < 1000) return formatCount(value);
+  return `${formatCompactSignificant(value / 1000)}K`;
+}
+
+function formatNumberAtDecimalPlaces(value, decimalPlaces) {
+  if (!Number.isFinite(value)) return 'n/a';
+  const rounded = normalizeRoundedZero(roundToDecimalPlaces(value, decimalPlaces));
+  const fractionDigits = getFractionDigitCount(decimalPlaces);
+  return rounded.toLocaleString('en-US', {
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  });
+}
+
+function formatLocCountAtDecimalPlaces(value, decimalPlaces, forceThousands = false) {
+  if (!Number.isFinite(value)) return 'n/a';
+  if (!forceThousands && Math.abs(value) < 1000) {
+    return formatNumberAtDecimalPlaces(value, decimalPlaces);
+  }
+  return `${formatNumberAtDecimalPlaces(value / 1000, decimalPlaces + 3)}K`;
 }
 
 function formatTokenCount(value) {
@@ -2466,6 +2737,16 @@ function formatTokenCount(value) {
     return `${formatSignificant(value / 1_000_000)}M`;
   }
   return `${formatSignificant(value / 1000)}K`;
+}
+
+function formatTokenCountAtDecimalPlaces(value, decimalPlaces) {
+  if (!Number.isFinite(value)) return 'n/a';
+  const abs = Math.abs(value);
+  if (abs < 1000) return formatNumberAtDecimalPlaces(value, decimalPlaces);
+  if (abs >= 1_000_000) {
+    return `${formatNumberAtDecimalPlaces(value / 1_000_000, decimalPlaces + 6)}M`;
+  }
+  return `${formatNumberAtDecimalPlaces(value / 1000, decimalPlaces + 3)}K`;
 }
 
 function formatWallTime(value) {
@@ -2482,6 +2763,27 @@ function formatWallTime(value) {
   return `${hours}h ${minutes}m ${seconds}s`;
 }
 
+function formatWallTimeAtDecimalPlaces(value, decimalPlaces) {
+  if (!Number.isFinite(value)) return 'n/a';
+  const roundedMinutes = Math.max(0, roundToDecimalPlaces(value, decimalPlaces));
+  if (decimalPlaces <= 0) {
+    const totalMinutes = Math.round(roundedMinutes);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours && minutes) return `${hours}h ${minutes}m`;
+    if (hours) return `${hours}h`;
+    return `${minutes}m`;
+  }
+
+  const totalSeconds = Math.round(roundedMinutes * 60);
+  if (totalSeconds < 60) return `${totalSeconds}s`;
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.round(totalSeconds % 60);
+  if (!hours) return seconds ? `${minutes}m ${seconds}s` : `${minutes}m`;
+  return seconds ? `${hours}h ${minutes}m ${seconds}s` : `${hours}h ${minutes}m`;
+}
+
 function formatSignificant(value, significantFigures = 3) {
   if (!Number.isFinite(value)) return 'n/a';
   if (value === 0) return '0';
@@ -2489,6 +2791,54 @@ function formatSignificant(value, significantFigures = 3) {
     minimumSignificantDigits: significantFigures,
     maximumSignificantDigits: significantFigures,
   }).format(value);
+}
+
+function formatCompactSignificant(value, significantFigures = 3) {
+  if (!Number.isFinite(value)) return 'n/a';
+  if (value === 0) return '0';
+  return new Intl.NumberFormat('en-US', {
+    maximumSignificantDigits: significantFigures,
+  }).format(value);
+}
+
+function getMeasuredValuePrecision(uncertainty) {
+  if (!Number.isFinite(uncertainty) || uncertainty <= 0) {
+    return { significantFigures: 1, decimalPlaces: 0 };
+  }
+  const leadingDigit = getLeadingSignificantDigit(uncertainty);
+  const significantFigures = leadingDigit > 3 ? 1 : 2;
+  const exponent = Math.floor(Math.log10(Math.abs(uncertainty)));
+  return {
+    significantFigures,
+    decimalPlaces: significantFigures - exponent - 1,
+  };
+}
+
+function getLeadingSignificantDigit(value) {
+  if (!Number.isFinite(value) || value === 0) return 0;
+  const exponent = Math.floor(Math.log10(Math.abs(value)));
+  const scaled = Math.abs(value) / Math.pow(10, exponent);
+  return Math.floor(scaled + 1e-12);
+}
+
+function roundToDecimalPlaces(value, decimalPlaces) {
+  if (!Number.isFinite(value)) return NaN;
+  if (!Number.isFinite(decimalPlaces)) return value;
+  if (decimalPlaces >= 0) {
+    const factor = Math.pow(10, decimalPlaces);
+    return Math.round(value * factor) / factor;
+  }
+  const factor = Math.pow(10, -decimalPlaces);
+  return Math.round(value / factor) * factor;
+}
+
+function normalizeRoundedZero(value) {
+  return Object.is(value, -0) || Math.abs(value) < 1e-12 ? 0 : value;
+}
+
+function getFractionDigitCount(decimalPlaces) {
+  if (!Number.isFinite(decimalPlaces) || decimalPlaces <= 0) return 0;
+  return Math.min(12, Math.floor(decimalPlaces));
 }
 
 function buildMarkerAriaLabel(point) {
@@ -2768,6 +3118,7 @@ function coerceRow(raw) {
     result_link: resultLink,
     transcript_link: transcriptLink,
     last_message: firstPresent(raw.last_message, raw.last_message_summary, raw.agent_last_message, ''),
+    last_message_verbatim: firstPresent(raw.last_message_verbatim, raw.agent_last_message, ''),
   };
 }
 
@@ -2803,6 +3154,7 @@ function rowFromHarnessResult(result) {
     result_link: result.result_link || '',
     transcript_link: result.transcript_link || '',
     last_message: metadata.agent_last_message || '',
+    last_message_verbatim: metadata.agent_last_message || '',
   };
 }
 
