@@ -241,7 +241,12 @@ def _run_scorer_attempt(
             sandbox.copy_out(_CONTAINER_REPORT, extract_dir)
             extracted = extract_dir / "report.json"
             if extracted.exists() and extracted != report_path:
-                extracted.rename(report_path)
+                # `replace` overwrites an existing destination atomically.
+                # `rename` raises FileExistsError on Windows if the target
+                # already exists — which happens on attempt 2 of the scorer
+                # retry when attempt 1 already produced a report.json that
+                # got renamed to test-report.json.
+                extracted.replace(report_path)
             report_extracted = report_path.is_file()
         except Exception:
             log.warning("Failed to extract test report from container", exc_info=True)
