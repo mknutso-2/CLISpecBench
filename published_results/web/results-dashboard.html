@@ -8,7 +8,7 @@
     />
     <title>CLISpecBench Results Explorer</title>
     <link rel="icon" href="data:," />
-    <link rel="stylesheet" href="results-dashboard.css" />
+    <link rel="stylesheet" href="results-dashboard.css?v=20260426-table" />
   </head>
   <body>
     <main class="page">
@@ -30,8 +30,51 @@
       <div class="dashboard-layout">
         <div class="controls-column">
           <section class="card">
+            <h2>View</h2>
+            <div id="view-mode" class="segmented-control" role="group" aria-label="View mode">
+              <button type="button" data-view-mode="graph" aria-pressed="true">Graph</button>
+              <button type="button" data-view-mode="table" aria-pressed="false">Table</button>
+            </div>
+          </section>
+
+          <section class="card table-control hidden">
+            <h2>Table</h2>
+            <div class="axis-row">
+              <label for="table-mode">Mode</label>
+              <select id="table-mode">
+                <option value="summary">Summary</option>
+                <option value="runs">Runs</option>
+              </select>
+            </div>
+            <div class="axis-row table-summary-control">
+              <label for="table-group-by">Group by</label>
+              <select id="table-group-by">
+                <option value="pair">Agent/model</option>
+                <option value="pair_language">Agent/model + language</option>
+                <option value="pair_eval">Agent/model + eval</option>
+                <option value="pair_eval_language">Agent/model + eval + language</option>
+              </select>
+            </div>
+            <div class="axis-row">
+              <label for="table-sort-by">Sort by</label>
+              <select id="table-sort-by"></select>
+            </div>
+            <div class="axis-row">
+              <label for="table-sort-direction">Sort</label>
+              <select id="table-sort-direction">
+                <option value="desc">Descending</option>
+                <option value="asc">Ascending</option>
+              </select>
+            </div>
+            <label class="toggle-row table-runs-control hidden">
+              <input id="table-show-excluded" type="checkbox" />
+              <span>Show excluded/error runs</span>
+            </label>
+          </section>
+
+          <section class="card">
             <h2>Agent/model pairs</h2>
-            <p class="hint">Select one or more pairs to plot.</p>
+            <p class="hint">Select one or more pairs to include.</p>
             <div class="selection-actions">
               <button id="pair-select-all" type="button" class="selection-action">Select all</button>
               <button id="pair-unselect-all" type="button" class="selection-action">Unselect all</button>
@@ -43,7 +86,7 @@
           <section class="card">
             <h2>Languages</h2>
             <p class="hint">
-              Language must remain selected when plotting aggregate values.
+              Language filters apply to graph and table aggregate values.
             </p>
             <div id="language-list" class="checkbox-grid"></div>
           </section>
@@ -57,7 +100,7 @@
             <div id="eval-list" class="checkbox-grid eval-checkbox-grid"></div>
           </section>
 
-          <section class="card">
+          <section class="card graph-control">
             <h2>Axes</h2>
             <div class="axis-row">
               <label for="x-axis">X axis</label>
@@ -80,17 +123,18 @@
             <p id="validation-message" class="hint"></p>
           </section>
 
-          <section class="card">
+          <section class="card graph-control">
             <h2>Color mode</h2>
             <div class="axis-row">
               <label for="color-mode">Color by</label>
               <select id="color-mode"></select>
             </div>
           </section>
+
         </div>
 
         <div class="chart-column">
-          <section class="card chart-card">
+          <section id="graph-panel" class="card chart-card view-panel">
             <h2>XY Scatter Plot</h2>
             <div id="chart-empty" class="chart-empty hidden">No data to plot yet.</div>
             <div class="chart-wrap">
@@ -100,12 +144,23 @@
             <div id="legend" class="legend"></div>
           </section>
 
+          <section id="table-panel" class="card table-card view-panel hidden">
+            <div class="table-header">
+              <h2>Results Table</h2>
+              <p id="table-count" class="hint"></p>
+            </div>
+            <div id="table-empty" class="chart-empty hidden">No rows to show.</div>
+            <div class="table-wrap">
+              <table id="results-table" class="results-table"></table>
+            </div>
+          </section>
+
           <p id="status" class="status"></p>
           <p id="error-banner" class="error-banner hidden"></p>
         </div>
       </div>
     </main>
 
-    <script src="results-dashboard.js"></script>
+    <script src="results-dashboard.js?v=20260426-table"></script>
   </body>
 </html>

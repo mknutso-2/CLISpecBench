@@ -31,6 +31,25 @@ const ERROR_BAR_OPTIONS = [
   { id: 'none', label: 'None' },
 ];
 
+const TABLE_SORT_OPTIONS = {
+  summary: [
+    { id: 'percent', label: 'Pass rate' },
+    { id: 'cost', label: 'Cost' },
+    { id: 'wall', label: 'Wall time' },
+    { id: 'runs', label: 'Runs' },
+    { id: 'pair', label: 'Agent/model' },
+  ],
+  runs: [
+    { id: 'eval', label: 'Eval' },
+    { id: 'language', label: 'Language' },
+    { id: 'pair', label: 'Agent/model' },
+    { id: 'percent', label: 'Pass rate' },
+    { id: 'cost', label: 'Cost' },
+    { id: 'wall', label: 'Wall time' },
+    { id: 'exit_reason', label: 'Exit' },
+  ],
+};
+
 const METRICS = {
   percent: {
     label: 'Pass rate',
@@ -151,17 +170,25 @@ const PALETTE = [
 
 const STATE = {
   rows: [],
+  excludedRows: [],
   selectedPairs: new Set(),
   selectedLanguages: new Set(),
   selectedEvals: new Set(),
+  viewMode: 'graph',
   xAxis: 'cost',
   yAxis: 'percent',
   colorMode: 'pair',
   reportType: 'mean',
   errorBarMode: 'std',
+  tableMode: 'summary',
+  tableGroupBy: 'pair',
+  tableSortBy: 'percent',
+  tableSortDirection: 'desc',
+  tableShowExcluded: false,
   hiddenColorKeys: new Set(),
 };
 
+const viewModeEl = document.getElementById('view-mode');
 const pairListEl = document.getElementById('pair-list');
 const pairUnavailableHintEl = document.getElementById('pair-unavailable-hint');
 const pairSelectAllButton = document.getElementById('pair-select-all');
@@ -175,17 +202,32 @@ const yAxisSelect = document.getElementById('y-axis');
 const reportTypeSelect = document.getElementById('report-type');
 const errorBarsSelect = document.getElementById('error-bars');
 const colorModeSelect = document.getElementById('color-mode');
+const tableModeSelect = document.getElementById('table-mode');
+const tableGroupBySelect = document.getElementById('table-group-by');
+const tableSortBySelect = document.getElementById('table-sort-by');
+const tableSortDirectionSelect = document.getElementById('table-sort-direction');
+const tableShowExcludedInput = document.getElementById('table-show-excluded');
+const graphControls = Array.from(document.querySelectorAll('.graph-control'));
+const tableControls = Array.from(document.querySelectorAll('.table-control'));
+const tableSummaryControls = Array.from(document.querySelectorAll('.table-summary-control'));
+const tableRunsControls = Array.from(document.querySelectorAll('.table-runs-control'));
 const fileInputEl = document.getElementById('data-file-input');
 const validationEl = document.getElementById('validation-message');
 const statusEl = document.getElementById('status');
 const errorBanner = document.getElementById('error-banner');
 const chartSvg = document.getElementById('scatter-svg');
 const chartEmpty = document.getElementById('chart-empty');
+const graphPanel = document.getElementById('graph-panel');
+const tablePanel = document.getElementById('table-panel');
+const tableEl = document.getElementById('results-table');
+const tableEmpty = document.getElementById('table-empty');
+const tableCountEl = document.getElementById('table-count');
 const legendEl = document.getElementById('legend');
 const tooltip = document.getElementById('tooltip');
 
 document.addEventListener('DOMContentLoaded', () => {
   if (
+    !viewModeEl ||
     !pairListEl ||
     !pairSelectAllButton ||
     !pairUnselectAllButton ||
@@ -197,7 +239,17 @@ document.addEventListener('DOMContentLoaded', () => {
     !yAxisSelect ||
     !reportTypeSelect ||
     !errorBarsSelect ||
-    !colorModeSelect
+    !colorModeSelect ||
+    !tableModeSelect ||
+    !tableGroupBySelect ||
+    !tableSortBySelect ||
+    !tableSortDirectionSelect ||
+    !tableShowExcludedInput ||
+    !graphPanel ||
+    !tablePanel ||
+    !tableEl ||
+    !tableEmpty ||
+    !tableCountEl
   ) {
     console.error('Dashboard initialization failed: expected UI elements are missing.');
     return;
@@ -211,8 +263,8 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!file) return;
       try {
         const text = await file.text();
-        const rows = parseDataSource(text, file.name);
-        initializeDashboard(rows, file.name, { preserveView: true });
+        const dataset = parseDataSource(text, file.name);
+        initializeDashboard(dataset, file.name, { preserveView: true });
       } catch (error) {
         setError(`Could not parse ${file.name}: ${error.message}`);
       }
@@ -221,8 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   (async () => {
     try {
-      const rows = await loadRows();
-      initializeDashboard(rows, DATA_PATH);
+      const dataset = await loadRows();
+      initializeDashboard(dataset, DATA_PATH);
     } catch (error) {
       const message =
         window.location.protocol === 'file:'
@@ -234,11 +286,13 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 });
 
-function initializeDashboard(rows, sourceName, { preserveView = false } = {}) {
-  if (!rows.length) {
+function initializeDashboard(data, sourceName, { preserveView = false } = {}) {
+  const dataset = normalizeDataset(data);
+  if (!dataset.rows.length) {
     throw new Error('No result rows were found in the data source.');
   }
-  STATE.rows = rows;
+  STATE.rows = dataset.rows;
+  STATE.excludedRows = dataset.excludedRows;
   initSelectionDefaults({ preserveView });
   buildControls();
   render();
@@ -255,6 +309,12 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         reportType: STATE.reportType,
         errorBarMode: STATE.errorBarMode,
         selectedEvals: new Set(STATE.selectedEvals),
+        viewMode: STATE.viewMode,
+        tableMode: STATE.tableMode,
+        tableGroupBy: STATE.tableGroupBy,
+        tableSortBy: STATE.tableSortBy,
+        tableSortDirection: STATE.tableSortDirection,
+        tableShowExcluded: STATE.tableShowExcluded,
       }
     : null;
 
@@ -284,12 +344,24 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.colorMode = previousView.colorMode;
     STATE.reportType = previousView.reportType;
     STATE.errorBarMode = previousView.errorBarMode;
+    STATE.viewMode = previousView.viewMode;
+    STATE.tableMode = previousView.tableMode;
+    STATE.tableGroupBy = previousView.tableGroupBy;
+    STATE.tableSortBy = previousView.tableSortBy;
+    STATE.tableSortDirection = previousView.tableSortDirection;
+    STATE.tableShowExcluded = previousView.tableShowExcluded;
   } else {
+    STATE.viewMode = 'graph';
     STATE.xAxis = 'cost';
     STATE.yAxis = 'percent';
     STATE.colorMode = 'agent';
     STATE.reportType = 'mean';
     STATE.errorBarMode = getDefaultErrorBarMode();
+    STATE.tableMode = 'summary';
+    STATE.tableGroupBy = 'pair';
+    STATE.tableSortBy = 'percent';
+    STATE.tableSortDirection = 'desc';
+    STATE.tableShowExcluded = false;
   }
 }
 
@@ -300,10 +372,20 @@ function buildControls() {
   renderColorModeSelector();
   renderReportTypeSelector();
   renderErrorBarSelector();
+  renderTableControls();
   updateAxisSelectors();
+  syncViewModeControls();
 }
 
 function attachEvents() {
+  viewModeEl.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-view-mode]');
+    if (!button) return;
+    STATE.viewMode = button.dataset.viewMode === 'table' ? 'table' : 'graph';
+    syncViewModeControls();
+    render();
+  });
+
   if (pairSelectAllButton) {
     pairSelectAllButton.addEventListener('click', () => {
       const allPairInputs = Array.from(pairListEl.querySelectorAll('input[data-group="pair"]'));
@@ -406,6 +488,35 @@ function attachEvents() {
   colorModeSelect.addEventListener('change', () => {
     STATE.colorMode = colorModeSelect.value;
     STATE.hiddenColorKeys.clear();
+    render();
+  });
+
+  tableModeSelect.addEventListener('change', () => {
+    STATE.tableMode = tableModeSelect.value === 'runs' ? 'runs' : 'summary';
+    if (!TABLE_SORT_OPTIONS[STATE.tableMode].some((option) => option.id === STATE.tableSortBy)) {
+      STATE.tableSortBy = STATE.tableMode === 'runs' ? 'eval' : 'percent';
+    }
+    renderTableControls();
+    render();
+  });
+
+  tableGroupBySelect.addEventListener('change', () => {
+    STATE.tableGroupBy = tableGroupBySelect.value;
+    render();
+  });
+
+  tableSortBySelect.addEventListener('change', () => {
+    STATE.tableSortBy = tableSortBySelect.value;
+    render();
+  });
+
+  tableSortDirectionSelect.addEventListener('change', () => {
+    STATE.tableSortDirection = tableSortDirectionSelect.value === 'asc' ? 'asc' : 'desc';
+    render();
+  });
+
+  tableShowExcludedInput.addEventListener('change', () => {
+    STATE.tableShowExcluded = tableShowExcludedInput.checked;
     render();
   });
 
@@ -578,6 +689,47 @@ function renderErrorBarSelector() {
   errorBarsSelect.value = STATE.errorBarMode;
 }
 
+function renderTableControls() {
+  tableModeSelect.value = STATE.tableMode;
+  tableGroupBySelect.value = STATE.tableGroupBy;
+  tableSortDirectionSelect.value = STATE.tableSortDirection;
+  tableShowExcludedInput.checked = STATE.tableShowExcluded;
+
+  tableSortBySelect.replaceChildren();
+  TABLE_SORT_OPTIONS[STATE.tableMode].forEach((optionDef) => {
+    const option = document.createElement('option');
+    option.value = optionDef.id;
+    option.textContent = optionDef.label;
+    tableSortBySelect.appendChild(option);
+  });
+  if (!TABLE_SORT_OPTIONS[STATE.tableMode].some((option) => option.id === STATE.tableSortBy)) {
+    STATE.tableSortBy = STATE.tableMode === 'runs' ? 'eval' : 'percent';
+  }
+  tableSortBySelect.value = STATE.tableSortBy;
+
+  tableSummaryControls.forEach((el) => {
+    el.classList.toggle('hidden', STATE.tableMode !== 'summary');
+  });
+  tableRunsControls.forEach((el) => {
+    el.classList.toggle('hidden', STATE.tableMode !== 'runs');
+  });
+}
+
+function syncViewModeControls() {
+  viewModeEl.querySelectorAll('button[data-view-mode]').forEach((button) => {
+    const pressed = button.dataset.viewMode === STATE.viewMode;
+    button.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+  });
+  graphControls.forEach((el) => {
+    el.classList.toggle('hidden', STATE.viewMode !== 'graph');
+  });
+  tableControls.forEach((el) => {
+    el.classList.toggle('hidden', STATE.viewMode !== 'table');
+  });
+  graphPanel.classList.toggle('hidden', STATE.viewMode !== 'graph');
+  tablePanel.classList.toggle('hidden', STATE.viewMode !== 'table');
+}
+
 function getDefaultErrorBarMode() {
   if (STATE.selectedLanguages.size > 1 && STATE.xAxis !== 'language') {
     return 'std';
@@ -597,6 +749,8 @@ function syncErrorBarModeWithDefaults() {
 
 function render() {
   clearError();
+  syncViewModeControls();
+  renderTableControls();
   const validation = validateSelection();
   if (!validation.ok) {
     showNoData(validation.message);
@@ -605,7 +759,10 @@ function render() {
 
   const colorMap = getColorMap();
   const rowsByPair = getRowsByPairForCurrentSelection();
-  const canRenderPairById = getPairAvailability(rowsByPair);
+  const canRenderPairById =
+    STATE.viewMode === 'table'
+      ? getPairAvailabilityForRows(rowsByPair)
+      : getPairAvailability(rowsByPair);
   const selectedPairs = new Set();
   STATE.selectedPairs.forEach((pairId) => {
     if (canRenderPairById.get(pairId)) {
@@ -614,6 +771,12 @@ function render() {
   });
   STATE.selectedPairs = selectedPairs;
   renderPairList(canRenderPairById);
+
+  if (STATE.viewMode === 'table') {
+    renderTableView();
+    return;
+  }
+
   const points = buildPoints(colorMap, rowsByPair);
   if (!points.length) {
     showNoData('No matching results for the current filters.');
@@ -672,7 +835,7 @@ function validateSelection() {
   if (!STATE.selectedLanguages.size) {
     return { ok: false, message: 'Choose at least one language.' };
   }
-  if (STATE.xAxis === 'language' && STATE.selectedLanguages.size < 2) {
+  if (STATE.viewMode === 'graph' && STATE.xAxis === 'language' && STATE.selectedLanguages.size < 2) {
     return { ok: false, message: 'Language is available when at least two languages are selected.' };
   }
   return { ok: true };
@@ -683,6 +846,10 @@ function showNoData(message) {
   chartEmpty.textContent = message;
   chartEmpty.classList.remove('hidden');
   legendEl.innerHTML = '';
+  tableEl.replaceChildren();
+  tableEmpty.textContent = message;
+  tableEmpty.classList.remove('hidden');
+  tableCountEl.textContent = '';
   validationEl.textContent = message;
 }
 
@@ -695,6 +862,277 @@ function getChartSize() {
 
 function clearChart() {
   chartSvg.innerHTML = '';
+}
+
+function renderTableView() {
+  clearChart();
+  legendEl.innerHTML = '';
+  chartEmpty.classList.add('hidden');
+  validationEl.textContent = '';
+
+  const rows = STATE.tableMode === 'runs' ? buildRunTableRows() : buildSummaryTableRows();
+  const columns = STATE.tableMode === 'runs' ? getRunTableColumns() : getSummaryTableColumns();
+  const sortedRows = sortTableRows(rows);
+  renderResultsTable(columns, sortedRows);
+
+  if (!sortedRows.length) {
+    tableEmpty.textContent = 'No matching rows for the current filters.';
+    tableEmpty.classList.remove('hidden');
+    tableCountEl.textContent = '';
+    return;
+  }
+
+  tableEmpty.classList.add('hidden');
+  const noun = sortedRows.length === 1 ? 'row' : 'rows';
+  tableCountEl.textContent = `${sortedRows.length} ${noun}`;
+}
+
+function buildSummaryTableRows() {
+  const groups = new Map();
+  getRowsForCurrentSelection(STATE.rows).forEach((row) => {
+    const group = getSummaryGroup(row);
+    if (!groups.has(group.key)) {
+      groups.set(group.key, { ...group, rows: [] });
+    }
+    groups.get(group.key).rows.push(row);
+  });
+
+  return Array.from(groups.values()).map((group) => {
+    const summaries = summarizePointDetails(group.rows);
+    const evals = Array.from(new Set(group.rows.map((row) => row.eval).filter(Boolean))).sort();
+    const languages = Array.from(new Set(group.rows.map((row) => row.language).filter(Boolean))).sort();
+    return {
+      type: 'summary',
+      pairId: group.pairId,
+      evalLabel: group.evalLabel || formatListLabel(evals, 'All selected'),
+      languageLabel: group.languageLabel || formatListLabel(languages, 'All selected'),
+      runs: group.rows.length,
+      evals,
+      languages,
+      summaries,
+      sortValues: {
+        pair: group.pairId,
+        runs: group.rows.length,
+        percent: summaries.percent?.mean,
+        cost: summaries.cost?.mean,
+        wall: summaries.wall?.mean,
+      },
+    };
+  });
+}
+
+function getSummaryGroup(row) {
+  const pairId = rowPairId(row);
+  const parts = [pairId];
+  const group = { key: '', pairId, evalLabel: '', languageLabel: '' };
+  if (STATE.tableGroupBy === 'pair_eval' || STATE.tableGroupBy === 'pair_eval_language') {
+    group.evalLabel = row.eval || 'Unknown';
+    parts.push(group.evalLabel);
+  }
+  if (STATE.tableGroupBy === 'pair_language' || STATE.tableGroupBy === 'pair_eval_language') {
+    group.languageLabel = row.language || 'Unknown';
+    parts.push(group.languageLabel);
+  }
+  group.key = parts.join('\u001f');
+  return group;
+}
+
+function buildRunTableRows() {
+  const rows = getRowsForCurrentSelection(STATE.rows).map((row) => ({
+    ...row,
+    isExcluded: false,
+    sortValues: getRunSortValues(row),
+  }));
+
+  if (STATE.tableShowExcluded) {
+    getRowsForCurrentSelection(STATE.excludedRows).forEach((row) => {
+      rows.push({
+        ...row,
+        isExcluded: true,
+        sortValues: getRunSortValues(row),
+      });
+    });
+  }
+
+  return rows;
+}
+
+function getRunSortValues(row) {
+  return {
+    eval: row.eval || '',
+    language: row.language || '',
+    pair: rowPairId(row),
+    percent: row.score_pct,
+    cost: row.cost_usd,
+    wall: row.wall_min,
+    exit_reason: row.exit_reason || '',
+  };
+}
+
+function getRowsForCurrentSelection(rows) {
+  return rows.filter((row) => {
+    if (!STATE.selectedEvals.has(row.eval)) return false;
+    if (!STATE.selectedLanguages.has(row.language)) return false;
+    if (!STATE.selectedPairs.has(rowPairId(row))) return false;
+    return true;
+  });
+}
+
+function getSummaryTableColumns() {
+  return [
+    { key: 'pair', label: 'Agent / Model', render: (row) => row.pairId },
+    { key: 'evals', label: 'Eval', render: (row) => row.evalLabel },
+    { key: 'languages', label: 'Language', render: (row) => row.languageLabel },
+    { key: 'runs', label: 'Runs', numeric: true, render: (row) => formatCount(row.runs) },
+    {
+      key: 'percent',
+      label: 'Pass rate',
+      numeric: true,
+      render: (row) => formatSummaryMetric('percent', row.summaries.percent),
+    },
+    {
+      key: 'cost',
+      label: 'Cost',
+      numeric: true,
+      render: (row) => formatSummaryMetric('cost', row.summaries.cost),
+    },
+    {
+      key: 'wall',
+      label: 'Wall',
+      numeric: true,
+      render: (row) => formatSummaryMetric('wall', row.summaries.wall),
+    },
+    {
+      key: 'tokens',
+      label: 'Tokens',
+      numeric: true,
+      render: (row) => formatSummaryMetric('tokens_total', row.summaries.tokens_total),
+    },
+    {
+      key: 'tools',
+      label: 'Tools',
+      numeric: true,
+      render: (row) => formatSummaryMetric('tools', row.summaries.tools),
+    },
+    {
+      key: 'loc',
+      label: 'LOC',
+      numeric: true,
+      render: (row) => formatSummaryMetric('loc', row.summaries.loc),
+    },
+  ];
+}
+
+function getRunTableColumns() {
+  return [
+    { key: 'eval', label: 'Eval', render: (row) => row.eval || 'Unknown' },
+    { key: 'language', label: 'Lang', render: (row) => row.language || 'n/a' },
+    { key: 'pair', label: 'Agent / Model', render: (row) => rowPairId(row) },
+    { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
+    { key: 'version', label: 'Version', render: (row) => row.eval_version || 'n/a' },
+    { key: 'exit', label: 'Exit', render: (row) => row.exit_reason || (row.isExcluded ? 'excluded' : 'completed') },
+    { key: 'score', label: 'Score', numeric: true, render: (row) => formatScore(row) },
+    { key: 'cost', label: 'Cost', numeric: true, render: (row) => formatAxisValue('cost', row.cost_usd) },
+    { key: 'wall', label: 'Wall', numeric: true, render: (row) => formatAxisValue('wall', row.wall_min) },
+    { key: 'tokens', label: 'Tokens', numeric: true, render: (row) => formatRunTokens(row) },
+    { key: 'tools', label: 'Tools', numeric: true, render: (row) => formatAxisValue('tools', row.tools) },
+    { key: 'files', label: 'Files', numeric: true, render: (row) => formatAxisValue('files', row.files) },
+    { key: 'loc', label: 'LOC', numeric: true, render: (row) => formatAxisValue('loc', row.loc) },
+    { key: 'link', label: 'Link', render: (row) => buildResultLink(row) },
+    { key: 'last_message', label: 'Last Message', className: 'table-message', render: (row) => row.last_message || row.failure_class || 'n/a' },
+  ];
+}
+
+function renderResultsTable(columns, rows) {
+  tableEl.replaceChildren();
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  columns.forEach((column) => {
+    const th = document.createElement('th');
+    th.textContent = column.label;
+    if (column.numeric) th.classList.add('numeric');
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  tableEl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    columns.forEach((column) => {
+      const td = document.createElement('td');
+      if (column.numeric) td.classList.add('numeric');
+      if (column.className) td.classList.add(column.className);
+      const value = column.render(row);
+      if (value instanceof Node) {
+        td.appendChild(value);
+      } else {
+        td.textContent = value;
+      }
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+  tableEl.appendChild(tbody);
+}
+
+function sortTableRows(rows) {
+  const direction = STATE.tableSortDirection === 'asc' ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const aValue = a.sortValues?.[STATE.tableSortBy];
+    const bValue = b.sortValues?.[STATE.tableSortBy];
+    const aMissing = isMissingSortValue(aValue);
+    const bMissing = isMissingSortValue(bValue);
+    if (aMissing && bMissing) return 0;
+    if (aMissing) return 1;
+    if (bMissing) return -1;
+    const result = compareTableValues(aValue, bValue);
+    return result * direction;
+  });
+}
+
+function compareTableValues(a, b) {
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b));
+}
+
+function isMissingSortValue(value) {
+  return value === undefined || value === null || value === '' ||
+    (typeof value === 'number' && !Number.isFinite(value));
+}
+
+function formatSummaryMetric(metricId, summary) {
+  if (!summary?.hasData) return 'n/a';
+  const mean = formatAxisValue(metricId, summary.mean);
+  if (!Number.isFinite(summary.stdDev) || summary.stdDev <= 0) return mean;
+  return `${mean} +/- ${formatAxisValue(metricId, summary.stdDev)}`;
+}
+
+function formatListLabel(items, fallback) {
+  if (!items.length) return fallback;
+  if (items.length <= 3) return items.join(', ');
+  return `${items.length} selected`;
+}
+
+function formatScore(row) {
+  if (Number.isFinite(row.score_count) && Number.isFinite(row.score_total) && row.score_total > 0) {
+    return `${formatCount(row.score_count)}/${formatCount(row.score_total)} (${formatAxisValue('percent', row.score_pct)})`;
+  }
+  return formatAxisValue('percent', row.score_pct);
+}
+
+function formatRunTokens(row) {
+  const total = row.input_tokens + row.output_tokens;
+  return Number.isFinite(total) ? formatTokenCount(total) : 'n/a';
+}
+
+function buildResultLink(row) {
+  if (!row.result_link) return 'n/a';
+  const link = document.createElement('a');
+  link.href = row.result_link;
+  link.textContent = 'result';
+  link.className = 'table-link';
+  return link;
 }
 
 function buildPoints(colorMap, rowsByPairOverride) {
@@ -786,6 +1224,15 @@ function getPairAvailability(rowsByPair) {
     availability.set(pairId, canRenderPair(rows, selectedLanguages));
   });
 
+  return availability;
+}
+
+function getPairAvailabilityForRows(rowsByPair) {
+  const availability = new Map();
+  getPairs().forEach((pairId) => {
+    const rows = rowsByPair.get(pairId) || [];
+    availability.set(pairId, rows.length > 0);
+  });
   return availability;
 }
 
@@ -1987,7 +2434,7 @@ function formatAxisValue(axisId, value) {
     return formatTokenCount(value);
   }
   if (axisId === 'wall') return formatWallTime(value);
-  if (axisId === 'tools' || axisId === 'loc') return formatCount(value);
+  if (axisId === 'tools' || axisId === 'loc' || axisId === 'files') return formatCount(value);
   if (axisId === 'cost') return formatMoney(value);
   return String(value.toFixed(2));
 }
@@ -2195,11 +2642,21 @@ async function loadRows() {
 
 function parseDataSource(text, sourceName = '') {
   const trimmed = text.trim();
-  if (!trimmed) return [];
+  if (!trimmed) return { rows: [], excludedRows: [] };
   if (sourceName.toLowerCase().endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
     return parseJsonData(trimmed);
   }
   return parseCsv(trimmed);
+}
+
+function normalizeDataset(data) {
+  if (Array.isArray(data)) {
+    return { rows: data, excludedRows: [] };
+  }
+  return {
+    rows: Array.isArray(data?.rows) ? data.rows : [],
+    excludedRows: Array.isArray(data?.excludedRows) ? data.excludedRows : [],
+  };
 }
 
 function parseJsonData(text) {
@@ -2213,7 +2670,11 @@ function parseJsonData(text) {
         : isHarnessResult(data)
           ? [data]
           : [];
-  return rows.map((row) => coerceRow(isHarnessResult(row) ? rowFromHarnessResult(row) : row));
+  const excludedRows = Array.isArray(data?.excluded_runs) ? data.excluded_runs : [];
+  return {
+    rows: rows.map((row) => coerceRow(isHarnessResult(row) ? rowFromHarnessResult(row) : row)),
+    excludedRows: excludedRows.map((row) => coerceRow({ ...row, excluded: true })),
+  };
 }
 
 function parseCsv(text) {
@@ -2234,7 +2695,7 @@ function parseCsv(text) {
     rows.push(coerceRow(row));
   }
 
-  return rows;
+  return { rows, excludedRows: [] };
 }
 
 function parseCsvLine(line) {
@@ -2289,6 +2750,10 @@ function coerceRow(raw) {
     effort: firstPresent(raw.effort, ''),
     run_id: String(firstPresent(raw.run_id, raw.run, '')),
     eval: normalizedEval,
+    eval_instance: firstPresent(raw.eval_instance, ''),
+    eval_version: firstPresent(raw.eval_version, ''),
+    exit_reason: firstPresent(raw.exit_reason, raw.excluded ? 'excluded' : 'completed'),
+    failure_class: firstPresent(raw.failure_class, ''),
     eval_raw: firstPresent(raw.eval, ''),
     score_count: scoreCount,
     score_total: scoreTotal,
@@ -2324,6 +2789,8 @@ function rowFromHarnessResult(result) {
     effort: metadata.effort || '',
     run_id: metadata.run_number || '',
     eval: evalLabelFromTask(task),
+    eval_version: metadata.eval_version || '',
+    exit_reason: metadata.exit_reason || '',
     score_count: summary.passed,
     score_total: summary.total,
     wall_min: metadata.wall_clock_seconds ? metadata.wall_clock_seconds / 60 : undefined,
