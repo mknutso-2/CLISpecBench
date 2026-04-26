@@ -12,10 +12,7 @@ from conftest import b64, run_marc21
 
 FIXED_RULES = json.loads(
     (
-        Path(__file__).resolve().parents[1]
-        / "reference-implementation-py"
-        / "generated"
-        / "marc21_fixed_field_rules.json"
+        Path(__file__).resolve().parent / "generated" / "marc21_fixed_field_rules.json"
     ).read_text(encoding="utf-8")
 )
 

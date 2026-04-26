@@ -4,6 +4,12 @@ The program must be runnable as:
 python main.py --input <request.json> --output <response.json>
 ```
 
+The program must be self-contained: only files placed in `output/` will be
+present at run time. Any reference data the program needs at run time (rule
+tables, lookup files, embedded constants, etc.) must live inside `output/` —
+files anywhere else in the project tree (including `docs/`) are not available
+when the program runs.
+
 ## Request schema
 
 The input file is always a JSON object with an `action` field.

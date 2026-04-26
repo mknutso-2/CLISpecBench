@@ -1,5 +1,60 @@
 # Changelog
 
+## v2.8.2 — 2026-04-25
+
+Two follow-ups from a multi-run analysis on v2.8.1 that surfaced a rule-3
+cascade: in some runs (e.g. one codex run scored 0.017, one Claude run
+scored 0.386) a single agent CLI startup bug failed every test that
+invoked the binary, masking ~2,840 independent capability tests with the
+same `returncode != 0` assertion. The score variance from 0.02 to 0.98
+across runs of the same model was not reflective of capability differences;
+it was the cascade.
+
+**Test-side rule-3 fix — CLI smoke gate** (`tests/conftest.py`):
+
+- The shared `submission_command` fixture is now overridden in marc21's
+  conftest. It runs a single minimum-valid `inspect` request once per
+  session before returning the command tuple. If the program exits
+  non-zero, the fixture calls `pytest.skip` with a uniform reason, which
+  transitively skips every test that requests `submission_command` (i.e.
+  every CLI-invoking test). Tests that do not invoke the CLI
+  (`test_build`, anything driven only by `prepared_submission`) keep
+  running.
+- Net effect: a startup-class bug now costs one clearly-named gate skip
+  per affected test instead of ~2,840 near-identical assertion failures.
+  The pass-rate is unchanged (skipped tests still count in `total`), so
+  scoring still reflects actual capability — only the diagnostic surface
+  changes.
+
+**Prompt clarification — submission self-containment**
+(`prompt/technical-requirements-prompt.md`):
+
+- Added a user-voice deployment constraint: only files placed in `output/`
+  are present at run time; anything outside `output/` (including `docs/`)
+  is unavailable to the running program. Phrased as a deployment
+  statement, not as eval/grading instruction.
+- Removes the ambiguity that drove the codex `_find_docs_root()` failure
+  mode, where the agent reached for prompt-time HTML files at run time.
+
+## v2.8.1 — 2026-04-25
+
+Bug fix: Test infrastructure was reading two JSON rules files
+(`marc21_field_rules.json`, `marc21_fixed_field_rules.json`) from
+`reference-implementation-py/generated/` via a `parents[1]` path.
+The harness scoring container only mounts `tests/`, the submission,
+and the clispecbench `src/`, so the reference-implementation tree
+is unavailable at scoring time. The result was an unconditional
+collection-time `FileNotFoundError` in `test_fixed_fields.py` and
+`marc21_spec_support.py` that caused pytest to exit with code 2 and
+no report.json — every run scored 0/0 regardless of agent output.
+
+- Copied `marc21_field_rules.json` and `marc21_fixed_field_rules.json`
+  into `tests/generated/` (alongside the existing
+  `marc21_field_examples.json`).
+- Updated `marc21_spec_support.py` and `test_fixed_fields.py` to load
+  from the new in-tree path.
+- Reference implementation paths are unchanged.
+
 ## v2.8.0 — 2026-04-24
 
 - Added `prompt/docs/MARCXML_Slim.md`, a maintainer-authored MARCXML slim

@@ -6,12 +6,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, cast
 
-_RULES_PATH = (
-    Path(__file__).resolve().parents[1]
-    / "reference-implementation-py"
-    / "generated"
-    / "marc21_field_rules.json"
-)
+_RULES_PATH = Path(__file__).resolve().parent / "generated" / "marc21_field_rules.json"
 _EXAMPLES_PATH = Path(__file__).resolve().parent / "generated" / "marc21_field_examples.json"
 _LEADER_TEMPLATE = "00000nam a2200000 a 4500"
 
