@@ -218,7 +218,7 @@ def test_application_reports_probe_trip_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     for parameter_index, expected_value in expected_trip_parameters.items():
         assert get_parameter_value(payload, parameter_index) == expected_value
 
@@ -266,5 +266,5 @@ def test_application_stops_probe_at_trip_point(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == expected_machine_position
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == expected_machine_position

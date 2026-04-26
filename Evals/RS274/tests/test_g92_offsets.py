@@ -37,9 +37,11 @@ def test_g92_sets_offsets_and_backing_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -3.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 6.0, "y": -3.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 6.0, "y": -3.0, "z": 0.0}
+    )
 
 
 def test_g92_ignores_incremental_distance_mode(
@@ -48,23 +50,16 @@ def test_g92_ignores_incremental_distance_mode(
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X4.0\n"
-            "G91\n"
-            "G92 X7.0\n"
-            "G90\n"
-            "G0 X7.0\n"
-        ),
+        input_gcode=("G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X4.0\nG91\nG92 X7.0\nG90\nG0 X7.0\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -3.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": 0.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 4.0, "y": 0.0, "z": 0.0}
+    )
 
 
 def test_g92_accumulates_existing_offsets(
@@ -87,9 +82,11 @@ def test_g92_accumulates_existing_offsets(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -5.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": -5.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 4.0, "y": -5.0, "z": 0.0}
+    )
 
 
 def test_g92_affects_all_coordinate_systems(
@@ -112,9 +109,11 @@ def test_g92_affects_all_coordinate_systems(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -3.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 14.0, "y": 0.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 14.0, "y": 0.0, "z": 0.0}
+    )
 
 
 def test_g92_1_cancels_offsets_and_zeros_parameters(
@@ -137,9 +136,11 @@ def test_g92_1_cancels_offsets_and_zeros_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == 0.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 7.0, "y": 0.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 7.0, "y": 0.0, "z": 0.0}
+    )
 
 
 def test_g92_2_cancels_offsets_without_zeroing_parameters(
@@ -162,9 +163,11 @@ def test_g92_2_cancels_offsets_without_zeroing_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -3.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 7.0, "y": -3.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 7.0, "y": -3.0, "z": 0.0}
+    )
 
 
 def test_g92_3_restores_offsets_from_parameters(
@@ -174,20 +177,17 @@ def test_g92_3_restores_offsets_from_parameters(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            f"#{G92_X_OFFSET_PARAMETER}=-3.0\n"
-            "G92.3\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X7.0\n"
+            f"#{G92_X_OFFSET_PARAMETER}=-3.0\nG92.3\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X7.0\n"
         ),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -3.0
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": 0.0, "z": 0.0})
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 4.0, "y": 0.0, "z": 0.0}
+    )
 
 
 def test_g92_sets_rotary_offsets_and_backing_parameters(
@@ -211,11 +211,11 @@ def test_g92_sets_rotary_offsets_and_backing_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_A_OFFSET_PARAMETER) == 9.0
     assert get_parameter_value(payload, G92_B_OFFSET_PARAMETER) == 18.0
     assert get_parameter_value(payload, G92_C_OFFSET_PARAMETER) == 27.0
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 9.0, "y": 18.0, "z": 27.0, "a": 11.0, "b": 21.0, "c": 31.0}
     )
 
@@ -239,11 +239,11 @@ def test_g92_1_cancels_rotary_offsets_and_zeros_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_A_OFFSET_PARAMETER) == 0.0
     assert get_parameter_value(payload, G92_B_OFFSET_PARAMETER) == 0.0
     assert get_parameter_value(payload, G92_C_OFFSET_PARAMETER) == 0.0
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 7.0, "b": 8.0, "c": 9.0}
     )
 
@@ -270,11 +270,11 @@ def test_g92_2_cancels_rotary_offsets_without_zeroing_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_A_OFFSET_PARAMETER) == 9.0
     assert get_parameter_value(payload, G92_B_OFFSET_PARAMETER) == 18.0
     assert get_parameter_value(payload, G92_C_OFFSET_PARAMETER) == 27.0
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 9.0, "y": 18.0, "z": 27.0, "a": 7.0, "b": 8.0, "c": 9.0}
     )
 
@@ -299,10 +299,10 @@ def test_g92_3_restores_rotary_offsets_from_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_A_OFFSET_PARAMETER) == 9.0
     assert get_parameter_value(payload, G92_B_OFFSET_PARAMETER) == 18.0
     assert get_parameter_value(payload, G92_C_OFFSET_PARAMETER) == 27.0
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 1.0, "y": 2.0, "z": 3.0, "a": 16.0, "b": 26.0, "c": 36.0}
     )

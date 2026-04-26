@@ -17,6 +17,7 @@ from rs274_parameters import (
 from rs274_support import (
     build_parameter_file,
     get_parameter_value,
+    mapping_field,
     run_rs274,
     run_rs274_invalid_input,
     with_default_rotary_axes,
@@ -54,8 +55,10 @@ def test_application_accepts_parameter_file_cli_arguments(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 1.0, "y": 2.0, "z": 3.0})
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 1.0, "y": 2.0, "z": 3.0}
+    )
 
 
 # RS274 section 3.2.1 says the interpreter reads the parameter file when it
@@ -100,16 +103,16 @@ def test_application_initializes_startup_state_from_parameter_input_file(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    active_modal_g_codes = payload["active_modal_g_codes"]
+    assert payload.get("error") is None
+    active_modal_g_codes = payload.get("active_modal_g_codes")
     assert isinstance(active_modal_g_codes, dict)
     assert active_modal_g_codes["12"] == "G55"
     assert get_parameter_value(payload, 1) == 4.25
     assert get_parameter_value(payload, SELECTED_COORDINATE_SYSTEM_PARAMETER) == 2.0
-    assert payload["coordinate_system_offsets"]["2"] == with_default_rotary_axes(
+    assert mapping_field(payload, "coordinate_system_offsets").get("2") == with_default_rotary_axes(
         {"x": 10.0, "y": 20.0, "z": 30.0, "a": 40.0, "b": 50.0, "c": 60.0}
     )
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 15.25, "y": 24.0, "z": 36.0, "a": 48.0, "b": 60.0, "c": 72.0}
     )
 

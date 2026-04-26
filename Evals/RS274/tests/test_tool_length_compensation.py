@@ -17,40 +17,25 @@ TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 TOOL_LENGTH_COMPENSATION_CASES: list[ToolLengthCompensationCase] = [
     (
         "g43-adjusts-current-z-without-axis-motion",
-        "G20\n"
-        "G90\n"
-        "G0 Z3.0\n"
-        "G43 H2\n",
+        "G20\nG90\nG0 Z3.0\nG43 H2\n",
         {"x": 0.0, "y": 0.0, "z": 1.5},
         2,
     ),
     (
         "changing-g43-offsets-adjusts-current-z-by-the-offset-difference",
-        "G20\n"
-        "G90\n"
-        "G0 Z3.0\n"
-        "G43 H2\n"
-        "G43 H4\n",
+        "G20\nG90\nG0 Z3.0\nG43 H2\nG43 H4\n",
         {"x": 0.0, "y": 0.0, "z": 2.5},
         4,
     ),
     (
         "g49-cancels-tool-length-compensation-without-axis-motion",
-        "G20\n"
-        "G90\n"
-        "G0 Z3.0\n"
-        "G43 H2\n"
-        "G49\n",
+        "G20\nG90\nG0 Z3.0\nG43 H2\nG49\n",
         {"x": 0.0, "y": 0.0, "z": 3.0},
         None,
     ),
     (
         "g43-remains-active-during-ordinary-motion",
-        "G20\n"
-        "G90\n"
-        "G0 Z3.0\n"
-        "G43 H2\n"
-        "G1 X4.0 Y5.0 F2.0\n",
+        "G20\nG90\nG0 Z3.0\nG43 H2\nG1 X4.0 Y5.0 F2.0\n",
         {"x": 4.0, "y": 5.0, "z": 1.5},
         2,
     ),
@@ -100,6 +85,6 @@ def test_application_applies_tool_length_compensation_to_current_position(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
-    assert payload["tool_length_offset_index"] == expected_tool_length_offset_index
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("tool_length_offset_index") == expected_tool_length_offset_index

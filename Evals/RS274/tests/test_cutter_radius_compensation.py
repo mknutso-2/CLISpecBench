@@ -5,13 +5,18 @@ from pathlib import Path
 
 import pytest
 
-from rs274_support import run_rs274
+from rs274_support import mapping_field, run_rs274
 
 TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 
 1 1 0.0 6.0 rougher
 2 2 0.0 10.0 finisher
 """
+
+
+def assert_close(value: object, expected: float, *, abs_tol: float) -> None:
+    assert isinstance(value, int | float)
+    assert math.isclose(float(value), expected, abs_tol=abs_tol)
 
 
 # Spec reading for the first straight cutter-radius-compensation move:
@@ -251,12 +256,13 @@ def test_application_tracks_cutter_radius_compensated_spindle_center(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert math.isclose(payload["machine_position"]["x"], expected_x, abs_tol=1e-4)
-    assert math.isclose(payload["machine_position"]["y"], expected_y, abs_tol=1e-4)
-    assert math.isclose(payload["machine_position"]["z"], 0.0, abs_tol=1e-4)
-    assert payload["active_modal_g_codes"]["7"] == expected_crc_mode
-    assert payload["cutter_radius_compensation_number"] == expected_d_number
+    assert payload.get("error") is None
+    machine_position = mapping_field(payload, "machine_position")
+    assert_close(machine_position.get("x"), expected_x, abs_tol=1e-4)
+    assert_close(machine_position.get("y"), expected_y, abs_tol=1e-4)
+    assert_close(machine_position.get("z"), 0.0, abs_tol=1e-4)
+    assert mapping_field(payload, "active_modal_g_codes").get("7") == expected_crc_mode
+    assert payload.get("cutter_radius_compensation_number") == expected_d_number
 
 
 # RS274 Appendix B.6 says that if the first move after turning cutter
@@ -536,15 +542,10 @@ def test_application_tracks_cutter_radius_compensated_arc_endpoints(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert math.isclose(
-        payload["machine_position"]["x"], expected_machine_position["x"], abs_tol=1e-4
-    )
-    assert math.isclose(
-        payload["machine_position"]["y"], expected_machine_position["y"], abs_tol=1e-4
-    )
-    assert math.isclose(
-        payload["machine_position"]["z"], expected_machine_position["z"], abs_tol=1e-4
-    )
-    assert payload["active_modal_g_codes"]["7"] == expected_crc_mode
-    assert payload["cutter_radius_compensation_number"] == expected_d_number
+    assert payload.get("error") is None
+    machine_position = mapping_field(payload, "machine_position")
+    assert_close(machine_position.get("x"), expected_machine_position["x"], abs_tol=1e-4)
+    assert_close(machine_position.get("y"), expected_machine_position["y"], abs_tol=1e-4)
+    assert_close(machine_position.get("z"), expected_machine_position["z"], abs_tol=1e-4)
+    assert mapping_field(payload, "active_modal_g_codes").get("7") == expected_crc_mode
+    assert payload.get("cutter_radius_compensation_number") == expected_d_number

@@ -59,7 +59,7 @@ def test_application_writes_required_parameter_output_file_entries(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
 
     parsed_entries = parse_parameter_output_file(parameter_output)
     assert required_non_rotational_parameter_indices() <= set(parsed_entries)
@@ -80,7 +80,7 @@ def test_application_preserves_input_parameters_in_output_file(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
 
     parsed_entries = parse_parameter_output_file(parameter_output)
     assert parsed_entries[1] == 4.25
@@ -113,7 +113,7 @@ def test_application_writes_execution_updates_to_output_parameter_file(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
 
     parsed_entries = parse_parameter_output_file(parameter_output)
     assert parsed_entries[1] == 5.5

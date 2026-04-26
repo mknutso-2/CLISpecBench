@@ -58,8 +58,8 @@ def test_application_returns_to_g28_home_set_by_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 40.0, "y": 50.0, "z": 60.0}
     )
     assert get_parameter_value(payload, G28_HOME_X_PARAMETER) == 40.0
@@ -91,8 +91,8 @@ def test_application_returns_to_g28_home_after_intermediate_programmed_position(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 40.0, "y": 50.0, "z": 60.0}
     )
     assert get_parameter_value(payload, G28_HOME_X_PARAMETER) == 40.0
@@ -124,8 +124,8 @@ def test_application_returns_to_g30_secondary_home_set_by_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 70.0, "y": 80.0, "z": 90.0}
     )
     assert get_parameter_value(payload, G30_HOME_X_PARAMETER) == 70.0
@@ -157,8 +157,8 @@ def test_application_returns_to_g30_secondary_home_without_axis_words(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 70.0, "y": 80.0, "z": 90.0}
     )
     assert get_parameter_value(payload, G30_HOME_X_PARAMETER) == 70.0
@@ -188,8 +188,8 @@ def test_application_returns_to_g28_rotary_home_set_by_parameters(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 40.0, "b": 50.0, "c": 60.0}
     )
     assert get_parameter_value(payload, G28_HOME_A_PARAMETER) == 40.0
@@ -219,8 +219,8 @@ def test_application_returns_to_g28_rotary_home_without_axis_words(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 40.0, "b": 50.0, "c": 60.0}
     )
     assert get_parameter_value(payload, G28_HOME_A_PARAMETER) == 40.0
@@ -250,8 +250,8 @@ def test_application_returns_to_g30_rotary_home_without_axis_words(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 70.0, "b": 80.0, "c": 90.0}
     )
     assert get_parameter_value(payload, G30_HOME_A_PARAMETER) == 70.0
@@ -281,8 +281,8 @@ def test_application_returns_to_g30_rotary_home_after_intermediate_programmed_po
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 70.0, "b": 80.0, "c": 90.0}
     )
     assert get_parameter_value(payload, G30_HOME_A_PARAMETER) == 70.0

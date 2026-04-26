@@ -85,14 +85,8 @@ GCODE_GROUP_ERROR_CASES: list[GcodeGroupErrorCase] = [
 # appear on the same line. These cases cover each supported G-code group.
 @pytest.mark.parametrize(
     "input_gcode",
-    [
-        input_gcode
-        for _, _group_number, input_gcode in GCODE_GROUP_ERROR_CASES
-    ],
-    ids=[
-        f"group-{group_number}-{case_id}"
-        for case_id, group_number, _ in GCODE_GROUP_ERROR_CASES
-    ],
+    [input_gcode for _, _group_number, input_gcode in GCODE_GROUP_ERROR_CASES],
+    ids=[f"group-{group_number}-{case_id}" for case_id, group_number, _ in GCODE_GROUP_ERROR_CASES],
 )
 def test_application_rejects_multiple_g_words_from_the_same_group(
     submission_command: tuple[str, ...],

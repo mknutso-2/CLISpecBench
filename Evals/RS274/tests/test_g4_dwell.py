@@ -20,5 +20,7 @@ def test_application_accepts_g4_dwell(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": 5.0, "z": 6.0})
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 4.0, "y": 5.0, "z": 6.0}
+    )

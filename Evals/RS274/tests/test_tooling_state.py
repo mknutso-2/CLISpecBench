@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from modal_groups import MCODE_MODAL_GROUP_COOLANT
-from rs274_support import run_rs274
+from rs274_support import mapping_field, run_rs274
 
 ToolingStateCase = tuple[
     str,
@@ -39,8 +39,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "clears-cutter-radius-compensation-number-on-g40",
-        "G41 D3\n"
-        "G40\n",
+        "G41 D3\nG40\n",
         None,
         None,
         None,
@@ -60,8 +59,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "clears-tool-length-offset-index-on-g49",
-        "G43 H4\n"
-        "G49\n",
+        "G43 H4\nG49\n",
         None,
         None,
         None,
@@ -81,9 +79,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-tool-in-spindle-after-m6",
-        "T2\n"
-        "T9\n"
-        "M6\n",
+        "T2\nT9\nM6\n",
         None,
         None,
         9,
@@ -93,9 +89,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-selected-tool-separately-from-tool-in-spindle",
-        "T4\n"
-        "M6\n"
-        "T7\n",
+        "T4\nM6\nT7\n",
         None,
         None,
         7,
@@ -105,10 +99,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-empty-spindle-after-t0-m6",
-        "T5\n"
-        "M6\n"
-        "T0\n"
-        "M6\n",
+        "T5\nM6\nT0\nM6\n",
         None,
         None,
         0,
@@ -118,10 +109,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "accepts-d-h-and-t-equal-to-carousel-slot-count",
-        "T6\n"
-        "M6\n"
-        "G43 H6\n"
-        "G41 D6\n",
+        "T6\nM6\nG43 H6\nG41 D6\n",
         6,
         6,
         6,
@@ -131,10 +119,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "m6-stops-the-spindle",
-        "S1200\n"
-        "M3\n"
-        "T4\n"
-        "M6\n",
+        "S1200\nM3\nT4\nM6\n",
         None,
         None,
         4,
@@ -144,9 +129,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-all-tooling-state-together",
-        "T5\n"
-        "G41 D6\n"
-        "G43 H7\n",
+        "T5\nG41 D6\nG43 H7\n",
         6,
         7,
         5,
@@ -156,12 +139,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-tooling-state-from-parameter-values",
-        "#1=6\n"
-        "#2=7\n"
-        "#3=4\n"
-        "T#1\n"
-        "G43 H#2\n"
-        "G41 D#3\n",
+        "#1=6\n#2=7\n#3=4\nT#1\nG43 H#2\nG41 D#3\n",
         4,
         7,
         6,
@@ -171,9 +149,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-tooling-state-from-expressions",
-        "T[3+3]\n"
-        "G43 H[3+4]\n"
-        "G41 D[2+2]\n",
+        "T[3+3]\nG43 H[3+4]\nG41 D[2+2]\n",
         4,
         7,
         6,
@@ -183,11 +159,7 @@ TOOLING_STATE_CASES: list[ToolingStateCase] = [
     ),
     (
         "tracks-tooling-state-from-repeated-parameters-and-unary-ops",
-        "#1=2\n"
-        "#2=6\n"
-        "T##1\n"
-        "G43 HABS[-7]\n"
-        "G41 DABS[-4]\n",
+        "#1=2\n#2=6\nT##1\nG43 HABS[-7]\nG41 DABS[-4]\n",
         4,
         7,
         6,
@@ -264,15 +236,15 @@ def test_application_tracks_tooling_state(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert (
-        payload["cutter_radius_compensation_number"]
+        payload.get("cutter_radius_compensation_number")
         == expected_cutter_radius_compensation_number
     )
-    assert payload["tool_length_offset_index"] == expected_tool_length_offset_index
-    assert payload["selected_tool"] == expected_selected_tool
-    assert payload["tool_in_spindle"] == expected_tool_in_spindle
-    assert payload["spindle_direction"] == expected_spindle_direction
+    assert payload.get("tool_length_offset_index") == expected_tool_length_offset_index
+    assert payload.get("selected_tool") == expected_selected_tool
+    assert payload.get("tool_in_spindle") == expected_tool_in_spindle
+    assert payload.get("spindle_direction") == expected_spindle_direction
 
 
 def test_m6_stops_spindle_without_clearing_unrelated_observable_state(
@@ -281,21 +253,14 @@ def test_m6_stops_spindle_without_clearing_unrelated_observable_state(
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "F12.5\n"
-            "M8\n"
-            "S1200\n"
-            "M3\n"
-            "T4\n"
-            "M6\n"
-        ),
+        input_gcode=("F12.5\nM8\nS1200\nM3\nT4\nM6\n"),
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["feed_rate"] == 12.5
-    assert payload["spindle_speed"] == 1200.0
-    assert payload["spindle_direction"] == "OFF"
-    assert payload["active_modal_m_codes"][MCODE_MODAL_GROUP_COOLANT] == "M8"
+    assert payload.get("error") is None
+    assert payload.get("feed_rate") == 12.5
+    assert payload.get("spindle_speed") == 1200.0
+    assert payload.get("spindle_direction") == "OFF"
+    assert mapping_field(payload, "active_modal_m_codes").get(MCODE_MODAL_GROUP_COOLANT) == "M8"

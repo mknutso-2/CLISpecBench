@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from modal_groups import GCODE_MODAL_GROUP_FEED_RATE_MODE
-from rs274_support import run_rs274, with_default_rotary_axes
+from rs274_support import mapping_field, run_rs274, with_default_rotary_axes
 
 FeedRateModeCase = tuple[str, str, str, float, dict[str, float]]
 
@@ -40,12 +40,7 @@ FEED_RATE_MODE_CASES: list[FeedRateModeCase] = [
     ),
     (
         "g94-restores-units-per-minute-mode-after-g93",
-        ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G93\n"
-        + "G1 X1.0 F2.0\n"
-        + "G94\n"
-        + "G1 X2.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\n" + "G93\n" + "G1 X1.0 F2.0\n" + "G94\n" + "G1 X2.0\n",
         "G94",
         2.0,
         {"x": 2.0, "y": 0.0, "z": 0.0},
@@ -91,7 +86,10 @@ def test_application_tracks_feed_rate_mode_behavior(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_FEED_RATE_MODE] == expected_active_mode
-    assert payload["feed_rate"] == expected_feed_rate
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("error") is None
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_FEED_RATE_MODE)
+        == expected_active_mode
+    )
+    assert payload.get("feed_rate") == expected_feed_rate
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)

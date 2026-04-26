@@ -10,7 +10,7 @@ from modal_groups import (
     MCODE_MODAL_GROUP_STOPPING,
     MCODE_MODAL_GROUP_TOOL_CHANGE,
 )
-from rs274_support import run_rs274
+from rs274_support import mapping_field, run_rs274
 
 McodeLineAcceptanceCase = tuple[str, str, dict[str, str]]
 
@@ -88,6 +88,9 @@ def test_application_accepts_up_to_four_m_words_on_one_line(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     for group_number, expected_active_mcode in expected_active_m_codes.items():
-        assert payload["active_modal_m_codes"][group_number] == expected_active_mcode
+        assert (
+            mapping_field(payload, "active_modal_m_codes").get(group_number)
+            == expected_active_mcode
+        )

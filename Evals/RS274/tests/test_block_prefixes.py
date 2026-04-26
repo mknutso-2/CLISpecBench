@@ -15,26 +15,17 @@ BlockPrefixCase = tuple[str, str, dict[str, float]]
 BLOCK_PREFIX_CASES: list[BlockPrefixCase] = [
     (
         "line-number-prefixes",
-        "N10 G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-        "N20 G54\n"
-        "N30 G90\n"
-        "N40 G0 X1.0 Y2.0 Z3.0\n",
+        "N10 G10 L2 P1 X0.0 Y0.0 Z0.0\nN20 G54\nN30 G90\nN40 G0 X1.0 Y2.0 Z3.0\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
     ),
     (
         "block-delete-prefixes",
-        "/G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-        "/G54\n"
-        "/G90\n"
-        "/G0 X4.0 Y5.0 Z6.0\n",
+        "/G10 L2 P1 X0.0 Y0.0 Z0.0\n/G54\n/G90\n/G0 X4.0 Y5.0 Z6.0\n",
         {"x": 4.0, "y": 5.0, "z": 6.0},
     ),
     (
         "block-delete-and-line-number-prefixes",
-        "/N10 G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-        "/N20 G54\n"
-        "/N30 G90\n"
-        "/N40 G0 X7.0 Y8.0 Z9.0\n",
+        "/N10 G10 L2 P1 X0.0 Y0.0 Z0.0\n/N20 G54\n/N30 G90\n/N40 G0 X7.0 Y8.0 Z9.0\n",
         {"x": 7.0, "y": 8.0, "z": 9.0},
     ),
 ]
@@ -66,8 +57,8 @@ def test_application_supports_optional_block_prefixes(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)
 
 
 # RS274 section 2.2.2 and section 3.3 say that if the block-delete switch is
@@ -80,18 +71,16 @@ def test_application_skips_slash_prefixed_blocks_when_block_delete_is_on(
         submission_command,
         block_delete=True,
         input_gcode=(
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X1.0 Y2.0 Z3.0\n"
-            "/N10 G0 X7.0 Y8.0 Z9.0\n"
+            "G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X1.0 Y2.0 Z3.0\n/N10 G0 X7.0 Y8.0 Z9.0\n"
         ),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 1.0, "y": 2.0, "z": 3.0})
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 1.0, "y": 2.0, "z": 3.0}
+    )
 
 
 # RS274 section 3.3 says the block-delete character is an optional prefix

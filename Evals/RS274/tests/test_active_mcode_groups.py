@@ -11,7 +11,7 @@ from modal_groups import (
     MCODE_MODAL_GROUP_STOPPING,
     MCODE_MODAL_GROUP_TOOL_CHANGE,
 )
-from rs274_support import run_rs274
+from rs274_support import mapping_field, run_rs274
 
 ActiveMcodeGroupCase = tuple[str, str, str]
 
@@ -32,8 +32,7 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
         "M60",
     ),
     (
-        "M0\n"
-        "M1\n",
+        "M0\nM1\n",
         MCODE_MODAL_GROUP_STOPPING,
         "M1",
     ),
@@ -43,8 +42,7 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
         "M6",
     ),
     (
-        "M3\n"
-        "M5\n",
+        "M3\nM5\n",
         MCODE_MODAL_GROUP_SPINDLE_TURNING,
         "M5",
     ),
@@ -59,14 +57,12 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
         "M8",
     ),
     (
-        "M7\n"
-        "M9\n",
+        "M7\nM9\n",
         MCODE_MODAL_GROUP_COOLANT,
         "M9",
     ),
     (
-        "M48\n"
-        "M49\n",
+        "M48\nM49\n",
         MCODE_MODAL_GROUP_OVERRIDE_SWITCHES,
         "M49",
     ),
@@ -123,5 +119,5 @@ def test_application_tracks_active_mcode_groups(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_m_codes"][group_number] == expected_active_mcode
+    assert payload.get("error") is None
+    assert mapping_field(payload, "active_modal_m_codes").get(group_number) == expected_active_mcode

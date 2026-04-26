@@ -2,45 +2,6 @@
 
 ## Proposed (not yet applied)
 
-### Schema-tolerant assertions and a central schema-gate test
-
-The test suite has **178 direct `payload["..."]` subscripts** versus
-**1 `payload.get(...)`** across `Evals/RS274/tests/`, and there is no
-`test_output_schema.py` gate test. This is the exact anti-pattern
-`skills/eval-authoring/SKILL.md` §"Keep test failure modes
-independent" warns about and `Eval-Design.md` §7.4 documents (the
-sonnet-4-6 cpp run 3 incident where one schema slip cost 55% of the
-suite).
-
-Representative site ([test_canned_cycles.py:330](tests/test_canned_cycles.py:330)):
-
-```python
-assert payload["error"] is None
-assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == ...
-```
-
-If a submission omits `"error"` or `"active_modal_g_codes"`, every one
-of 549 tests raises `KeyError` instead of surfacing as a single
-schema failure.
-
-Proposed:
-
-1. Add `Evals/RS274/tests/test_output_schema.py` with a small number
-   of tests that assert the full shape of `--output` and `--trace-output`
-   payloads against a canonical minimal program. These are the only
-   tests that should hard-fail on schema shape.
-2. Sweep the ~178 behavioral assertions to tolerant access:
-   `payload.get("error")` instead of `payload["error"]`,
-   `payload.get("active_modal_g_codes", {}).get(group)` instead of
-   the chained subscript, etc. Assertions compare against expected
-   values, which naturally surface a missing key as a `None == <value>`
-   failure rather than an error outcome.
-
-This is a contract-affecting change (`test_suite_sha` moves and the
-error-vs-failure outcome distribution shifts for submissions with
-schema slips), so it requires a patch bump and CHANGELOG entry when
-applied. Not applied yet.
-
 ### Two M-code modal-group issues in the prompt
 
 Issue (a) and issue (b) are independent and have very different
@@ -129,6 +90,23 @@ a sentence to the trace rules that says when a block contains both
 motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
+
+## v3.1.8 — 2026-04-26
+
+- Added `tests/test_output_schema.py` as the central schema gate for
+  `--output` and `--trace-output` payloads:
+  - success payloads now get full nested schema checks for machine position,
+    modal-code maps, coordinate-system offsets, parameters, and nullable state
+    fields;
+  - error payloads now gate top-level output shape and non-empty error fields
+    without requiring every nested state snapshot to be complete on the error
+    path.
+- Made shared RS274 test runners tolerate missing or malformed JSON objects by
+  returning `{}`; schema tests now own the hard schema failure, while behavioral
+  tests can continue to report value mismatches.
+- Swept behavioral tests from direct `payload[...]` and top-level
+  `trace[...]` subscripts to `payload.get(...)`, `mapping_field(...)`,
+  `trace_entries(...)`, and `trace_initial_state(...)` accessors.
 
 ## v3.1.7 — 2026-04-25
 

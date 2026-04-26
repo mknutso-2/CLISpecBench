@@ -49,14 +49,8 @@ MCODE_GROUP_ERROR_CASES: list[McodeGroupErrorCase] = [
 # appear on the same line. These cases cover each supported M-code group.
 @pytest.mark.parametrize(
     "input_gcode",
-    [
-        input_gcode
-        for _, _group_number, input_gcode in MCODE_GROUP_ERROR_CASES
-    ],
-    ids=[
-        f"group-{group_number}-{case_id}"
-        for case_id, group_number, _ in MCODE_GROUP_ERROR_CASES
-    ],
+    [input_gcode for _, _group_number, input_gcode in MCODE_GROUP_ERROR_CASES],
+    ids=[f"group-{group_number}-{case_id}" for case_id, group_number, _ in MCODE_GROUP_ERROR_CASES],
 )
 def test_application_rejects_multiple_m_words_from_the_same_group(
     submission_command: tuple[str, ...],

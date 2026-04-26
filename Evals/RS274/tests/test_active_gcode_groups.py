@@ -16,166 +16,134 @@ from modal_groups import (
     GCODE_MODAL_GROUP_TOOL_LENGTH_OFFSET,
     GCODE_MODAL_GROUP_UNITS,
 )
-from rs274_support import run_rs274, with_default_rotary_axes
+from rs274_support import mapping_field, run_rs274, with_default_rotary_axes
 
 ActiveGcodeGroupCase = tuple[str, str, str]
 CoordinateSystemSelectionCase = tuple[str, str, dict[str, float]]
 
 ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
     (
-        "G94\n"
-        "G0 X0\n"
-        "G1 X0\n",
+        "G94\nG0 X0\nG1 X0\n",
         GCODE_MODAL_GROUP_MOTION,
         "G1",
     ),
     (
-        "G17\n"
-        "G18\n",
+        "G17\nG18\n",
         GCODE_MODAL_GROUP_PLANE_SELECTION,
         "G18",
     ),
     (
-        "#1=18\n"
-        "G17\n"
-        "G#1\n",
+        "#1=18\nG17\nG#1\n",
         GCODE_MODAL_GROUP_PLANE_SELECTION,
         "G18",
     ),
     (
-        "G17\n"
-        "G[17+2]\n",
+        "G17\nG[17+2]\n",
         GCODE_MODAL_GROUP_PLANE_SELECTION,
         "G19",
     ),
     (
-        "G90\n"
-        "G91\n",
+        "G90\nG91\n",
         GCODE_MODAL_GROUP_DISTANCE_MODE,
         "G91",
     ),
     (
-        "#1=91\n"
-        "G90\n"
-        "G#1\n",
+        "#1=91\nG90\nG#1\n",
         GCODE_MODAL_GROUP_DISTANCE_MODE,
         "G91",
     ),
     (
-        "G90\n"
-        "G[45*2]\n",
+        "G90\nG[45*2]\n",
         GCODE_MODAL_GROUP_DISTANCE_MODE,
         "G90",
     ),
     (
-        "G94\n"
-        "G93\n",
+        "G94\nG93\n",
         GCODE_MODAL_GROUP_FEED_RATE_MODE,
         "G93",
     ),
     (
-        "#1=93\n"
-        "G94\n"
-        "G#1\n",
+        "#1=93\nG94\nG#1\n",
         GCODE_MODAL_GROUP_FEED_RATE_MODE,
         "G93",
     ),
     (
-        "G93\n"
-        "G[47*2]\n",
+        "G93\nG[47*2]\n",
         GCODE_MODAL_GROUP_FEED_RATE_MODE,
         "G94",
     ),
     (
-        "G20\n"
-        "G21\n",
+        "G20\nG21\n",
         GCODE_MODAL_GROUP_UNITS,
         "G21",
     ),
     (
-        "#1=21\n"
-        "G20\n"
-        "G#1\n",
+        "#1=21\nG20\nG#1\n",
         GCODE_MODAL_GROUP_UNITS,
         "G21",
     ),
     (
-        "G20\n"
-        "G[42/2]\n",
+        "G20\nG[42/2]\n",
         GCODE_MODAL_GROUP_UNITS,
         "G21",
     ),
     (
-        "G40\n"
-        "G41\n",
+        "G40\nG41\n",
         GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION,
         "G41",
     ),
     (
-        "G49\n"
-        "G43 H0\n",
+        "G49\nG43 H0\n",
         GCODE_MODAL_GROUP_TOOL_LENGTH_OFFSET,
         "G43",
     ),
     (
-        "G98\n"
-        "G99\n",
+        "G98\nG99\n",
         GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
         "G99",
     ),
     (
-        "G54\n"
-        "G55\n",
+        "G54\nG55\n",
         GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
         "G55",
     ),
     (
-        "#1=54\n"
-        "G55\n"
-        "G#1\n",
+        "#1=54\nG55\nG#1\n",
         GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
         "G54",
     ),
     (
-        "G55\n"
-        "G[53+1]\n",
+        "G55\nG[53+1]\n",
         GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION,
         "G54",
     ),
     (
-        "G61\n"
-        "G64\n",
+        "G61\nG64\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G64",
     ),
     (
-        "G64\n"
-        "G61\n",
+        "G64\nG61\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G61",
     ),
     (
-        "G61\n"
-        "G61.1\n",
+        "G61\nG61.1\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G61.1",
     ),
     (
-        "#1=61.1\n"
-        "G64\n"
-        "G#1\n",
+        "#1=61.1\nG64\nG#1\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G61.1",
     ),
     (
-        "G61.1\n"
-        "G[32*2]\n",
+        "G61.1\nG[32*2]\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G64",
     ),
     (
-        "G64\n"
-        "G64\n",
+        "G64\nG64\n",
         GCODE_MODAL_GROUP_PATH_CONTROL_MODE,
         "G64",
     ),
@@ -222,8 +190,8 @@ def test_application_tracks_active_gcode_groups(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"][group_number] == expected_active_gcode
+    assert payload.get("error") is None
+    assert mapping_field(payload, "active_modal_g_codes").get(group_number) == expected_active_gcode
 
 
 # RS274 section 3.2.2 defines the nine program coordinate systems, and
@@ -250,21 +218,20 @@ def test_coordinate_system_selection_codes_activate_the_expected_system(
     completed, payload = run_rs274(
         submission_command,
         input_gcode=(
-            coordinate_system_setup
-            + f"{selected_gcode}\n"
-            + "G90\n"
-            + "G0 X0.0 Y0.0 Z0.0\n"
+            coordinate_system_setup + f"{selected_gcode}\n" + "G90\n" + "G0 X0.0 Y0.0 Z0.0\n"
         ),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert (
-        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION]
+        mapping_field(payload, "active_modal_g_codes").get(
+            GCODE_MODAL_GROUP_COORDINATE_SYSTEM_SELECTION
+        )
         == selected_gcode
     )
-    assert payload["coordinate_system_offsets"][expected_system_number] == with_default_rotary_axes(
-        expected_machine_position
-    )
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
+    assert mapping_field(payload, "coordinate_system_offsets").get(
+        expected_system_number
+    ) == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)

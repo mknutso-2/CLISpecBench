@@ -11,6 +11,7 @@ from modal_groups import (
 from rs274_parameters import G92_X_OFFSET_PARAMETER
 from rs274_support import (
     get_parameter_value,
+    mapping_field,
     run_rs274,
     with_default_rotary_axes,
 )
@@ -335,14 +336,19 @@ def test_application_tracks_initial_canned_cycle_behavior(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == expected_active_motion
+    assert payload.get("error") is None
     assert (
-        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
+        mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_MOTION)
+        == expected_active_motion
+    )
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(
+            GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES
+        )
         == expected_return_mode
     )
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
-    assert payload["spindle_direction"] == expected_spindle_direction
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("spindle_direction") == expected_spindle_direction
 
 
 # RS274 section 3.5.16 says sticky R and depth-word behavior applies to canned
@@ -396,14 +402,19 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] in {"G84", "G85"}
+    assert payload.get("error") is None
+    assert mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_MOTION) in {
+        "G84",
+        "G85",
+    }
     assert (
-        payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES]
+        mapping_field(payload, "active_modal_g_codes").get(
+            GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES
+        )
         == expected_return_mode
     )
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
-    assert payload["spindle_direction"] == expected_spindle_direction
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("spindle_direction") == expected_spindle_direction
 
 
 # RS274 section 3.5.16.9 defines G88's operator stop and spindle restart.
@@ -450,9 +461,9 @@ def test_g88_restores_the_prior_spindle_direction_after_the_cycle(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == "G88"
-    assert payload["spindle_direction"] == expected_spindle_direction
+    assert payload.get("error") is None
+    assert mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_MOTION) == "G88"
+    assert payload.get("spindle_direction") == expected_spindle_direction
 
 
 # RS274 section 3.5.15 says axis words are an error when G80 is active unless
@@ -470,8 +481,8 @@ def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["coordinate_system_offsets"]["2"] == with_default_rotary_axes(
+    assert payload.get("error") is None
+    assert mapping_field(payload, "coordinate_system_offsets").get("2") == with_default_rotary_axes(
         {"x": 4.0, "y": 5.0, "z": 6.0}
     )
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -7.0
@@ -500,7 +511,14 @@ def test_return_mode_change_affects_later_repeats_of_an_active_canned_cycle(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == "G81"
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES] == "G99"
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 6.0, "y": 7.0, "z": 2.8})
+    assert payload.get("error") is None
+    assert mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_MOTION) == "G81"
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(
+            GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES
+        )
+        == "G99"
+    )
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 6.0, "y": 7.0, "z": 2.8}
+    )

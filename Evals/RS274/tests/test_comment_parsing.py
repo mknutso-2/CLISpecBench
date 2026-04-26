@@ -11,10 +11,7 @@ CommentParsingCase = tuple[str, str, dict[str, float]]
 COMMENT_PARSING_CASES: list[CommentParsingCase] = [
     (
         "empty-parenthetical-comments",
-        "G10 L2 P1 X0.0 Y0.0 Z0.0 ()\n"
-        "G54 ()\n"
-        "G90 ()\n"
-        "G0 X0.5 Y1.5 Z2.5 ()\n",
+        "G10 L2 P1 X0.0 Y0.0 Z0.0 ()\nG54 ()\nG90 ()\nG0 X0.5 Y1.5 Z2.5 ()\n",
         {"x": 0.5, "y": 1.5, "z": 2.5},
     ),
     (
@@ -82,5 +79,5 @@ def test_application_accepts_well_formed_parenthetical_comments(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)

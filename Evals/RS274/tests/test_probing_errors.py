@@ -18,57 +18,27 @@ ProbeErrorCase = tuple[str, str]
 PROBE_ERROR_CASES: list[ProbeErrorCase] = [
     (
         "g38-2-requires-linear-axis-word",
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "F10.0\n"
-        "G38.2\n",
+        "G20\nG90 G94\nT2 M6\nF10.0\nG38.2\n",
     ),
     (
         "g38-2-rejects-inverse-time-feed-rate-mode",
-        "G20\n"
-        "G90\n"
-        "T2 M6\n"
-        "G0 X5.0 Y5.0 Z5.0\n"
-        "G93\n"
-        "F1.0\n"
-        "G38.2 Z0.0\n",
+        "G20\nG90\nT2 M6\nG0 X5.0 Y5.0 Z5.0\nG93\nF1.0\nG38.2 Z0.0\n",
     ),
     (
         "g38-2-rejects-programmed-point-that-is-too-close",
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X5.0 Y5.0 Z5.0\n"
-        "F10.0\n"
-        "G38.2 Z4.995\n",
+        "G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z5.0\nF10.0\nG38.2 Z4.995\n",
     ),
     (
         "g38-2-rejects-a-axis-motion",
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X5.0 Y5.0 Z5.0 A10.0\n"
-        "F10.0\n"
-        "G38.2 Z0.0 A11.0\n",
+        "G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z5.0 A10.0\nF10.0\nG38.2 Z0.0 A11.0\n",
     ),
     (
         "g38-2-rejects-b-axis-motion",
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X5.0 Y5.0 Z5.0 B20.0\n"
-        "F10.0\n"
-        "G38.2 Z0.0 B21.0\n",
+        "G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z5.0 B20.0\nF10.0\nG38.2 Z0.0 B21.0\n",
     ),
     (
         "g38-2-rejects-c-axis-motion",
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X5.0 Y5.0 Z5.0 C30.0\n"
-        "F10.0\n"
-        "G38.2 Z0.0 C31.0\n",
+        "G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z5.0 C30.0\nF10.0\nG38.2 Z0.0 C31.0\n",
     ),
 ]
 
@@ -136,15 +106,7 @@ def test_application_rejects_probing_with_the_spindle_turning(
 ) -> None:
     run_rs274_invalid_input(
         submission_command,
-        input_gcode=(
-            "G20\n"
-            "G90 G94\n"
-            "T2 M6\n"
-            "G0 X5.0 Y5.0 Z5.0\n"
-            "S500.0 M3\n"
-            "F10.0\n"
-            "G38.2 Z0.0\n"
-        ),
+        input_gcode=("G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z5.0\nS500.0 M3\nF10.0\nG38.2 Z0.0\n"),
         probe_box=PROBE_BOX,
         probe_tool=PROBE_TOOL,
         tmp_path=tmp_path,
@@ -161,15 +123,7 @@ def test_application_rejects_probing_when_the_probe_is_already_tripped(
 ) -> None:
     run_rs274_invalid_input(
         submission_command,
-        input_gcode=(
-            "G20\n"
-            "G90 G94\n"
-            "T2 M6\n"
-            "G0 X5.0 Y5.0 Z3.0\n"
-            "G43 H2\n"
-            "F10.0\n"
-            "G38.2 Z0.0\n"
-        ),
+        input_gcode=("G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z3.0\nG43 H2\nF10.0\nG38.2 Z0.0\n"),
         probe_box=(0.0, 10.0, 0.0, 10.0, 0.0, 2.0),
         probe_tool=PROBE_TOOL,
         tool_table_content=PROBE_TOOL_TABLE,
@@ -183,32 +137,17 @@ NO_HIT_PROBE_CASES: list[NoHitProbeCase] = [
     (
         "x-probe-no-hit",
         (0.0, 10.0, 0.0, 10.0, 0.0, 6.0),
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X-5.0 Y5.0 Z3.0\n"
-        "F10.0\n"
-        "G38.2 X-1.0\n",
+        "G20\nG90 G94\nT2 M6\nG0 X-5.0 Y5.0 Z3.0\nF10.0\nG38.2 X-1.0\n",
     ),
     (
         "y-probe-no-hit",
         (0.0, 10.0, 0.0, 10.0, 0.0, 6.0),
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X5.0 Y-5.0 Z3.0\n"
-        "F10.0\n"
-        "G38.2 Y-1.0\n",
+        "G20\nG90 G94\nT2 M6\nG0 X5.0 Y-5.0 Z3.0\nF10.0\nG38.2 Y-1.0\n",
     ),
     (
         "z-probe-no-hit",
         (0.0, 10.0, 0.0, 10.0, 0.0, 4.0),
-        "G20\n"
-        "G90 G94\n"
-        "T2 M6\n"
-        "G0 X5.0 Y5.0 Z8.0\n"
-        "F10.0\n"
-        "G38.2 Z6.0\n",
+        "G20\nG90 G94\nT2 M6\nG0 X5.0 Y5.0 Z8.0\nF10.0\nG38.2 Z6.0\n",
     ),
 ]
 

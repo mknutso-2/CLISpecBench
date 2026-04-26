@@ -13,48 +13,27 @@ ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\nG94\n"
 POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     (
         "absolute-xyz",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 X1.0 Y2.0 Z3.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 X1.0 Y2.0 Z3.0\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
     ),
     (
         "absolute-abc-does-not-normalize-rotary-values",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 A370.0 B-45.0 C720.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 A370.0 B-45.0 C720.0\n",
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 370.0, "b": -45.0, "c": 720.0},
     ),
     (
         "absolute-xyz-from-parameter-values",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "#1=1.5\n"
-        "#2=2.5\n"
-        "#3=3.5\n"
-        "G90\n"
-        "G0 X#1 Y#2 Z#3\n",
+        ZERO_OFFSET_P1_SETUP + "#1=1.5\n#2=2.5\n#3=3.5\nG90\nG0 X#1 Y#2 Z#3\n",
         {"x": 1.5, "y": 2.5, "z": 3.5},
     ),
     (
         "absolute-xyz-from-expressions",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 X[1+2] Y[8/2] Z[5-2]\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 X[1+2] Y[8/2] Z[5-2]\n",
         {"x": 3.0, "y": 4.0, "z": 3.0},
     ),
     (
         "absolute-abc-from-parameter-values-and-expressions",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "#1=10.0\n"
-        "#2=3.0\n"
-        "#3=30.0\n"
-        "G90\n"
-        "G0 A#1 B[6*7] C##2\n",
+        ZERO_OFFSET_P1_SETUP + "#1=10.0\n#2=3.0\n#3=30.0\nG90\nG0 A#1 B[6*7] C##2\n",
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 10.0, "b": 42.0, "c": 30.0},
     ),
     # RS274 sections 2.1.2.10 and 3.5.7: when length units change, the
@@ -62,22 +41,14 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     # motion.
     (
         "g20-converts-current-position-numerically-without-motion",
-        "G21\n"
-        + ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G0 X25.4 Y50.8 Z76.2\n"
-        + "G20\n",
+        "G21\n" + ZERO_OFFSET_P1_SETUP + "G90\n" + "G0 X25.4 Y50.8 Z76.2\n" + "G20\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
     ),
     # RS274 sections 2.1.2.10 and 3.5.7: the same current-position rescaling
     # requirement applies when switching from inches to millimeters.
     (
         "g21-converts-current-position-numerically-without-motion",
-        "G20\n"
-        + ZERO_OFFSET_P1_SETUP
-        + "G90\n"
-        + "G0 X1.0 Y2.0 Z3.0\n"
-        + "G21\n",
+        "G20\n" + ZERO_OFFSET_P1_SETUP + "G90\n" + "G0 X1.0 Y2.0 Z3.0\n" + "G21\n",
         {"x": 25.4, "y": 50.8, "z": 76.2},
     ),
     (
@@ -95,24 +66,14 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     # the currently active length units.
     (
         "motion-after-unit-change-preserves-program-origin-location",
-        "G21\n"
-        "G10 L2 P1 X25.4 Y50.8 Z76.2\n"
-        "G54\n"
-        "G90\n"
-        "G0 X0.0 Y0.0 Z0.0\n"
-        "G20\n"
-        "G0 X1.5 Y2.5 Z3.5\n",
+        "G21\nG10 L2 P1 X25.4 Y50.8 Z76.2\nG54\nG90\nG0 X0.0 Y0.0 Z0.0\nG20\nG0 X1.5 Y2.5 Z3.5\n",
         {"x": 2.5, "y": 4.5, "z": 6.5},
     ),
     # RS274 section 3.5.5: G10 L2 on the active coordinate system changes
     # the work-coordinate interpretation but does not move the machine.
     (
         "g10-on-active-cs-does-not-move-machine",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 X1.0 Y2.0 Z3.0\n"
-        "G10 L2 P1 X10.0 Y20.0 Z30.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 X1.0 Y2.0 Z3.0\nG10 L2 P1 X10.0 Y20.0 Z30.0\n",
         {"x": 1.0, "y": 2.0, "z": 3.0},
     ),
     # RS274 section 3.5.12: G53 moves to absolute machine coordinates.
@@ -139,74 +100,43 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     # RS274 section 3.5.12: G53 is not modal and must be programmed on each line.
     (
         "g53-is-not-modal",
-        "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
-        "G54\n"
-        "G90\n"
-        "G53 G0 X1.0 Y2.0 Z3.0\n"
-        "G0 X4.0 Y5.0 Z6.0\n",
+        "G10 L2 P1 X10.0 Y20.0 Z30.0\nG54\nG90\nG53 G0 X1.0 Y2.0 Z3.0\nG0 X4.0 Y5.0 Z6.0\n",
         {"x": 14.0, "y": 25.0, "z": 36.0},
     ),
     # RS274 section 3.5.12: G0 or G1 is optional on a G53 line if one is already active.
     (
         "g53-may-omit-g0-or-g1-when-linear-motion-is-active",
-        "G10 L2 P1 X10.0 Y20.0 Z30.0\n"
-        "G54\n"
-        "G90\n"
-        "G1 X0.0 Y0.0 Z0.0 F1.0\n"
-        "G53 X4.0 Y5.0 Z6.0\n",
+        "G10 L2 P1 X10.0 Y20.0 Z30.0\nG54\nG90\nG1 X0.0 Y0.0 Z0.0 F1.0\nG53 X4.0 Y5.0 Z6.0\n",
         {"x": 4.0, "y": 5.0, "z": 6.0},
     ),
     (
         "absolute-updates-only-programmed-axes",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 X1.0 Y2.0 Z3.0\n"
-        "G1 X4.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 X1.0 Y2.0 Z3.0\nG1 X4.0\n",
         {"x": 4.0, "y": 2.0, "z": 3.0},
     ),
     (
         "implicit-g1-continues-active-linear-motion",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G1 X1.0 Y2.0 Z3.0 F5.0\n"
-        "X4.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG1 X1.0 Y2.0 Z3.0 F5.0\nX4.0\n",
         {"x": 4.0, "y": 2.0, "z": 3.0},
     ),
     (
         "incremental-xyz",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 X10.0 Y20.0 Z30.0\n"
-        "G91\n"
-        "G0 X1.0 Y2.0 Z3.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 X10.0 Y20.0 Z30.0\nG91\nG0 X1.0 Y2.0 Z3.0\n",
         {"x": 11.0, "y": 22.0, "z": 33.0},
     ),
     (
         "incremental-abc",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G0 A10.0 B20.0 C30.0\n"
-        "G91\n"
-        "G0 A1.0 B2.0 C3.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG0 A10.0 B20.0 C30.0\nG91\nG0 A1.0 B2.0 C3.0\n",
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 11.0, "b": 22.0, "c": 33.0},
     ),
     (
         "g1-updates-rotary-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
-        "G1 A45.0 B-30.0 C90.0 F10.0\n",
+        ZERO_OFFSET_P1_SETUP + "G90\nG1 A45.0 B-30.0 C90.0 F10.0\n",
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 45.0, "b": -30.0, "c": 90.0},
     ),
     (
         "incremental-accumulates-from-current-position",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G90\n"
+        ZERO_OFFSET_P1_SETUP + "G90\n"
         "G0 X10.0 Y20.0 Z30.0\n"
         "G91\n"
         "G0 X1.0 Y2.0 Z3.0\n"
@@ -215,19 +145,12 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g2-updates-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G2 X0.0 Y-1.0 Z4.0 I-1.0 J0.0\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG2 X0.0 Y-1.0 Z4.0 I-1.0 J0.0\n",
         {"x": 0.0, "y": -1.0, "z": 4.0},
     ),
     (
         "g2-updates-simultaneous-rotary-endpoints",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
+        ZERO_OFFSET_P1_SETUP + "G17\n"
         "G90\n"
         "G0 X1.0 Y0.0 Z5.0 A10.0 B20.0 C30.0\n"
         "G2 X0.0 Y-1.0 Z4.0 A40.0 B50.0 C60.0 I-1.0 J0.0\n",
@@ -235,9 +158,7 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g2-accepts-parameter-values-in-i-and-j",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "#1=-1.0\n"
+        ZERO_OFFSET_P1_SETUP + "#1=-1.0\n"
         "#2=0.0\n"
         "G17\n"
         "G90\n"
@@ -247,49 +168,27 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g2-updates-g18-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G18\n"
-        "G90\n"
-        "G0 X1.0 Y5.0 Z0.0\n"
-        "G2 X0.0 Y4.0 Z-1.0 I-1.0 K0.0\n",
+        ZERO_OFFSET_P1_SETUP + "G18\nG90\nG0 X1.0 Y5.0 Z0.0\nG2 X0.0 Y4.0 Z-1.0 I-1.0 K0.0\n",
         {"x": 0.0, "y": 4.0, "z": -1.0},
     ),
     (
         "g2-accepts-expressions-in-i-and-k",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G18\n"
-        "G90\n"
-        "G0 X1.0 Y5.0 Z0.0\n"
-        "G2 X0.0 Y4.0 Z-1.0 I[-2/2] K[0+0]\n",
+        ZERO_OFFSET_P1_SETUP + "G18\nG90\nG0 X1.0 Y5.0 Z0.0\nG2 X0.0 Y4.0 Z-1.0 I[-2/2] K[0+0]\n",
         {"x": 0.0, "y": 4.0, "z": -1.0},
     ),
     (
         "g3-updates-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G3 X0.0 Y1.0 Z6.0 I-1.0 J0.0\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG3 X0.0 Y1.0 Z6.0 I-1.0 J0.0\n",
         {"x": 0.0, "y": 1.0, "z": 6.0},
     ),
     (
         "g3-updates-g19-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G19\n"
-        "G90\n"
-        "G0 X5.0 Y1.0 Z0.0\n"
-        "G3 X4.0 Y0.0 Z1.0 J-1.0 K0.0\n",
+        ZERO_OFFSET_P1_SETUP + "G19\nG90\nG0 X5.0 Y1.0 Z0.0\nG3 X4.0 Y0.0 Z1.0 J-1.0 K0.0\n",
         {"x": 4.0, "y": 0.0, "z": 1.0},
     ),
     (
         "g3-accepts-parameter-values-in-j-and-k",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "#1=-1.0\n"
+        ZERO_OFFSET_P1_SETUP + "#1=-1.0\n"
         "#2=0.0\n"
         "G19\n"
         "G90\n"
@@ -299,72 +198,37 @@ POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     ),
     (
         "g2-center-format-full-circle-explicit-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G2 X1.0 Y0.0 I-1.0 J0.0 F60\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG2 X1.0 Y0.0 I-1.0 J0.0 F60\n",
         {"x": 1.0, "y": 0.0, "z": 5.0},
     ),
     (
         "g3-center-format-full-circle-explicit-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G3 X1.0 Y0.0 I-1.0 J0.0 F60\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG3 X1.0 Y0.0 I-1.0 J0.0 F60\n",
         {"x": 1.0, "y": 0.0, "z": 5.0},
     ),
     (
         "g2-radius-format-updates-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G2 X0.0 Y-1.0 Z4.0 R1.0\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG2 X0.0 Y-1.0 Z4.0 R1.0\n",
         {"x": 0.0, "y": -1.0, "z": 4.0},
     ),
     (
         "g2-radius-format-accepts-expressions-in-r",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G2 X0.0 Y-1.0 Z4.0 R[0.5+0.5]\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG2 X0.0 Y-1.0 Z4.0 R[0.5+0.5]\n",
         {"x": 0.0, "y": -1.0, "z": 4.0},
     ),
     (
         "g2-radius-format-updates-g18-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G18\n"
-        "G90\n"
-        "G0 X1.0 Y5.0 Z0.0\n"
-        "G2 X0.0 Y4.0 Z-1.0 R1.0\n",
+        ZERO_OFFSET_P1_SETUP + "G18\nG90\nG0 X1.0 Y5.0 Z0.0\nG2 X0.0 Y4.0 Z-1.0 R1.0\n",
         {"x": 0.0, "y": 4.0, "z": -1.0},
     ),
     (
         "g3-radius-format-updates-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G17\n"
-        "G90\n"
-        "G0 X1.0 Y0.0 Z5.0\n"
-        "G3 X0.0 Y1.0 Z6.0 R1.0\n",
+        ZERO_OFFSET_P1_SETUP + "G17\nG90\nG0 X1.0 Y0.0 Z5.0\nG3 X0.0 Y1.0 Z6.0 R1.0\n",
         {"x": 0.0, "y": 1.0, "z": 6.0},
     ),
     (
         "g3-radius-format-updates-g19-arc-endpoint",
-        ZERO_OFFSET_P1_SETUP
-        +
-        "G19\n"
-        "G90\n"
-        "G0 X5.0 Y1.0 Z0.0\n"
-        "G3 X4.0 Y0.0 Z1.0 R1.0\n",
+        ZERO_OFFSET_P1_SETUP + "G19\nG90\nG0 X5.0 Y1.0 Z0.0\nG3 X4.0 Y0.0 Z1.0 R1.0\n",
         {"x": 4.0, "y": 0.0, "z": 1.0},
     ),
 ]
@@ -416,5 +280,5 @@ def test_application_tracks_machine_position(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes(expected_machine_position)
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)

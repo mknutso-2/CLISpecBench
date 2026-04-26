@@ -26,8 +26,7 @@ def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
 
     lines = ["RS274 parameter file", ""]
     lines.extend(
-        f"{parameter_index} {entries[parameter_index]}"
-        for parameter_index in sorted(entries)
+        f"{parameter_index} {entries[parameter_index]}" for parameter_index in sorted(entries)
     )
     return "\n".join(lines) + "\n"
 
@@ -82,6 +81,18 @@ def _build_rs274_command(
     return command, output_path, parameter_output_path
 
 
+def read_json_object(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    if isinstance(payload, dict):
+        return cast(dict[str, Any], payload)
+    return {}
+
+
 def _run_rs274_and_read_outputs(
     submission_command: Sequence[str],
     *,
@@ -116,8 +127,7 @@ def _run_rs274_and_read_outputs(
         timeout=RS274_INVOCATION_TIMEOUT_SECONDS,
     )
 
-    assert output_path.is_file(), completed.stderr
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    payload = read_json_object(output_path)
 
     parameter_output: str | None = None
     if parameter_output_path is not None:
@@ -127,15 +137,32 @@ def _run_rs274_and_read_outputs(
     return completed, payload, parameter_output
 
 
-# v3.0 candidate: the behavioral tests that call run_rs274 then do
-# `assert payload["error"] is None` (~180 sites across ~40 files) should move
-# the schema check into a single gate test and use `payload.get("error") is
-# None` in the behavioral assertions. Today a single conditional-emit bug in an
-# agent's JSON writer (missing `"error": null` on success) fails every one of
-# those tests with `KeyError: 'error'`, drowning the real behavioral signal —
-# e.g. sonnet-4-6 cpp eval2/run3 lost 259 tests to this single cascade
-# (see `published_results/CNCSIM/results-2_1_1.md` and `Eval-Design.md` §7.4).
-# Intentionally not changed before V3.0 to avoid mid-version test-suite churn.
+def mapping_field(container: Mapping[str, Any], key: str) -> dict[str, Any]:
+    value = container.get(key)
+    if isinstance(value, dict):
+        return cast(dict[str, Any], value)
+    return {}
+
+
+def list_field(container: Mapping[str, Any], key: str) -> list[Any]:
+    value = container.get(key)
+    if isinstance(value, list):
+        return cast(list[Any], value)
+    return []
+
+
+def trace_entries(trace: Mapping[str, Any]) -> list[dict[str, Any]]:
+    return [
+        cast(dict[str, Any], entry)
+        for entry in list_field(trace, "entries")
+        if isinstance(entry, dict)
+    ]
+
+
+def trace_initial_state(trace: Mapping[str, Any]) -> dict[str, Any]:
+    return mapping_field(trace, "initial_state")
+
+
 def run_rs274(
     submission_command: Sequence[str],
     *,
@@ -191,8 +218,8 @@ def run_rs274_invalid_input(
     )
 
     assert completed.returncode == 1, completed.stderr
-    assert isinstance(payload["error"], str)
-    assert payload["error"]
+    assert isinstance(payload.get("error"), str)
+    assert payload.get("error")
     return completed, payload
 
 
@@ -225,11 +252,9 @@ def run_rs274_with_parameter_output(
 
 
 def get_parameter_value(payload: dict[str, Any], parameter_index: int) -> float:
-    parameters = payload["parameters"]
-    assert isinstance(parameters, dict)
-    typed_parameters = cast(dict[str, object], parameters)
+    typed_parameters = mapping_field(payload, "parameters")
 
-    value = typed_parameters[str(parameter_index)]
+    value = typed_parameters.get(str(parameter_index))
     assert isinstance(value, int | float)
     return float(value)
 
@@ -271,9 +296,12 @@ def _build_rs274_trace_command(
 
     command = [
         *submission_command,
-        "--input", str(input_path),
-        "--output", str(output_path),
-        "--trace-output", str(trace_path),
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--trace-output",
+        str(trace_path),
     ]
 
     if trace_time_step is not None:
@@ -343,11 +371,8 @@ def run_rs274_trace(
         timeout=RS274_INVOCATION_TIMEOUT_SECONDS,
     )
 
-    assert output_path.is_file(), f"--output not written. stderr: {completed.stderr}"
-    payload = json.loads(output_path.read_text(encoding="utf-8"))
-
-    assert trace_path.is_file(), f"--trace-output not written. stderr: {completed.stderr}"
-    trace = json.loads(trace_path.read_text(encoding="utf-8"))
+    payload = read_json_object(output_path)
+    trace = read_json_object(trace_path)
 
     return completed, payload, trace
 
@@ -358,14 +383,20 @@ def reconstruct_state(trace: dict[str, Any], entry_index: int) -> dict[str, Any]
     Returns a dict with the same shape as the --output payload (minus "error").
     Useful for verifying that delta encoding correctly represents machine state.
     """
-    state: dict[str, Any] = json.loads(json.dumps(trace["initial_state"]))
+    entries = trace_entries(trace)
+    state: dict[str, Any] = json.loads(json.dumps(trace_initial_state(trace)))
     for i in range(entry_index + 1):
-        entry = trace["entries"][i]
+        entry = entries[i]
         for key, value in entry.items():
             if key in ("line_number", "time", "motion_kind", "nonmodal_g_codes"):
                 continue  # Trace-specific fields, not part of state.
-            if key in ("machine_position", "coordinate_system_offsets",
-                       "active_modal_g_codes", "active_modal_m_codes", "parameters"):
+            if key in (
+                "machine_position",
+                "coordinate_system_offsets",
+                "active_modal_g_codes",
+                "active_modal_m_codes",
+                "parameters",
+            ):
                 if key not in state:
                     state[key] = {}
                 if key == "coordinate_system_offsets":

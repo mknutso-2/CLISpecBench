@@ -12,14 +12,12 @@ G53_ERROR_CASES: list[G53ErrorCase] = [
     # RS274 section 3.5.12: G53 is an error unless G0 or G1 is active.
     (
         "g53-without-g0-or-g1-active",
-        "G17\n"
-        "G53 X1.0\n",
+        "G17\nG53 X1.0\n",
     ),
     # RS274 section 3.5.12: at least one axis word must be used on a G53 line.
     (
         "g53-omits-all-axis-words",
-        "G0 X0.0\n"
-        "G53\n",
+        "G0 X0.0\nG53\n",
     ),
 ]
 

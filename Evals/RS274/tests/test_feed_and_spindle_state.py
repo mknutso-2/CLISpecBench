@@ -11,58 +11,42 @@ StateCase = tuple[str, str, float, float, str]
 STATE_CASES: list[StateCase] = [
     (
         "tracks-latest-feed-rate",
-        "F12.5\n"
-        "F30.0\n",
+        "F12.5\nF30.0\n",
         30.0,
         0.0,
         "OFF",
     ),
     (
         "tracks-spindle-speed-and-direction",
-        "S1200\n"
-        "M3\n",
+        "S1200\nM3\n",
         0.0,
         1200.0,
         "CW",
     ),
     (
         "tracks-spindle-stop-with-latest-speed",
-        "S900\n"
-        "M4\n"
-        "S1500\n"
-        "M5\n",
+        "S900\nM4\nS1500\nM5\n",
         0.0,
         1500.0,
         "OFF",
     ),
     (
         "tracks-feed-and-spindle-state-from-parameter-values",
-        "#1=250.0\n"
-        "#2=1200.0\n"
-        "#3=3\n"
-        "F#1\n"
-        "S#2\n"
-        "M#3\n",
+        "#1=250.0\n#2=1200.0\n#3=3\nF#1\nS#2\nM#3\n",
         250.0,
         1200.0,
         "CW",
     ),
     (
         "tracks-feed-and-spindle-state-from-expressions",
-        "F[500/2]\n"
-        "S[600*2]\n"
-        "M[1+2]\n",
+        "F[500/2]\nS[600*2]\nM[1+2]\n",
         250.0,
         1200.0,
         "CW",
     ),
     (
         "tracks-feed-and-spindle-state-from-repeated-parameters-and-unary-ops",
-        "#1=2\n"
-        "#2=250.0\n"
-        "F##1\n"
-        "SABS[-1200.0]\n"
-        "MABS[-3]\n",
+        "#1=2\n#2=250.0\nF##1\nSABS[-1200.0]\nMABS[-3]\n",
         250.0,
         1200.0,
         "CW",
@@ -111,7 +95,7 @@ def test_application_tracks_feed_and_spindle_state(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["feed_rate"] == expected_feed_rate
-    assert payload["spindle_speed"] == expected_spindle_speed
-    assert payload["spindle_direction"] == expected_spindle_direction
+    assert payload.get("error") is None
+    assert payload.get("feed_rate") == expected_feed_rate
+    assert payload.get("spindle_speed") == expected_spindle_speed
+    assert payload.get("spindle_direction") == expected_spindle_direction

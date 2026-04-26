@@ -10,6 +10,7 @@ from rs274_parameters import (
 )
 from rs274_support import (
     get_parameter_value,
+    mapping_field,
     run_rs274,
     with_default_rotary_axes,
 )
@@ -108,11 +109,11 @@ def test_application_tracks_g10_coordinate_system_offsets(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     for system_number, expected_offset in expected_offsets.items():
-        assert payload["coordinate_system_offsets"][system_number] == with_default_rotary_axes(
-            expected_offset
-        )
+        assert mapping_field(payload, "coordinate_system_offsets").get(
+            system_number
+        ) == with_default_rotary_axes(expected_offset)
 
 
 @pytest.mark.parametrize(
@@ -174,8 +175,10 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["coordinate_system_offsets"]["1"] == with_default_rotary_axes(expected_offset)
+    assert payload.get("error") is None
+    assert mapping_field(payload, "coordinate_system_offsets").get("1") == with_default_rotary_axes(
+        expected_offset
+    )
     assert get_parameter_value(payload, cs1_x_parameter) == expected_parameter_values["x"]
     assert get_parameter_value(payload, cs1_y_parameter) == expected_parameter_values["y"]
     assert get_parameter_value(payload, cs1_z_parameter) == expected_parameter_values["z"]

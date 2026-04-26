@@ -7,12 +7,18 @@ import pytest
 
 from rs274_support import (
     get_parameter_value,
+    mapping_field,
     run_rs274,
     with_default_rotary_axes,
 )
 
 BinaryExpressionCase = tuple[str, str, float]
 UnaryOperationCase = tuple[str, str, float]
+
+
+def assert_close(value: object, expected: float, *, abs_tol: float) -> None:
+    assert isinstance(value, int | float)
+    assert math.isclose(float(value), expected, abs_tol=abs_tol)
 
 
 # RS274 section 3.3.2.3 "Expressions and Binary Operations" explicitly allows
@@ -71,22 +77,13 @@ def test_application_evaluates_binary_expressions_in_axis_words(
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            f"G0 X{expression}\n"
-        ),
+        input_gcode=(f"G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X{expression}\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert math.isclose(
-        float(payload["machine_position"]["x"]),
-        expected_x,
-        abs_tol=1e-6,
-    )
+    assert payload.get("error") is None
+    assert_close(mapping_field(payload, "machine_position").get("x"), expected_x, abs_tol=1e-6)
 
 
 @pytest.mark.parametrize(
@@ -102,22 +99,13 @@ def test_application_evaluates_unary_operation_values(
 ) -> None:
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            f"G0 X{unary_value}\n"
-        ),
+        input_gcode=(f"G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X{unary_value}\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert math.isclose(
-        float(payload["machine_position"]["x"]),
-        expected_x,
-        abs_tol=1e-5,
-    )
+    assert payload.get("error") is None
+    assert_close(mapping_field(payload, "machine_position").get("x"), expected_x, abs_tol=1e-5)
 
 
 def test_application_supports_expression_based_parameter_indices(
@@ -128,18 +116,12 @@ def test_application_supports_expression_based_parameter_indices(
     # and Appendix E makes that grammar explicit.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "#[1+2]=7\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X#3\n"
-        ),
+        input_gcode=("#[1+2]=7\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X#3\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, 3) == 7.0
 
 
@@ -151,18 +133,12 @@ def test_application_supports_expression_valued_parameter_settings(
     # a real value, and section 3.3.2.3 says a real value may be an expression.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "#1=[2+3]\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X#1\n"
-        ),
+        input_gcode=("#1=[2+3]\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X#1\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, 1) == 5.0
 
 
@@ -173,20 +149,15 @@ def test_application_supports_bracketed_parameter_reads(
     # RS274 section 3.3.2.2 explicitly distinguishes #1+2 from #[1+2].
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "#1=5\n"
-            "#3=9\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X[#1+2] Y#[1+2]\n"
-        ),
+        input_gcode=("#1=5\n#3=9\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X[#1+2] Y#[1+2]\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 7.0, "y": 9.0, "z": 0.0})
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 7.0, "y": 9.0, "z": 0.0}
+    )
 
 
 def test_application_supports_repeated_parameter_indirection(
@@ -196,19 +167,12 @@ def test_application_supports_repeated_parameter_indirection(
     # RS274 section 3.3.2.2 explicitly says the # character may be repeated.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "#1=2\n"
-            "##1=0.375\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X#2\n"
-        ),
+        input_gcode=("#1=2\n##1=0.375\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X#2\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, 2) == 0.375
 
 
@@ -221,20 +185,15 @@ def test_application_evaluates_expressions_before_parameter_settings_take_effect
     # after all parameter values on that line have been found.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "#3=15\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "#3=[2+4] G0 X[#3+1]\n"
-            "G0 Y#3\n"
-        ),
+        input_gcode=("#3=15\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\n#3=[2+4] G0 X[#3+1]\nG0 Y#3\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 16.0, "y": 6.0, "z": 0.0})
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 16.0, "y": 6.0, "z": 0.0}
+    )
     assert get_parameter_value(payload, 3) == 6.0
 
 
@@ -246,18 +205,12 @@ def test_application_accepts_close_to_integer_parameter_indices(
     # integer are acceptable if they are within 0.0001 of one.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "#1.00005=[2+3]\n"
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X#1.00005\n"
-        ),
+        input_gcode=("#1.00005=[2+3]\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X#1.00005\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, 1) == 5.0
 
 
@@ -269,20 +222,16 @@ def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
     # considered close enough if within 0.0001 of an integer.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "G10 L2 P2 X3.0 Y0.0 Z0.0\n"
-            "G[54.999995]\n"
-            "G90\n"
-            "M[2.99995]\n"
-            "G0 X1.0\n"
-        ),
+        input_gcode=("G10 L2 P2 X3.0 Y0.0 Z0.0\nG[54.999995]\nG90\nM[2.99995]\nG0 X1.0\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 4.0, "y": 0.0, "z": 0.0})
-    assert payload["spindle_direction"] == "CW"
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 4.0, "y": 0.0, "z": 0.0}
+    )
+    assert payload.get("spindle_direction") == "CW"
 
 
 def test_application_evaluates_unary_values_inside_expressions(
@@ -293,15 +242,10 @@ def test_application_evaluates_unary_values_inside_expressions(
     # real_value terms, so unary operations must be usable inside expressions.
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=(
-            "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-            "G54\n"
-            "G90\n"
-            "G0 X[1+SIN[30]]\n"
-        ),
+        input_gcode=("G10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X[1+SIN[30]]\n"),
         tmp_path=tmp_path,
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert math.isclose(float(payload["machine_position"]["x"]), 1.5, abs_tol=1e-6)
+    assert payload.get("error") is None
+    assert_close(mapping_field(payload, "machine_position").get("x"), 1.5, abs_tol=1e-6)

@@ -21,6 +21,7 @@ from rs274_parameters import (
 )
 from rs274_support import (
     get_parameter_value,
+    mapping_field,
     run_rs274,
     with_default_rotary_axes,
 )
@@ -81,17 +82,38 @@ def test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_inval
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 1.0, "y": 2.0, "z": 3.0})
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_PLANE_SELECTION] == "G17"
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_DISTANCE_MODE] == "G90"
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_FEED_RATE_MODE] == "G94"
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION] == "G40"
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_MOTION] == "G1"
-    assert payload["active_modal_m_codes"][MCODE_MODAL_GROUP_OVERRIDE_SWITCHES] == "M48"
-    assert payload["active_modal_m_codes"][MCODE_MODAL_GROUP_SPINDLE_TURNING] == "M5"
-    assert payload["active_modal_m_codes"][MCODE_MODAL_GROUP_COOLANT] == "M9"
-    assert payload["spindle_direction"] == "OFF"
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 1.0, "y": 2.0, "z": 3.0}
+    )
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_PLANE_SELECTION)
+        == "G17"
+    )
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_DISTANCE_MODE) == "G90"
+    )
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_FEED_RATE_MODE)
+        == "G94"
+    )
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(
+            GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION
+        )
+        == "G40"
+    )
+    assert mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_MOTION) == "G1"
+    assert (
+        mapping_field(payload, "active_modal_m_codes").get(MCODE_MODAL_GROUP_OVERRIDE_SWITCHES)
+        == "M48"
+    )
+    assert (
+        mapping_field(payload, "active_modal_m_codes").get(MCODE_MODAL_GROUP_SPINDLE_TURNING)
+        == "M5"
+    )
+    assert mapping_field(payload, "active_modal_m_codes").get(MCODE_MODAL_GROUP_COOLANT) == "M9"
+    assert payload.get("spindle_direction") == "OFF"
 
 
 # RS274 section 3.6.1 explicitly says M2 and M30 turn cutter compensation off.
@@ -113,10 +135,17 @@ def test_application_turns_cutter_compensation_off_on_m2_and_m30(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["machine_position"] == with_default_rotary_axes({"x": 5.0, "y": 0.0, "z": 0.0})
-    assert payload["active_modal_g_codes"][GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION] == "G40"
-    assert payload["cutter_radius_compensation_number"] is None
+    assert payload.get("error") is None
+    assert payload.get("machine_position") == with_default_rotary_axes(
+        {"x": 5.0, "y": 0.0, "z": 0.0}
+    )
+    assert (
+        mapping_field(payload, "active_modal_g_codes").get(
+            GCODE_MODAL_GROUP_CUTTER_RADIUS_COMPENSATION
+        )
+        == "G40"
+    )
+    assert payload.get("cutter_radius_compensation_number") is None
 
 
 # RS274 section 3.6.1 says axis offsets are set to zero like G92.2, which
@@ -143,7 +172,7 @@ def test_application_preserves_g92_parameters_on_m2_and_m30_like_g92_2(
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
+    assert payload.get("error") is None
     assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == 9.0
     assert get_parameter_value(payload, G92_Y_OFFSET_PARAMETER) == 18.0
     assert get_parameter_value(payload, G92_Z_OFFSET_PARAMETER) == 27.0

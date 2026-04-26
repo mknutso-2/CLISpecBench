@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from rs274_support import run_rs274, run_rs274_invalid_input
+from rs274_support import mapping_field, run_rs274, run_rs274_invalid_input
 
 TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 
@@ -304,8 +304,8 @@ def test_application_accepts_non_xy_plane_selection_when_cutter_radius_compensat
     )
 
     assert completed.returncode == 0, completed.stderr
-    assert payload["error"] is None
-    assert payload["active_modal_g_codes"]["2"] == expected_active_plane
+    assert payload.get("error") is None
+    assert mapping_field(payload, "active_modal_g_codes").get("2") == expected_active_plane
 
 
 @pytest.mark.parametrize(

@@ -81,11 +81,7 @@ PARAMETER_ERROR_CASES: list[ParameterErrorCase] = [
     # evaluate to an integer in 1..5399.
     (
         "parameter-read-indirection-index-non-integer",
-        "#1=1.5\n"
-        "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
-        "G54\n"
-        "G90\n"
-        "G0 X##1\n",
+        "#1=1.5\nG10 L2 P1 X0.0 Y0.0 Z0.0\nG54\nG90\nG0 X##1\n",
     ),
     # RS274 section 3.3.2.1 "Number":
     # indexes are only considered close enough if within 0.0001 of an integer.
