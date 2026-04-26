@@ -112,63 +112,108 @@ def load_task(
 
 
 # ---------------------------------------------------------------------------
-# Task registry — maps task IDs to (subdir, language) pairs
+# Eval registry — maps eval names to subdirs.
+#
+# Language is intentionally NOT part of the registry. Eval prompts and tests
+# are language-agnostic (the agent writes the implementation; tests use the
+# shared `submission_command` fixture). The available languages are determined
+# by which ``Evals/_shared/language-requirements-<lang>.md`` files exist.
+#
+# Task IDs at the CLI continue to use ``<eval>-<language>`` form (e.g.
+# ``bibtex-cpp``) so output paths and historical results keep their shape.
 # ---------------------------------------------------------------------------
 
 
-@dataclass(frozen=True, slots=True)
-class _RegisteredTask:
-    subdir: str
-    language: str
-
-
-def _register_language_tasks(
-    task_name: str,
-    subdir: str,
-    languages: tuple[str, ...],
-) -> dict[str, _RegisteredTask]:
-    return {
-        f"{task_name}-{language}": _RegisteredTask(subdir, language=language)
-        for language in languages
-    }
-
-
-_RS274_LANGUAGES = ("cpp", "py", "js", "rs")
-_RS274_TASKS = _register_language_tasks("rs274", "Evals/RS274", _RS274_LANGUAGES)
-
-_KNOWN_TASKS: dict[str, _RegisteredTask] = {
-    **_RS274_TASKS,
-    # Keep historical CNCSim task IDs working while scripts/results catch up.
-    **{
-        f"cncsim-{language}": _RegisteredTask("Evals/RS274", language=language)
-        for language in _RS274_LANGUAGES
-    },
-    **_register_language_tasks("wordcount", "Evals/WordCount", ("cpp", "py", "js", "rs")),
-    **_register_language_tasks("iges", "Evals/IGES", ("cpp", "js", "py", "rs")),
-    **_register_language_tasks("bibtex", "Evals/BibTeX", ("cpp",)),
-    **_register_language_tasks("ical", "Evals/ICal", ("cpp",)),
-    **_register_language_tasks("gedcom", "Evals/GEDCOM", ("py",)),
-    **_register_language_tasks("las", "Evals/LAS", ("py",)),
-    **_register_language_tasks("marc21", "Evals/MARC21", ("py",)),
+_KNOWN_EVALS: dict[str, str] = {
+    "rs274": "Evals/RS274",
+    # Historical alias for RS274 — kept for backwards compatibility with
+    # earlier results and scripts.
+    "cncsim": "Evals/RS274",
+    "wordcount": "Evals/WordCount",
+    "iges": "Evals/IGES",
+    "bibtex": "Evals/BibTeX",
+    "ical": "Evals/ICal",
+    "gedcom": "Evals/GEDCOM",
+    "las": "Evals/LAS",
+    "marc21": "Evals/MARC21",
 }
 
 
-def resolve_task(repo_root: Path, task_id: str) -> TaskDefinition:
-    """Resolve a task ID to a loaded :class:`TaskDefinition`.
+def list_evals() -> list[str]:
+    """Return the sorted list of registered eval names (without languages)."""
+    return sorted(_KNOWN_EVALS)
 
-    Raises ``ValueError`` if the task ID is not recognised.
+
+def list_languages() -> list[str]:
+    """Return the sorted list of languages with a shared language-requirements file."""
+    shared_dir = Path(__file__).resolve().parents[3] / "Evals" / "_shared"
+    if not shared_dir.is_dir():
+        return []
+    languages: set[str] = set()
+    for path in shared_dir.glob("language-requirements-*.md"):
+        stem = path.stem  # language-requirements-<lang>
+        prefix = "language-requirements-"
+        if stem.startswith(prefix):
+            languages.add(stem[len(prefix):])
+    return sorted(languages)
+
+
+def split_task_id(task_id: str) -> tuple[str, str]:
+    """Split a CLI ``<eval>-<language>`` task id into ``(eval_name, language)``.
+
+    Raises ``ValueError`` on a malformed id.
     """
-    registered = _KNOWN_TASKS.get(task_id)
-    if registered is None:
-        known = ", ".join(sorted(_KNOWN_TASKS))
-        raise ValueError(f"Unknown task {task_id!r}. Known tasks: {known}")
+    if "-" not in task_id:
+        raise ValueError(
+            f"Task id {task_id!r} must use the form '<eval>-<language>' "
+            f"(e.g. 'bibtex-cpp'). Known evals: {', '.join(list_evals())}."
+        )
+    eval_name, _, language = task_id.rpartition("-")
+    return eval_name, language
+
+
+def resolve_task(
+    repo_root: Path, task_id: str, *, language: str | None = None
+) -> TaskDefinition:
+    """Resolve a CLI task identifier to a loaded :class:`TaskDefinition`.
+
+    Two calling forms are accepted:
+
+    - ``resolve_task(root, "bibtex-cpp")`` — legacy/canonical form, language
+      embedded in the id.
+    - ``resolve_task(root, "bibtex", language="cpp")`` — preferred form, eval
+      name and language as orthogonal arguments.
+
+    The canonical task id stored on the result is always ``<eval>-<language>``.
+    """
+    if language is None:
+        eval_name, language = split_task_id(task_id)
+        canonical_id = task_id
+    else:
+        eval_name = task_id
+        canonical_id = f"{eval_name}-{language}"
+    subdir = _KNOWN_EVALS.get(eval_name)
+    if subdir is None:
+        raise ValueError(
+            f"Unknown eval {eval_name!r}. Known evals: {', '.join(list_evals())}."
+        )
     return load_task(
-        repo_root / registered.subdir,
-        task_id,
-        language=registered.language,
+        repo_root / subdir,
+        canonical_id,
+        language=language,
     )
 
 
 def list_tasks() -> list[str]:
-    """Return sorted list of known task IDs."""
-    return sorted(_KNOWN_TASKS)
+    """Return the sorted list of canonical ``<eval>-<language>`` task ids.
+
+    The cross product of every registered eval with every language that has
+    a shared ``language-requirements-<lang>.md`` file. Used for argparse
+    ``choices=`` lists; the runtime resolver does not enforce membership in
+    this list.
+    """
+    return sorted(
+        f"{eval_name}-{language}"
+        for eval_name in _KNOWN_EVALS
+        for language in list_languages()
+    )

@@ -61,8 +61,12 @@ class TestPythonTaskRegistration:
 
     def test_unknown_task_raises(self) -> None:
         repo_root = _repo_root()
-        with pytest.raises(ValueError, match="Unknown task"):
+        # Bare eval name without a language is not a valid task id.
+        with pytest.raises(ValueError, match="<eval>-<language>"):
             resolve_task(repo_root, "wordcount")
+        # Unknown eval name with a language should also raise.
+        with pytest.raises(ValueError, match="Unknown eval"):
+            resolve_task(repo_root, "nonsense-cpp")
 
 
 class TestRustTaskRegistration:

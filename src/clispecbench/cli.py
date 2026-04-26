@@ -22,7 +22,7 @@ from clispecbench.harness.results import (
 )
 from clispecbench.harness.runner import run_evaluation
 from clispecbench.harness.scoring import compute_subscores
-from clispecbench.harness.task import list_tasks, resolve_task
+from clispecbench.harness.task import list_evals, list_languages, list_tasks, resolve_task
 
 
 def _find_repo_root() -> Path:
@@ -56,7 +56,7 @@ def _get_adapter(
 
 def _cmd_run(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
-    task = resolve_task(repo_root, args.task)
+    task = resolve_task(repo_root, args.task, language=getattr(args, "language", None))
     adapter = _get_adapter(
         args.agent,
         model=getattr(args, "model", None),
@@ -539,7 +539,7 @@ def _cmd_hash(args: argparse.Namespace) -> None:
     eyeball exactly which files feed the hash.
     """
     repo_root = _find_repo_root()
-    task = resolve_task(repo_root, args.task)
+    task = resolve_task(repo_root, args.task, language=getattr(args, "language", None))
     prompt = hash_prompt_content(task, args.prompt_variant)
     tests = hash_test_suite(task)
     print(f"task:               {task.task_id}")
@@ -605,7 +605,7 @@ def _cmd_publish(args: argparse.Namespace) -> None:
 def _cmd_validate(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
     try:
-        task = resolve_task(repo_root, args.task)
+        task = resolve_task(repo_root, args.task, language=getattr(args, "language", None))
     except (ValueError, FileNotFoundError) as exc:
         print(f"Validation failed: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -638,7 +638,24 @@ def main(argv: list[str] | None = None) -> None:
 
     # --- run ---
     run_parser = subparsers.add_parser("run", help="Run an evaluation")
-    run_parser.add_argument("--task", required=True, choices=list_tasks())
+    run_parser.add_argument(
+        "--task",
+        required=True,
+        help=(
+            "Either a canonical '<eval>-<language>' task id (e.g. 'bibtex-cpp') "
+            "or a bare eval name (e.g. 'bibtex') paired with --language. "
+            f"Known evals: {', '.join(list_evals())}."
+        ),
+    )
+    run_parser.add_argument(
+        "--language",
+        choices=list_languages(),
+        default=None,
+        help=(
+            "Implementation language. Optional when --task already includes the "
+            "language; required when --task is a bare eval name."
+        ),
+    )
     run_parser.add_argument(
         "--agent",
         required=True,
@@ -696,7 +713,8 @@ def main(argv: list[str] | None = None) -> None:
         "hash",
         help="Print content hashes for a task's prompt + test suite",
     )
-    hash_parser.add_argument("--task", required=True, choices=list_tasks())
+    hash_parser.add_argument("--task", required=True)
+    hash_parser.add_argument("--language", choices=list_languages(), default=None)
     hash_parser.add_argument("--prompt-variant", default=None)
     hash_parser.add_argument(
         "--show-manifest",
@@ -741,7 +759,8 @@ def main(argv: list[str] | None = None) -> None:
 
     # --- validate ---
     validate_parser = subparsers.add_parser("validate", help="Validate a task definition")
-    validate_parser.add_argument("--task", required=True, choices=list_tasks())
+    validate_parser.add_argument("--task", required=True)
+    validate_parser.add_argument("--language", choices=list_languages(), default=None)
 
     args = parser.parse_args(argv)
 
