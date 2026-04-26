@@ -61,12 +61,9 @@ MCODE_LINE_ACCEPTANCE_CASES: list[McodeLineAcceptanceCase] = [
 # while `one-m-word` (M6 → group 6), `three-m-words` (M1 M6 M3), and
 # `four-m-words` (M1 M6 M3 M7) pass at 13–20%. Every low-pass case
 # requires reporting group 6 (tool-change, M6) or group 4 (stopping,
-# M1) as persistent modal state after the action has executed. RS274
-# Table 4 places these codes in modal groups (meaning "at most one per
-# line"), but the spec never says a stop or tool-change code remains
-# the "active" member of its group after it fires. Models reasonably
-# treat them as events; the tests require persistence. See CHANGELOG
-# "Proposed".
+# M1) as persistent modal state after the action has executed. The prompt
+# now states that expected serialization rule explicitly for every Table 4
+# M-code, including stopping codes and M6.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_active_m_codes"),
     [

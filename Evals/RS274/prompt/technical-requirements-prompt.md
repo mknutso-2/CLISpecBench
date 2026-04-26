@@ -65,6 +65,13 @@
   Serialize "active_modal_m_codes" as a JSON object whose keys are RS274 M-code modal group
   numbers encoded as JSON strings and whose values are M-code strings (for example:
   {"7": "M5"}).
+  When serializing "active_modal_m_codes", every M-code from RS274 Table 4 that appears in the
+  program remains the active member of its modal group after it executes, including stopping
+  codes in group 4 and tool-change M6 in group 6. It remains active until a later M-code from
+  the same modal group executes. M2 and M30 also apply the program-end reset effects listed in
+  RS274 section 3.6.1; after such a reset, serialize affected modal groups with their reset
+  codes: M5 for group 7 (spindle turning), M9 for group 8 (coolant), and M48 for group 9
+  (override switches).
   Serialize "coordinate_system_offsets" as a JSON object whose keys are program coordinate
   system numbers 1 through 9 encoded as JSON strings and whose values are objects of the form
   {"x": float, "y": float, "z": float, "a": float, "b": float, "c": float}.
@@ -291,7 +298,7 @@ entry (at time 0.5).
     "selected_tool": null,
     "tool_in_spindle": null,
     "active_modal_g_codes": {"1": "G0", "3": "G90", "6": "G20", "...": "other default groups"},
-    "active_modal_m_codes": {"4": "M5", "...": "other default groups"},
+    "active_modal_m_codes": {"7": "M5", "...": "other default groups"},
     "coordinate_system_offsets": {
       "1": {"x": 0.0, "y": 0.0, "z": 0.0, "a": 0.0, "b": 0.0, "c": 0.0},
       "...": "systems 2 through 9 with default zero offsets"
