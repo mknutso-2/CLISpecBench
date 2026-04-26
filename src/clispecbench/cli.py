@@ -22,7 +22,7 @@ from clispecbench.harness.results import (
 )
 from clispecbench.harness.runner import run_evaluation
 from clispecbench.harness.scoring import compute_subscores
-from clispecbench.harness.task import list_evals, list_languages, list_tasks, resolve_task
+from clispecbench.harness.task import list_evals, list_languages, resolve_task
 
 
 def _find_repo_root() -> Path:
