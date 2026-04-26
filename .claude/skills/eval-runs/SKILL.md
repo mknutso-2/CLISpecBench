@@ -64,7 +64,8 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
 - Every results report must include the language/task variant, the root cause for every zero-score run, whether any non-zero timed-out runs may have scored higher, and any infrastructure issues requiring reruns.
 - Only runs with `exit_reason: "completed"` belong in official per-run tables and Best/Mean calculations. Timed-out, errored, or rate-limited runs are excluded from those tables and called out separately.
 - If a model has zero completed runs, show `- | -` for Best and Mean and explain the failure in the Status column.
-- For the Last Message column, read the full `metadata.agent_last_message`, cross-check it against files/LOC, and summarize it editorially instead of copying the first sentence.
+- The model preparing or publishing the results is responsible for the Last Message summary: read the full `metadata.agent_last_message`, compare it against the run outcome and artifacts, and write a concise editorial summary instead of copying the first sentence.
+- Do not include file counts or LOC in the Last Message summary unless they are needed to explain a contradiction, false completion claim, or other anomaly; the per-run table reports those fields separately.
 - Surface these signals when present:
   - claims complete
   - incomplete and acknowledged
