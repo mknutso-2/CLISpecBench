@@ -65,7 +65,8 @@ class ModelPricing:
 # ---------------------------------------------------------------------------
 # Pricing tables
 # Anthropic rows last verified 2026-04-19
-# OpenAI and Google rows last verified 2026-04-02
+# OpenAI rows last verified 2026-04-26
+# Google rows last verified 2026-04-02
 # ---------------------------------------------------------------------------
 
 # Anthropic Claude
@@ -92,6 +93,7 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 # https://openai.com/api/pricing/
 # cache_write = 0 (Codex CLI doesn't report cache creation tokens)
 OPENAI_PRICING: dict[str, ModelPricing] = {
+    "gpt-5.5": ModelPricing(input=5.00, output=30.00, cached_input=0.50, cache_write=0),  # noqa: E501
     "gpt-5.4": ModelPricing(input=2.50, output=15.00, cached_input=0.25, cache_write=0),  # noqa: E501
     "gpt-5.4-mini": ModelPricing(input=0.75, output=4.50, cached_input=0.075, cache_write=0),  # noqa: E501
     "gpt-5-mini": ModelPricing(input=0.25, output=2.00, cached_input=0.025, cache_write=0),  # noqa: E501

@@ -1,4 +1,4 @@
-const DATA_PATH = 'results-2_1_1_runs.csv';
+const DATA_PATH = 'results-published.json';
 
 const AXIS_OPTIONS = [
   { id: 'percent', label: 'Pass rate' },
@@ -109,6 +109,12 @@ const METRICS = {
   },
 };
 
+const EVAL_COMBINED_METRIC_MODES = {
+  percent: 'average',
+  cost: 'sum',
+  wall: 'sum',
+};
+
 const DETAIL_METRIC_IDS = [
   'percent',
   'tools',
@@ -147,7 +153,7 @@ const STATE = {
   rows: [],
   selectedPairs: new Set(),
   selectedLanguages: new Set(),
-  selectedEval: '',
+  selectedEvals: new Set(),
   xAxis: 'cost',
   yAxis: 'percent',
   colorMode: 'pair',
@@ -161,13 +167,15 @@ const pairUnavailableHintEl = document.getElementById('pair-unavailable-hint');
 const pairSelectAllButton = document.getElementById('pair-select-all');
 const pairUnselectAllButton = document.getElementById('pair-unselect-all');
 const languageListEl = document.getElementById('language-list');
-const evalSelect = document.getElementById('eval-select');
+const evalListEl = document.getElementById('eval-list');
+const evalSelectAllButton = document.getElementById('eval-select-all');
+const evalClearButton = document.getElementById('eval-clear');
 const xAxisSelect = document.getElementById('x-axis');
 const yAxisSelect = document.getElementById('y-axis');
 const reportTypeSelect = document.getElementById('report-type');
 const errorBarsSelect = document.getElementById('error-bars');
 const colorModeSelect = document.getElementById('color-mode');
-const fileInputEl = document.getElementById('csv-file-input');
+const fileInputEl = document.getElementById('data-file-input');
 const validationEl = document.getElementById('validation-message');
 const statusEl = document.getElementById('status');
 const errorBanner = document.getElementById('error-banner');
@@ -182,7 +190,9 @@ document.addEventListener('DOMContentLoaded', () => {
     !pairSelectAllButton ||
     !pairUnselectAllButton ||
     !languageListEl ||
-    !evalSelect ||
+    !evalListEl ||
+    !evalSelectAllButton ||
+    !evalClearButton ||
     !xAxisSelect ||
     !yAxisSelect ||
     !reportTypeSelect ||
@@ -201,7 +211,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!file) return;
       try {
         const text = await file.text();
-        const rows = parseCsv(text);
+        const rows = parseDataSource(text, file.name);
         initializeDashboard(rows, file.name, { preserveView: true });
       } catch (error) {
         setError(`Could not parse ${file.name}: ${error.message}`);
@@ -226,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function initializeDashboard(rows, sourceName, { preserveView = false } = {}) {
   if (!rows.length) {
-    throw new Error('No result rows were found in the CSV.');
+    throw new Error('No result rows were found in the data source.');
   }
   STATE.rows = rows;
   initSelectionDefaults({ preserveView });
@@ -244,11 +254,13 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         colorMode: STATE.colorMode,
         reportType: STATE.reportType,
         errorBarMode: STATE.errorBarMode,
+        selectedEvals: new Set(STATE.selectedEvals),
       }
     : null;
 
   STATE.selectedPairs = new Set();
   STATE.selectedLanguages = new Set();
+  STATE.selectedEvals = new Set();
   STATE.hiddenColorKeys = new Set();
   const pairs = getPairs();
   const languages = getLanguages();
@@ -256,15 +268,17 @@ function initSelectionDefaults({ preserveView = false } = {}) {
 
   if (!pairs.length || !languages.length || !evals.length) {
     throw new Error(
-      'The CSV loaded but did not contain expected pair/language/eval rows for the controls.',
+      'The data source loaded but did not contain expected pair/language/eval rows for the controls.',
     );
   }
 
   pairs.forEach((id) => STATE.selectedPairs.add(id));
   languages.forEach((lang) => STATE.selectedLanguages.add(lang));
-  STATE.selectedEval = evals[0] || '';
+  evals.forEach((evalName) => STATE.selectedEvals.add(evalName));
 
   if (previousView) {
+    const preservedEvals = evals.filter((evalName) => previousView.selectedEvals.has(evalName));
+    STATE.selectedEvals = new Set(preservedEvals.length ? preservedEvals : evals);
     STATE.xAxis = previousView.xAxis;
     STATE.yAxis = previousView.yAxis;
     STATE.colorMode = previousView.colorMode;
@@ -343,8 +357,30 @@ function attachEvents() {
     render();
   });
 
-  evalSelect.addEventListener('change', () => {
-    STATE.selectedEval = evalSelect.value;
+  if (evalSelectAllButton) {
+    evalSelectAllButton.addEventListener('click', () => {
+      const evals = getEvals();
+      STATE.selectedEvals = new Set(evals);
+      Array.from(evalListEl.querySelectorAll('input[data-group="eval"]')).forEach((input) => {
+        input.checked = true;
+      });
+      render();
+    });
+  }
+
+  if (evalClearButton) {
+    evalClearButton.addEventListener('click', () => {
+      STATE.selectedEvals = new Set();
+      Array.from(evalListEl.querySelectorAll('input[data-group="eval"]')).forEach((input) => {
+        input.checked = false;
+      });
+      render();
+    });
+  }
+
+  evalListEl.addEventListener('change', () => {
+    const selected = getCheckedValues(evalListEl, 'eval');
+    STATE.selectedEvals = new Set(selected);
     render();
   });
 
@@ -442,13 +478,17 @@ function renderLanguageList() {
 }
 
 function renderEvalList() {
-  evalSelect.replaceChildren();
+  evalListEl.replaceChildren();
   getEvals().forEach((evalName) => {
-    const option = document.createElement('option');
-    option.value = evalName;
-    option.textContent = evalName;
-    option.selected = evalName === STATE.selectedEval;
-    evalSelect.appendChild(option);
+    const row = document.createElement('label');
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.group = 'eval';
+    cb.value = evalName;
+    cb.checked = STATE.selectedEvals.has(evalName);
+    row.appendChild(cb);
+    row.appendChild(document.createTextNode(evalName));
+    evalListEl.appendChild(row);
   });
 }
 
@@ -623,8 +663,8 @@ function getColorMap() {
 }
 
 function validateSelection() {
-  if (!STATE.selectedEval) {
-    return { ok: false, message: 'Choose an eval.' };
+  if (!STATE.selectedEvals.size) {
+    return { ok: false, message: 'Choose at least one eval.' };
   }
   if (!STATE.selectedPairs.size) {
     return { ok: false, message: 'Choose at least one agent/model pair.' };
@@ -727,7 +767,7 @@ function getRowsByPairForCurrentSelection() {
   const rowsByPair = new Map();
 
   STATE.rows.forEach((row) => {
-    if (row.eval !== STATE.selectedEval) return;
+    if (!STATE.selectedEvals.has(row.eval)) return;
     if (!STATE.selectedLanguages.has(row.language)) return;
     const pairId = rowPairId(row);
     if (!rowsByPair.has(pairId)) rowsByPair.set(pairId, []);
@@ -875,6 +915,16 @@ function summarizeMetric(rows, metricId) {
 
   const spec = METRICS[metricId];
   if (!spec) return { hasData: false };
+  if (shouldCombineMetricAcrossEvals(rows, metricId)) {
+    const combined = summarizeMetricAcrossEvals(rows, metricId, spec);
+    if (!combined.hasData) return combined;
+    const minClamp = spec.minClamp;
+    if (!Number.isFinite(minClamp)) return combined;
+    const clamped = applySummaryClamp(combined, minClamp);
+    clamped.hasData = true;
+    return clamped;
+  }
+
   const values = rows
     .map((row) => spec.parse(row))
     .filter((value) => Number.isFinite(value));
@@ -885,6 +935,56 @@ function summarizeMetric(rows, metricId) {
   const clamped = applySummaryClamp(s, minClamp);
   clamped.hasData = true;
   return clamped;
+}
+
+function shouldCombineMetricAcrossEvals(rows, metricId) {
+  if (!EVAL_COMBINED_METRIC_MODES[metricId]) return false;
+  if (STATE.selectedEvals.size <= 1) return false;
+
+  const evalsWithRows = new Set();
+  rows.forEach((row) => {
+    if (row.eval) evalsWithRows.add(row.eval);
+  });
+  return evalsWithRows.size > 1;
+}
+
+function summarizeMetricAcrossEvals(rows, metricId, spec) {
+  const groupsByEval = new Map();
+  rows.forEach((row) => {
+    const value = spec.parse(row);
+    if (!Number.isFinite(value)) return;
+
+    const evalName = row.eval || 'Unknown Eval';
+    if (!groupsByEval.has(evalName)) groupsByEval.set(evalName, []);
+    groupsByEval.get(evalName).push(value);
+  });
+
+  const evalSummaries = Array.from(groupsByEval.values())
+    .map((values) => stats(values))
+    .filter(Boolean);
+  if (!evalSummaries.length) return { hasData: false };
+
+  const mode = EVAL_COMBINED_METRIC_MODES[metricId];
+  const divisor = mode === 'average' ? evalSummaries.length : 1;
+  const combineField = (field) =>
+    evalSummaries.reduce((acc, summary) => acc + summary[field], 0) / divisor;
+  const varianceSum = evalSummaries.reduce(
+    (acc, summary) => acc + Math.pow(summary.stdDev || 0, 2),
+    0,
+  );
+
+  return {
+    hasData: true,
+    min: combineField('min'),
+    worst: combineField('worst'),
+    max: combineField('max'),
+    best: combineField('best'),
+    median: combineField('median'),
+    mean: combineField('mean'),
+    stdDev: Math.sqrt(varianceSum) / divisor,
+    count: evalSummaries.reduce((acc, summary) => acc + summary.count, 0),
+    evalCount: evalSummaries.length,
+  };
 }
 
 function stats(values) {
@@ -954,7 +1054,7 @@ function getReportValue(summary, reportType) {
   return summary.mean;
 }
 
-function getErrorBarRange(summary, mode, reportType) {
+function getErrorBarRange(summary, mode, reportType, axisId) {
   if (!summary?.hasData) return null;
   if (mode === 'none') return null;
   if (mode === 'std') {
@@ -966,12 +1066,18 @@ function getErrorBarRange(summary, mode, reportType) {
     ) {
       return null;
     }
-    const min = Number.isFinite(summary.min)
-      ? Math.max(center - summary.stdDev, summary.min)
-      : center - summary.stdDev;
-    const max = Number.isFinite(summary.max)
-      ? Math.min(center + summary.stdDev, summary.max)
-      : center + summary.stdDev;
+    let min = center - summary.stdDev;
+    let max = center + summary.stdDev;
+    if (METRICS[axisId]?.forceMin !== undefined) {
+      min = Math.max(min, METRICS[axisId].forceMin);
+    }
+    if (METRICS[axisId]?.forceMax !== undefined) {
+      max = Math.min(max, METRICS[axisId].forceMax);
+    }
+    if (METRICS[axisId]?.minClamp !== undefined) {
+      min = Math.max(min, METRICS[axisId].minClamp);
+      max = Math.max(max, METRICS[axisId].minClamp);
+    }
     if (!Number.isFinite(min) || !Number.isFinite(max) || min === max) return null;
     return { min, max };
   }
@@ -1161,10 +1267,10 @@ function renderPlot(points) {
     const canShowErrorBars =
       STATE.xAxis !== 'language' && STATE.errorBarMode !== 'none';
     const xBarRange = canShowErrorBars
-      ? getErrorBarRange(point.xSummary, STATE.errorBarMode, STATE.reportType)
+      ? getErrorBarRange(point.xSummary, STATE.errorBarMode, STATE.reportType, STATE.xAxis)
       : null;
     const yBarRange = canShowErrorBars
-      ? getErrorBarRange(point.ySummary, STATE.errorBarMode, STATE.reportType)
+      ? getErrorBarRange(point.ySummary, STATE.errorBarMode, STATE.reportType, STATE.yAxis)
       : null;
 
     if (!point.xAsLanguage && xBarRange) {
@@ -2084,7 +2190,30 @@ async function loadRows() {
   const response = await fetch(`${DATA_PATH}?t=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Unable to load ${DATA_PATH}`);
   const text = await response.text();
-  return parseCsv(text);
+  return parseDataSource(text, DATA_PATH);
+}
+
+function parseDataSource(text, sourceName = '') {
+  const trimmed = text.trim();
+  if (!trimmed) return [];
+  if (sourceName.toLowerCase().endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    return parseJsonData(trimmed);
+  }
+  return parseCsv(trimmed);
+}
+
+function parseJsonData(text) {
+  const data = JSON.parse(text);
+  const rows = Array.isArray(data)
+    ? data
+    : Array.isArray(data.rows)
+      ? data.rows
+      : Array.isArray(data.results)
+        ? data.results
+        : isHarnessResult(data)
+          ? [data]
+          : [];
+  return rows.map((row) => coerceRow(isHarnessResult(row) ? rowFromHarnessResult(row) : row));
 }
 
 function parseCsv(text) {
@@ -2140,40 +2269,105 @@ function parseCsvLine(line) {
 }
 
 function coerceRow(raw) {
-  const normalizedEval = normalizeEval(raw.eval, raw.result_link, raw.transcript_link);
+  const resultLink = firstPresent(raw.result_link, raw.resultLink, '');
+  const transcriptLink = firstPresent(raw.transcript_link, raw.transcriptLink, '');
+  const scoreCount = toNumber(firstPresent(raw.score_count, raw.passed));
+  const scoreTotal = toNumber(firstPresent(raw.score_total, raw.total));
+  const scorePctRaw = toNumber(raw.score_pct);
+  const scorePct =
+    Number.isFinite(scorePctRaw)
+      ? scorePctRaw
+      : Number.isFinite(scoreCount) && Number.isFinite(scoreTotal) && scoreTotal > 0
+        ? (scoreCount / scoreTotal) * 100
+        : NaN;
+  const task = firstPresent(raw.task, '');
+  const normalizedEval = normalizeEval(firstPresent(raw.eval, task), resultLink, transcriptLink, task);
   return {
-    language: raw.language || '',
-    agent: raw.agent || '',
-    model: raw.model || '',
-    effort: raw.effort || '',
-    run_id: raw.run_id || '',
+    language: firstPresent(raw.language, languageFromTask(task), ''),
+    agent: firstPresent(raw.agent, ''),
+    model: firstPresent(raw.model, 'default'),
+    effort: firstPresent(raw.effort, ''),
+    run_id: String(firstPresent(raw.run_id, raw.run, '')),
     eval: normalizedEval,
-    eval_raw: raw.eval || '',
-    score_count: toNumber(raw.score_count),
-    score_total: toNumber(raw.score_total),
-    score_pct: toNumber(raw.score_pct),
+    eval_raw: firstPresent(raw.eval, ''),
+    score_count: scoreCount,
+    score_total: scoreTotal,
+    score_pct: scorePct,
     wall_min: toNumber(raw.wall_min),
     input_tokens: toNumber(raw.input_tokens),
     output_tokens: toNumber(raw.output_tokens),
     cost_usd: toNumber(raw.cost_usd),
-    tools: toNumber(raw.tools),
+    tools: toNumber(firstPresent(raw.tools, raw.tool_calls)),
     files: toNumber(raw.files),
     loc: toNumber(raw.loc),
-    result_link: raw.result_link || '',
-    transcript_link: raw.transcript_link || '',
-    last_message: raw.last_message || '',
+    result_link: resultLink,
+    transcript_link: transcriptLink,
+    last_message: firstPresent(raw.last_message, raw.last_message_summary, raw.agent_last_message, ''),
   };
 }
 
-function normalizeEval(rawEval, resultLink, transcriptLink) {
+function isHarnessResult(value) {
+  return Boolean(value && typeof value === 'object' && value.metadata && value.test_summary);
+}
+
+function rowFromHarnessResult(result) {
+  const metadata = result.metadata || {};
+  const summary = result.test_summary || {};
+  const usage = result.token_usage || {};
+  const stats = result.source_stats || {};
+  const task = metadata.task || '';
+  return {
+    task,
+    language: languageFromTask(task),
+    agent: metadata.agent || '',
+    model: metadata.model || 'default',
+    effort: metadata.effort || '',
+    run_id: metadata.run_number || '',
+    eval: evalLabelFromTask(task),
+    score_count: summary.passed,
+    score_total: summary.total,
+    wall_min: metadata.wall_clock_seconds ? metadata.wall_clock_seconds / 60 : undefined,
+    input_tokens: usage.input_tokens,
+    output_tokens: usage.output_tokens,
+    cost_usd: usage.reported_cost_usd ?? usage.estimated_cost_usd,
+    tools: usage.tool_calls,
+    files: stats.file_count,
+    loc: stats.lines_of_code,
+    result_link: result.result_link || '',
+    transcript_link: result.transcript_link || '',
+    last_message: metadata.agent_last_message || '',
+  };
+}
+
+function normalizeEval(rawEval, resultLink, transcriptLink, task) {
+  const taskLabel = evalLabelFromTask(task);
+  if (taskLabel !== 'Unknown') return taskLabel;
+
   const evalName = String(rawEval || '').trim();
   const searchText = `${resultLink || ''} ${transcriptLink || ''}`.toLowerCase();
+  const linkedLabel = evalLabelFromTask(searchText);
+  if (linkedLabel !== 'Unknown') return linkedLabel;
 
-  if (/cncsim(?:-full)?(?:-(?:cpp|py|js|rs))?/.test(searchText)) return 'CNCSim';
-  if (searchText.includes('iges')) return 'IGES';
-  if (!evalName) return 'CNCSim';
-  if (/^eval\d+$/i.test(evalName)) return 'CNCSim';
+  if (!evalName) return 'Unknown';
+  if (/^eval\d+$/i.test(evalName)) return 'Unknown';
   return evalLabelFromText(evalName);
+}
+
+function evalLabelFromTask(value) {
+  const text = String(value || '').toLowerCase();
+  const labels = [
+    ['cncsim', 'CNCSim'],
+    ['rs274', 'RS274'],
+    ['wordcount', 'WordCount'],
+    ['bibtex', 'BibTeX'],
+    ['gedcom', 'GEDCOM'],
+    ['ical', 'ICal'],
+    ['iges', 'IGES'],
+    ['marc21', 'MARC21'],
+    ['las', 'LAS'],
+  ];
+  const match = labels.find(([needle]) => text.includes(needle));
+  return match ? match[1] : 'Unknown';
 }
 
 function evalLabelFromText(value) {
@@ -2184,9 +2378,24 @@ function evalLabelFromText(value) {
     .map((token, index) => {
       if (index === 0 && token === 'cncsim') return 'CNCSim';
       if (index === 0 && token === 'iges') return 'IGES';
+      if (index === 0 && token === 'bibtex') return 'BibTeX';
+      if (index === 0 && token === 'gedcom') return 'GEDCOM';
+      if (index === 0 && token === 'ical') return 'ICal';
+      if (index === 0 && token === 'marc21') return 'MARC21';
+      if (index === 0 && token === 'las') return 'LAS';
+      if (index === 0 && token === 'rs274') return 'RS274';
       return token[0].toUpperCase() + token.slice(1);
     })
     .join(' ');
+}
+
+function languageFromTask(task) {
+  const match = String(task || '').match(/-(cpp|py|js|rs)$/i);
+  return match ? match[1].toUpperCase() : '';
+}
+
+function firstPresent(...values) {
+  return values.find((value) => value !== undefined && value !== null && value !== '') ?? '';
 }
 
 function toNumber(value) {

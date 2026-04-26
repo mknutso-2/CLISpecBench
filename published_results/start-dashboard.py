@@ -8,6 +8,7 @@ not already serving the dashboard, then opens the dashboard in the default brows
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import socket
 import subprocess
@@ -21,8 +22,8 @@ from pathlib import Path
 DEFAULT_PORT = 8000
 DEFAULT_DASHBOARD = "results-dashboard.html"
 DASHBOARD_MARKER = "CLISpecBench Results Explorer"
-EXPECTED_DATA_PATH = "results-2_1_1_runs.csv"
-EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id"}
+EXPECTED_DATA_PATH = "results-published.json"
+EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id", "score_pct"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -83,9 +84,11 @@ def is_dashboard_running(base: str, dashboard: str) -> bool:
         ) as data_response:
             if data_response.status != 200:
                 return False
-            data_header = data_response.read(256).decode("utf-8", errors="ignore")
-            header = data_header.splitlines()[0].replace("\ufeff", "").lower().split(",")
-            column_set = {column.strip() for column in header}
+            payload = json.loads(data_response.read().decode("utf-8", errors="ignore"))
+            rows = payload.get("rows", []) if isinstance(payload, dict) else payload
+            if not rows:
+                return False
+            column_set = set(rows[0])
             return EXPECTED_DATA_COLUMNS.issubset(column_set)
     except (urllib.error.URLError, TimeoutError, OSError):
         return False

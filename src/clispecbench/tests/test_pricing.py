@@ -90,6 +90,16 @@ class TestEstimateCost:
         assert cost is not None
         assert cost == pytest.approx(2.50 + 15.00)  # type: ignore[reportUnknownMemberType]
 
+    def test_gpt_5_5_model(self) -> None:
+        cost = estimate_cost(
+            "gpt-5.5",
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_input_tokens=500_000,
+        )
+        assert cost is not None
+        assert cost == pytest.approx(0.5 * 5.00 + 0.5 * 0.50 + 30.00)  # type: ignore[reportUnknownMemberType]
+
     def test_gemini_model(self) -> None:
         cost = estimate_cost(
             "gemini-2.5-flash-lite",
@@ -118,6 +128,7 @@ class TestPricingTableCompleteness:
 
     def test_all_openai_models_present(self) -> None:
         for model in (
+            "gpt-5.5",
             "gpt-5.4",
             "gpt-5.4-mini",
             "gpt-5.3-codex",
