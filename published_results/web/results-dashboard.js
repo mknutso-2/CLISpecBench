@@ -50,7 +50,7 @@ const TABLE_SORT_OPTIONS = {
     { id: 'pair', label: 'Agent/model' },
     { id: 'run', label: 'Run' },
     { id: 'version', label: 'Version' },
-    { id: 'exit_reason', label: 'Exit' },
+    { id: 'status', label: 'Status', requiresExcluded: true },
     { id: 'percent', label: 'Pass rate' },
     { id: 'cost', label: 'Cost' },
     { id: 'wall', label: 'Wall time' },
@@ -525,8 +525,8 @@ function attachEvents() {
 
   tableModeSelect.addEventListener('change', () => {
     STATE.tableMode = tableModeSelect.value === 'runs' ? 'runs' : 'summary';
-    if (!TABLE_SORT_OPTIONS[STATE.tableMode].some((option) => option.id === STATE.tableSortBy)) {
-      STATE.tableSortBy = STATE.tableMode === 'runs' ? 'eval' : 'percent';
+    if (!getTableSortOptions(STATE.tableMode).some((option) => option.id === STATE.tableSortBy)) {
+      STATE.tableSortBy = '';
     }
     renderTableControls();
     render();
@@ -553,6 +553,7 @@ function attachEvents() {
 
   tableShowExcludedInput.addEventListener('change', () => {
     STATE.tableShowExcluded = tableShowExcludedInput.checked;
+    renderTableControls();
     render();
   });
 
@@ -732,13 +733,14 @@ function renderTableControls() {
   tableShowExcludedInput.checked = STATE.tableShowExcluded;
 
   tableSortBySelect.replaceChildren();
-  TABLE_SORT_OPTIONS[STATE.tableMode].forEach((optionDef) => {
+  const sortOptions = getTableSortOptions(STATE.tableMode);
+  sortOptions.forEach((optionDef) => {
     const option = document.createElement('option');
     option.value = optionDef.id;
     option.textContent = optionDef.label;
     tableSortBySelect.appendChild(option);
   });
-  if (!TABLE_SORT_OPTIONS[STATE.tableMode].some((option) => option.id === STATE.tableSortBy)) {
+  if (!sortOptions.some((option) => option.id === STATE.tableSortBy)) {
     STATE.tableSortBy = '';
   }
   tableSortBySelect.value = STATE.tableSortBy;
@@ -750,6 +752,12 @@ function renderTableControls() {
   tableRunsControls.forEach((el) => {
     el.classList.toggle('hidden', STATE.tableMode !== 'runs');
   });
+}
+
+function getTableSortOptions(tableMode = STATE.tableMode) {
+  return (TABLE_SORT_OPTIONS[tableMode] || []).filter(
+    (option) => !option.requiresExcluded || STATE.tableShowExcluded,
+  );
 }
 
 function syncViewModeControls() {
@@ -1003,7 +1011,7 @@ function buildRunTableRows() {
       rows.push({
         ...row,
         isExcluded: true,
-        sortValues: getRunSortValues(row),
+        sortValues: getRunSortValues({ ...row, isExcluded: true }),
       });
     });
   }
@@ -1025,9 +1033,24 @@ function getRunSortValues(row) {
     files: row.files,
     loc: row.loc,
     link: row.result_link || '',
-    exit_reason: row.exit_reason || '',
+    status: getRunStatusLabel(row),
     last_message: getLastMessageDisplay(row),
   };
+}
+
+function getRunStatusLabel(row) {
+  return firstPresent(
+    row.failure_class,
+    row.exit_reason,
+    row.isExcluded ? 'excluded' : 'completed',
+  );
+}
+
+function getRunStatusTitle(row) {
+  const exitReason = firstPresent(row.exit_reason, row.isExcluded ? 'excluded' : 'completed');
+  const failureClass = firstPresent(row.failure_class, '');
+  if (failureClass && failureClass !== exitReason) return `${exitReason} / ${failureClass}`;
+  return exitReason;
 }
 
 function getRowsForCurrentSelection(rows) {
@@ -1094,7 +1117,7 @@ function getSummaryTableColumns() {
 }
 
 function getRunTableColumns() {
-  return [
+  const columns = [
     {
       key: 'eval_language',
       label: 'Eval-Lang',
@@ -1109,7 +1132,6 @@ function getRunTableColumns() {
     },
     { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
     { key: 'version', label: 'Version', render: (row) => row.eval_version || 'n/a' },
-    { key: 'exit', label: 'Exit', render: (row) => row.exit_reason || (row.isExcluded ? 'excluded' : 'completed') },
     { key: 'score', sortKey: 'percent', label: 'Score', numeric: true, render: (row) => formatScore(row) },
     { key: 'cost', label: 'Cost', numeric: true, render: (row) => formatAxisValue('cost', row.cost_usd) },
     { key: 'wall', label: 'Wall', numeric: true, render: (row) => formatAxisValue('wall', row.wall_min) },
@@ -1126,6 +1148,15 @@ function getRunTableColumns() {
       title: (row) => getLastMessageTooltip(row),
     },
   ];
+  if (STATE.tableShowExcluded) {
+    columns.splice(4, 0, {
+      key: 'status',
+      label: 'Status',
+      render: (row) => getRunStatusLabel(row),
+      title: (row) => getRunStatusTitle(row),
+    });
+  }
+  return columns;
 }
 
 function renderResultsTable(columns, rows) {
