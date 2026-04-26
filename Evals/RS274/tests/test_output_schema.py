@@ -8,6 +8,7 @@ import pytest
 from rs274_support import run_rs274, run_rs274_trace
 
 AXES = {"x", "y", "z", "a", "b", "c"}
+COORDINATE_SYSTEM_KEYS = {str(index) for index in range(1, 10)}
 REQUIRED_OUTPUT_KEYS = {
     "machine_position",
     "feed_rate",
@@ -61,18 +62,23 @@ def assert_axis_mapping(value: object, *, complete: bool) -> None:
         assert_number(axis_value)
 
 
-def assert_string_mapping(value: object) -> None:
+def assert_string_mapping(value: object, *, require_non_empty: bool = False) -> None:
     assert isinstance(value, dict)
     typed_value = cast(dict[str, object], value)
+    if require_non_empty:
+        assert typed_value
     for key, item in typed_value.items():
         assert isinstance(key, str)
+        assert key.isdecimal()
         assert isinstance(item, str)
         assert item
 
 
-def assert_parameters(value: object) -> None:
+def assert_parameters(value: object, *, require_non_empty: bool = False) -> None:
     assert isinstance(value, dict)
     typed_value = cast(dict[str, object], value)
+    if require_non_empty:
+        assert typed_value
     for key, item in typed_value.items():
         assert isinstance(key, str)
         assert key.isdecimal()
@@ -83,10 +89,12 @@ def assert_coordinate_system_offsets(value: object, *, complete: bool) -> None:
     assert isinstance(value, dict)
     typed_value = cast(dict[str, object], value)
     if complete:
-        assert set(typed_value) == {str(index) for index in range(1, 10)}
+        assert set(typed_value) == COORDINATE_SYSTEM_KEYS
+    else:
+        assert typed_value
+        assert set(typed_value) <= COORDINATE_SYSTEM_KEYS
     for system_number, offsets in typed_value.items():
         assert isinstance(system_number, str)
-        assert system_number.isdecimal()
         assert_axis_mapping(offsets, complete=complete)
 
 
@@ -137,6 +145,7 @@ def assert_trace_entry_schema(entry: object) -> None:
     assert isinstance(entry, dict)
     typed_entry = cast(dict[str, object], entry)
     assert set(typed_entry) <= TRACE_ENTRY_KEYS
+    assert {"line_number", "time"} <= set(typed_entry)
     assert isinstance(typed_entry["line_number"], int)
     assert_number(typed_entry["time"])
     assert "error" not in typed_entry
@@ -153,19 +162,20 @@ def assert_trace_entry_schema(entry: object) -> None:
         if field in typed_entry:
             assert_nullable_scalar(typed_entry[field])
     if "active_modal_g_codes" in typed_entry:
-        assert_string_mapping(typed_entry["active_modal_g_codes"])
+        assert_string_mapping(typed_entry["active_modal_g_codes"], require_non_empty=True)
     if "active_modal_m_codes" in typed_entry:
-        assert_string_mapping(typed_entry["active_modal_m_codes"])
+        assert_string_mapping(typed_entry["active_modal_m_codes"], require_non_empty=True)
     if "coordinate_system_offsets" in typed_entry:
         assert_coordinate_system_offsets(typed_entry["coordinate_system_offsets"], complete=False)
     if "parameters" in typed_entry:
-        assert_parameters(typed_entry["parameters"])
+        assert_parameters(typed_entry["parameters"], require_non_empty=True)
     if "motion_kind" in typed_entry:
         assert typed_entry["motion_kind"] in {"rapid", "feed"}
     if "nonmodal_g_codes" in typed_entry:
         nonmodal_g_codes = typed_entry["nonmodal_g_codes"]
         assert isinstance(nonmodal_g_codes, list)
         typed_codes = cast(list[object], nonmodal_g_codes)
+        assert typed_codes
         assert all(isinstance(code, str) and code for code in typed_codes)
 
 

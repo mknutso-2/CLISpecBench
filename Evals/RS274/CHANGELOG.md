@@ -91,6 +91,14 @@ motion and state-only content, the state-only deltas fold into the
 block's final stepping entry rather than producing a separate epsilon
 entry. Documentation-only; would be a patch bump when applied.
 
+## v3.1.9 — 2026-04-26
+
+- Tightened `tests/test_output_schema.py` trace-entry validation:
+  - optional trace delta maps/lists must be non-empty when present;
+  - coordinate-system delta keys are restricted to `"1"` through `"9"`;
+  - modal-code map keys must be decimal modal-group strings;
+  - required `line_number` and `time` entry fields are asserted explicitly.
+
 ## v3.1.8 — 2026-04-26
 
 - Added `tests/test_output_schema.py` as the central schema gate for
