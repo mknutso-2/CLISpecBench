@@ -245,6 +245,10 @@
   sub-motion, or that sub-motion's final entry if no interior sample fits inside it. Any
   modal, parameter, tool, coordinate-system, and label deltas that would otherwise have
   ridden a "time" == 0.0 entry ride the line's first emitted entry instead.
+- When a line produces motion and also has post-motion state-only changes, such as a moving
+  line that also contains M2 or M30, the post-motion state deltas are folded into the line's
+  final emitted motion entry at that motion entry's normal "time"; do not emit a separate
+  "time" == 0.0001 state-only entry for the same source line.
 - For G38.2 probing, the final entry for the line reflects the actual trip point if the probe
   tripped, or the commanded endpoint if it did not. A non-tripping probe is an error, but the
   probe motion to the commanded endpoint completed — the entry for that motion is emitted

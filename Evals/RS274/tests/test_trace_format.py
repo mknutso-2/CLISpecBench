@@ -634,12 +634,10 @@ def test_motion_plus_m2_same_line_final_entry_time(
     The M2 state deltas are folded into that final entry.
 
     PASS-RATE NOTE (2026-04-18): 2 passes / 243 attempts across all models
-    (see CHANGELOG "Proposed"). technical-requirements-prompt.md describes
-    state-only-block entries (time == 0.0001) and motion-block stepping as
-    separate cases; the behavior when a state-only transition (M2) shares a
-    line with a motion block is a legitimately underspecified interaction.
-    Models reasonably emit either a folded final entry or a trailing
-    0.0001s epsilon entry; only the folded form passes here.
+    before the prompt clarified this interaction. technical-requirements-prompt.md
+    now states that post-motion state-only deltas on a moving line fold into
+    the line's final emitted motion entry rather than producing a trailing
+    0.0001s epsilon entry.
     """
     _, _, trace = run_rs274_trace(
         submission_command,

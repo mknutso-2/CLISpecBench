@@ -1,31 +1,14 @@
 # RS274 Changelog
 
-## Proposed (not yet applied)
+## v3.1.11 — 2026-04-26
 
-### Clarify trace behavior when state-only transitions share a line with motion
-
-`test_trace_format.py::test_motion_plus_m2_same_line_final_entry_time`
-passed only 2 / 243 times across all models. Input: `G1 X1 F60 M2` on a
-single line. The test requires the final trace entry's `time` to equal
-the motion duration (1.0 s), with the M2 modal deltas folded into that
-entry.
-
-`technical-requirements-prompt.md` describes state-only blocks as
-producing a single `time == 0.0001` epsilon entry and motion blocks as
-being stepped into sub-motion entries, but does not specify what happens
-when a state-only transition (M2 program-end) shares a line with a
-motion block. Models reasonably emit either:
-
-- A folded final entry whose `time` equals the motion duration and which
-  carries the M2 modal deltas (the test's expected form), or
-- A trailing `time == 0.0001` entry after the final motion step,
-  carrying just the M2 deltas.
-
-Both are defensible under the current prompt. Proposed clarification: add
-a sentence to the trace rules that says when a block contains both
-motion and state-only content, the state-only deltas fold into the
-block's final stepping entry rather than producing a separate epsilon
-entry. Documentation-only; would be a patch bump when applied.
+- Clarified in `technical-requirements-prompt.md` that when a moving block
+  also produces post-motion state-only changes, such as `G1 X1 F60 M2`, those
+  state deltas fold into the line's final emitted motion entry at the motion
+  entry's normal time instead of producing a separate `time == 0.0001`
+  state-only trace entry.
+- Updated the corresponding trace test comment to cite the clarified prompt
+  rule instead of treating the interaction as underspecified.
 
 ## v3.1.10 — 2026-04-26
 
