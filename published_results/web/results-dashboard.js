@@ -1665,6 +1665,17 @@ function summarizeMetricAcrossEvals(rows, metricId, spec) {
   if (!evalSummaries.length) return { hasData: false };
 
   const mode = EVAL_COMBINED_METRIC_MODES[metricId];
+  if (mode === 'average') {
+    const evalMeanStats = stats(evalSummaries.map((summary) => summary.mean));
+    if (!evalMeanStats) return { hasData: false };
+    return {
+      ...evalMeanStats,
+      hasData: true,
+      count: evalSummaries.reduce((acc, summary) => acc + summary.count, 0),
+      evalCount: evalSummaries.length,
+    };
+  }
+
   const divisor = mode === 'average' ? evalSummaries.length : 1;
   const combineField = (field) =>
     evalSummaries.reduce((acc, summary) => acc + summary[field], 0) / divisor;
@@ -2895,7 +2906,10 @@ function buildTooltip(point) {
   const details = summarizePointDetails(point.rows || []);
   const reportTypeLabel = getReportTypeLabel(STATE.reportType);
   const formatAxisReportValue = (axisId, axisSummary) =>
-    formatAxisValue(axisId, getReportValue(axisSummary, STATE.reportType));
+    axisSummary?.hasData
+      ? METRICS[axisId]?.formatSummary(axisSummary) ||
+        formatAxisValue(axisId, getReportValue(axisSummary, STATE.reportType))
+      : 'n/a';
 
   const lines = [
     `<strong>${point.pairLabel || rowPairId(point.pairId)}</strong>`,
