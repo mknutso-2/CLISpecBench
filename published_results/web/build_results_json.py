@@ -7,6 +7,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from clispecbench.harness.pricing import estimate_cost
+
 DEFAULT_PUBLISHED_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_FILE = Path(__file__).with_name("results-published.json")
 
@@ -53,6 +55,35 @@ def number(value) -> float | int | None:
     if isinstance(value, (int, float)):
         return value
     return None
+
+
+def integer(value) -> int | None:
+    if isinstance(value, int):
+        return value
+    return None
+
+
+def cost_usd(model: str, usage: dict) -> float | int | None:
+    reported = number(usage.get("reported_cost_usd"))
+    if reported is not None:
+        return reported
+
+    estimated = number(usage.get("estimated_cost_usd"))
+    if estimated is not None:
+        return estimated
+
+    input_tokens = integer(usage.get("input_tokens"))
+    output_tokens = integer(usage.get("output_tokens"))
+    if input_tokens is None or output_tokens is None:
+        return None
+
+    return estimate_cost(
+        model,
+        input_tokens,
+        output_tokens,
+        integer(usage.get("cache_read_input_tokens")) or 0,
+        integer(usage.get("cache_creation_input_tokens")) or 0,
+    )
 
 
 def run_number(path: Path, metadata: dict) -> str:
@@ -105,9 +136,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "total_tokens": total_tokens,
-        "cost_usd": number(usage.get("reported_cost_usd"))
-        if usage.get("reported_cost_usd") is not None
-        else number(usage.get("estimated_cost_usd")),
+        "cost_usd": cost_usd(metadata.get("model") or "", usage),
         "tools": usage.get("tool_calls"),
         "files": stats.get("file_count"),
         "loc": stats.get("lines_of_code"),
