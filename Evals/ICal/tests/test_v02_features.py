@@ -169,9 +169,7 @@ def test_recurrence_id_cancel_marks_occurrence_cancelled(
     )
     occs = out.get("occurrences") or []
     cancelled_occs = [
-        o for o in occs
-        if o.get("uid") == "e1"
-        and o.get("dtstart") == "2026-03-07T10:00:00Z"
+        o for o in occs if o.get("uid") == "e1" and o.get("dtstart") == "2026-03-07T10:00:00Z"
     ]
     assert len(cancelled_occs) == 1, (
         f"expected the 2026-03-07 override occurrence to be emitted "

@@ -11,9 +11,9 @@ from marc21_support import encode_iso2709_record, sample_marcxml, sample_record
 from conftest import b64, run_marc21
 
 FIXED_RULES = json.loads(
-    (
-        Path(__file__).resolve().parent / "generated" / "marc21_fixed_field_rules.json"
-    ).read_text(encoding="utf-8")
+    (Path(__file__).resolve().parent / "generated" / "marc21_fixed_field_rules.json").read_text(
+        encoding="utf-8"
+    )
 )
 
 

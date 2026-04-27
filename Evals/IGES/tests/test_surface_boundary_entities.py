@@ -4,6 +4,7 @@ These tests lock in the canonical JSON behavior for the remaining
 surface-trimming and external-reference entities that were still only
 covered indirectly through broader round-trip suites.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -24,11 +25,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -37,7 +43,8 @@ def _roundtrip_single(
 
 
 def test_boundary_with_parameter_space_curve_collections_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -62,7 +69,8 @@ def test_boundary_with_parameter_space_curve_collections_roundtrips(
 
 
 def test_curve_on_parametric_surface_roundtrips_creation_and_preference(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -74,7 +82,8 @@ def test_curve_on_parametric_surface_roundtrips_creation_and_preference(
 
 
 def test_bounded_surface_with_multiple_boundaries_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -89,7 +98,8 @@ def test_bounded_surface_with_multiple_boundaries_roundtrips(
 
 
 def test_trimmed_surface_with_default_outer_boundary_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -101,7 +111,8 @@ def test_trimmed_surface_with_default_outer_boundary_roundtrips(
 
 
 def test_trimmed_surface_with_inner_boundaries_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -116,7 +127,8 @@ def test_trimmed_surface_with_inner_boundaries_roundtrips(
 
 
 def test_associativity_instance_group_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -129,7 +141,8 @@ def test_associativity_instance_group_roundtrips(
 
 
 def test_associativity_instance_empty_group_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -142,7 +155,8 @@ def test_associativity_instance_empty_group_roundtrips(
 
 
 def test_external_reference_form_zero_roundtrips_filename_and_entity_name(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -155,7 +169,8 @@ def test_external_reference_form_zero_roundtrips_filename_and_entity_name(
 
 
 def test_external_reference_form_one_roundtrips_filename_only(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -168,7 +183,8 @@ def test_external_reference_form_one_roundtrips_filename_only(
 
 
 def test_external_reference_form_two_roundtrips_logical_reference(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

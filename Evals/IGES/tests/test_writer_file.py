@@ -1,4 +1,5 @@
 """Writer tests for full-file section layout and terminate counts."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -35,6 +36,7 @@ def test_written_file_has_all_five_sections_and_80_column_records(
     assert len(grouped["D"]) == 2
     assert len(grouped["P"]) >= 1
     assert len(grouped["T"]) == 1
+
 
 def test_empty_start_lines_produce_one_or_more_blank_start_records(
     submission_command: Sequence[str], tmp_path: Path

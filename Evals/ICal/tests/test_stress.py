@@ -45,14 +45,10 @@ def test_parse_500_events_in_reasonable_time(
 # ---------------------------------------------------------------------------
 
 
-def test_rrule_count_1000_expands(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_rrule_count_1000_expands(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A daily RRULE with COUNT=1000 expands without error."""
     body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T100000Z\n"
-        "RRULE:FREQ=DAILY;COUNT=1000\n"
+        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T100000Z\nRRULE:FREQ=DAILY;COUNT=1000\n"
     )
     ics = HEAD + "BEGIN:VEVENT\n" + body + "END:VEVENT\n" + TAIL
     out = run_expand(
@@ -72,11 +68,7 @@ def test_rrule_hourly_expansion_bounded_by_window(
 ) -> None:
     """An HOURLY recurrence with no COUNT is safely bounded by the expand
     window (24 hours = 24 occurrences)."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T000000Z\n"
-        "RRULE:FREQ=HOURLY\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T000000Z\nRRULE:FREQ=HOURLY\n"
     ics = HEAD + "BEGIN:VEVENT\n" + body + "END:VEVENT\n" + TAIL
     out = run_expand(
         submission_command,
@@ -94,9 +86,7 @@ def test_rrule_hourly_expansion_bounded_by_window(
 # ---------------------------------------------------------------------------
 
 
-def test_deep_override_chain(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_deep_override_chain(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A base event + 20 overrides on consecutive daily instances."""
     base = (
         "BEGIN:VEVENT\nUID:e1\nDTSTAMP:20260101T120000Z\n"
@@ -140,14 +130,11 @@ def test_malformed_midfile_preserves_later_valid_events(
 ) -> None:
     """A malformed property in one event doesn't lose the events around it."""
     ics = (
-        HEAD
-        + "BEGIN:VEVENT\nUID:a\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\nEND:VEVENT\n"
-        + "BEGIN:VEVENT\nUID:b\nDTSTAMP:20260101T120000Z\n"
+        HEAD + "BEGIN:VEVENT\nUID:a\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nEND:VEVENT\n" + "BEGIN:VEVENT\nUID:b\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260302T100000Z\nGEO:garbage\nEND:VEVENT\n"  # malformed GEO
-        + "BEGIN:VEVENT\nUID:c\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260303T100000Z\nEND:VEVENT\n"
-        + TAIL
+         + "BEGIN:VEVENT\nUID:c\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260303T100000Z\nEND:VEVENT\n" + TAIL
     )
     out = run_parse(submission_command, ics, tmp_path)
     events = cast(list[dict[str, Any]], out.get("events") or [])
@@ -160,9 +147,7 @@ def test_malformed_midfile_preserves_later_valid_events(
 # ---------------------------------------------------------------------------
 
 
-def test_many_alarms_on_one_event(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_many_alarms_on_one_event(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """An event with 50 VALARMs parses and all alarms surface."""
     alarms = []
     for i in range(50):
@@ -175,9 +160,7 @@ def test_many_alarms_on_one_event(
         )
     body = (
         "BEGIN:VEVENT\nUID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\n"
-        + "".join(alarms) +
-        "END:VEVENT\n"
+        "DTSTART:20260301T100000Z\n" + "".join(alarms) + "END:VEVENT\n"
     )
     ics = HEAD + body + TAIL
     out = run_parse(submission_command, ics, tmp_path)
@@ -249,10 +232,7 @@ def test_expand_window_before_event_is_empty(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Expand window entirely before DTSTART produces no occurrences."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260601T100000Z\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260601T100000Z\n"
     ics = HEAD + "BEGIN:VEVENT\n" + body + "END:VEVENT\n" + TAIL
     out = run_expand(
         submission_command,
@@ -269,9 +249,7 @@ def test_expand_window_before_event_is_empty(
 # ---------------------------------------------------------------------------
 
 
-def test_mixed_timekinds_coexist(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_mixed_timekinds_coexist(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Three events with UTC, floating, and zoned DATE-TIMEs all parse and
     expand independently."""
     tz = (
@@ -284,15 +262,12 @@ def test_mixed_timekinds_coexist(
         "END:VTIMEZONE\n"
     )
     ics = (
-        HEAD
-        + tz
-        + "BEGIN:VEVENT\nUID:utc\nDTSTAMP:20260101T120000Z\n"
+        HEAD + tz + "BEGIN:VEVENT\nUID:utc\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260601T100000Z\nEND:VEVENT\n"
         + "BEGIN:VEVENT\nUID:floating\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260602T100000\nEND:VEVENT\n"
         + "BEGIN:VEVENT\nUID:zoned\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/Chicago:20260603T100000\nEND:VEVENT\n"
-        + TAIL
+        "DTSTART;TZID=America/Chicago:20260603T100000\nEND:VEVENT\n" + TAIL
     )
     out = run_expand(
         submission_command,

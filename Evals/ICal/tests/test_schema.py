@@ -37,8 +37,14 @@ def test_parse_top_level_keys_all_present(
     # Tests assert presence only.
     out = run_parse(submission_command, SIMPLE, tmp_path)
     required = {
-        "calendar", "events", "todos", "journals", "freebusy",
-        "timezones", "availabilities", "warnings",
+        "calendar",
+        "events",
+        "todos",
+        "journals",
+        "freebusy",
+        "timezones",
+        "availabilities",
+        "warnings",
     }
     assert required.issubset(set(out.keys()))
 

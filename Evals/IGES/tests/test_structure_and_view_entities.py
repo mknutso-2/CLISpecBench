@@ -1,4 +1,5 @@
 """Dedicated CLI coverage for structure and view entities."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -21,11 +22,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -34,7 +40,8 @@ def _roundtrip_single(
 
 
 def test_subfigure_definition_roundtrips_empty_member_list(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -44,8 +51,10 @@ def test_subfigure_definition_roundtrips_empty_member_list(
     )
     assert data == {"depth": 0, "name": "EMPTY", "n": 0, "entities": []}
 
+
 def test_drawing_form_one_roundtrips_angles_and_annotations(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -66,8 +75,10 @@ def test_drawing_form_one_roundtrips_angles_and_annotations(
     assert data["views"][1]["angle"] == pytest.approx(1.5708)
     assert data["annotations"] == [9]
 
+
 def test_view_form_one_roundtrips_perspective_fields(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -100,7 +111,8 @@ def test_view_form_one_roundtrips_perspective_fields(
 
 
 def test_rectangular_array_roundtrips_do_dont_list(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

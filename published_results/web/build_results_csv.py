@@ -22,6 +22,7 @@ def default_input_file() -> Path:
 
     return local
 
+
 HEADER_WITHOUT_VERSION = [
     "Run",
     "Score",

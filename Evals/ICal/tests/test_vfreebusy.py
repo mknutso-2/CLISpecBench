@@ -66,19 +66,14 @@ def test_vfreebusy_default_fbtype_is_busy(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """§3.2.9: default FBTYPE is BUSY when not specified."""
-    body = (
-        "UID:fb1\nDTSTAMP:20260101T120000Z\n"
-        "FREEBUSY:20260301T090000Z/20260301T100000Z\n"
-    )
+    body = "UID:fb1\nDTSTAMP:20260101T120000Z\nFREEBUSY:20260301T090000Z/20260301T100000Z\n"
     out = run_parse(submission_command, _wrap_fb(body), tmp_path)
     fbs = _freebusy_list(out)
     entries = _entries(fbs[0])
     assert entries[0].get("fbtype") == "BUSY"
 
 
-def test_vfreebusy_fbtype_free(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_vfreebusy_fbtype_free(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "UID:fb1\nDTSTAMP:20260101T120000Z\n"
         "FREEBUSY;FBTYPE=FREE:20260301T090000Z/20260301T100000Z\n"
@@ -167,10 +162,7 @@ def test_vfreebusy_comma_separated_periods(
 def test_vfreebusy_period_with_explicit_end(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    body = (
-        "UID:fb1\nDTSTAMP:20260101T120000Z\n"
-        "FREEBUSY:20260301T090000Z/20260301T100000Z\n"
-    )
+    body = "UID:fb1\nDTSTAMP:20260101T120000Z\nFREEBUSY:20260301T090000Z/20260301T100000Z\n"
     out = run_parse(submission_command, _wrap_fb(body), tmp_path)
     fbs = _freebusy_list(out)
     periods = cast(list[dict[str, Any]], _entries(fbs[0])[0].get("periods"))
@@ -182,10 +174,7 @@ def test_vfreebusy_period_with_explicit_end(
 def test_vfreebusy_period_with_duration(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    body = (
-        "UID:fb1\nDTSTAMP:20260101T120000Z\n"
-        "FREEBUSY:20260301T090000Z/PT1H\n"
-    )
+    body = "UID:fb1\nDTSTAMP:20260101T120000Z\nFREEBUSY:20260301T090000Z/PT1H\n"
     out = run_parse(submission_command, _wrap_fb(body), tmp_path)
     fbs = _freebusy_list(out)
     periods = cast(list[dict[str, Any]], _entries(fbs[0])[0].get("periods"))
@@ -274,10 +263,7 @@ def test_vfreebusy_without_freebusy_property(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """A VFREEBUSY with no FREEBUSY properties has an empty entries list."""
-    body = (
-        "UID:fb1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T000000Z\nDTEND:20260301T235959Z\n"
-    )
+    body = "UID:fb1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T000000Z\nDTEND:20260301T235959Z\n"
     out = run_parse(submission_command, _wrap_fb(body), tmp_path)
     fbs = _freebusy_list(out)
     entries = _entries(fbs[0])

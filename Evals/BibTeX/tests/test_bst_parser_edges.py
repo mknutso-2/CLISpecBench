@@ -59,25 +59,19 @@ def _exec(
 # ---------------------------------------------------------------------------
 
 
-def test_negative_integer_literal(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_negative_integer_literal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """#-5 is a valid negative integer literal (bibtex.web §3020)."""
     bbl = _exec(submission_command, tmp_path, "#-5 int.to.str$ write$")
     assert bbl.strip() == "-5"
 
 
-def test_zero_integer_literal(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_zero_integer_literal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """#0 is the integer zero."""
     bbl = _exec(submission_command, tmp_path, "#0 int.to.str$ write$")
     assert bbl.strip() == "0"
 
 
-def test_integer_literal_arithmetic(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_integer_literal_arithmetic(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """#3 #4 + = 7."""
     bbl = _exec(submission_command, tmp_path, "#3 #4 + int.to.str$ write$")
     assert bbl.strip() == "7"
@@ -87,9 +81,7 @@ def test_negative_minus_positive_arithmetic(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """#-3 #4 + = 1."""
-    bbl = _exec(
-        submission_command, tmp_path, "#-3 #4 + int.to.str$ write$"
-    )
+    bbl = _exec(submission_command, tmp_path, "#-3 #4 + int.to.str$ write$")
     assert bbl.strip() == "1"
 
 
@@ -119,9 +111,7 @@ EXECUTE {loop}
     assert bbl.rstrip("\n") == "xxx"
 
 
-def test_function_literal_as_if_branch(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_function_literal_as_if_branch(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """if$ takes two function literals as branches."""
     bbl = _exec(
         submission_command,
@@ -164,9 +154,7 @@ EXECUTE {f}
     assert bbl.strip() == "hello"
 
 
-def test_full_line_comment(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_full_line_comment(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A line starting with % is entirely a comment."""
     style = """\
 ENTRY { } { } { }
@@ -185,9 +173,7 @@ EXECUTE {f}
 # ---------------------------------------------------------------------------
 
 
-def test_iterate_before_read_is_error(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_iterate_before_read_is_error(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Per btxhak §3.1, ITERATE requires READ to have run first."""
     style = """\
 ENTRY { } { } { }
@@ -195,9 +181,7 @@ FUNCTION {f} { cite$ write$ newline$ }
 ITERATE {f}
 READ
 """
-    bbl, _ = run_bibtex(
-        submission_command, MINI_BIB, style, ["a"], tmp_path, expect_exit=1
-    )
+    bbl, _ = run_bibtex(submission_command, MINI_BIB, style, ["a"], tmp_path, expect_exit=1)
     # Error body should be JSON with source=bst or runtime.
     assert "error" in bbl.lower()
 
@@ -231,7 +215,7 @@ EXECUTE {f}
 """
     bbl, log = run_bibtex(
         submission_command,
-        "@article{a, title = \"T\"}\n",
+        '@article{a, title = "T"}\n',
         style,
         ["a"],
         tmp_path,
@@ -295,9 +279,7 @@ EXECUTE {f}
     )
     # Lenient mode: last definition wins.
     content = out_file.read_text(encoding="utf-8") if out_file.exists() else ""
-    assert "two" in content, (
-        f"last-definition-wins expected, but output contains: {content!r}"
-    )
+    assert "two" in content, f"last-definition-wins expected, but output contains: {content!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -317,9 +299,7 @@ FUNCTION {f} { "ok" write$ }
 READ
 EXECUTE {f}
 """
-    bbl, log = run_bibtex(
-        submission_command, MINI_BIB, style, ["a"], tmp_path, with_log=True
-    )
+    bbl, log = run_bibtex(submission_command, MINI_BIB, style, ["a"], tmp_path, with_log=True)
     assert "ok" in bbl
     # If the log includes macros_defined, custommac should be present.
     if log is not None and "macros_defined" in log:
@@ -407,7 +387,4 @@ EXECUTE {f}
     assert any(
         "does.not.exist" in m or "unknown" in k.lower() or "undefined" in k.lower()
         for m, k in zip(msgs, kinds, strict=False)
-    ), (
-        "lenient mode must emit a warning naming the unknown function; "
-        f"got warnings: {warnings!r}"
-    )
+    ), f"lenient mode must emit a warning naming the unknown function; got warnings: {warnings!r}"

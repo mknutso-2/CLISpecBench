@@ -14,9 +14,7 @@ from conftest import run_wordcount
 WordCountCase = tuple[str, str, dict[str, Any]]
 
 
-def _run(
-    submission_command: tuple[str, ...], text: str, tmp_path: Path
-) -> dict[str, Any]:
+def _run(submission_command: tuple[str, ...], text: str, tmp_path: Path) -> dict[str, Any]:
     return run_wordcount(submission_command, text, tmp_path)
 
 
@@ -182,9 +180,7 @@ class TestPunctuation:
         result = _run(submission_command, "hello hello,", tmp_path)
         assert result["unique_words"] == 2
 
-    def test_various_punctuation(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_various_punctuation(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "end. end! end?", tmp_path)
         assert result["unique_words"] == 3
 
@@ -195,9 +191,7 @@ class TestPunctuation:
 
 
 class TestTopWords:
-    def test_descending_by_count(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_descending_by_count(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         text = "a a a b b c"
         result = _run(submission_command, text, tmp_path)
         top = result["top_words"]
@@ -218,9 +212,7 @@ class TestTopWords:
         assert top[1]["word"] == "banana"
         assert top[2]["word"] == "cherry"
 
-    def test_max_ten_entries(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_max_ten_entries(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         # 15 unique words, only top 10 should appear
         words = [f"word{i:02d}" for i in range(15)]
         # Give each a different frequency so ordering is deterministic
@@ -234,15 +226,11 @@ class TestTopWords:
         assert result["top_words"][0]["word"] == "word00"
         assert result["top_words"][0]["count"] == 15
 
-    def test_fewer_than_ten(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_fewer_than_ten(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "one two three", tmp_path)
         assert len(result["top_words"]) == 3
 
-    def test_empty_top_words(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_empty_top_words(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "", tmp_path)
         assert result["top_words"] == []
 
@@ -300,9 +288,7 @@ class TestJsonStructure:
 
 
 class TestExitCodes:
-    def test_success_exit_code(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_success_exit_code(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         input_file = tmp_path / "input.txt"
         output_file = tmp_path / "output.json"
         input_file.write_text("hello", encoding="utf-8")
@@ -328,8 +314,10 @@ class TestExitCodes:
         result = __import__("subprocess").run(
             [
                 *submission_command,
-                "--input", str(tmp_path / "nonexistent.txt"),
-                "--output", str(output_file),
+                "--input",
+                str(tmp_path / "nonexistent.txt"),
+                "--output",
+                str(output_file),
             ],
             capture_output=True,
         )
@@ -342,9 +330,7 @@ class TestExitCodes:
 
 
 class TestIntegration:
-    def test_multiline_document(
-        self, submission_command: tuple[str, ...], tmp_path: Path
-    ) -> None:
+    def test_multiline_document(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         text = (
             "The quick brown fox jumps over the lazy dog.\n"
             "The dog barked at the fox.\n"

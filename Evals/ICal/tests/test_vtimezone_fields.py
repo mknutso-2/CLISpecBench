@@ -37,9 +37,7 @@ def _tzs(out: dict[str, Any]) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
-def test_vtimezone_last_modified(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_vtimezone_last_modified(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "TZID:America/New_York\n"
         "LAST-MODIFIED:20230115T120000Z\n"
@@ -95,9 +93,7 @@ def test_vtimezone_tzurl(submission_command: tuple[str, ...], tmp_path: Path) ->
 # ---------------------------------------------------------------------------
 
 
-def test_vtimezone_single_comment(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_vtimezone_single_comment(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "TZID:Europe/Berlin\n"
         "COMMENT:Data from IANA tzdata 2024a\n"
@@ -113,9 +109,7 @@ def test_vtimezone_single_comment(
     assert "IANA" in cast(str, comments[0])
 
 
-def test_vtimezone_multiple_comments(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_vtimezone_multiple_comments(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "TZID:Europe/Berlin\n"
         "COMMENT:Source\\: tzdata 2024a\n"
@@ -151,17 +145,13 @@ def test_vtimezone_absence_is_empty_comment_list(
 # ---------------------------------------------------------------------------
 
 
-def test_duplicate_uid_warning(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_duplicate_uid_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Two non-override events sharing UID → duplicate_uid warning."""
     ics = (
-        VCALENDAR_HEAD
-        + "BEGIN:VEVENT\nUID:same-uid\nDTSTAMP:20260101T120000Z\n"
+        VCALENDAR_HEAD + "BEGIN:VEVENT\nUID:same-uid\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T100000Z\nEND:VEVENT\n"
         + "BEGIN:VEVENT\nUID:same-uid\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260302T100000Z\nEND:VEVENT\n"
-        + VCALENDAR_TAIL
+        "DTSTART:20260302T100000Z\nEND:VEVENT\n" + VCALENDAR_TAIL
     )
     out = run_parse(submission_command, ics, tmp_path)
     warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
@@ -179,8 +169,7 @@ def test_override_same_uid_does_not_warn_duplicate(
         + "BEGIN:VEVENT\nUID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
         "RRULE:FREQ=DAILY;COUNT=3\nEND:VEVENT\n"
         + "BEGIN:VEVENT\nUID:e1\nDTSTAMP:20260101T120000Z\n"
-        "RECURRENCE-ID:20260302T100000Z\nDTSTART:20260302T150000Z\nEND:VEVENT\n"
-        + VCALENDAR_TAIL
+        "RECURRENCE-ID:20260302T100000Z\nDTSTART:20260302T150000Z\nEND:VEVENT\n" + VCALENDAR_TAIL
     )
     out = run_parse(submission_command, ics, tmp_path)
     warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
@@ -188,9 +177,7 @@ def test_override_same_uid_does_not_warn_duplicate(
     assert "duplicate_uid" not in kinds
 
 
-def test_unique_uids_no_warning(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_unique_uids_no_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     ics = (
         VCALENDAR_HEAD
         + "BEGIN:VEVENT\nUID:a\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\nEND:VEVENT\n"

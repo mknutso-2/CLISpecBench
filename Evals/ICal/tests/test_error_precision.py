@@ -19,9 +19,7 @@ from typing import Any, cast
 from conftest import run_parse
 
 
-def _run_for_error(
-    submission_command: tuple[str, ...], tmp_path: Path, ics: str
-) -> dict[str, Any]:
+def _run_for_error(submission_command: tuple[str, ...], tmp_path: Path, ics: str) -> dict[str, Any]:
     """Run parse expecting exit=1; return the error JSON body."""
     input_file = tmp_path / "bad.ics"
     output_file = tmp_path / "out.json"
@@ -55,9 +53,7 @@ def _run_for_error(
 # ---------------------------------------------------------------------------
 
 
-def test_error_json_has_error_object(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_error_json_has_error_object(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Any exit-1 output must be a JSON object with an `error` key."""
     # Invalid VERSION line (VERSION is required).
     ics = "BEGIN:VCALENDAR\nEND:VCALENDAR\n"
@@ -69,9 +65,7 @@ def test_error_json_has_error_object(
     assert isinstance(err["error"], dict)
 
 
-def test_error_has_line_field(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_error_has_line_field(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """error.line is a positive integer."""
     ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"  # unclosed
     err = _run_for_error(submission_command, tmp_path, ics)
@@ -80,9 +74,7 @@ def test_error_has_line_field(
     assert line >= 1, f"error.line not positive: {line}"
 
 
-def test_error_has_column_field(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_error_has_column_field(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """error.column is a positive integer."""
     ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"  # unclosed
     err = _run_for_error(submission_command, tmp_path, ics)
@@ -91,9 +83,7 @@ def test_error_has_column_field(
     assert col >= 1, f"error.column not positive: {col}"
 
 
-def test_error_has_message_field(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_error_has_message_field(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """error.message is a non-empty string."""
     ics = "BEGIN:VCALENDAR\n"  # no VERSION, no END — minimal malformed
     err = _run_for_error(submission_command, tmp_path, ics)
@@ -106,9 +96,7 @@ def test_error_has_message_field(
 # ---------------------------------------------------------------------------
 
 
-def test_unclosed_vevent_is_error(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_unclosed_vevent_is_error(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """BEGIN:VEVENT without matching END is an error."""
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
@@ -121,9 +109,7 @@ def test_unclosed_vevent_is_error(
     assert isinstance(line, int) and line >= 1
 
 
-def test_mismatched_end_component(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_mismatched_end_component(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """END:WRONG when inside VEVENT is an error."""
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
@@ -178,9 +164,7 @@ def test_unknown_component_is_warning_not_error(
     kinds = [w.get("kind") for w in warnings]
     # The tool must not have exited 1 AND must have emitted at least
     # one warning for the unknown component.
-    assert len(warnings) >= 1, (
-        f"expected at least one warning for VUNKNOWN; got: {warnings!r}"
-    )
+    assert len(warnings) >= 1, f"expected at least one warning for VUNKNOWN; got: {warnings!r}"
     # The kind must be the tech-reqs-declared `unsupported_component`.
     # (Prior version of this test had a tautological "or" fallback
     # that always passed as long as any warning existed.)

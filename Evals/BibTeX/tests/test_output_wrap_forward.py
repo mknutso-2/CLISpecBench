@@ -22,7 +22,7 @@ from pathlib import Path
 
 from conftest import run_bibtex
 
-MINI_BIB = '@misc{a}\n'
+MINI_BIB = "@misc{a}\n"
 
 
 def _run(submission_command: tuple[str, ...], tmp_path: Path, body: str) -> str:
@@ -69,9 +69,7 @@ def test_forward_scan_preserves_content_order(
     bbl = _run(submission_command, tmp_path, body)
     # Strip the 2-space continuation indent and join. The original was
     # "<long> end", so after normalizing wrap we should see those two tokens.
-    normalized = " ".join(
-        part.strip() for part in bbl.split("\n") if part.strip()
-    )
+    normalized = " ".join(part.strip() for part in bbl.split("\n") if part.strip())
     assert normalized == f"{long_word} end"
 
 
@@ -88,9 +86,7 @@ def test_forward_scan_multiple_spaces_picks_first(
     assert non_empty[0] == long_word
     # The remainder is "  A B C D" (two-space indent + rest).
     remainder = " ".join(non_empty[1:])
-    assert "A B C D" in remainder, (
-        f"continuation should contain 'A B C D', got {remainder!r}"
-    )
+    assert "A B C D" in remainder, f"continuation should contain 'A B C D', got {remainder!r}"
 
 
 # ---------------------------------------------------------------------------

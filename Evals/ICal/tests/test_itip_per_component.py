@@ -69,14 +69,7 @@ def _has_itip_warning(
 
 
 def _vjournal_calendar(method: str, journal_body: str) -> str:
-    return (
-        HEAD
-        + f"METHOD:{method}\n"
-        + "BEGIN:VJOURNAL\n"
-        + journal_body
-        + "END:VJOURNAL\n"
-        + TAIL
-    )
+    return HEAD + f"METHOD:{method}\n" + "BEGIN:VJOURNAL\n" + journal_body + "END:VJOURNAL\n" + TAIL
 
 
 def test_vjournal_request_is_undefined_method(
@@ -118,8 +111,7 @@ def test_vjournal_publish_requires_organizer(
     """RFC 5546 §3.5.1 PUBLISH VJOURNAL ORGANIZER row is `1`. Missing
     ORGANIZER on a PUBLISH VJOURNAL is a matrix violation."""
     body = (
-        "UID:j1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\nDESCRIPTION:Hello\n"
+        "UID:j1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\nDESCRIPTION:Hello\n"
         # deliberately missing ORGANIZER
     )
     out = run_parse(submission_command, _vjournal_calendar("PUBLISH", body), tmp_path)
@@ -190,8 +182,7 @@ def test_vjournal_add_requires_description_and_dtstart(
 ) -> None:
     """RFC 5546 §3.5.2 both DESCRIPTION and DTSTART rows are `1`."""
     body = (
-        "UID:j1\nDTSTAMP:20260101T120000Z\n"
-        "ORGANIZER:mailto:boss@example.com\nSEQUENCE:1\n"
+        "UID:j1\nDTSTAMP:20260101T120000Z\nORGANIZER:mailto:boss@example.com\nSEQUENCE:1\n"
         # deliberately missing DESCRIPTION AND DTSTART
     )
     out = run_parse(submission_command, _vjournal_calendar("ADD", body), tmp_path)
@@ -206,14 +197,7 @@ def test_vjournal_add_requires_description_and_dtstart(
 
 
 def _vtodo_calendar(method: str, todo_body: str) -> str:
-    return (
-        HEAD
-        + f"METHOD:{method}\n"
-        + "BEGIN:VTODO\n"
-        + todo_body
-        + "END:VTODO\n"
-        + TAIL
-    )
+    return HEAD + f"METHOD:{method}\n" + "BEGIN:VTODO\n" + todo_body + "END:VTODO\n" + TAIL
 
 
 def test_vtodo_counter_requires_priority(
@@ -273,8 +257,7 @@ def test_vtodo_publish_requires_organizer(
     isolates the ORGANIZER rule. A fixture missing multiple required
     rows can't prove the ORGANIZER check specifically."""
     body = (
-        "UID:t1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\nPRIORITY:5\nSUMMARY:Task\n"
+        "UID:t1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\nPRIORITY:5\nSUMMARY:Task\n"
         # deliberately missing ORGANIZER — all other required rows present
     )
     out = run_parse(submission_command, _vtodo_calendar("PUBLISH", body), tmp_path)
@@ -329,14 +312,7 @@ def test_vtodo_request_requires_priority_and_summary(
 
 
 def _vfreebusy_calendar(method: str, fb_body: str) -> str:
-    return (
-        HEAD
-        + f"METHOD:{method}\n"
-        + "BEGIN:VFREEBUSY\n"
-        + fb_body
-        + "END:VFREEBUSY\n"
-        + TAIL
-    )
+    return HEAD + f"METHOD:{method}\n" + "BEGIN:VFREEBUSY\n" + fb_body + "END:VFREEBUSY\n" + TAIL
 
 
 def test_vfreebusy_cancel_is_undefined_method(

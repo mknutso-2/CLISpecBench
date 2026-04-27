@@ -25,9 +25,7 @@ from pathlib import Path
 from typing import Any, cast
 
 
-def _run_parse_bytes(
-    command: tuple[str, ...], ics_bytes: bytes, tmp_path: Path
-) -> dict[str, Any]:
+def _run_parse_bytes(command: tuple[str, ...], ics_bytes: bytes, tmp_path: Path) -> dict[str, Any]:
     """Run `ical parse` with raw bytes; no CRLF normalization."""
     ics_file = tmp_path / "in.ics"
     ics_file.write_bytes(ics_bytes)
@@ -49,9 +47,7 @@ def _run_parse_bytes(
 def _find_event(payload: dict[str, Any], uid: str) -> dict[str, Any]:
     events = payload.get("events")
     if not isinstance(events, list):
-        raise AssertionError(
-            f"output has no 'events' array (top-level keys: {list(payload)})"
-        )
+        raise AssertionError(f"output has no 'events' array (top-level keys: {list(payload)})")
     for raw in cast(list[Any], events):
         if isinstance(raw, dict):
             ev = cast(dict[str, Any], raw)
@@ -67,12 +63,7 @@ def _assemble(body_bytes: bytes) -> bytes:
     any CRLF+WS fold injections); this function only adds the surrounding
     VCALENDAR/VEVENT envelope with CRLF separators.
     """
-    header = (
-        b"BEGIN:VCALENDAR\r\n"
-        b"VERSION:2.0\r\n"
-        b"PRODID:-//Test//EN\r\n"
-        b"BEGIN:VEVENT\r\n"
-    )
+    header = b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Test//EN\r\nBEGIN:VEVENT\r\n"
     footer = b"END:VEVENT\r\nEND:VCALENDAR\r\n"
     return header + body_bytes + footer
 
@@ -99,9 +90,7 @@ def test_unfold_crlf_space_joins_zero_space(
     assert _find_event(out, "e1").get("summary") == "HelloWorld"
 
 
-def test_unfold_crlf_tab_also_unfolds(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_unfold_crlf_tab_also_unfolds(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5545 §3.1: The folding whitespace is SPACE *or* HTAB. CRLF+HTAB
     must also be stripped (the HTAB is NOT kept in the unfolded value)."""
     body = (
@@ -227,9 +216,7 @@ def test_long_description_with_utf8_folded_at_char_boundary(
     body = (
         b"UID:e1\r\n"
         b"DTSTAMP:20260420T120000Z\r\n"
-        b"DTSTART:20260305T100000Z\r\n"
-        + prefix
-        + b"\r\n \xed\x95\x9cCD\r\n"
+        b"DTSTART:20260305T100000Z\r\n" + prefix + b"\r\n \xed\x95\x9cCD\r\n"
     )
     out = _run_parse_bytes(submission_command, _assemble(body), tmp_path)
     expected = ("a" * 61) + "한CD"
@@ -265,9 +252,7 @@ def test_utf8_prefix_exactly_75_octets_then_fold(
     body = (
         b"UID:e1\r\n"
         b"DTSTAMP:20260420T120000Z\r\n"
-        b"DTSTART:20260305T100000Z\r\n"
-        + prefix
-        + b"\r\n tail\r\n"
+        b"DTSTART:20260305T100000Z\r\n" + prefix + b"\r\n tail\r\n"
     )
     out = _run_parse_bytes(submission_command, _assemble(body), tmp_path)
     assert _find_event(out, "e1").get("summary") == ("x" * 67) + "tail"
@@ -293,13 +278,7 @@ def test_folding_at_realistic_75_octet_wrap(
     body = (
         b"UID:e1\r\n"
         b"DTSTAMP:20260420T120000Z\r\n"
-        b"DTSTART:20260305T100000Z\r\n"
-        + line1
-        + b"\r\n"
-        + line2
-        + b"\r\n"
-        + line3
-        + b"\r\n"
+        b"DTSTART:20260305T100000Z\r\n" + line1 + b"\r\n" + line2 + b"\r\n" + line3 + b"\r\n"
     )
     out = _run_parse_bytes(submission_command, _assemble(body), tmp_path)
     expected = ("A" * 63) + ("B" * 74) + ("C" * 20)
@@ -312,11 +291,6 @@ def test_short_line_without_fold_unchanged(
     """Sanity: a short line with no fold marker is unchanged. Protects
     against over-eager unfolders that strip leading whitespace when no
     CRLF precedes it."""
-    body = (
-        b"UID:e1\r\n"
-        b"DTSTAMP:20260420T120000Z\r\n"
-        b"DTSTART:20260305T100000Z\r\n"
-        b"SUMMARY:short\r\n"
-    )
+    body = b"UID:e1\r\nDTSTAMP:20260420T120000Z\r\nDTSTART:20260305T100000Z\r\nSUMMARY:short\r\n"
     out = _run_parse_bytes(submission_command, _assemble(body), tmp_path)
     assert _find_event(out, "e1").get("summary") == "short"

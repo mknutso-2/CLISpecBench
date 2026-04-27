@@ -1,4 +1,5 @@
 """Solid and CSG entity tests for IGES §§4.37-4.48."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -21,11 +22,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -34,7 +40,8 @@ def _roundtrip_single(
 
 
 def test_block_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -56,7 +63,8 @@ def test_block_roundtrip(
 
 
 def test_wedge_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -79,7 +87,8 @@ def test_wedge_roundtrip(
 
 
 def test_right_circular_cylinder_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -97,7 +106,8 @@ def test_right_circular_cylinder_roundtrip(
 
 
 def test_cone_frustum_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -116,7 +126,8 @@ def test_cone_frustum_roundtrip(
 
 
 def test_sphere_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -129,7 +140,8 @@ def test_sphere_roundtrip(
 
 
 def test_torus_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -147,7 +159,8 @@ def test_torus_roundtrip(
 
 
 def test_solid_of_revolution_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -166,7 +179,8 @@ def test_solid_of_revolution_roundtrip(
 
 
 def test_solid_of_linear_extrusion_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -180,7 +194,8 @@ def test_solid_of_linear_extrusion_roundtrip(
 
 
 def test_ellipsoid_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -201,7 +216,8 @@ def test_ellipsoid_roundtrip(
 
 
 def test_boolean_tree_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -213,7 +229,8 @@ def test_boolean_tree_roundtrip(
 
 
 def test_selected_component_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -226,7 +243,8 @@ def test_selected_component_roundtrip(
 
 
 def test_solid_assembly_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

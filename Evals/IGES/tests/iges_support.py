@@ -143,13 +143,15 @@ def make_entity(
 
 def single_line_document(start: Vec3, terminate: Vec3) -> dict[str, Any]:
     """Convenience: a file containing exactly one Type 110 Line entity."""
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": list(start), "terminate": list(terminate)},
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": list(start), "terminate": list(terminate)},
+            ),
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -195,8 +197,10 @@ def write_iges_from_json(
     _run_cli(
         submission_command,
         "write",
-        "--input", str(json_path),
-        "--output", str(iges_path),
+        "--input",
+        str(json_path),
+        "--output",
+        str(iges_path),
     )
     assert iges_path.is_file(), "iges write did not produce an output file"
     return iges_path
@@ -213,8 +217,10 @@ def parse_iges_to_json(
     _run_cli(
         submission_command,
         "parse",
-        "--input", str(iges_path),
-        "--output", str(out),
+        "--input",
+        str(iges_path),
+        "--output",
+        str(out),
     )
     return json.loads(out.read_text(encoding="utf-8"))
 
@@ -231,9 +237,12 @@ def query_entity(
     _run_cli(
         submission_command,
         "query",
-        "--input", str(iges_path),
-        "--de", str(de_index),
-        "--output", str(out),
+        "--input",
+        str(iges_path),
+        "--de",
+        str(de_index),
+        "--output",
+        str(out),
     )
     return json.loads(out.read_text(encoding="utf-8"))
 
@@ -252,10 +261,14 @@ def evaluate_entity(
     out = tmp_path / f"{name}.json"
     args = [
         "eval",
-        "--input", str(iges_path),
-        "--de", str(de_index),
-        "--t", repr(t),
-        "--output", str(out),
+        "--input",
+        str(iges_path),
+        "--de",
+        str(de_index),
+        "--t",
+        repr(t),
+        "--output",
+        str(out),
     ]
     if s is not None:
         args.extend(["--s", repr(s)])
@@ -275,8 +288,10 @@ def roundtrip_iges(
     _run_cli(
         submission_command,
         "roundtrip",
-        "--input", str(iges_path),
-        "--output", str(out),
+        "--input",
+        str(iges_path),
+        "--output",
+        str(out),
     )
     return out
 

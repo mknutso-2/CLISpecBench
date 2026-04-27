@@ -1,4 +1,5 @@
 """Dedicated CLI coverage for core geometric/value entities."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -27,11 +28,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -40,7 +46,8 @@ def _roundtrip_single(
 
 
 def test_circular_arc_eval_full_circle_lands_in_zt_plane(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = {
         "zt": 7.5,
@@ -58,14 +65,20 @@ def test_circular_arc_eval_full_circle_lands_in_zt_plane(
         name="circular-arc",
     )
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, 0.0, tmp_path, name="circular-arc-eval",
+        submission_command,
+        iges_path,
+        1,
+        0.0,
+        tmp_path,
+        name="circular-arc-eval",
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([1.0, 0.0, 7.5], abs=1e-9)
 
 
 def test_direction_roundtrips_non_unit_ratios_without_normalizing(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -77,7 +90,8 @@ def test_direction_roundtrips_non_unit_ratios_without_normalizing(
 
 
 def test_transformation_matrix_roundtrips_rotation_and_translation(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

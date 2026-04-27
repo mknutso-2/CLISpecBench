@@ -29,6 +29,7 @@ __all__ = [
 def pytest_configure(config: pytest.Config) -> None:
     config.addinivalue_line("markers", "trace: tests for the v2.0.0 motion trace feature")
 
+
 EVAL_CONFIG = EvalConfig(
     task_name="rs274",
     reference_impl_subdirs={

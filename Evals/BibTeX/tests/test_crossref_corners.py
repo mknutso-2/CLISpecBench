@@ -72,17 +72,13 @@ def _find_warning(log: dict[str, Any] | None, kind: str) -> list[dict[str, Any]]
 # ---------------------------------------------------------------------------
 
 
-def test_child_inherits_missing_fields(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_child_inherits_missing_fields(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Child missing ``year`` and ``publisher`` inherits them from parent."""
     bib = """
 @proceedings{parent, title = "Proc Vol", year = "2020", publisher = "ACM"}
 @inproceedings{child, author = "Jones", title = "Paper X", crossref = "parent"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["year"] == "2020"
     assert rec["publisher"] == "ACM"
@@ -96,9 +92,7 @@ def test_child_own_field_overrides_inherited(
 @proceedings{parent, title = "Parent Title", year = "2020"}
 @inproceedings{child, title = "Child Title", crossref = "parent"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["title"] == "Child Title"
     # But still inherited fields the child did not define.
@@ -113,9 +107,7 @@ def test_child_without_inheritable_parent_field_is_missing(
 @proceedings{parent, title = "T"}
 @inproceedings{child, crossref = "parent"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     # publisher was defined on neither → missing → empty dump value.
     assert rec["publisher"] == ""
@@ -134,9 +126,7 @@ def test_crossref_lookup_is_case_insensitive(
 @article{parent, year = "1999"}
 @article{child, crossref = "PARENT"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["year"] == "1999"
 
@@ -149,9 +139,7 @@ def test_crossref_lookup_case_insensitive_other_direction(
 @article{PARENT, year = "1999"}
 @article{child, crossref = "parent"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["year"] == "1999"
 
@@ -164,9 +152,7 @@ def test_crossref_mixed_case_parent_key(
 @proceedings{MixedParent, year = "2020"}
 @inproceedings{child, crossref = "MIXEDPARENT"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["year"] == "2020"
 
@@ -180,9 +166,7 @@ def test_unresolved_crossref_emits_warning(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """A crossref to a non-existent key emits ``unresolved_crossref`` (spec §5.3)."""
-    bib = (
-        '@article{child, title = "kept", crossref = "ghost"}\n'
-    )
+    bib = '@article{child, title = "kept", crossref = "ghost"}\n'
     _, log = run_bibtex(
         submission_command,
         bib,
@@ -200,9 +184,7 @@ def test_unresolved_crossref_does_not_lose_child_fields(
 ) -> None:
     """With a ghost crossref target, the child's own fields are still present."""
     bib = '@article{child, title = "kept", crossref = "ghost"}\n'
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["title"] == "kept"
 
@@ -234,9 +216,7 @@ def test_two_entry_cycle_emits_cycle_warning(
     assert len(cycles) >= 1
 
 
-def test_cycle_does_not_prevent_output(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_cycle_does_not_prevent_output(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Even under a cycle, the child's .bbl output is still produced."""
     bib = """
 @article{a, title = "A", crossref = "b"}
@@ -292,9 +272,7 @@ def test_chain_child_own_fields_still_present(
 @misc{b, year = "2020", crossref = "c"}
 @misc{c, publisher = "X"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["a"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["a"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["title"] == "MyTitle"
 
@@ -314,8 +292,6 @@ def test_inherited_macro_field_is_expanded(
 @proceedings{parent, publisher = pub}
 @inproceedings{child, crossref = "parent"}
 """
-    bbl, _ = run_bibtex(
-        submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path
-    )
+    bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["publisher"] == "IEEE"

@@ -41,9 +41,7 @@ def _attendees(ev: dict[str, Any]) -> list[dict[str, Any]]:
 
 
 def _wrap_attendee(line: str) -> str:
-    return wrap_event(
-        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n" + line + "\n"
-    )
+    return wrap_event("UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n" + line + "\n")
 
 
 # --- Value / URI handling ---
@@ -59,9 +57,7 @@ def test_attendee_value_is_cal_address_uri(
     assert att.get("value") == "mailto:jane@example.com"
 
 
-def test_attendee_non_mailto_scheme(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_attendee_non_mailto_scheme(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.3.3: cal-address is a URI; non-mailto schemes are permitted and preserved."""
     ics = _wrap_attendee("ATTENDEE:http://example.com/people/jane")
     out = run_parse(submission_command, ics, tmp_path)
@@ -125,9 +121,7 @@ def test_role_opt_participant_hyphen_preserved(
 # --- PARTSTAT (§3.2.12) ---
 
 
-def test_partstat_needs_action(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_partstat_needs_action(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.12: PARTSTAT=NEEDS-ACTION preserves the hyphen."""
     ics = _wrap_attendee("ATTENDEE;PARTSTAT=NEEDS-ACTION:mailto:x@example.com")
     out = run_parse(submission_command, ics, tmp_path)
@@ -137,18 +131,14 @@ def test_partstat_needs_action(
 # --- RSVP (§3.2.17) ---
 
 
-def test_rsvp_true_becomes_boolean(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_rsvp_true_becomes_boolean(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.17: RSVP=TRUE → boolean true (not the string "TRUE")."""
     ics = _wrap_attendee("ATTENDEE;RSVP=TRUE:mailto:a@example.com")
     out = run_parse(submission_command, ics, tmp_path)
     assert _attendees(find_event(out, "e1"))[0].get("rsvp") is True
 
 
-def test_rsvp_false_becomes_boolean(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_rsvp_false_becomes_boolean(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.17: RSVP=FALSE → boolean false (not the string "FALSE" or null)."""
     ics = _wrap_attendee("ATTENDEE;RSVP=FALSE:mailto:a@example.com")
     out = run_parse(submission_command, ics, tmp_path)
@@ -160,9 +150,7 @@ def test_rsvp_false_becomes_boolean(
 
 def test_member_single_quoted(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.11: MEMBER = DQUOTE cal-address DQUOTE. Single member becomes one-element list."""
-    ics = _wrap_attendee(
-        'ATTENDEE;MEMBER="mailto:team@example.com":mailto:alice@example.com'
-    )
+    ics = _wrap_attendee('ATTENDEE;MEMBER="mailto:team@example.com":mailto:alice@example.com')
     out = run_parse(submission_command, ics, tmp_path)
     att = _attendees(find_event(out, "e1"))[0]
     assert att.get("member") == ["mailto:team@example.com"]
@@ -216,9 +204,7 @@ def test_delegated_to_multiple(submission_command: tuple[str, ...], tmp_path: Pa
 
 def test_dir_quoted_uri(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.6: DIR is a DQUOTE-wrapped URI. The quotes are removed by the parser."""
-    ics = _wrap_attendee(
-        'ATTENDEE;DIR="ldap://example.com:6666/o=ABC,c=US":mailto:jim@example.com'
-    )
+    ics = _wrap_attendee('ATTENDEE;DIR="ldap://example.com:6666/o=ABC,c=US":mailto:jim@example.com')
     out = run_parse(submission_command, ics, tmp_path)
     att = _attendees(find_event(out, "e1"))[0]
     assert att.get("dir") == "ldap://example.com:6666/o=ABC,c=US"
@@ -229,9 +215,7 @@ def test_dir_quoted_uri(submission_command: tuple[str, ...], tmp_path: Path) -> 
 
 def test_sent_by(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.18: SENT-BY holds a mailto URI as a quoted-string. Quotes stripped."""
-    ics = _wrap_attendee(
-        'ATTENDEE;SENT-BY="mailto:assistant@example.com":mailto:boss@example.com'
-    )
+    ics = _wrap_attendee('ATTENDEE;SENT-BY="mailto:assistant@example.com":mailto:boss@example.com')
     out = run_parse(submission_command, ics, tmp_path)
     att = _attendees(find_event(out, "e1"))[0]
     assert att.get("sent_by") == "mailto:assistant@example.com"
@@ -242,9 +226,7 @@ def test_sent_by(submission_command: tuple[str, ...], tmp_path: Path) -> None:
 
 def test_language_tag(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.10: LANGUAGE holds an RFC-5646 language tag; surface verbatim."""
-    ics = _wrap_attendee(
-        'ATTENDEE;LANGUAGE=en-US;CN="Jane":mailto:jane@example.com'
-    )
+    ics = _wrap_attendee('ATTENDEE;LANGUAGE=en-US;CN="Jane":mailto:jane@example.com')
     out = run_parse(submission_command, ics, tmp_path)
     att = _attendees(find_event(out, "e1"))[0]
     assert att.get("language") == "en-US"
@@ -253,9 +235,7 @@ def test_language_tag(submission_command: tuple[str, ...], tmp_path: Path) -> No
 # --- Combined / folded ---
 
 
-def test_combined_parameters_all(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_combined_parameters_all(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.8.4.1: full parameter set on a single ATTENDEE parses cleanly."""
     ics = _wrap_attendee(
         'ATTENDEE;CN="Jane Doe";CUTYPE=INDIVIDUAL;ROLE=REQ-PARTICIPANT;'
@@ -277,9 +257,7 @@ def test_combined_parameters_all(
     assert att.get("value") == "mailto:jane@example.com"
 
 
-def test_folded_attendee_across_lines(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_folded_attendee_across_lines(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.1 content line folding: parameters may span folded lines without loss."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -351,14 +329,10 @@ def test_parameter_name_case_insensitive(
 # --- Invalid / experimental tokens (§3.2.3, §3.2.12, §3.2.16) ---
 
 
-def test_cutype_x_name_passthrough(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_cutype_x_name_passthrough(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.3 + §3.2.16: experimental (x-name) or unknown IANA tokens on
     CUTYPE / ROLE must round-trip, not be dropped or validated away."""
-    ics = _wrap_attendee(
-        "ATTENDEE;CUTYPE=X-ROBOT;ROLE=REVIEWER:mailto:bot@example.com"
-    )
+    ics = _wrap_attendee("ATTENDEE;CUTYPE=X-ROBOT;ROLE=REVIEWER:mailto:bot@example.com")
     out = run_parse(submission_command, ics, tmp_path)
     att = _attendees(find_event(out, "e1"))[0]
     assert att.get("cutype") == "X-ROBOT"

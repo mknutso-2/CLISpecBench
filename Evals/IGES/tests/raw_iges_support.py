@@ -22,11 +22,16 @@ def build_global_payload(
     """Build a raw Global-section payload from fields 3..26."""
     if len(fields) != 24:
         raise ValueError(f"expected 24 global fields, got {len(fields)}")
-    return param_delimiter.join([
-        hollerith(param_delimiter),
-        hollerith(record_delimiter),
-        *fields,
-    ]) + record_delimiter
+    return (
+        param_delimiter.join(
+            [
+                hollerith(param_delimiter),
+                hollerith(record_delimiter),
+                *fields,
+            ]
+        )
+        + record_delimiter
+    )
 
 
 def pad_iges_line(data: str, section: str, seq: int) -> str:
@@ -43,7 +48,7 @@ def make_empty_iges(
     starts = list(start_lines or ["pytest fixture"])
     s_lines = [pad_iges_line(line, "S", i + 1) for i, line in enumerate(starts)]
     g_lines = [
-        pad_iges_line(global_payload[i:i + 72], "G", (i // 72) + 1)
+        pad_iges_line(global_payload[i : i + 72], "G", (i // 72) + 1)
         for i in range(0, len(global_payload), 72)
     ]
     t_body = f"S{len(s_lines):>7d}G{len(g_lines):>7d}D{0:>7d}P{0:>7d}"

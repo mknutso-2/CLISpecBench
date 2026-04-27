@@ -42,12 +42,7 @@ def _warn_kinds(out: dict[str, Any]) -> list[str]:
 
 
 def _wrap(method: str, event_body: str) -> str:
-    return (
-        HEAD
-        + f"METHOD:{method}\n"
-        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n"
-        + TAIL
-    )
+    return HEAD + f"METHOD:{method}\n" + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
 
 
 # ---------------------------------------------------------------------------
@@ -55,9 +50,7 @@ def _wrap(method: str, event_body: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_publish_forbids_attendee(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_publish_forbids_attendee(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3.2.1: PUBLISH MUST NOT include ATTENDEE."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -68,9 +61,7 @@ def test_publish_forbids_attendee(
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_publish_without_attendee_ok(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_publish_without_attendee_ok(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A PUBLISH with all §3.2.1 "1" rows (UID, DTSTAMP, DTSTART,
     ORGANIZER, SUMMARY) and no ATTENDEE is legal."""
     body = (
@@ -87,9 +78,7 @@ def test_publish_without_attendee_ok(
 # ---------------------------------------------------------------------------
 
 
-def test_add_requires_organizer(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_add_requires_organizer(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """METHOD:ADD without ORGANIZER → itip_missing_property."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
@@ -99,9 +88,7 @@ def test_add_requires_organizer(
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_add_with_organizer_ok(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_add_with_organizer_ok(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3.2.4 full matrix: DTSTAMP 1, DTSTART 1, ORGANIZER 1,
     SEQUENCE 1 (>0), SUMMARY 1, UID 1. Fixture satisfies every "1"
     row; SEQUENCE:1 is the canonical "first added instance" value."""
@@ -135,33 +122,21 @@ def test_add_sequence_must_be_greater_than_zero(
 # ---------------------------------------------------------------------------
 
 
-def test_refresh_requires_organizer(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_refresh_requires_organizer(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """REFRESH without ORGANIZER → itip_missing_property."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "ATTENDEE:mailto:a@example.com\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nATTENDEE:mailto:a@example.com\n"
     out = run_parse(submission_command, _wrap("REFRESH", body), tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_refresh_requires_attendee(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_refresh_requires_attendee(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """REFRESH without ATTENDEE → itip_missing_property."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "ORGANIZER:mailto:boss@example.com\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nORGANIZER:mailto:boss@example.com\n"
     out = run_parse(submission_command, _wrap("REFRESH", body), tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_refresh_with_both_ok(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_refresh_with_both_ok(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """REFRESH with ORGANIZER + ATTENDEE and no SEQUENCE is valid per
     RFC 5546 §3.2.6 (SEQUENCE row is "0" — MUST NOT be present)."""
     body = (
@@ -173,9 +148,7 @@ def test_refresh_with_both_ok(
     assert "itip_missing_property" not in _warn_kinds(out)
 
 
-def test_refresh_forbids_sequence(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_refresh_forbids_sequence(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3.2.6 table row: SEQUENCE "0" — MUST NOT be present on a
     REFRESH. Inclusion of SEQUENCE is a semantic violation."""
     body = (
@@ -192,9 +165,7 @@ def test_refresh_forbids_sequence(
 # ---------------------------------------------------------------------------
 
 
-def test_counter_requires_organizer(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_counter_requires_organizer(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
         "ATTENDEE:mailto:a@example.com\n"
@@ -221,9 +192,7 @@ def test_counter_does_not_require_attendee(
     assert "itip_missing_property" not in _warn_kinds(out)
 
 
-def test_counter_requires_sequence(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_counter_requires_sequence(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3.2.7 SEQUENCE row is "1" — MUST echo the original."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\n"
@@ -235,9 +204,7 @@ def test_counter_requires_sequence(
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_counter_with_both_ok(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_counter_with_both_ok(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """COUNTER VEVENT with every §3.2.7 "1" row satisfied plus an
     optional ATTENDEE (propose another attendee)."""
     body = (
@@ -258,10 +225,7 @@ def test_counter_with_both_ok(
 def test_declinecounter_requires_organizer(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "ATTENDEE:mailto:a@example.com\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nATTENDEE:mailto:a@example.com\n"
     out = run_parse(submission_command, _wrap("DECLINECOUNTER", body), tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
 
@@ -283,19 +247,14 @@ def test_declinecounter_with_organizer_ok(
 # ---------------------------------------------------------------------------
 
 
-def test_method_value_canonicalization(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_method_value_canonicalization(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Lowercase `method:request` triggers REQUEST-style validation
     regardless of how the tool canonicalizes the casing."""
     ics = (
-        HEAD
-        + "method:request\n"
-        + "BEGIN:VEVENT\n"
+        HEAD + "method:request\n" + "BEGIN:VEVENT\n"
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
         "SUMMARY:Event\n"  # missing ORGANIZER
-        "END:VEVENT\n"
-        + TAIL
+        "END:VEVENT\n" + TAIL
     )
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
@@ -306,9 +265,7 @@ def test_method_value_canonicalization(
 # ---------------------------------------------------------------------------
 
 
-def test_cancel_requires_sequence(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_cancel_requires_sequence(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3.2.5 SEQUENCE row is "1" — CANCEL REQUIRES SEQUENCE.
     (By contrast REQUEST, REPLY, and PUBLISH have SEQUENCE "0 or 1",
     so SEQUENCE is not universally required — we pick CANCEL here as
@@ -341,9 +298,7 @@ def test_request_allows_omitted_sequence(
     assert "itip_missing_property" not in _warn_kinds(out)
 
 
-def test_itip_requires_dtstamp(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_itip_requires_dtstamp(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3: DTSTAMP is "1" (required) in every §3.2.x table
     including PUBLISH. Missing DTSTAMP triggers the warning."""
     body = (
@@ -363,17 +318,14 @@ def test_declinecounter_requires_attendee(
     DECLINECOUNTER without ATTENDEE must warn (the Attendee being
     declined is identified by this field)."""
     body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:1\n"
-        "ORGANIZER:mailto:boss@example.com\n"
+        "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:1\nORGANIZER:mailto:boss@example.com\n"
         # no ATTENDEE
     )
     out = run_parse(submission_command, _wrap("DECLINECOUNTER", body), tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_request_requires_attendee(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_request_requires_attendee(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 5546 §3.2.2: REQUEST requires at least one ATTENDEE."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
@@ -398,25 +350,19 @@ def test_publish_does_not_require_sequence(
     assert "itip_missing_property" not in _warn_kinds(out)
 
 
-def test_itip_warning_per_event(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_itip_warning_per_event(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """When a calendar has multiple events, validation runs per-event."""
     ics = (
-        HEAD
-        + "METHOD:REQUEST\n"
-        + "BEGIN:VEVENT\n"
+        HEAD + "METHOD:REQUEST\n" + "BEGIN:VEVENT\n"
         "UID:a\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
         "DTSTART:20260301T100000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE;PARTSTAT=ACCEPTED:mailto:x@example.com\n"
-        "END:VEVENT\n"
-        + "BEGIN:VEVENT\n"
+        "END:VEVENT\n" + "BEGIN:VEVENT\n"
         "UID:b\nDTSTAMP:20260101T120000Z\nSEQUENCE:0\n"
         "DTSTART:20260302T100000Z\n"
         # missing ORGANIZER on the second event
-        "END:VEVENT\n"
-        + TAIL
+        "END:VEVENT\n" + TAIL
     )
     out = run_parse(submission_command, ics, tmp_path)
     # The first event is fine; the second should warn.

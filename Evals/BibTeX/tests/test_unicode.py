@@ -104,12 +104,10 @@ def test_latex_diacritic_preserved_in_field(
     # The raw backslash-quote-o construct should appear.
     assert "ne" in bbl
     # Either {\"o} or ö variant (if impl normalizes).
-    assert "\\\"o" in bbl or "ö" in bbl or '{"o}' in bbl
+    assert '\\"o' in bbl or "ö" in bbl or '{"o}' in bbl
 
 
-def test_purify_preserves_ascii_bytes(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_purify_preserves_ascii_bytes(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """purify$ on a plain ASCII string preserves the letters (modulo the
     documented punctuation stripping rules)."""
     style = """\
@@ -128,9 +126,7 @@ EXECUTE {f}
 # ---------------------------------------------------------------------------
 
 
-def test_substring_is_byte_oriented(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_substring_is_byte_oriented(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """substring$ operates on bytes, consistent with bibtex.web's 8-bit view.
 
     For a pure-ASCII string "hello", substring$ #1 #3 returns "hel".

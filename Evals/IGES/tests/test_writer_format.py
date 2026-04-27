@@ -1,4 +1,5 @@
 """Writer-format tests for Hollerith, real, and logical output."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -30,8 +31,8 @@ _REAL_TOKEN_RE = re.compile(
     #   [±] (digits . [digits] | . digits | digits)  ( [DE] [±] digits )?
     # with the constraint that decimal-point-or-exponent is present.
     r"^[+-]?(?:"
-    r"\d+\.\d*|\.\d+|\d+\.|"          # forms containing a decimal point
-    r"\d+(?=[eEdD])"                  # integer form, must be followed by exponent
+    r"\d+\.\d*|\.\d+|\d+\.|"  # forms containing a decimal point
+    r"\d+(?=[eEdD])"  # integer form, must be followed by exponent
     r")(?:[eEdD][+-]?\d+)?$"
 )
 
@@ -68,9 +69,7 @@ def test_real_values_in_parameter_records_are_spec_legal(
     assert len(tokens) == 6, tokens
     expected = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
     for tok, want in zip(tokens, expected, strict=True):
-        assert _REAL_TOKEN_RE.match(tok), (
-            f"{tok!r} is not a spec-legal real literal (§2.2.2.2)"
-        )
+        assert _REAL_TOKEN_RE.match(tok), f"{tok!r} is not a spec-legal real literal (§2.2.2.2)"
         # Allow the IGES D exponent for double precision.
         got = float(tok.replace("D", "E").replace("d", "e"))
         assert got == want, f"token {tok!r} decodes to {got}, expected {want}"
@@ -79,13 +78,15 @@ def test_real_values_in_parameter_records_are_spec_legal(
 def test_string_values_in_parameter_records_use_hollerith_encoding(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=308,
-            data={"depth": 1, "name": "NETLIST", "n": 0, "entities": []},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=308,
+                data={"depth": 1, "name": "NETLIST", "n": 0, "entities": []},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="pd-hollerith")
 
     p_body = physical_lines_by_section(iges_path)["P"][0][:64].rstrip()
@@ -95,14 +96,16 @@ def test_string_values_in_parameter_records_use_hollerith_encoding(
 def test_logical_values_in_parameter_records_use_zero_and_one(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=510,
-            form=1,
-            data={"surf": 0, "n": 0, "outer_loop_flag": True, "loops": []},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=510,
+                form=1,
+                data={"surf": 0, "n": 0, "outer_loop_flag": True, "loops": []},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="logical-format")
 
     p_body = physical_lines_by_section(iges_path)["P"][0][:64].rstrip()

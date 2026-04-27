@@ -40,6 +40,7 @@ def _tz_or_empty(out: dict[str, Any]) -> dict[str, Any]:
     tzs = _timezones(out)
     return tzs[0] if tzs else {}
 
+
 # ---------------------------------------------------------------------------
 # US DST rule change (2007): two STANDARD + two DAYLIGHT observances.
 # ---------------------------------------------------------------------------
@@ -192,10 +193,7 @@ def test_dst_rule_2005_uses_pre_2007_april_rule(
     """An event on 2005-04-10 10:00 local America/New_York MUST use the pre-2007
     rule: DST started April 3, 2005 (1st Sunday of April). So April 10 is DST
     (EDT, -0400). 10:00 EDT = 14:00 UTC."""
-    body = (
-        "UID:e1\nDTSTAMP:20050101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20050410T100000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20050101T120000Z\nDTSTART;TZID=America/New_York:20050410T100000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -214,10 +212,7 @@ def test_dst_rule_2005_early_march_is_standard_time(
     """Under the pre-2007 rule, DST did NOT start until the 1st Sunday of April.
     An event on 2005-03-15 10:00 local is still in EST (-0500), so 15:00 UTC.
     (Under the post-2007 rule, 2005-03-15 would already be DST, which is wrong.)"""
-    body = (
-        "UID:e1\nDTSTAMP:20050101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20050315T100000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20050101T120000Z\nDTSTART;TZID=America/New_York:20050315T100000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -236,10 +231,7 @@ def test_dst_rule_2010_uses_post_2007_march_rule(
     """Under the post-2007 rule, DST starts the 2nd Sunday of March. For 2010
     that is March 14. An event on 2010-03-20 10:00 local is DST (EDT), so
     14:00 UTC."""
-    body = (
-        "UID:e1\nDTSTAMP:20100101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20100320T100000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20100101T120000Z\nDTSTART;TZID=America/New_York:20100320T100000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -259,10 +251,7 @@ def test_dst_rule_2010_late_october_is_still_dst(
     that is November 7. An event on 2010-10-25 10:00 local is still DST (EDT),
     so 14:00 UTC. (Under the pre-2007 rule, DST would have already ended on
     2010-10-31, which would be wrong.)"""
-    body = (
-        "UID:e1\nDTSTAMP:20100101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20101025T100000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20100101T120000Z\nDTSTART;TZID=America/New_York:20101025T100000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -282,10 +271,7 @@ def test_dst_rule_2005_late_october_is_standard_time(
     that is October 30. An event on 2005-10-31 10:00 local is EST (-0500), so
     15:00 UTC. (Under the post-2007 rule, 2005-10-31 would still be DST, which
     would be wrong for that era.)"""
-    body = (
-        "UID:e1\nDTSTAMP:20050101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20051031T100000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20050101T120000Z\nDTSTART;TZID=America/New_York:20051031T100000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -334,10 +320,7 @@ def test_event_before_any_observance_dtstart_uses_earliest_observance(
     observance's DTSTART). The pre-2007 DAYLIGHT observance has TZOFFSETFROM
     -0500 (= EST, pre-DST state), so a March 1995 event at 10:00 resolves to
     15:00 UTC under EST."""
-    body = (
-        "UID:e1\nDTSTAMP:19950101T120000Z\n"
-        "DTSTART;TZID=America/New_York:19950315T100000\n"
-    )
+    body = "UID:e1\nDTSTAMP:19950101T120000Z\nDTSTART;TZID=America/New_York:19950315T100000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -394,9 +377,7 @@ def test_historical_tzoffsets_normalized_with_colon(
             all_offsets.add(obs["tzoffsetto"])
     # Every offset string should start with + or -.
     for off in all_offsets:
-        assert isinstance(off, str) and off[:1] in "+-", (
-            f"offset not in canonical form: {off!r}"
-        )
+        assert isinstance(off, str) and off[:1] in "+-", f"offset not in canonical form: {off!r}"
 
 
 # ---------------------------------------------------------------------------

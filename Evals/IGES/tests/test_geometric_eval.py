@@ -12,6 +12,7 @@ using each entity's **native** parameter domain (not a normalized
 * Curve ``eval`` with ``--s`` supplied — must be rejected.
 * Surface ``eval`` without ``--s`` — must be rejected.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -38,18 +39,23 @@ def _single_arc_document(
     start: tuple[float, float],
     end: tuple[float, float],
 ) -> dict[str, object]:
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=100,
-            data={
-                "zt": zt,
-                "x1": center[0], "y1": center[1],
-                "x2": start[0],  "y2": start[1],
-                "x3": end[0],    "y3": end[1],
-            },
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=100,
+                data={
+                    "zt": zt,
+                    "x1": center[0],
+                    "y1": center[1],
+                    "x2": start[0],
+                    "y2": start[1],
+                    "x3": end[0],
+                    "y3": end[1],
+                },
+            ),
+        ]
+    )
 
 
 # §4.3: Circular Arc parameterization.
@@ -78,21 +84,15 @@ def test_arc_eval_at_end_angle_gives_end_point(
 ) -> None:
     doc = _single_arc_document(0.0, (0.0, 0.0), (5.0, 0.0), (0.0, 5.0))
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command, iges_path, 1, math.pi / 2, tmp_path
-    )
+    _, payload = evaluate_entity(submission_command, iges_path, 1, math.pi / 2, tmp_path)
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.0, 5.0, 0.0], abs=1e-9)
 
 
-def test_arc_eval_at_midangle_is_on_arc(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
+def test_arc_eval_at_midangle_is_on_arc(submission_command: Sequence[str], tmp_path: Path) -> None:
     doc = _single_arc_document(0.0, (0.0, 0.0), (5.0, 0.0), (0.0, 5.0))
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command, iges_path, 1, math.pi / 4, tmp_path
-    )
+    _, payload = evaluate_entity(submission_command, iges_path, 1, math.pi / 4, tmp_path)
     assert payload.get("ok") is True
     expected = 5.0 * math.cos(math.pi / 4)
     assert payload.get("point") == pytest.approx([expected, expected, 0.0], abs=1e-9)
@@ -118,11 +118,16 @@ def test_arc_eval_at_nonzero_start_angle_returns_start_point(
     doc = _single_arc_document(0.0, (0.0, 0.0), start, end)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, start_angle, tmp_path,
+        submission_command,
+        iges_path,
+        1,
+        start_angle,
+        tmp_path,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx(
-        [start[0], start[1], 0.0], abs=1e-9,
+        [start[0], start[1], 0.0],
+        abs=1e-9,
     )
 
 
@@ -137,11 +142,16 @@ def test_arc_eval_at_nonzero_end_angle_returns_end_point(
     doc = _single_arc_document(0.0, (0.0, 0.0), start, end)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, end_angle, tmp_path,
+        submission_command,
+        iges_path,
+        1,
+        end_angle,
+        tmp_path,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx(
-        [end[0], end[1], 0.0], abs=1e-9,
+        [end[0], end[1], 0.0],
+        abs=1e-9,
     )
 
 
@@ -160,7 +170,11 @@ def test_arc_eval_offcenter_arc_midangle_on_circle(
     # Mid-arc angle must land on the circle centered at (cx, cy).
     mid = (start_angle + end_angle) / 2.0
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, mid, tmp_path,
+        submission_command,
+        iges_path,
+        1,
+        mid,
+        tmp_path,
     )
     assert payload.get("ok") is True
     point = payload.get("point")
@@ -170,9 +184,7 @@ def test_arc_eval_offcenter_arc_midangle_on_circle(
     assert pz == pytest.approx(0.0, abs=1e-9)
 
 
-def test_arc_eval_respects_z_plane(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
+def test_arc_eval_respects_z_plane(submission_command: Sequence[str], tmp_path: Path) -> None:
     # Arc parallel to XY but at z = 2.5.
     doc = _single_arc_document(2.5, (0.0, 0.0), (1.0, 0.0), (0.0, 1.0))
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
@@ -188,65 +200,117 @@ def test_arc_eval_respects_z_plane(
 # The spec's default parameterization is form-dependent and evaluated in
 # definition space before any entity transformation matrix is applied.
 def _parabolic_conic_document() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=104, form=3, data={
-            "A": 1.0, "B": 0.0, "C": 0.0, "D": 0.0, "E": -1.0, "F": 0.0,
-            "zt": 2.0,
-            "x1": -2.0, "y1": 4.0,
-            "x2": 2.0, "y2": 4.0,
-        }),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=104,
+                form=3,
+                data={
+                    "A": 1.0,
+                    "B": 0.0,
+                    "C": 0.0,
+                    "D": 0.0,
+                    "E": -1.0,
+                    "F": 0.0,
+                    "zt": 2.0,
+                    "x1": -2.0,
+                    "y1": 4.0,
+                    "x2": 2.0,
+                    "y2": 4.0,
+                },
+            ),
+        ]
+    )
 
 
 def _elliptic_conic_document() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=104, form=1, data={
-            "A": -0.25, "B": 0.0, "C": -(1.0 / 9.0),
-            "D": 0.0, "E": 0.0, "F": 1.0,
-            "zt": 1.5,
-            "x1": 2.0, "y1": 0.0,
-            "x2": 0.0, "y2": 3.0,
-        }),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=104,
+                form=1,
+                data={
+                    "A": -0.25,
+                    "B": 0.0,
+                    "C": -(1.0 / 9.0),
+                    "D": 0.0,
+                    "E": 0.0,
+                    "F": 1.0,
+                    "zt": 1.5,
+                    "x1": 2.0,
+                    "y1": 0.0,
+                    "x2": 0.0,
+                    "y2": 3.0,
+                },
+            ),
+        ]
+    )
 
 
 def _hyperbolic_conic_document() -> dict[str, object]:
     root_two = math.sqrt(2.0)
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=104, form=2, data={
-            "A": 0.25, "B": 0.0, "C": -(1.0 / 9.0),
-            "D": 0.0, "E": 0.0, "F": -1.0,
-            "zt": -1.0,
-            "x1": 2.0 * root_two, "y1": -3.0,
-            "x2": 2.0 * root_two, "y2": 3.0,
-        }),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=104,
+                form=2,
+                data={
+                    "A": 0.25,
+                    "B": 0.0,
+                    "C": -(1.0 / 9.0),
+                    "D": 0.0,
+                    "E": 0.0,
+                    "F": -1.0,
+                    "zt": -1.0,
+                    "x1": 2.0 * root_two,
+                    "y1": -3.0,
+                    "x2": 2.0 * root_two,
+                    "y2": 3.0,
+                },
+            ),
+        ]
+    )
 
 
 def _transformed_elliptic_conic_document() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=124, data={
-            "rotation": [
-                [0.0, -1.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0],
-            ],
-            "translation": [10.0, -5.0, 2.0],
-        }),
-        make_entity(
-            de_index=3,
-            entity_type=104,
-            form=1,
-            data={
-                "A": -0.25, "B": 0.0, "C": -(1.0 / 9.0),
-                "D": 0.0, "E": 0.0, "F": 1.0,
-                "zt": 1.0,
-                "x1": 2.0, "y1": 0.0,
-                "x2": 0.0, "y2": 3.0,
-            },
-            directory_entry_overrides={"xform_matrix": 1},
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=124,
+                data={
+                    "rotation": [
+                        [0.0, -1.0, 0.0],
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "translation": [10.0, -5.0, 2.0],
+                },
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=104,
+                form=1,
+                data={
+                    "A": -0.25,
+                    "B": 0.0,
+                    "C": -(1.0 / 9.0),
+                    "D": 0.0,
+                    "E": 0.0,
+                    "F": 1.0,
+                    "zt": 1.0,
+                    "x1": 2.0,
+                    "y1": 0.0,
+                    "x2": 0.0,
+                    "y2": 3.0,
+                },
+                directory_entry_overrides={"xform_matrix": 1},
+            ),
+        ]
+    )
 
 
 def test_parabolic_conic_eval_reaches_vertex_at_midparameter(
@@ -264,9 +328,7 @@ def test_elliptic_conic_eval_midangle_matches_semiaxes(
 ) -> None:
     doc = _elliptic_conic_document()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command, iges_path, 1, math.pi / 4, tmp_path
-    )
+    _, payload = evaluate_entity(submission_command, iges_path, 1, math.pi / 4, tmp_path)
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx(
         [math.sqrt(2.0), 3.0 / math.sqrt(2.0), 1.5],
@@ -289,9 +351,7 @@ def test_transformed_elliptic_conic_applies_entity_matrix_after_eval(
 ) -> None:
     doc = _transformed_elliptic_conic_document()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command, iges_path, 3, math.pi / 2, tmp_path
-    )
+    _, payload = evaluate_entity(submission_command, iges_path, 3, math.pi / 2, tmp_path)
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([7.0, -5.0, 3.0], abs=1e-9)
 
@@ -308,14 +368,16 @@ def _copious_data_form11_document(
     flat: list[float] = []
     for x, y in points_2d:
         flat.extend([x, y])
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=106,
-            form=11,
-            data={"ip": 1, "n": len(points_2d), "zt": zt, "data": flat},
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=106,
+                form=11,
+                data={"ip": 1, "n": len(points_2d), "zt": zt, "data": flat},
+            ),
+        ]
+    )
 
 
 def _copious_data_form12_document(
@@ -324,22 +386,22 @@ def _copious_data_form12_document(
     flat: list[float] = []
     for x, y, z in points_3d:
         flat.extend([x, y, z])
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=106,
-            form=12,
-            data={"ip": 2, "n": len(points_3d), "zt": 0.0, "data": flat},
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=106,
+                form=12,
+                data={"ip": 2, "n": len(points_3d), "zt": 0.0, "data": flat},
+            ),
+        ]
+    )
 
 
 def test_copious_data_form11_at_vertex_returns_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = _copious_data_form11_document(
-        2.5, [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]
-    )
+    doc = _copious_data_form11_document(2.5, [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 1.0, tmp_path)
     assert payload.get("ok") is True
@@ -350,9 +412,7 @@ def test_copious_data_form11_at_vertex_returns_point(
 def test_copious_data_form11_midpoint_interpolates(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = _copious_data_form11_document(
-        0.0, [(0.0, 0.0), (2.0, 0.0), (2.0, 4.0)]
-    )
+    doc = _copious_data_form11_document(0.0, [(0.0, 0.0), (2.0, 0.0), (2.0, 4.0)])
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t = 1.5: halfway between tuples 1 (2,0) and 2 (2,4).
     _, payload = evaluate_entity(submission_command, iges_path, 1, 1.5, tmp_path)
@@ -363,11 +423,13 @@ def test_copious_data_form11_midpoint_interpolates(
 def test_copious_data_form12_3d_path_at_fractional_t(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = _copious_data_form12_document([
-        (0.0, 0.0, 0.0),
-        (3.0, 0.0, 0.0),
-        (3.0, 0.0, 6.0),
-    ])
+    doc = _copious_data_form12_document(
+        [
+            (0.0, 0.0, 0.0),
+            (3.0, 0.0, 0.0),
+            (3.0, 0.0, 6.0),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t = 0.25: 25% between tuples 0 and 1 → (0.75, 0, 0).
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.25, tmp_path)
@@ -390,22 +452,22 @@ def _copious_data_form63_document(
     flat: list[float] = []
     for x, y in points_2d:
         flat.extend([x, y])
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=106,
-            form=63,
-            data={"ip": 1, "n": len(points_2d), "zt": zt, "data": flat},
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=106,
+                form=63,
+                data={"ip": 1, "n": len(points_2d), "zt": zt, "data": flat},
+            ),
+        ]
+    )
 
 
 def test_copious_data_form63_midpoint_interpolates(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = _copious_data_form63_document(
-        1.5, [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)]
-    )
+    doc = _copious_data_form63_document(1.5, [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)])
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t = 0.5: halfway along first edge (0,0) → (4,0), so point is
     # (2.0, 0.0, zt=1.5).
@@ -424,14 +486,21 @@ def test_copious_data_form63_midpoint_interpolates(
 def test_composite_curve_eval_at_start_returns_first_constituent_start(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
-        make_entity(de_index=5, entity_type=102, data={
-            "constituents": [1, 3]}),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]},
+            ),
+            make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 0.0, tmp_path)
     assert payload.get("ok") is True
@@ -441,14 +510,21 @@ def test_composite_curve_eval_at_start_returns_first_constituent_start(
 def test_composite_curve_eval_inside_first_constituent(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
-        make_entity(de_index=5, entity_type=102, data={
-            "constituents": [1, 3]}),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]},
+            ),
+            make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t = 0.5 → halfway along first Line (native [0,1]) → (1.5, 0, 0)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 0.5, tmp_path)
@@ -459,14 +535,21 @@ def test_composite_curve_eval_inside_first_constituent(
 def test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
-        make_entity(de_index=5, entity_type=102, data={
-            "constituents": [1, 3]}),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]},
+            ),
+            make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t = 1.0 is the junction; both legs pass through (3, 0, 0).
     _, payload = evaluate_entity(submission_command, iges_path, 5, 1.0, tmp_path)
@@ -477,14 +560,21 @@ def test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint(
 def test_composite_curve_eval_inside_second_constituent(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
-        make_entity(de_index=5, entity_type=102, data={
-            "constituents": [1, 3]}),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]},
+            ),
+            make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t = 1.5 → halfway along second Line, local t = 0.5 → (3, 2, 0)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 1.5, tmp_path)
@@ -495,14 +585,21 @@ def test_composite_curve_eval_inside_second_constituent(
 def test_composite_curve_eval_at_terminus_returns_second_constituent_end(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]}),
-        make_entity(de_index=5, entity_type=102, data={
-            "constituents": [1, 3]}),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [3.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [3.0, 0.0, 0.0], "terminate": [3.0, 4.0, 0.0]},
+            ),
+            make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 2.0, tmp_path)
     assert payload.get("ok") is True
@@ -516,20 +613,35 @@ def test_composite_curve_eval_at_terminus_returns_second_constituent_end(
 # parameter t_in_base is (10*t_in_base, 2, 0). The offset curve uses
 # the base curve's parameter [TT1, TT2] = [0, 1].
 def _offset_curve_over_line_doc(d1: float) -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [10.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=130, data={
-            "de1": 1,
-            "flag": 1,    # uniform offset
-            "de2": 0,
-            "ndim": 0,
-            "ptype": 2,   # parameter
-            "d1": d1, "td1": 0.0, "d2": 0.0, "td2": 0.0,
-            "vx": 0.0, "vy": 1.0, "vz": 0.0,  # +Y unit normal
-            "tt1": 0.0, "tt2": 1.0,
-        }),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [10.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=130,
+                data={
+                    "de1": 1,
+                    "flag": 1,  # uniform offset
+                    "de2": 0,
+                    "ndim": 0,
+                    "ptype": 2,  # parameter
+                    "d1": d1,
+                    "td1": 0.0,
+                    "d2": 0.0,
+                    "td2": 0.0,
+                    "vx": 0.0,
+                    "vy": 1.0,
+                    "vz": 0.0,  # +Y unit normal
+                    "tt1": 0.0,
+                    "tt2": 1.0,
+                },
+            ),
+        ]
+    )
 
 
 def test_offset_curve_eval_at_start_is_displaced_base_start(
@@ -570,17 +682,27 @@ def test_offset_curve_eval_nonzero_offset_follows_base(
 #   Curve 2: (0,5,0) → (10,5,0)
 # Form 0: t ∈ [0, 1] along curves, s ∈ [0, 1] across the rule.
 # At (t, s) = (0.3, 0.4): point = (3, 2, 0).
-def _ruled_surface_two_lines_doc(
-    dirflg: int = 0, form: int = 0
-) -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [10.0, 0.0, 0.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [0.0, 5.0, 0.0], "terminate": [10.0, 5.0, 0.0]}),
-        make_entity(de_index=5, entity_type=118, form=form, data={
-            "de1": 1, "de2": 3, "dirflg": dirflg, "devflg": 0}),
-    ])
+def _ruled_surface_two_lines_doc(dirflg: int = 0, form: int = 0) -> dict[str, object]:
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [10.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [0.0, 5.0, 0.0], "terminate": [10.0, 5.0, 0.0]},
+            ),
+            make_entity(
+                de_index=5,
+                entity_type=118,
+                form=form,
+                data={"de1": 1, "de2": 3, "dirflg": dirflg, "devflg": 0},
+            ),
+        ]
+    )
 
 
 def test_ruled_surface_eval_interior_point(
@@ -589,7 +711,12 @@ def test_ruled_surface_eval_interior_point(
     doc = _ruled_surface_two_lines_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.3, tmp_path, s=0.4,
+        submission_command,
+        iges_path,
+        5,
+        0.3,
+        tmp_path,
+        s=0.4,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([3.0, 2.0, 0.0], abs=1e-9)
@@ -601,7 +728,12 @@ def test_ruled_surface_eval_on_first_curve_returns_curve1_point(
     doc = _ruled_surface_two_lines_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.5, tmp_path, s=0.0,
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        s=0.0,
     )
     assert payload.get("ok") is True
     # s=0 is on curve 1 at u=0.5 → (5, 0, 0)
@@ -614,7 +746,12 @@ def test_ruled_surface_eval_on_second_curve_returns_curve2_point(
     doc = _ruled_surface_two_lines_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.5, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     # s=1 is on curve 2 at u=0.5 → (5, 5, 0)
@@ -629,7 +766,12 @@ def test_ruled_surface_eval_dirflg_reverses_second_curve(
     doc = _ruled_surface_two_lines_doc(dirflg=1)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.0, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        5,
+        0.0,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([10.0, 5.0, 0.0], abs=1e-9)
@@ -645,16 +787,24 @@ def test_ruled_surface_eval_dirflg_reverses_second_curve(
 # Line native param t ∈ [0, 1], so at t=0.5 the generatrix point is
 # (2, 0, 1.5).
 def _cylinder_via_surface_of_revolution(
-    sa: float, ta: float,
+    sa: float,
+    ta: float,
 ) -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [0.0, 0.0, 0.0], "terminate": [0.0, 0.0, 1.0]}),
-        make_entity(de_index=3, entity_type=110, data={
-            "start": [2.0, 0.0, 0.0], "terminate": [2.0, 0.0, 3.0]}),
-        make_entity(de_index=5, entity_type=120, data={
-            "l": 1, "c": 3, "sa": sa, "ta": ta}),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [0.0, 0.0, 1.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [2.0, 0.0, 0.0], "terminate": [2.0, 0.0, 3.0]},
+            ),
+            make_entity(de_index=5, entity_type=120, data={"l": 1, "c": 3, "sa": sa, "ta": ta}),
+        ]
+    )
 
 
 def test_surface_of_revolution_eval_at_start_angle(
@@ -667,7 +817,12 @@ def test_surface_of_revolution_eval_at_start_angle(
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t=0 → generatrix start (2, 0, 0); s=0 → no rotation.
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.0, tmp_path, s=0.0,
+        submission_command,
+        iges_path,
+        5,
+        0.0,
+        tmp_path,
+        s=0.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([2.0, 0.0, 0.0], abs=1e-9)
@@ -681,7 +836,12 @@ def test_surface_of_revolution_eval_quarter_rotation(
     # t=0.5 → generatrix point (2, 0, 1.5); s=π/2 → rotate 90° about Z
     # → (0, 2, 1.5).
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.5, tmp_path, s=math.pi / 2,
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        s=math.pi / 2,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.0, 2.0, 1.5], abs=1e-9)
@@ -694,7 +854,12 @@ def test_surface_of_revolution_eval_half_rotation(
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     # t=1 → generatrix end (2, 0, 3); s=π → rotate 180° → (−2, 0, 3).
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 1.0, tmp_path, s=math.pi,
+        submission_command,
+        iges_path,
+        5,
+        1.0,
+        tmp_path,
+        s=math.pi,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([-2.0, 0.0, 3.0], abs=1e-9)
@@ -707,25 +872,41 @@ def test_surface_of_revolution_eval_half_rotation(
 # entity's terminate point. `s` runs from the directrix (`s=0`) to the
 # terminate point (`s=1`) along that fixed vector.
 def _tabulated_cylinder_over_line_doc() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=110, data={
-            "start": [1.0, 2.0, 3.0], "terminate": [5.0, 2.0, 3.0]}),
-        make_entity(de_index=3, entity_type=122, data={
-            "de": 1, "terminate_point": [1.0, 2.0, 7.0]}),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [1.0, 2.0, 3.0], "terminate": [5.0, 2.0, 3.0]},
+            ),
+            make_entity(
+                de_index=3, entity_type=122, data={"de": 1, "terminate_point": [1.0, 2.0, 7.0]}
+            ),
+        ]
+    )
 
 
 def _tabulated_cylinder_over_arc_doc() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=100, data={
-            "zt": 1.0,
-            "x1": 0.0, "y1": 0.0,
-            "x2": 2.0, "y2": 0.0,
-            "x3": 0.0, "y3": 2.0,
-        }),
-        make_entity(de_index=3, entity_type=122, data={
-            "de": 1, "terminate_point": [3.0, 0.0, 4.0]}),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=100,
+                data={
+                    "zt": 1.0,
+                    "x1": 0.0,
+                    "y1": 0.0,
+                    "x2": 2.0,
+                    "y2": 0.0,
+                    "x3": 0.0,
+                    "y3": 2.0,
+                },
+            ),
+            make_entity(
+                de_index=3, entity_type=122, data={"de": 1, "terminate_point": [3.0, 0.0, 4.0]}
+            ),
+        ]
+    )
 
 
 def test_tabulated_cylinder_over_line_interpolates_along_generatrix(
@@ -734,7 +915,12 @@ def test_tabulated_cylinder_over_line_interpolates_along_generatrix(
     doc = _tabulated_cylinder_over_line_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 3, 0.25, tmp_path, s=0.5,
+        submission_command,
+        iges_path,
+        3,
+        0.25,
+        tmp_path,
+        s=0.5,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([2.0, 2.0, 5.0], abs=1e-9)
@@ -746,7 +932,12 @@ def test_tabulated_cylinder_over_arc_keeps_generatrix_parallel(
     doc = _tabulated_cylinder_over_arc_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 3, math.pi / 2, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        3,
+        math.pi / 2,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([1.0, 2.0, 4.0], abs=1e-9)
@@ -761,24 +952,34 @@ def test_tabulated_cylinder_over_arc_keeps_generatrix_parallel(
 def _offset_surface_over_base_doc(
     base_entity: dict[str, object], indicator: list[float], distance: float
 ) -> dict[str, object]:
-    return wrap_entities([
-        make_entity(de_index=1, entity_type=116, data={
-            "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
-        make_entity(de_index=3, entity_type=123, data={
-            "x": 0.0, "y": 0.0, "z": 1.0}),
-        make_entity(de_index=5, entity_type=123, data={
-            "x": 1.0, "y": 0.0, "z": 0.0}),
-        base_entity,
-        make_entity(de_index=9, entity_type=140, data={
-            "nx": indicator[0], "ny": indicator[1], "nz": indicator[2],
-            "d": distance, "de": 7}),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1, entity_type=116, data={"coords": [0.0, 0.0, 0.0], "display_symbol": 0}
+            ),
+            make_entity(de_index=3, entity_type=123, data={"x": 0.0, "y": 0.0, "z": 1.0}),
+            make_entity(de_index=5, entity_type=123, data={"x": 1.0, "y": 0.0, "z": 0.0}),
+            base_entity,
+            make_entity(
+                de_index=9,
+                entity_type=140,
+                data={
+                    "nx": indicator[0],
+                    "ny": indicator[1],
+                    "nz": indicator[2],
+                    "d": distance,
+                    "de": 7,
+                },
+            ),
+        ]
+    )
 
 
 def _offset_surface_over_plane_doc(indicator: list[float], distance: float) -> dict[str, object]:
     return _offset_surface_over_base_doc(
-        make_entity(de_index=7, entity_type=190, form=1, data={
-            "deloc": 1, "denrml": 3, "derefd": 5}),
+        make_entity(
+            de_index=7, entity_type=190, form=1, data={"deloc": 1, "denrml": 3, "derefd": 5}
+        ),
         indicator,
         distance,
     )
@@ -786,8 +987,12 @@ def _offset_surface_over_plane_doc(indicator: list[float], distance: float) -> d
 
 def _offset_surface_over_cylinder_doc(indicator: list[float], distance: float) -> dict[str, object]:
     return _offset_surface_over_base_doc(
-        make_entity(de_index=7, entity_type=192, form=1, data={
-            "deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}),
+        make_entity(
+            de_index=7,
+            entity_type=192,
+            form=1,
+            data={"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5},
+        ),
         indicator,
         distance,
     )
@@ -795,9 +1000,12 @@ def _offset_surface_over_cylinder_doc(indicator: list[float], distance: float) -
 
 def _offset_surface_over_cone_doc(indicator: list[float], distance: float) -> dict[str, object]:
     return _offset_surface_over_base_doc(
-        make_entity(de_index=7, entity_type=194, form=1, data={
-            "deloc": 1, "deaxis": 3, "radius": 2.0,
-            "sangle": 45.0, "derefd": 5}),
+        make_entity(
+            de_index=7,
+            entity_type=194,
+            form=1,
+            data={"deloc": 1, "deaxis": 3, "radius": 2.0, "sangle": 45.0, "derefd": 5},
+        ),
         indicator,
         distance,
     )
@@ -805,8 +1013,12 @@ def _offset_surface_over_cone_doc(indicator: list[float], distance: float) -> di
 
 def _offset_surface_over_sphere_doc(indicator: list[float], distance: float) -> dict[str, object]:
     return _offset_surface_over_base_doc(
-        make_entity(de_index=7, entity_type=196, form=1, data={
-            "deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5}),
+        make_entity(
+            de_index=7,
+            entity_type=196,
+            form=1,
+            data={"deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5},
+        ),
         indicator,
         distance,
     )
@@ -814,9 +1026,12 @@ def _offset_surface_over_sphere_doc(indicator: list[float], distance: float) -> 
 
 def _offset_surface_over_torus_doc(indicator: list[float], distance: float) -> dict[str, object]:
     return _offset_surface_over_base_doc(
-        make_entity(de_index=7, entity_type=198, form=1, data={
-            "deloc": 1, "deaxis": 3, "majrad": 5.0,
-            "minrad": 1.0, "derefd": 5}),
+        make_entity(
+            de_index=7,
+            entity_type=198,
+            form=1,
+            data={"deloc": 1, "deaxis": 3, "majrad": 5.0, "minrad": 1.0, "derefd": 5},
+        ),
         indicator,
         distance,
     )
@@ -828,7 +1043,12 @@ def test_offset_surface_over_plane_offsets_along_plane_normal(
     doc = _offset_surface_over_plane_doc([0.0, 0.0, 1.0], 2.5)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 3.0, tmp_path, s=-1.0,
+        submission_command,
+        iges_path,
+        9,
+        3.0,
+        tmp_path,
+        s=-1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([3.0, -1.0, 2.5], abs=1e-9)
@@ -840,7 +1060,12 @@ def test_offset_surface_over_cylinder_expands_radius_on_indicator_side(
     doc = _offset_surface_over_cylinder_doc([1.0, 0.0, 0.0], 0.5)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 90.0, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        9,
+        90.0,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.0, 2.5, 1.0], abs=1e-9)
@@ -852,7 +1077,12 @@ def test_offset_surface_indicator_flips_global_normal_orientation(
     doc = _offset_surface_over_cylinder_doc([-1.0, 0.0, 0.0], 0.5)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 90.0, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        9,
+        90.0,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.0, 1.5, 1.0], abs=1e-9)
@@ -864,7 +1094,12 @@ def test_offset_surface_over_cone_uses_conical_reference_parameters(
     doc = _offset_surface_over_cone_doc([1.0, 0.0, -1.0], 0.5)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 90.0, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        9,
+        90.0,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     delta = 0.5 / math.sqrt(2.0)
@@ -877,11 +1112,17 @@ def test_offset_surface_over_sphere_extends_radius_along_spherical_normal(
     doc = _offset_surface_over_sphere_doc([0.0, math.sqrt(3.0), 1.0], 0.5)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 90.0, tmp_path, s=30.0,
+        submission_command,
+        iges_path,
+        9,
+        90.0,
+        tmp_path,
+        s=30.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx(
-        [0.0, 1.25 * math.sqrt(3.0), 1.25], abs=1e-9,
+        [0.0, 1.25 * math.sqrt(3.0), 1.25],
+        abs=1e-9,
     )
 
 
@@ -891,7 +1132,12 @@ def test_offset_surface_over_torus_offsets_along_minor_circle_normal(
     doc = _offset_surface_over_torus_doc([0.0, 0.0, 1.0], 0.5)
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 90.0, tmp_path, s=180.0,
+        submission_command,
+        iges_path,
+        9,
+        90.0,
+        tmp_path,
+        s=180.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([-5.0, 0.0, 1.5], abs=1e-9)
@@ -904,25 +1150,33 @@ def test_offset_surface_over_torus_offsets_along_minor_circle_normal(
 # degrees for angular parameters, matching the contract.
 def _analytic_surface_frame() -> list[dict[str, object]]:
     return [
-        make_entity(de_index=1, entity_type=116, data={
-            "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
-        make_entity(de_index=3, entity_type=123, data={
-            "x": 0.0, "y": 0.0, "z": 1.0}),
-        make_entity(de_index=5, entity_type=123, data={
-            "x": 1.0, "y": 0.0, "z": 0.0}),
+        make_entity(
+            de_index=1, entity_type=116, data={"coords": [0.0, 0.0, 0.0], "display_symbol": 0}
+        ),
+        make_entity(de_index=3, entity_type=123, data={"x": 0.0, "y": 0.0, "z": 1.0}),
+        make_entity(de_index=5, entity_type=123, data={"x": 1.0, "y": 0.0, "z": 0.0}),
     ]
 
 
 def test_plane_surface_eval_uses_reference_direction_basis(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(_analytic_surface_frame() + [
-        make_entity(de_index=7, entity_type=190, form=1, data={
-            "deloc": 1, "denrml": 3, "derefd": 5}),
-    ])
+    doc = wrap_entities(
+        _analytic_surface_frame()
+        + [
+            make_entity(
+                de_index=7, entity_type=190, form=1, data={"deloc": 1, "denrml": 3, "derefd": 5}
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 7, 2.0, tmp_path, s=-1.0,
+        submission_command,
+        iges_path,
+        7,
+        2.0,
+        tmp_path,
+        s=-1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([2.0, -1.0, 0.0], abs=1e-9)
@@ -931,13 +1185,25 @@ def test_plane_surface_eval_uses_reference_direction_basis(
 def test_cylindrical_surface_eval_matches_spec_angles_and_axis(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(_analytic_surface_frame() + [
-        make_entity(de_index=7, entity_type=192, form=1, data={
-            "deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}),
-    ])
+    doc = wrap_entities(
+        _analytic_surface_frame()
+        + [
+            make_entity(
+                de_index=7,
+                entity_type=192,
+                form=1,
+                data={"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 7, 90.0, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        7,
+        90.0,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.0, 2.0, 1.0], abs=1e-9)
@@ -946,14 +1212,25 @@ def test_cylindrical_surface_eval_matches_spec_angles_and_axis(
 def test_conical_surface_eval_expands_radius_by_v_tan_angle(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(_analytic_surface_frame() + [
-        make_entity(de_index=7, entity_type=194, form=1, data={
-            "deloc": 1, "deaxis": 3, "radius": 2.0,
-            "sangle": 45.0, "derefd": 5}),
-    ])
+    doc = wrap_entities(
+        _analytic_surface_frame()
+        + [
+            make_entity(
+                de_index=7,
+                entity_type=194,
+                form=1,
+                data={"deloc": 1, "deaxis": 3, "radius": 2.0, "sangle": 45.0, "derefd": 5},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 7, 90.0, tmp_path, s=1.0,
+        submission_command,
+        iges_path,
+        7,
+        90.0,
+        tmp_path,
+        s=1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.0, 3.0, 1.0], abs=1e-9)
@@ -962,31 +1239,55 @@ def test_conical_surface_eval_expands_radius_by_v_tan_angle(
 def test_spherical_surface_eval_uses_latitude_and_longitude_degrees(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(_analytic_surface_frame() + [
-        make_entity(de_index=7, entity_type=196, form=1, data={
-            "deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5}),
-    ])
+    doc = wrap_entities(
+        _analytic_surface_frame()
+        + [
+            make_entity(
+                de_index=7,
+                entity_type=196,
+                form=1,
+                data={"deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 7, 90.0, tmp_path, s=30.0,
+        submission_command,
+        iges_path,
+        7,
+        90.0,
+        tmp_path,
+        s=30.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx(
-        [0.0, math.sqrt(3.0), 1.0], abs=1e-9,
+        [0.0, math.sqrt(3.0), 1.0],
+        abs=1e-9,
     )
 
 
 def test_toroidal_surface_eval_matches_major_and_minor_radii(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(_analytic_surface_frame() + [
-        make_entity(de_index=7, entity_type=198, form=1, data={
-            "deloc": 1, "deaxis": 3, "majrad": 5.0,
-            "minrad": 1.0, "derefd": 5}),
-    ])
+    doc = wrap_entities(
+        _analytic_surface_frame()
+        + [
+            make_entity(
+                de_index=7,
+                entity_type=198,
+                form=1,
+                data={"deloc": 1, "deaxis": 3, "majrad": 5.0, "minrad": 1.0, "derefd": 5},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 7, 90.0, tmp_path, s=180.0,
+        submission_command,
+        iges_path,
+        7,
+        90.0,
+        tmp_path,
+        s=180.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([-5.0, 0.0, 1.0], abs=1e-9)
@@ -995,32 +1296,42 @@ def test_toroidal_surface_eval_matches_major_and_minor_radii(
 def test_transformed_plane_surface_applies_entity_matrix_after_eval(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(de_index=1, entity_type=124, data={
-            "rotation": [
-                [0.0, -1.0, 0.0],
-                [1.0, 0.0, 0.0],
-                [0.0, 0.0, 1.0],
-            ],
-            "translation": [10.0, -5.0, 2.0],
-        }),
-        make_entity(de_index=3, entity_type=116, data={
-            "coords": [0.0, 0.0, 0.0], "display_symbol": 0}),
-        make_entity(de_index=5, entity_type=123, data={
-            "x": 0.0, "y": 0.0, "z": 1.0}),
-        make_entity(de_index=7, entity_type=123, data={
-            "x": 1.0, "y": 0.0, "z": 0.0}),
-        make_entity(
-            de_index=9,
-            entity_type=190,
-            form=1,
-            data={"deloc": 3, "denrml": 5, "derefd": 7},
-            directory_entry_overrides={"xform_matrix": 1},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=124,
+                data={
+                    "rotation": [
+                        [0.0, -1.0, 0.0],
+                        [1.0, 0.0, 0.0],
+                        [0.0, 0.0, 1.0],
+                    ],
+                    "translation": [10.0, -5.0, 2.0],
+                },
+            ),
+            make_entity(
+                de_index=3, entity_type=116, data={"coords": [0.0, 0.0, 0.0], "display_symbol": 0}
+            ),
+            make_entity(de_index=5, entity_type=123, data={"x": 0.0, "y": 0.0, "z": 1.0}),
+            make_entity(de_index=7, entity_type=123, data={"x": 1.0, "y": 0.0, "z": 0.0}),
+            make_entity(
+                de_index=9,
+                entity_type=190,
+                form=1,
+                data={"deloc": 3, "denrml": 5, "derefd": 7},
+                directory_entry_overrides={"xform_matrix": 1},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 9, 2.0, tmp_path, s=-1.0,
+        submission_command,
+        iges_path,
+        9,
+        2.0,
+        tmp_path,
+        s=-1.0,
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([11.0, -3.0, 2.0], abs=1e-9)
@@ -1030,19 +1341,26 @@ def test_transformed_plane_surface_applies_entity_matrix_after_eval(
 def test_eval_on_non_parametric_entity_is_rejected(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=406,  # Property — not geometrically parametric
-            data={
-                "np": 1,
-                "values": [{"kind": "real", "value": 1.0}],
-            },
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=406,  # Property — not geometrically parametric
+                data={
+                    "np": 1,
+                    "values": [{"kind": "real", "value": 1.0}],
+                },
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, 0.0, tmp_path, check=False,
+        submission_command,
+        iges_path,
+        1,
+        0.0,
+        tmp_path,
+        check=False,
     )
     assert payload.get("ok") is False
     assert "error" in payload
@@ -1053,13 +1371,17 @@ def test_eval_on_non_parametric_entity_is_rejected(
 # - surfaces: both --t and --s required
 # - curve success: normal is null
 # - surface success: tangent is null
-def test_curve_eval_with_s_is_rejected(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
+def test_curve_eval_with_s_is_rejected(submission_command: Sequence[str], tmp_path: Path) -> None:
     doc = single_line_document((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     completed, payload = evaluate_entity(
-        submission_command, iges_path, 1, 0.5, tmp_path, s=0.5, check=False,
+        submission_command,
+        iges_path,
+        1,
+        0.5,
+        tmp_path,
+        s=0.5,
+        check=False,
     )
     assert completed.returncode == 1
     assert payload.get("ok") is False
@@ -1071,7 +1393,12 @@ def test_surface_eval_without_s_is_rejected(
     doc = _ruled_surface_two_lines_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     completed, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.5, tmp_path, check=False,
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        check=False,
     )
     assert completed.returncode == 1
     assert payload.get("ok") is False
@@ -1093,7 +1420,12 @@ def test_surface_eval_success_has_null_tangent(
     doc = _ruled_surface_two_lines_doc()
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
-        submission_command, iges_path, 5, 0.5, tmp_path, s=0.5,
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        s=0.5,
     )
     assert payload.get("ok") is True
     assert payload["tangent"] is None
@@ -1106,31 +1438,33 @@ def test_surface_eval_success_has_null_tangent(
 def test_line_form1_eval_beyond_terminate(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            form=1,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                form=1,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 3.0, tmp_path)
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([3.0, 0.0, 0.0], abs=1e-9)
 
 
-def test_line_form2_eval_before_start(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            form=2,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-    ])
+def test_line_form2_eval_before_start(submission_command: Sequence[str], tmp_path: Path) -> None:
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                form=2,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, -2.0, tmp_path)
     assert payload.get("ok") is True

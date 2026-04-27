@@ -31,6 +31,7 @@ from conftest import find_event, run_parse, wrap_event
 def _attendees_of(ev: dict[str, Any]) -> list[dict[str, Any]]:
     return cast(list[dict[str, Any]], ev.get("attendees") or [])
 
+
 # ---------------------------------------------------------------------------
 # ^' (encoded double-quote) inside unquoted param value
 # ---------------------------------------------------------------------------
@@ -96,9 +97,7 @@ def test_param_escape_double_caret_decodes_to_single_caret(
     assert attendees[0].get("cn") == "a^b"
 
 
-def test_param_escape_three_carets(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_param_escape_three_carets(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """`^^^'` = `^^` + `^'` = literal `^` + literal `"`. This checks that the
     decoder greedily consumes from left to right per RFC 6868 §3."""
     body = (

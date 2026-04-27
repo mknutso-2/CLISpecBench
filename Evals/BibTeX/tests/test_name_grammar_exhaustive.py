@@ -101,9 +101,7 @@ ITERATE {f}
 # ---------------------------------------------------------------------------
 
 
-def test_form1_single_token_is_last(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_form1_single_token_is_last(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Form 1, single token: becomes Last; First/von/Jr empty."""
     n = _parts(submission_command, tmp_path, "Plato")
     assert n["last"] == "Plato"
@@ -112,9 +110,7 @@ def test_form1_single_token_is_last(
     assert n["jr"] == ""
 
 
-def test_form1_first_last_no_von(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_form1_first_last_no_von(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Form 1, two uppercase tokens: First + Last, no von."""
     n = _parts(submission_command, tmp_path, "John Smith")
     assert n["first"] == "John"
@@ -131,9 +127,7 @@ def test_form1_von_between(submission_command: tuple[str, ...], tmp_path: Path) 
     assert n["last"] == "Pol"
 
 
-def test_form1_von_without_first(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_form1_von_without_first(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Form 1, no leading caps: First is empty, von then Last."""
     n = _parts(submission_command, tmp_path, "van der Pol")
     assert n["first"] == ""
@@ -216,9 +210,7 @@ def test_form2_simple(submission_command: tuple[str, ...], tmp_path: Path) -> No
     assert n["von"] == ""
 
 
-def test_form2_von_plus_last_head(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_form2_von_plus_last_head(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Form 2, head with von + Last run. Inter-token separator inside
     von may be tie or space per §2.6."""
     n = _parts(submission_command, tmp_path, "van der Pol, Balthasar")
@@ -250,9 +242,7 @@ def test_form2_head_without_lowercase_is_all_last(
     assert n["von"] == ""
 
 
-def test_form2_empty_first_after_comma(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_form2_empty_first_after_comma(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Form 2 with empty segment after comma: First is empty, head becomes Last."""
     n = _parts(submission_command, tmp_path, "Smith, ")
     assert n["first"] == ""
@@ -282,9 +272,7 @@ def test_form3_jr_roman_iii(submission_command: tuple[str, ...], tmp_path: Path)
     assert n["jr"] == "III"
 
 
-def test_form3_jr_multiword_senior(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_form3_jr_multiword_senior(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Form 3 with a multi-word Jr segment like ``Senior``."""
     n = _parts(submission_command, tmp_path, "Bush, Senior, George")
     assert n["first"] == "George"
@@ -316,33 +304,25 @@ def test_and_separates_multiple_authors(
     assert _num_names(submission_command, tmp_path, "John Smith and Jane Doe") == 2
 
 
-def test_and_case_insensitive(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_and_case_insensitive(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """``AND`` / ``And`` are also separators (case-insensitive, spec §2)."""
     assert _num_names(submission_command, tmp_path, "John Smith AND Jane Doe") == 2
     assert _num_names(submission_command, tmp_path, "John Smith And Jane Doe") == 2
 
 
-def test_and_inside_braces_is_literal(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_and_inside_braces_is_literal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """``and`` inside a brace group is not a separator (btxhak §2)."""
     # One brace-wrapped name counts as 1.
     assert _num_names(submission_command, tmp_path, "{Smith and Smith}") == 1
 
 
-def test_and_must_be_word_bounded(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_and_must_be_word_bounded(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """``sand`` and ``brand`` contain ``and`` but are not separators."""
     # "Alexander and Hamilton" is 2 names; "Alexandrand Hamilton" is 1 (no ``and`` word).
     assert _num_names(submission_command, tmp_path, "Alexander and Hamilton") == 2
 
 
-def test_multi_author_parts_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_multi_author_parts_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Each name in a list is independently grammared."""
     # Three authors in three forms.
     literal = "Smith, Jane and {Von Neumann}, John and Watson, Jr., James"
@@ -385,9 +365,7 @@ def test_latex_accent_opening_token_is_uppercase(
     # group, and therefore this token is uppercase. The name has one lowercase
     # run: "de la". ``Valle'e`` begins with uppercase V. ``Poussin`` begins
     # with uppercase P.
-    n = _parts(
-        submission_command, tmp_path, r"{\'E}tienne de la Vall\'ee Poussin"
-    )
+    n = _parts(submission_command, tmp_path, r"{\'E}tienne de la Vall\'ee Poussin")
     assert n["first"] == r"{\'E}tienne"
     assert _normalize_separator(n["von"]) == "de la"
     # Last can be "Vall\'ee Poussin" (uppercase-caps after the von).

@@ -65,10 +65,7 @@ def test_fall_back_ambiguous_emits_warning(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """US/Eastern 2026-11-01 01:30 falls in the fall-back overlap."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20261101T013000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20261101T013000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -83,10 +80,7 @@ def test_fall_back_unambiguous_does_not_warn(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """03:00 on fall-back day is unambiguous (after the transition)."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20261101T030000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20261101T030000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -106,10 +100,7 @@ def test_spring_forward_gap_emits_warning(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """US/Eastern 2026-03-08 02:30 falls in the spring-forward gap."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20260308T023000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20260308T023000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -124,10 +115,7 @@ def test_spring_forward_before_gap_does_not_warn(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """01:30 on spring-forward day is before the 02:00 transition (valid EST)."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20260308T013000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20260308T013000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -142,10 +130,7 @@ def test_spring_forward_after_gap_does_not_warn(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """04:00 on spring-forward day is after the gap (valid EDT)."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20260308T040000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20260308T040000\n"
     out = run_expand(
         submission_command,
         _wrap(body),
@@ -176,10 +161,7 @@ END:VTIMEZONE
 def test_no_dst_zone_does_not_emit_fold_warnings(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Etc/UTC:20260301T023000\n"
-    )
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Etc/UTC:20260301T023000\n"
     ics = HEAD + UTC_TZ + "BEGIN:VEVENT\n" + body + "END:VEVENT\n" + TAIL
     out = run_expand(
         submission_command,
@@ -267,10 +249,7 @@ END:VTIMEZONE
 
 
 def _wrap_historical(event_body: str) -> str:
-    return (
-        HEAD + HISTORICAL_US_TZ
-        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
-    )
+    return HEAD + HISTORICAL_US_TZ + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
 
 
 def test_historical_fold_on_pre_2007_date(
@@ -302,10 +281,7 @@ def test_historical_post_2007_fold_still_fires(
     """Post-2007 (current DST rule), the first-Sunday-of-November fall-
     back fold-ambiguous time still fires, proving the detect_tz_anomaly
     multi-year scan isn't confused by the presence of the old rule."""
-    body = (
-        "UID:e-modern\nDTSTAMP:20261101T120000Z\n"
-        "DTSTART;TZID=America/New_York:20261101T013000\n"
-    )
+    body = "UID:e-modern\nDTSTAMP:20261101T120000Z\nDTSTART;TZID=America/New_York:20261101T013000\n"
     out = run_expand(
         submission_command,
         _wrap_historical(body),
@@ -335,10 +311,7 @@ END:VTIMEZONE
 
 
 def _wrap_rdate_tz(event_body: str) -> str:
-    return (
-        HEAD + RDATE_DRIVEN_TZ
-        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
-    )
+    return HEAD + RDATE_DRIVEN_TZ + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
 
 
 def test_rdate_driven_fold_fires_warning(
@@ -424,10 +397,7 @@ END:VTIMEZONE
 
 
 def _wrap_yearend_tz(event_body: str) -> str:
-    return (
-        HEAD + YEAREND_GAP_TZ
-        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
-    )
+    return HEAD + YEAREND_GAP_TZ + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
 
 
 def test_yearend_gap_detected_via_neighbor_year_scan(

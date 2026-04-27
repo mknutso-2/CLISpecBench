@@ -50,13 +50,9 @@ def test_link_property_preserved_in_raw(
     assert "LINK" in _raw_names(ev)
 
 
-def test_link_with_linkrel_parameter(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_link_with_linkrel_parameter(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """LINK;LINKREL=x-name preserves the parameter."""
-    ics = _event_with(
-        "LINK;LINKREL=CHILD;VALUE=URI:https://example.com/child.ics\n"
-    )
+    ics = _event_with("LINK;LINKREL=CHILD;VALUE=URI:https://example.com/child.ics\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
@@ -72,19 +68,13 @@ def test_link_with_linkrel_parameter(
 # ---------------------------------------------------------------------------
 
 
-def test_related_to_gap_parameter(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_related_to_gap_parameter(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RELATED-TO;GAP=PT30M preserves the GAP duration."""
-    ics = _event_with(
-        "RELATED-TO;RELTYPE=FINISHTOSTART;GAP=PT30M:other-event-uid\n"
-    )
+    ics = _event_with("RELATED-TO;RELTYPE=FINISHTOSTART;GAP=PT30M:other-event-uid\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
-    rel = next(
-        (p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None
-    )
+    rel = next((p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None)
     assert rel is not None
     params = rel.get("params", {})
     assert isinstance(params, dict)
@@ -97,32 +87,22 @@ def test_related_to_gap_parameter(
 # ---------------------------------------------------------------------------
 
 
-def test_reltype_finishtofinish(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    ics = _event_with(
-        "RELATED-TO;RELTYPE=FINISHTOFINISH:other-uid\n"
-    )
+def test_reltype_finishtofinish(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    ics = _event_with("RELATED-TO;RELTYPE=FINISHTOFINISH:other-uid\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
-    rel = next(
-        (p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None
-    )
+    rel = next((p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None)
     assert rel is not None
     assert rel["params"].get("RELTYPE") == "FINISHTOFINISH"
 
 
-def test_reltype_dependson(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_reltype_dependson(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     ics = _event_with("RELATED-TO;RELTYPE=DEPENDS-ON:prerequisite\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
-    rel = next(
-        (p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None
-    )
+    rel = next((p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None)
     assert rel is not None
     assert rel["params"].get("RELTYPE") == "DEPENDS-ON"
 
@@ -136,9 +116,7 @@ def test_structured_categories_preserved(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """STRUCTURED-CATEGORIES carries hierarchical category URIs."""
-    ics = _event_with(
-        "STRUCTURED-CATEGORIES:http://example.com/category/tree/project/alpha\n"
-    )
+    ics = _event_with("STRUCTURED-CATEGORIES:http://example.com/category/tree/project/alpha\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     assert "STRUCTURED-CATEGORIES" in _raw_names(ev)
@@ -149,20 +127,14 @@ def test_structured_categories_preserved(
 # ---------------------------------------------------------------------------
 
 
-def test_concept_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    ics = _event_with(
-        "CONCEPT:http://example.com/concepts/project-milestone\n"
-    )
+def test_concept_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    ics = _event_with("CONCEPT:http://example.com/concepts/project-milestone\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     assert "CONCEPT" in _raw_names(ev)
 
 
-def test_refid_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_refid_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     ics = _event_with("REFID:external-ref-ABC123\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
@@ -185,15 +157,12 @@ def test_event_related_to_surfaced_as_typed_field(
     property is also preserved but the typed view is what downstream
     tooling relies on."""
     ics = _event_with(
-        "RELATED-TO;RELTYPE=PARENT:parent-event-uid-123\n"
-        "RELATED-TO:sibling-uid-456\n"
+        "RELATED-TO;RELTYPE=PARENT:parent-event-uid-123\nRELATED-TO:sibling-uid-456\n"
     )
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     rels = cast(list[dict[str, Any]], ev.get("related_to") or [])
-    assert len(rels) == 2, (
-        f"expected 2 RELATED-TO entries; got {rels!r}"
-    )
+    assert len(rels) == 2, f"expected 2 RELATED-TO entries; got {rels!r}"
     # First entry: explicit RELTYPE=PARENT.
     assert rels[0].get("value") == "parent-event-uid-123"
     assert rels[0].get("reltype") == "PARENT"

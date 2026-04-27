@@ -163,10 +163,7 @@ def test_entry_field_values_are_per_entry(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Field values written in one entry's context don't leak to another."""
-    bib = (
-        '@article{a, title = "AlphaTitle"}\n'
-        '@article{b}\n'
-    )
+    bib = '@article{a, title = "AlphaTitle"}\n@article{b}\n'
     style = """\
 ENTRY { title } { } { }
 FUNCTION {dump} { title duplicate$ missing$ { "MISSING" swap$ pop$ } { skip$ } if$ write$ newline$ }
@@ -176,9 +173,7 @@ ITERATE {dump}
     bbl, _ = run_bibtex(submission_command, bib, style, ["a", "b"], tmp_path)
     lines = [ln for ln in bbl.split("\n") if ln]
     assert lines[0] == "AlphaTitle"
-    assert lines[1] == "MISSING", (
-        f"entry b should not see a's title; got {lines[1]!r}"
-    )
+    assert lines[1] == "MISSING", f"entry b should not see a's title; got {lines[1]!r}"
 
 
 # ---------------------------------------------------------------------------

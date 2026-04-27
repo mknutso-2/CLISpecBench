@@ -60,9 +60,7 @@ def _wrap_with_method(method: str, vevent_body: str) -> str:
         "VERSION:2.0\n"
         "PRODID:-//Test//EN\n"
         f"METHOD:{method}\n"
-        "BEGIN:VEVENT\n"
-        + vevent_body
-        + "END:VEVENT\n"
+        "BEGIN:VEVENT\n" + vevent_body + "END:VEVENT\n"
         "END:VCALENDAR\n"
     )
 
@@ -70,19 +68,12 @@ def _wrap_with_method(method: str, vevent_body: str) -> str:
 # Common event skeletons — all have the minimum required VEVENT props
 # (UID, DTSTAMP, DTSTART) so that baseline parsing never fails for
 # unrelated reasons.
-_BASE = (
-    "UID:e1\n"
-    "DTSTAMP:20260420T120000Z\n"
-    "DTSTART:20260305T100000Z\n"
-    "SEQUENCE:0\n"
-    "SUMMARY:Sample\n"
-)
+_BASE = "UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\nSEQUENCE:0\nSUMMARY:Sample\n"
 
 _BASE_WITH_ORGANIZER = _BASE + "ORGANIZER:mailto:boss@example.com\n"
 
 _BASE_WITH_ORGANIZER_AND_ATTENDEE_PARTSTAT = (
-    _BASE_WITH_ORGANIZER
-    + "ATTENDEE;PARTSTAT=ACCEPTED:mailto:jane@example.com\n"
+    _BASE_WITH_ORGANIZER + "ATTENDEE;PARTSTAT=ACCEPTED:mailto:jane@example.com\n"
 )
 
 
@@ -91,9 +82,7 @@ _BASE_WITH_ORGANIZER_AND_ATTENDEE_PARTSTAT = (
 # ---------------------------------------------------------------------------
 
 
-def test_method_publish_surfaced(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_method_publish_surfaced(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """METHOD:PUBLISH must be exposed as calendar.method='PUBLISH'."""
     ics = _wrap_with_method("PUBLISH", _BASE)
     out = run_parse(submission_command, ics, tmp_path)
@@ -101,9 +90,7 @@ def test_method_publish_surfaced(
     assert isinstance(cal, dict) and cast(dict[str, Any], cal).get("method") == "PUBLISH"
 
 
-def test_method_request_surfaced(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_method_request_surfaced(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """METHOD:REQUEST is the primary scheduling method (RFC 5546 §3.2.2)."""
     ics = _wrap_with_method("REQUEST", _BASE_WITH_ORGANIZER)
     out = run_parse(submission_command, ics, tmp_path)
@@ -111,9 +98,7 @@ def test_method_request_surfaced(
     assert isinstance(cal, dict) and cast(dict[str, Any], cal).get("method") == "REQUEST"
 
 
-def test_method_reply_surfaced(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_method_reply_surfaced(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """METHOD:REPLY is used by attendees to respond (RFC 5546 §3.2.3)."""
     ics = _wrap_with_method("REPLY", _BASE_WITH_ORGANIZER_AND_ATTENDEE_PARTSTAT)
     out = run_parse(submission_command, ics, tmp_path)
@@ -143,9 +128,7 @@ def test_well_formed_request_emits_no_itip_warning(
     """A METHOD:REQUEST calendar with ORGANIZER + ATTENDEE + SEQUENCE
     satisfies the iTIP requirements (RFC 5546 §3.2.2 + §3), so no
     `itip_missing_property` warning should be emitted."""
-    ics = _wrap_with_method(
-        "REQUEST", _BASE_WITH_ORGANIZER_AND_ATTENDEE_PARTSTAT
-    )
+    ics = _wrap_with_method("REQUEST", _BASE_WITH_ORGANIZER_AND_ATTENDEE_PARTSTAT)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
 
@@ -186,8 +169,7 @@ def test_reply_attendee_without_partstat_emits_itip_warning(
     Missing PARTSTAT on the reply's ATTENDEE must trigger
     `itip_missing_property`."""
     body = (
-        _BASE_WITH_ORGANIZER
-        + "ATTENDEE:mailto:jane@example.com\n"  # no PARTSTAT
+        _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\n"  # no PARTSTAT
     )
     ics = _wrap_with_method("REPLY", body)
     out = run_parse(submission_command, ics, tmp_path)
@@ -293,9 +275,7 @@ def test_publish_without_organizer_emits_itip_warning(
     assert "itip_missing_property" in _warn_kinds(out)
 
 
-def test_publish_without_attendee_ok(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_publish_without_attendee_ok(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Complement to the test above: PUBLISH with ORGANIZER (as RFC
     requires) and no ATTENDEE is legal. §3.2.1 says ATTENDEE MUST NOT
     be present; omitting it is therefore compliant, not a warning."""
@@ -354,9 +334,7 @@ def test_no_method_means_no_itip_warning(
         "BEGIN:VCALENDAR\n"
         "VERSION:2.0\n"
         "PRODID:-//Test//EN\n"
-        "BEGIN:VEVENT\n"
-        + _BASE
-        + "END:VEVENT\n"
+        "BEGIN:VEVENT\n" + _BASE + "END:VEVENT\n"
         "END:VCALENDAR\n"
     )
     out = run_parse(submission_command, ics, tmp_path)
@@ -379,9 +357,7 @@ def test_calendar_method_null_when_absent(
         "BEGIN:VCALENDAR\n"
         "VERSION:2.0\n"
         "PRODID:-//Test//EN\n"
-        "BEGIN:VEVENT\n"
-        + _BASE
-        + "END:VEVENT\n"
+        "BEGIN:VEVENT\n" + _BASE + "END:VEVENT\n"
         "END:VCALENDAR\n"
     )
     out = run_parse(submission_command, ics, tmp_path)

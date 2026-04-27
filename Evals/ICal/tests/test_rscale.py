@@ -250,9 +250,7 @@ def test_rscale_surfaces_on_rrule_object(
         assert rscale.upper() == "CHINESE"
 
 
-def test_rscale_skip_field_surfaced(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_rscale_skip_field_surfaced(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """When SKIP is present on an RRULE, the parser must surface it in the
     `skip` field of the rrule object (schema: `skip: "OMIT"|"BACKWARD"|
     "FORWARD"|null`). Per RFC 7529 §4, SKIP MUST NOT be present unless RSCALE

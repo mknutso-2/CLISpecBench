@@ -57,18 +57,11 @@ def _dict_list_field(d: dict[str, Any], key: str) -> list[dict[str, Any]]:
 def _wrap_calprops(calprops: str, include_event: bool = True) -> str:
     """Build a VCALENDAR with the given calendar-level properties."""
     event = (
-        "BEGIN:VEVENT\n"
-        "UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\n"
-        "END:VEVENT\n"
+        "BEGIN:VEVENT\nUID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\nEND:VEVENT\n"
         if include_event
         else ""
     )
-    return (
-        "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
-        + calprops
-        + event
-        + "END:VCALENDAR\n"
-    )
+    return "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n" + calprops + event + "END:VCALENDAR\n"
 
 
 # ---------------------------------------------------------------------------
@@ -130,9 +123,7 @@ def test_calendar_name_with_text_escapes(
 # ---------------------------------------------------------------------------
 
 
-def test_calendar_description_parsed(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_calendar_description_parsed(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 7986 §5.2: DESCRIPTION at the VCALENDAR level is a lengthy textual
     description of the calendar (not of any single event)."""
     out = run_parse(

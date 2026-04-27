@@ -15,6 +15,7 @@ Type-level assertions rather than enum checks: the TR vocabulary for
 ("start"/"directory"/...) currently disagree; these tests lock in the
 shape without forcing a particular vocabulary.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -77,11 +78,17 @@ def test_parse_error_envelope_has_all_required_fields(
     out = tmp_path / "err.json"
     completed = subprocess.run(
         [
-            *submission_command, "parse",
-            "--input", str(iges_path),
-            "--output", str(out),
+            *submission_command,
+            "parse",
+            "--input",
+            str(iges_path),
+            "--output",
+            str(out),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
@@ -96,12 +103,19 @@ def test_query_error_envelope_has_all_required_fields(
     out = tmp_path / "err.json"
     completed = subprocess.run(
         [
-            *submission_command, "query",
-            "--input", str(iges_path),
-            "--de", "999",
-            "--output", str(out),
+            *submission_command,
+            "query",
+            "--input",
+            str(iges_path),
+            "--de",
+            "999",
+            "--output",
+            str(out),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
@@ -112,24 +126,34 @@ def test_eval_error_envelope_has_all_required_fields(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     # Property (406) is non-parametric; eval must reject it.
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=406,
-            data={"np": 1, "values": [{"kind": "real", "value": 1.0}]},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=406,
+                data={"np": 1, "values": [{"kind": "real", "value": 1.0}]},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path)
     out = tmp_path / "err.json"
     completed = subprocess.run(
         [
-            *submission_command, "eval",
-            "--input", str(iges_path),
-            "--de", "1",
-            "--t", "0.0",
-            "--output", str(out),
+            *submission_command,
+            "eval",
+            "--input",
+            str(iges_path),
+            "--de",
+            "1",
+            "--t",
+            "0.0",
+            "--output",
+            str(out),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))

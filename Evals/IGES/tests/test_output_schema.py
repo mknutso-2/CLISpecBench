@@ -10,6 +10,7 @@ behavioral tests can use ``.get()`` for tolerant access and surface as
 The envelope shapes asserted here are defined in
 ``Evals/IGES/prompt/technical-requirements-prompt.md`` §1.3–§1.5 and §2.2.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -30,13 +31,15 @@ from iges_support import (
 
 
 def _simple_line_document() -> dict[str, object]:
-    return wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-    ])
+    return wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
 
 
 def _eval_curve(
@@ -51,10 +54,14 @@ def _eval_curve(
         [
             *submission_command,
             "eval",
-            "--input", str(iges_path),
-            "--de", str(de),
-            "--t", str(t),
-            "--output", str(out),
+            "--input",
+            str(iges_path),
+            "--de",
+            str(de),
+            "--t",
+            str(t),
+            "--output",
+            str(out),
         ],
         check=True,
         capture_output=True,
@@ -70,7 +77,8 @@ def _eval_curve(
 
 
 def test_parse_success_envelope_has_required_top_level_keys(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """§2.2: parse success output has `start_lines`, `global`, `entities`.
 
@@ -79,7 +87,9 @@ def test_parse_success_envelope_has_required_top_level_keys(
     tests assume this shape.
     """
     iges_path = write_iges_from_json(
-        submission_command, _simple_line_document(), tmp_path,
+        submission_command,
+        _simple_line_document(),
+        tmp_path,
     )
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path)
 
@@ -94,28 +104,41 @@ def test_parse_success_envelope_has_required_top_level_keys(
 
     entity_record = parsed["entities"][0]
     assert isinstance(entity_record, dict)
-    assert "directory_entry" in entity_record, \
-        "EntityRecord missing `directory_entry`"
+    assert "directory_entry" in entity_record, "EntityRecord missing `directory_entry`"
     assert "entity" in entity_record, "EntityRecord missing `entity`"
     assert "de_index" in entity_record, "EntityRecord missing `de_index`"
 
 
 def test_parse_global_section_has_required_keys(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """§2.3: Global section has the 26 required fields (spot-check a few)."""
     iges_path = write_iges_from_json(
-        submission_command, _simple_line_document(), tmp_path,
+        submission_command,
+        _simple_line_document(),
+        tmp_path,
     )
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path)
     global_section = parsed.get("global", {})
 
     required = [
-        "param_delimiter", "record_delimiter", "product_id_sender",
-        "file_name", "native_system_id", "preprocessor_version",
-        "integer_bits", "sp_magnitude", "sp_significance",
-        "dp_magnitude", "dp_significance", "model_space_scale",
-        "units", "units_name", "file_timestamp", "min_resolution",
+        "param_delimiter",
+        "record_delimiter",
+        "product_id_sender",
+        "file_name",
+        "native_system_id",
+        "preprocessor_version",
+        "integer_bits",
+        "sp_magnitude",
+        "sp_significance",
+        "dp_magnitude",
+        "dp_significance",
+        "model_space_scale",
+        "units",
+        "units_name",
+        "file_timestamp",
+        "min_resolution",
     ]
     missing = [k for k in required if k not in global_section]
     assert missing == [], f"Global section missing required keys: {missing}"
@@ -127,7 +150,8 @@ def test_parse_global_section_has_required_keys(
 
 
 def test_parse_error_envelope_has_required_top_level_keys(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """§1.4: error envelope has `ok` (false), `error`, `spec_ref`, `line`,
     `section`, `diagnostics`.
@@ -139,8 +163,10 @@ def test_parse_error_envelope_has_required_top_level_keys(
         [
             *submission_command,
             "parse",
-            "--input", str(iges_path),
-            "--output", str(out),
+            "--input",
+            str(iges_path),
+            "--output",
+            str(out),
         ],
         check=False,
         capture_output=True,
@@ -167,13 +193,16 @@ def test_parse_error_envelope_has_required_top_level_keys(
 
 
 def test_eval_success_envelope_has_required_top_level_keys(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """§1.5: eval success output has `ok` (true), `point`, `tangent`,
     `normal`, `error`.
     """
     iges_path = write_iges_from_json(
-        submission_command, _simple_line_document(), tmp_path,
+        submission_command,
+        _simple_line_document(),
+        tmp_path,
     )
     payload = _eval_curve(submission_command, iges_path, tmp_path, de=1, t=0.5)
 
@@ -183,8 +212,7 @@ def test_eval_success_envelope_has_required_top_level_keys(
     assert "tangent" in payload, "eval output missing `tangent` (may be null)"
     assert "normal" in payload, "eval output missing `normal` (may be null)"
     assert "error" in payload, "eval output missing `error` (may be null)"
-    assert payload["error"] is None, \
-        "eval success envelope must carry `error: null` per §1.5"
+    assert payload["error"] is None, "eval success envelope must carry `error: null` per §1.5"
     assert isinstance(payload["point"], list)
     assert len(payload["point"]) == 3
 
@@ -195,13 +223,16 @@ def test_eval_success_envelope_has_required_top_level_keys(
 
 
 def test_query_success_envelope_has_entity_keys(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """§2.5: query returns a single EntityRecord with `directory_entry`,
     `entity`, and `de_index`.
     """
     iges_path = write_iges_from_json(
-        submission_command, _simple_line_document(), tmp_path,
+        submission_command,
+        _simple_line_document(),
+        tmp_path,
     )
     entity = query_entity(submission_command, iges_path, 1, tmp_path)
 

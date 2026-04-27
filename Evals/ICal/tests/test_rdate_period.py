@@ -31,9 +31,7 @@ def _rdate_of(ev: dict[str, Any]) -> list[Any]:
     return cast(list[Any], r)
 
 
-def test_rdate_period_explicit_parsed(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_rdate_period_explicit_parsed(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.3.9 period-explicit: start/end DATE-TIMEs joined by SOLIDUS.
     Parsed into `{"start": ..., "end": ...}` object in the rdate list."""
     body = (
@@ -110,9 +108,7 @@ def test_rdate_mixed_value_types_not_allowed_but_period_only_ok(
     assert "dict" in types
 
 
-def test_rdate_period_adds_occurrence(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_rdate_period_adds_occurrence(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.8.5.2: a PERIOD-valued RDATE adds an occurrence at the period start."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -148,9 +144,7 @@ def test_rdate_period_explicit_sets_occurrence_end(
         tmp_path,
     )
     # Find the occurrence at the RDATE time.
-    occ_at_rdate = [
-        o for o in occurrences_of(out) if o.get("dtstart") == "2026-03-10T09:00:00Z"
-    ]
+    occ_at_rdate = [o for o in occurrences_of(out) if o.get("dtstart") == "2026-03-10T09:00:00Z"]
     assert len(occ_at_rdate) == 1
     # Period was 09:00–11:30 UTC (2h30m), different from the default 30m duration.
     assert occ_at_rdate[0].get("dtend") == "2026-03-10T11:30:00Z"

@@ -154,7 +154,7 @@ def list_languages() -> list[str]:
         stem = path.stem  # language-requirements-<lang>
         prefix = "language-requirements-"
         if stem.startswith(prefix):
-            languages.add(stem[len(prefix):])
+            languages.add(stem[len(prefix) :])
     return sorted(languages)
 
 
@@ -172,9 +172,7 @@ def split_task_id(task_id: str) -> tuple[str, str]:
     return eval_name, language
 
 
-def resolve_task(
-    repo_root: Path, task_id: str, *, language: str | None = None
-) -> TaskDefinition:
+def resolve_task(repo_root: Path, task_id: str, *, language: str | None = None) -> TaskDefinition:
     """Resolve a CLI task identifier to a loaded :class:`TaskDefinition`.
 
     Two calling forms are accepted:
@@ -194,9 +192,7 @@ def resolve_task(
         canonical_id = f"{eval_name}-{language}"
     subdir = _KNOWN_EVALS.get(eval_name)
     if subdir is None:
-        raise ValueError(
-            f"Unknown eval {eval_name!r}. Known evals: {', '.join(list_evals())}."
-        )
+        raise ValueError(f"Unknown eval {eval_name!r}. Known evals: {', '.join(list_evals())}.")
     return load_task(
         repo_root / subdir,
         canonical_id,
@@ -213,7 +209,5 @@ def list_tasks() -> list[str]:
     this list.
     """
     return sorted(
-        f"{eval_name}-{language}"
-        for eval_name in _KNOWN_EVALS
-        for language in list_languages()
+        f"{eval_name}-{language}" for eval_name in _KNOWN_EVALS for language in list_languages()
     )

@@ -5,6 +5,7 @@ to the eval's CLI surface. Each case writes canonical IGES-JSON through
 ``iges write`` and reparses it with ``iges parse`` so the assertions
 exercise the buildable submission contract rather than library internals.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -27,11 +28,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -40,7 +46,8 @@ def _roundtrip_single(
 
 
 def test_angular_dimension_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -65,7 +72,8 @@ def test_angular_dimension_roundtrip(
 
 
 def test_curve_dimension_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -93,7 +101,8 @@ def test_curve_dimension_roundtrip(
 
 
 def test_diameter_dimension_allows_single_leader(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -113,7 +122,8 @@ def test_diameter_dimension_allows_single_leader(
 
 
 def test_flag_note_zero_leaders_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -135,7 +145,8 @@ def test_flag_note_zero_leaders_roundtrip(
 
 
 def test_general_label_zero_leaders_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -147,7 +158,8 @@ def test_general_label_zero_leaders_roundtrip(
 
 
 def test_general_note_multiple_strings_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -190,7 +202,8 @@ def test_general_note_multiple_strings_roundtrip(
 
 
 def test_new_general_note_multiple_strings_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -266,7 +279,8 @@ def test_new_general_note_multiple_strings_roundtrip(
 
 
 def test_leader_arrow_multiple_segments_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -292,7 +306,8 @@ def test_leader_arrow_multiple_segments_roundtrip(
 
 
 def test_linear_dimension_allows_null_witness_lines(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -314,7 +329,8 @@ def test_linear_dimension_allows_null_witness_lines(
 
 
 def test_ordinate_dimension_form_zero_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -336,7 +352,8 @@ def test_ordinate_dimension_form_zero_roundtrip(
 
 
 def test_ordinate_dimension_form_one_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -357,7 +374,8 @@ def test_ordinate_dimension_form_one_roundtrip(
 
 
 def test_point_dimension_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -369,7 +387,8 @@ def test_point_dimension_roundtrip(
 
 
 def test_radius_dimension_form_one_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -392,7 +411,8 @@ def test_radius_dimension_form_one_roundtrip(
 
 
 def test_general_symbol_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -413,7 +433,8 @@ def test_general_symbol_roundtrip(
 
 
 def test_sectioned_area_multiple_islands_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

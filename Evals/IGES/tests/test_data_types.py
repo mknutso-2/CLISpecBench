@@ -4,6 +4,7 @@ The original Catch2 cases exercise tokenizer helpers directly. The hidden
 eval only observes the CLI, so these tests drive the same semantics through
 ``iges parse`` / ``iges write`` and the canonical IGES-JSON envelope.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -174,11 +175,17 @@ def test_control_character_in_start_section_is_rejected(
 
     completed = subprocess.run(
         [
-            *submission_command, "parse",
-            "--input", str(iges_path),
-            "--output", str(out_path),
+            *submission_command,
+            "parse",
+            "--input",
+            str(iges_path),
+            "--output",
+            str(out_path),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
@@ -326,20 +333,22 @@ def test_spec_version_above_range_is_clamped_to_v5_3(
 def test_pointer_and_logical_values_roundtrip_through_entity_json(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-            directory_entry_overrides={"color": -7},
-        ),
-        make_entity(
-            de_index=3,
-            entity_type=510,
-            form=1,
-            data={"surf": 0, "n": 0, "outer_loop_flag": True, "loops": []},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+                directory_entry_overrides={"color": -7},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=510,
+                form=1,
+                data={"surf": 0, "n": 0, "outer_loop_flag": True, "loops": []},
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
 
     line_record = reparsed["entities"][0]

@@ -38,9 +38,7 @@ BASIC_CAL = (
 # ---------------------------------------------------------------------------
 
 
-def test_events_array_is_always_a_list(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_events_array_is_always_a_list(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(submission_command, BASIC_CAL, tmp_path)
     assert isinstance(out.get("events"), list)
 
@@ -55,8 +53,13 @@ def test_empty_calendar_has_empty_arrays_not_nulls(
     # the tech-reqs mandatory set so it's checked here alongside the
     # other list-shaped keys.
     for key in (
-        "events", "todos", "journals", "freebusy",
-        "timezones", "availabilities", "warnings",
+        "events",
+        "todos",
+        "journals",
+        "freebusy",
+        "timezones",
+        "availabilities",
+        "warnings",
     ):
         val = out.get(key)
         assert val is not None, f"{key} is null; should be []"
@@ -116,9 +119,7 @@ def test_occurrence_dtstart_matches_iso_utc(
     occs = cast(list[dict[str, Any]], out.get("occurrences") or [])
     assert len(occs) == 1
     dt = occs[0].get("dtstart")
-    assert isinstance(dt, str) and dt.endswith("Z"), (
-        f"occurrence dtstart not UTC ISO-8601: {dt!r}"
-    )
+    assert isinstance(dt, str) and dt.endswith("Z"), f"occurrence dtstart not UTC ISO-8601: {dt!r}"
     assert ISO_DATE_TIME.match(dt)
 
 
@@ -127,16 +128,13 @@ def test_occurrence_dtstart_matches_iso_utc(
 # ---------------------------------------------------------------------------
 
 
-def test_occurrences_sorted_by_dtstart(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_occurrences_sorted_by_dtstart(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
         + "BEGIN:VEVENT\nUID:late\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260302T100000Z\nEND:VEVENT\n"
         + "BEGIN:VEVENT\nUID:early\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\nEND:VEVENT\n"
-        + "END:VCALENDAR\n"
+        "DTSTART:20260301T100000Z\nEND:VEVENT\n" + "END:VCALENDAR\n"
     )
     out = run_expand(
         submission_command, ics, "2026-01-01T00:00:00Z", "2026-04-01T00:00:00Z", tmp_path
@@ -157,8 +155,7 @@ def test_occurrences_uid_tiebreak_on_equal_dtstart(
         + "BEGIN:VEVENT\nUID:zebra\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260301T100000Z\nEND:VEVENT\n"
         + "BEGIN:VEVENT\nUID:apple\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\nEND:VEVENT\n"
-        + "END:VCALENDAR\n"
+        "DTSTART:20260301T100000Z\nEND:VEVENT\n" + "END:VCALENDAR\n"
     )
     out = run_expand(
         submission_command, ics, "2026-01-01T00:00:00Z", "2026-04-01T00:00:00Z", tmp_path
@@ -183,9 +180,19 @@ def test_calendar_object_has_all_rfc7986_keys(
     out = run_parse(submission_command, BASIC_CAL, tmp_path)
     cal = cast(dict[str, Any], out.get("calendar") or {})
     for key in (
-        "prodid", "version", "calscale", "method",
-        "name", "description", "refresh_interval", "source",
-        "color", "url", "categories", "images", "conferences",
+        "prodid",
+        "version",
+        "calscale",
+        "method",
+        "name",
+        "description",
+        "refresh_interval",
+        "source",
+        "color",
+        "url",
+        "categories",
+        "images",
+        "conferences",
     ):
         assert key in cal, f"calendar missing key {key!r}: {list(cal)}"
 
@@ -212,16 +219,24 @@ def test_calendar_images_array_when_absent(
 # ---------------------------------------------------------------------------
 
 
-def test_event_has_all_required_keys(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_event_has_all_required_keys(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Every VEVENT object surfaces the full schema key set, even empty."""
     out = run_parse(submission_command, BASIC_CAL, tmp_path)
     ev = cast(list[dict[str, Any]], out["events"])[0]
     required = {
-        "uid", "dtstamp", "dtstart", "summary", "description",
-        "status", "categories", "rrule", "rdate", "exdate",
-        "alarms", "attendees", "raw_properties",
+        "uid",
+        "dtstamp",
+        "dtstart",
+        "summary",
+        "description",
+        "status",
+        "categories",
+        "rrule",
+        "rdate",
+        "exdate",
+        "alarms",
+        "attendees",
+        "raw_properties",
     }
     missing = required - set(ev.keys())
     assert not missing, f"event missing keys {missing!r}; got {list(ev)}"

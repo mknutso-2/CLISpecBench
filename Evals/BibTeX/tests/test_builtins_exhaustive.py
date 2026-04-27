@@ -49,9 +49,7 @@ FUNCTION {{f}} {{ {body} }}
 READ
 EXECUTE {{f}}
 """
-    return run_bibtex(
-        submission_command, bib, style, ["a"], tmp_path, with_log=with_log
-    )
+    return run_bibtex(submission_command, bib, style, ["a"], tmp_path, with_log=with_log)
 
 
 def _iterate(
@@ -70,9 +68,7 @@ FUNCTION {{f}} {{ {body} }}
 READ
 ITERATE {{f}}
 """
-    return run_bibtex(
-        submission_command, bib, style, ["a"], tmp_path, with_log=with_log
-    )
+    return run_bibtex(submission_command, bib, style, ["a"], tmp_path, with_log=with_log)
 
 
 def _has_type_error(log: dict[str, Any] | None) -> bool:
@@ -104,13 +100,9 @@ def test_plus_negative(submission_command: tuple[str, ...], tmp_path: Path) -> N
     assert bbl.strip() == "2"
 
 
-def test_plus_type_error_pushes_zero(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_plus_type_error_pushes_zero(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Non-integer top → warn + push 0 (spec §3.3)."""
-    bbl, log = _exec(
-        submission_command, tmp_path, '"abc" #3 + int.to.str$ write$', with_log=True
-    )
+    bbl, log = _exec(submission_command, tmp_path, '"abc" #3 + int.to.str$ write$', with_log=True)
     assert bbl.strip() == "3"  # "abc" popped as int → 0; 0+3 = 3.
     assert _has_type_error(log)
 
@@ -120,9 +112,7 @@ def test_minus_normal(submission_command: tuple[str, ...], tmp_path: Path) -> No
     assert bbl.strip() == "7"
 
 
-def test_minus_negative_result(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_minus_negative_result(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(submission_command, tmp_path, "#3 #10 - int.to.str$ write$")
     assert bbl.strip() == "-7"
 
@@ -147,9 +137,7 @@ def test_greater_false(submission_command: tuple[str, ...], tmp_path: Path) -> N
     assert bbl.strip() == "0"
 
 
-def test_greater_equal_is_false(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_greater_equal_is_false(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(submission_command, tmp_path, "#5 #5 > int.to.str$ write$")
     assert bbl.strip() == "0"
 
@@ -189,9 +177,7 @@ def test_equal_empty_strings(submission_command: tuple[str, ...], tmp_path: Path
     assert bbl.strip() == "1"
 
 
-def test_equal_cross_type_is_zero(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_equal_cross_type_is_zero(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Comparing across types yields 0 per spec §3.5."""
     bbl, _ = _exec(submission_command, tmp_path, '#1 "1" = int.to.str$ write$')
     assert bbl.strip() == "0"
@@ -220,9 +206,7 @@ def test_concat_empty_right(submission_command: tuple[str, ...], tmp_path: Path)
 def test_concat_type_error_pushes_empty(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    bbl, log = _exec(
-        submission_command, tmp_path, '#5 "suffix" * write$', with_log=True
-    )
+    bbl, log = _exec(submission_command, tmp_path, '#5 "suffix" * write$', with_log=True)
     # First pop is a string, second pop should be string but got int → default "".
     assert bbl.strip() == "suffix"
     assert _has_type_error(log)
@@ -257,9 +241,7 @@ EXECUTE {f}
     assert bbl.strip() == "hello"
 
 
-def test_assign_empty_string_edge(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_assign_empty_string_edge(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     style = """\
 ENTRY { } { } { }
 STRINGS { s }
@@ -277,18 +259,12 @@ EXECUTE {f}
 
 
 def test_substring_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"abcdefg" #2 #3 substring$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"abcdefg" #2 #3 substring$ write$')
     assert bbl.strip() == "bcd"
 
 
-def test_substring_zero_length(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"abcdef" #1 #0 substring$ "|" * write$'
-    )
+def test_substring_zero_length(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"abcdef" #1 #0 substring$ "|" * write$')
     # zero length → empty; emit "|" to keep result non-empty for assertion
     assert bbl.strip() == "|"
 
@@ -297,9 +273,7 @@ def test_substring_from_end_negative_start(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Negative start counts from the end (spec §3.5)."""
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"abcdef" #-1 #3 substring$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"abcdef" #-1 #3 substring$ write$')
     # start=-1 counts from the end: last 3 chars of "abcdef" = "def".
     assert bbl.strip() == "def"
 
@@ -310,26 +284,18 @@ def test_substring_from_end_negative_start(
 
 
 def test_text_length_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"abcde" text.length$ int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"abcde" text.length$ int.to.str$ write$')
     assert bbl.strip() == "5"
 
 
 def test_text_length_empty(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"" text.length$ int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"" text.length$ int.to.str$ write$')
     assert bbl.strip() == "0"
 
 
-def test_text_length_control_sequence(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_text_length_control_sequence(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     r"""``{\TeX}`` is a control sequence, counts as 1 (spec §8.4)."""
-    bbl, _ = _exec(
-        submission_command, tmp_path, r'"{\TeX}" text.length$ int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, r'"{\TeX}" text.length$ int.to.str$ write$')
     assert bbl.strip() == "1"
 
 
@@ -339,25 +305,19 @@ def test_text_length_control_sequence(
 
 
 def test_text_prefix_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"hello world" #5 text.prefix$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"hello world" #5 text.prefix$ write$')
     assert bbl.strip() == "hello"
 
 
 def test_text_prefix_zero(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"hello" #0 text.prefix$ "|" * write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"hello" #0 text.prefix$ "|" * write$')
     assert bbl.strip() == "|"
 
 
 def test_text_prefix_longer_than_string(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"hi" #100 text.prefix$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"hi" #100 text.prefix$ write$')
     assert bbl.strip() == "hi"
 
 
@@ -368,16 +328,12 @@ def test_text_prefix_longer_than_string(
 
 def test_width_nonzero_on_text(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """width$ returns a positive integer for any non-empty printable string (spec §8.1)."""
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"hello" width$ #0 > int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"hello" width$ #0 > int.to.str$ write$')
     assert bbl.strip() == "1"
 
 
 def test_width_empty_is_zero(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"" width$ int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"" width$ int.to.str$ write$')
     assert bbl.strip() == "0"
 
 
@@ -438,41 +394,27 @@ def test_add_period_ignores_trailing_braces(
 
 
 def test_change_case_lower(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"Hello World" "l" change.case$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"Hello World" "l" change.case$ write$')
     assert bbl.strip() == "hello world"
 
 
 def test_change_case_upper(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"Hello World" "u" change.case$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"Hello World" "u" change.case$ write$')
     assert bbl.strip() == "HELLO WORLD"
 
 
 def test_change_case_title(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"HELLO WORLD" "t" change.case$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"HELLO WORLD" "t" change.case$ write$')
     assert bbl.strip() == "Hello world"
 
 
-def test_change_case_preserves_braces(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"The {USA} story" "l" change.case$ write$'
-    )
+def test_change_case_preserves_braces(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"The {USA} story" "l" change.case$ write$')
     assert bbl.strip() == "the {USA} story"
 
 
-def test_change_case_on_empty(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"" "l" change.case$ "|" * write$'
-    )
+def test_change_case_on_empty(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"" "l" change.case$ "|" * write$')
     assert bbl.strip() == "|"
 
 
@@ -482,18 +424,12 @@ def test_change_case_on_empty(
 
 
 def test_chr_to_int_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"A" chr.to.int$ int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"A" chr.to.int$ int.to.str$ write$')
     assert bbl.strip() == "65"
 
 
-def test_chr_to_int_lowercase(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"a" chr.to.int$ int.to.str$ write$'
-    )
+def test_chr_to_int_lowercase(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"a" chr.to.int$ int.to.str$ write$')
     assert bbl.strip() == "97"
 
 
@@ -552,25 +488,17 @@ def test_int_to_str_negative(submission_command: tuple[str, ...], tmp_path: Path
 
 
 def test_purify_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"Hello, World!" purify$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"Hello, World!" purify$ write$')
     assert bbl.strip() == "Hello World"
 
 
 def test_purify_empty(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"" purify$ "|" * write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"" purify$ "|" * write$')
     assert bbl.strip() == "|"
 
 
-def test_purify_only_punctuation(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"!!!???" purify$ "|" * write$'
-    )
+def test_purify_only_punctuation(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"!!!???" purify$ "|" * write$')
     # All stripped to empty; marker preserves position.
     assert bbl.strip() == "|"
 
@@ -592,9 +520,7 @@ def test_format_name_last(submission_command: tuple[str, ...], tmp_path: Path) -
     assert bbl.strip() == "Smith"
 
 
-def test_format_name_first_initial(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_format_name_first_initial(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = '@article{a, author = "John Smith"}\n'
     bbl, _ = _iterate(
         submission_command,
@@ -608,9 +534,7 @@ def test_format_name_first_initial(
     assert "." in bbl
 
 
-def test_format_name_out_of_range(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_format_name_out_of_range(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Index beyond the list length returns empty string (spec §3.5)."""
     bib = '@article{a, author = "John Smith"}\n'
     bbl, _ = _iterate(
@@ -734,9 +658,7 @@ def test_skip_is_noop(submission_command: tuple[str, ...], tmp_path: Path) -> No
     assert bbl.strip() == "A"
 
 
-def test_skip_leaves_stack_untouched(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_skip_leaves_stack_untouched(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(submission_command, tmp_path, '"X" "Y" skip$ * write$')
     assert bbl.strip() == "XY"
 
@@ -752,16 +674,12 @@ def test_pop_discards_top(submission_command: tuple[str, ...], tmp_path: Path) -
 
 
 def test_swap_two(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"A" "B" swap$ write$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"A" "B" swap$ write$ write$')
     assert bbl.strip() == "AB"
 
 
 def test_duplicate(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"X" duplicate$ write$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"X" duplicate$ write$ write$')
     assert bbl.strip() == "XX"
 
 
@@ -777,15 +695,11 @@ def test_cite(submission_command: tuple[str, ...], tmp_path: Path) -> None:
 
 def test_type_is_lowercased(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = '@ARTICLE{a, author = "x"}\n'
-    bbl, _ = _iterate(
-        submission_command, tmp_path, "type$ write$", bib=bib, entry_fields="author"
-    )
+    bbl, _ = _iterate(submission_command, tmp_path, "type$ write$", bib=bib, entry_fields="author")
     assert bbl.strip() == "article"
 
 
-def test_call_type_dispatches(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_call_type_dispatches(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = '@article{a, title = "A"}\n'
     style = """\
 ENTRY { title } { } { }
@@ -799,49 +713,29 @@ ITERATE {f}
     assert bbl.strip() == "art:A"
 
 
-def test_empty_on_missing_field(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _iterate(
-        submission_command, tmp_path, "journal empty$ int.to.str$ write$"
-    )
+def test_empty_on_missing_field(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _iterate(submission_command, tmp_path, "journal empty$ int.to.str$ write$")
     assert bbl.strip() == "1"
 
 
-def test_empty_on_whitespace_string(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"   " empty$ int.to.str$ write$'
-    )
+def test_empty_on_whitespace_string(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"   " empty$ int.to.str$ write$')
     assert bbl.strip() == "1"
 
 
-def test_empty_on_nonempty_string(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"hi" empty$ int.to.str$ write$'
-    )
+def test_empty_on_nonempty_string(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _exec(submission_command, tmp_path, '"hi" empty$ int.to.str$ write$')
     assert bbl.strip() == "0"
 
 
-def test_missing_on_missing_field(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    bbl, _ = _iterate(
-        submission_command, tmp_path, "journal missing$ int.to.str$ write$"
-    )
+def test_missing_on_missing_field(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    bbl, _ = _iterate(submission_command, tmp_path, "journal missing$ int.to.str$ write$")
     assert bbl.strip() == "1"
 
 
-def test_missing_vs_empty_string(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_missing_vs_empty_string(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """missing$ distinguishes missing field from empty string."""
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"" missing$ int.to.str$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"" missing$ int.to.str$ write$')
     assert bbl.strip() == "0"
 
 
@@ -856,29 +750,21 @@ def test_preamble_normal(submission_command: tuple[str, ...], tmp_path: Path) ->
     assert bbl.strip() == r"\special"
 
 
-def test_preamble_empty_when_none(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_preamble_empty_when_none(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(
         submission_command,
         tmp_path,
-        'preamble$ empty$ int.to.str$ write$',
+        "preamble$ empty$ int.to.str$ write$",
     )
     assert bbl.strip() == "1"
 
 
-def test_preamble_concatenated(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_preamble_concatenated(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """summary.md §3.5 `preamble$` row: concatenation of all
     `@preamble` values in source order, separated by a single
     ASCII space. Two preambles "aa" + "bb" MUST yield exactly
     "aa bb" per the documented contract."""
-    bib = (
-        '@preamble{"aa"}\n'
-        '@preamble{"bb"}\n'
-        '@article{a, author = "X"}\n'
-    )
+    bib = '@preamble{"aa"}\n@preamble{"bb"}\n@article{a, author = "X"}\n'
     bbl, _ = _exec(submission_command, tmp_path, "preamble$ write$", bib=bib)
     assert bbl.rstrip("\n") == "aa bb", (
         f"expected 'aa bb' (source order, single-space separator); got {bbl!r}"
@@ -911,16 +797,12 @@ def test_newline_emits_lf(submission_command: tuple[str, ...], tmp_path: Path) -
 # ---------------------------------------------------------------------------
 
 
-def test_quote_pushes_double_quote(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_quote_pushes_double_quote(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(submission_command, tmp_path, "quote$ write$")
     assert bbl.rstrip("\n") == '"'
 
 
-def test_quote_within_string_build(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_quote_within_string_build(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """quote$ composes with * to build a literal quote in the middle."""
     bbl, _ = _exec(submission_command, tmp_path, '"a" quote$ * "b" * write$')
     assert bbl.rstrip("\n") == 'a"b'
@@ -934,25 +816,17 @@ def test_quote_within_string_build(
 # ---------------------------------------------------------------------------
 
 
-def test_top_is_noop_on_output(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_top_is_noop_on_output(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """top$ prints the stack (debug) — MUST not abort execution."""
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"A" duplicate$ top$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"A" duplicate$ top$ write$')
     # Two copies of "A" were left by duplicate; top$ either prints them to
     # a log/stderr or is a silent no-op. Either way, "A" must still write.
     assert "A" in bbl
 
 
-def test_stack_does_not_crash(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_stack_does_not_crash(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """stack$ dumps the full stack (debug). MUST not abort execution."""
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"X" "Y" stack$ "post" write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"X" "Y" stack$ "post" write$')
     # "post" comes after stack$, so execution must continue. stack$ may leave
     # the stack empty or full depending on interpretation; don't assert on
     # what's left, just on continuation.
@@ -964,9 +838,7 @@ def test_stack_does_not_crash(
 # ---------------------------------------------------------------------------
 
 
-def test_warning_emits_entry_in_log(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_warning_emits_entry_in_log(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """warning$ appends to the warnings log (spec §5.2/§5.3)."""
     _, log = _exec(
         submission_command,
@@ -981,9 +853,7 @@ def test_warning_emits_entry_in_log(
     assert any("something odd" in m for m in msgs)
 
 
-def test_warning_does_not_abort(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_warning_does_not_abort(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """warning$ does not stop execution (spec §5.3)."""
     bbl, _ = _exec(
         submission_command,
@@ -993,9 +863,7 @@ def test_warning_does_not_abort(
     assert "after" in bbl
 
 
-def test_warning_empty_message_allowed(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_warning_empty_message_allowed(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """warning$ with empty string is legal."""
     bbl, _ = _exec(
         submission_command,

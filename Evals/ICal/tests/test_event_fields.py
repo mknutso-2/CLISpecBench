@@ -37,18 +37,14 @@ def _event_with(props: str, uid: str = "e1") -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_priority_integer(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_priority_integer(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """PRIORITY=5 surfaces as integer 5."""
     out = run_parse(submission_command, _event_with("PRIORITY:5\n"), tmp_path)
     ev = find_event(out, "e1")
     assert ev.get("priority") == 5
 
 
-def test_priority_absent_is_null(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_priority_absent_is_null(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(submission_command, _event_with(""), tmp_path)
     ev = find_event(out, "e1")
     assert ev.get("priority") in (None, 0) or ev["priority"] is None
@@ -65,12 +61,8 @@ def test_transp_opaque(submission_command: tuple[str, ...], tmp_path: Path) -> N
     assert ev.get("transp") == "OPAQUE"
 
 
-def test_transp_transparent(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    out = run_parse(
-        submission_command, _event_with("TRANSP:TRANSPARENT\n"), tmp_path
-    )
+def test_transp_transparent(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    out = run_parse(submission_command, _event_with("TRANSP:TRANSPARENT\n"), tmp_path)
     ev = find_event(out, "e1")
     assert ev.get("transp") == "TRANSPARENT"
 
@@ -90,9 +82,7 @@ def test_url_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> N
     assert ev.get("url") == "https://example.com/e1"
 
 
-def test_url_absent_is_null(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_url_absent_is_null(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(submission_command, _event_with(""), tmp_path)
     ev = find_event(out, "e1")
     assert ev.get("url") is None
@@ -117,16 +107,12 @@ def test_geo_two_floats(submission_command: tuple[str, ...], tmp_path: Path) -> 
     assert abs(cast(float, geo["lon"]) - (-122.4194)) < 0.01
 
 
-def test_geo_absent_is_null(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_geo_absent_is_null(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(submission_command, _event_with(""), tmp_path)
     assert find_event(out, "e1").get("geo") is None
 
 
-def test_geo_malformed_emits_warning(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_geo_malformed_emits_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Malformed GEO value emits `malformed_value` warning; geo stays null."""
     out = run_parse(
         submission_command,
@@ -190,9 +176,7 @@ def test_contact_text(submission_command: tuple[str, ...], tmp_path: Path) -> No
 # ---------------------------------------------------------------------------
 
 
-def test_created_utc_datetime(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_created_utc_datetime(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(
         submission_command,
         _event_with("CREATED:20251115T080000Z\n"),
@@ -209,9 +193,7 @@ def test_created_utc_datetime(
 # ---------------------------------------------------------------------------
 
 
-def test_last_modified_utc_datetime(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_last_modified_utc_datetime(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(
         submission_command,
         _event_with("LAST-MODIFIED:20260201T094500Z\n"),
@@ -228,9 +210,7 @@ def test_last_modified_utc_datetime(
 # ---------------------------------------------------------------------------
 
 
-def test_attach_uri_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_attach_uri_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """ATTACH with a URI value surfaces in attachments array."""
     out = run_parse(
         submission_command,
@@ -243,14 +223,10 @@ def test_attach_uri_preserved(
     assert atts[0].get("value") == "https://example.com/agenda.pdf"
 
 
-def test_attach_fmttype_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_attach_fmttype_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_parse(
         submission_command,
-        _event_with(
-            "ATTACH;FMTTYPE=application/pdf:https://example.com/a.pdf\n"
-        ),
+        _event_with("ATTACH;FMTTYPE=application/pdf:https://example.com/a.pdf\n"),
         tmp_path,
     )
     ev = find_event(out, "e1")
@@ -264,9 +240,7 @@ def test_attach_inline_base64_preserved(
     """Inline base64 attachment surfaces the encoding param."""
     out = run_parse(
         submission_command,
-        _event_with(
-            "ATTACH;ENCODING=BASE64;VALUE=BINARY:aGVsbG8=\n"
-        ),
+        _event_with("ATTACH;ENCODING=BASE64;VALUE=BINARY:aGVsbG8=\n"),
         tmp_path,
     )
     ev = find_event(out, "e1")
@@ -281,9 +255,7 @@ def test_attach_inline_base64_preserved(
 # ---------------------------------------------------------------------------
 
 
-def test_color_preserved_on_event(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_color_preserved_on_event(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 7986 §5.9 COLOR can appear on VEVENT."""
     out = run_parse(
         submission_command,
@@ -298,9 +270,7 @@ def test_image_on_event(submission_command: tuple[str, ...], tmp_path: Path) -> 
     """RFC 7986 §5.10 IMAGE can appear on VEVENT (not just VCALENDAR)."""
     out = run_parse(
         submission_command,
-        _event_with(
-            "IMAGE;VALUE=URI;FMTTYPE=image/png;DISPLAY=BADGE:https://example.com/i.png\n"
-        ),
+        _event_with("IMAGE;VALUE=URI;FMTTYPE=image/png;DISPLAY=BADGE:https://example.com/i.png\n"),
         tmp_path,
     )
     ev = find_event(out, "e1")
@@ -310,15 +280,11 @@ def test_image_on_event(submission_command: tuple[str, ...], tmp_path: Path) -> 
     assert images[0].get("display") == "BADGE"
 
 
-def test_conference_on_event(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_conference_on_event(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 7986 §6.3 CONFERENCE at event level."""
     out = run_parse(
         submission_command,
-        _event_with(
-            'CONFERENCE;FEATURE=VIDEO;LABEL="Zoom":https://zoom.us/j/123\n'
-        ),
+        _event_with('CONFERENCE;FEATURE=VIDEO;LABEL="Zoom":https://zoom.us/j/123\n'),
         tmp_path,
     )
     ev = find_event(out, "e1")

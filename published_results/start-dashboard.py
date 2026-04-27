@@ -80,7 +80,8 @@ def is_dashboard_running(base: str, dashboard: str) -> bool:
                 return False
 
         with urllib.request.urlopen(
-            dashboard_url(base, EXPECTED_DATA_PATH), timeout=1.0,
+            dashboard_url(base, EXPECTED_DATA_PATH),
+            timeout=1.0,
         ) as data_response:
             if data_response.status != 200:
                 return False

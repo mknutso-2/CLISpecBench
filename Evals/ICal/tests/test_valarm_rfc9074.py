@@ -42,9 +42,7 @@ def _wrap_alarm(properties: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def test_valarm_uid_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_valarm_uid_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 9074 §4: UID may appear inside VALARM for cross-replica identity."""
     body = "UID:alarm-xyz-123\nACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
     ics = _wrap_alarm(body)
@@ -54,9 +52,7 @@ def test_valarm_uid_preserved(
     if "uid" in alarm:
         assert alarm["uid"] == "alarm-xyz-123"
     # Either way, raw_properties should carry it.
-    raw = cast(
-        list[dict[str, Any]], alarm.get("raw_properties") or []
-    )
+    raw = cast(list[dict[str, Any]], alarm.get("raw_properties") or [])
     names = [str(p.get("name", "")).upper() for p in raw]
     assert "UID" in names, f"UID not in raw_properties: {names}"
 
@@ -70,10 +66,7 @@ def test_acknowledged_absolute_datetime(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """RFC 9074 §6: ACKNOWLEDGED is a UTC DATE-TIME of last ack."""
-    body = (
-        "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
-        "ACKNOWLEDGED:20260301T090500Z\n"
-    )
+    body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\nACKNOWLEDGED:20260301T090500Z\n"
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
@@ -84,9 +77,7 @@ def test_acknowledged_absolute_datetime(
     assert "2026-03-01" in ack
 
 
-def test_acknowledged_absence_is_null(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_acknowledged_absence_is_null(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """If ACKNOWLEDGED is not present, acknowledged is null."""
     body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
     ics = _wrap_alarm(body)
@@ -100,41 +91,26 @@ def test_acknowledged_absence_is_null(
 # ---------------------------------------------------------------------------
 
 
-def test_proximity_arrive(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_proximity_arrive(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 9074 §8: PROXIMITY=ARRIVE."""
-    body = (
-        "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
-        "PROXIMITY:ARRIVE\n"
-    )
+    body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\nPROXIMITY:ARRIVE\n"
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
     assert alarm.get("proximity") == "ARRIVE"
 
 
-def test_proximity_depart(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    body = (
-        "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
-        "PROXIMITY:DEPART\n"
-    )
+def test_proximity_depart(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\nPROXIMITY:DEPART\n"
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
     assert alarm.get("proximity") == "DEPART"
 
 
-def test_proximity_xname_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_proximity_xname_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """x-name PROXIMITY values are preserved as strings, not coerced."""
-    body = (
-        "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
-        "PROXIMITY:X-CUSTOM-ZONE\n"
-    )
+    body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\nPROXIMITY:X-CUSTOM-ZONE\n"
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
@@ -145,9 +121,7 @@ def test_proximity_xname_preserved(
     assert alarm.get("proximity") == "X-CUSTOM-ZONE"
 
 
-def test_proximity_absence_is_null(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_proximity_absence_is_null(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
@@ -160,14 +134,9 @@ def test_proximity_absence_is_null(
 # ---------------------------------------------------------------------------
 
 
-def test_related_to_plain_uid(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_related_to_plain_uid(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 9074 §9: RELATED-TO value is a UID string; default RELTYPE=PARENT."""
-    body = (
-        "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
-        "RELATED-TO:other-event-uid\n"
-    )
+    body = "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\nRELATED-TO:other-event-uid\n"
     ics = _wrap_alarm(body)
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
@@ -177,9 +146,7 @@ def test_related_to_plain_uid(
     )
 
 
-def test_related_to_with_reltype(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_related_to_with_reltype(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RELTYPE parameter: PARENT / CHILD / SIBLING / x-name."""
     body = (
         "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"
@@ -189,17 +156,13 @@ def test_related_to_with_reltype(
     out = run_parse(submission_command, ics, tmp_path)
     alarm = _alarms_of(find_event(out, "e1"))[0]
     rels = cast(list[dict[str, Any]], alarm.get("related_to") or [])
-    sibling = next(
-        (r for r in rels if r.get("value") == "sibling-alarm-uid"), None
-    )
+    sibling = next((r for r in rels if r.get("value") == "sibling-alarm-uid"), None)
     assert sibling is not None
     if "reltype" in sibling:
         assert sibling["reltype"] == "SIBLING"
 
 
-def test_related_to_multiple_entries(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_related_to_multiple_entries(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Multiple RELATED-TO properties accumulate."""
     body = (
         "ACTION:DISPLAY\nTRIGGER:-PT15M\nDESCRIPTION:X\n"

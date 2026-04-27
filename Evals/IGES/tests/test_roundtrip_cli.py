@@ -10,6 +10,7 @@ be byte-identical to the first.
 Ports ``Evals/IGES-SDK/tests/spec/test_file_roundtrip.cpp`` /
 ``test_writer_roundtrip*.cpp``.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none

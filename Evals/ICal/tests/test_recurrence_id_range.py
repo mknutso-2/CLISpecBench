@@ -159,9 +159,7 @@ def test_range_flag_surfaces_on_override_occurrence(
     assert anchor[0].get("recurrence_id") == "2026-03-02T10:00:00Z"
 
 
-def test_range_with_unbounded_rrule(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_range_with_unbounded_rrule(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.8.4.4: THISANDFUTURE on an unbounded RRULE shifts every instance from
     the anchor forward; the test window bounds what we can observe."""
     # Daily with no COUNT/UNTIL; window is [3/1, 3/6).

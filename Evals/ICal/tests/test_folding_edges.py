@@ -90,9 +90,7 @@ def test_exactly_75_octet_line_does_not_warn(
     assert code == 0
     warnings = cast(list[dict[str, Any]], data.get("warnings") or [])
     kinds = [w.get("kind") for w in warnings]
-    assert "line_too_long" not in kinds, (
-        "75-octet line should not warn"
-    )
+    assert "line_too_long" not in kinds, "75-octet line should not warn"
 
 
 def test_properly_folded_long_line_does_not_warn(
@@ -127,9 +125,7 @@ def test_properly_folded_long_line_does_not_warn(
 # ---------------------------------------------------------------------------
 
 
-def test_fold_before_escape_sequence(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_fold_before_escape_sequence(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A fold that splits "\\" and "n" of a \\n escape should still produce
     a newline after unfolding (the unfolder removes the CRLF+SP before the
     escape processor runs)."""
@@ -152,8 +148,7 @@ def test_fold_before_escape_sequence(
     # output so that a parser which emitted literal backslash-n
     # (no escape processing) would fail this test.
     assert desc == "line1\nline2", (
-        f"expected unfold+escape to produce 'line1\\nline2' with real LF; "
-        f"got {desc!r}"
+        f"expected unfold+escape to produce 'line1\\nline2' with real LF; got {desc!r}"
     )
 
 
@@ -179,8 +174,7 @@ def test_multibyte_char_straddling_75_octet_boundary(
         b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//T//EN\r\n"
         b"BEGIN:VEVENT\r\n"
         b"UID:e1\r\nDTSTAMP:20260101T120000Z\r\nDTSTART:20260301T100000Z\r\n"
-        b"DESCRIPTION:" + prefix + b"\r\n "
-        + korean + b"\r\n"
+        b"DESCRIPTION:" + prefix + b"\r\n " + korean + b"\r\n"
         b"END:VEVENT\r\n"
         b"END:VCALENDAR\r\n"
     )

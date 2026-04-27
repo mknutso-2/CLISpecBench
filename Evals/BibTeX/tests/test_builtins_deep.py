@@ -79,10 +79,7 @@ def _iterate(
     if cites is None:
         cites = ["a", "b", "c"]
     style = (
-        "ENTRY { author title } { } { }\n"
-        f"FUNCTION {{f}} {{ {body} }}\n"
-        "READ\n"
-        "ITERATE {f}\n"
+        f"ENTRY {{ author title }} {{ }} {{ }}\nFUNCTION {{f}} {{ {body} }}\nREAD\nITERATE {{f}}\n"
     )
     return run_bibtex(submission_command, bib, style, cites, tmp_path, with_log=with_log)
 
@@ -119,9 +116,7 @@ def test_width_single_lowercase_letter_is_cmr10_value(
     assert value == 500, f"width$ of 'a' expected cmr10 value 500; got {value}"
 
 
-def test_width_space_is_cmr10_value(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_width_space_is_cmr10_value(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """ASCII space is 278 in cmr10; summary §8.1 approximates to 250.
     We accept either but nothing else."""
     bbl, _ = _exec(submission_command, tmp_path, '" " width$ int.to.str$ write$')
@@ -147,9 +142,7 @@ def test_width_uppercase_letter_not_less_than_lowercase(
     that reported `M < m` would be miscalibrated under either
     interpretation."""
     bbl_m, _ = _exec(submission_command, tmp_path, '"M" width$ int.to.str$ write$')
-    bbl_lower_m, _ = _exec(
-        submission_command, tmp_path, '"m" width$ int.to.str$ write$'
-    )
+    bbl_lower_m, _ = _exec(submission_command, tmp_path, '"m" width$ int.to.str$ write$')
     m = int(bbl_m.strip())
     lm = int(bbl_lower_m.strip())
     assert m >= lm, f"'M'={m} less than 'm'={lm}; invalid under every §8.1 interpretation"
@@ -168,24 +161,18 @@ def test_width_brace_group_sums_interior(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Width of {abc} equals width of abc — braces themselves count 0."""
-    bbl_braced, _ = _exec(
-        submission_command, tmp_path, '"{abc}" width$ int.to.str$ write$'
-    )
+    bbl_braced, _ = _exec(submission_command, tmp_path, '"{abc}" width$ int.to.str$ write$')
     bbl_bare, _ = _exec(submission_command, tmp_path, '"abc" width$ int.to.str$ write$')
     assert bbl_braced.strip() == bbl_bare.strip()
 
 
-def test_width_ligature_ae_is_positive(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_width_ligature_ae_is_positive(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """The AE ligature special {\\AE} has a positive, non-zero width."""
     bbl, _ = _exec(submission_command, tmp_path, r'"{\AE}" width$ int.to.str$ write$')
     assert int(bbl.strip()) > 0
 
 
-def test_width_space_less_than_letter(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_width_space_less_than_letter(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A space has less width than a letter (both positive)."""
     bbl, _ = _exec(
         submission_command,
@@ -205,19 +192,16 @@ def test_width_used_as_sort_key_breaks_ties_by_read_order(
     value regardless of order (width$ is commutative across chars). So
     their sort keys are identical and the READ order wins.
     """
-    bib = (
-        '@article{a, author = "abc"}\n'
-        '@article{b, author = "cba"}\n'
-    )
+    bib = '@article{a, author = "abc"}\n@article{b, author = "cba"}\n'
     style = (
-        'ENTRY { author } { } { sort.key$ }\n'
-        'FUNCTION {presort}\n'
-        '{ author width$ int.to.str$ \'sort.key$ := }\n'
-        'FUNCTION {emit} { cite$ write$ newline$ }\n'
-        'READ\n'
-        'ITERATE {presort}\n'
-        'SORT\n'
-        'ITERATE {emit}\n'
+        "ENTRY { author } { } { sort.key$ }\n"
+        "FUNCTION {presort}\n"
+        "{ author width$ int.to.str$ 'sort.key$ := }\n"
+        "FUNCTION {emit} { cite$ write$ newline$ }\n"
+        "READ\n"
+        "ITERATE {presort}\n"
+        "SORT\n"
+        "ITERATE {emit}\n"
     )
     bbl, _ = run_bibtex(submission_command, bib, style, ["a", "b"], tmp_path)
     # Both entries' sort keys are "<width>" (same integer). READ order wins.
@@ -312,12 +296,8 @@ def test_change_case_mode_char_case_insensitive(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """'L' and 'l' are both valid lowercase mode chars (btxhak §3.5)."""
-    lower, _ = _exec(
-        submission_command, tmp_path, '"HI" "l" change.case$ write$'
-    )
-    upper_mode, _ = _exec(
-        submission_command, tmp_path, '"HI" "L" change.case$ write$'
-    )
+    lower, _ = _exec(submission_command, tmp_path, '"HI" "l" change.case$ write$')
+    upper_mode, _ = _exec(submission_command, tmp_path, '"HI" "L" change.case$ write$')
     assert lower.rstrip("\n") == upper_mode.rstrip("\n") == "hi"
 
 
@@ -325,12 +305,8 @@ def test_change_case_upper_mode_char_case_insensitive(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """'U' and 'u' are both valid uppercase mode chars."""
-    lower_mode, _ = _exec(
-        submission_command, tmp_path, '"hi" "u" change.case$ write$'
-    )
-    upper_mode, _ = _exec(
-        submission_command, tmp_path, '"hi" "U" change.case$ write$'
-    )
+    lower_mode, _ = _exec(submission_command, tmp_path, '"hi" "u" change.case$ write$')
+    upper_mode, _ = _exec(submission_command, tmp_path, '"hi" "U" change.case$ write$')
     assert lower_mode.rstrip("\n") == upper_mode.rstrip("\n") == "HI"
 
 
@@ -363,9 +339,7 @@ def test_change_case_preserves_digits_and_punct(
 # ---------------------------------------------------------------------------
 
 
-def test_top_preserves_following_stack(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_top_preserves_following_stack(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """top$ is a debug peek; the value must still be there after."""
     bbl, _ = _exec(
         submission_command,
@@ -390,9 +364,7 @@ def test_stack_dumps_without_affecting_output(
         tmp_path,
         '"A" write$ stack$ "B" write$',
     )
-    assert bbl.replace("\n", "") == "AB", (
-        f"stack$ must not leak into .bbl; got {bbl!r}"
-    )
+    assert bbl.replace("\n", "") == "AB", f"stack$ must not leak into .bbl; got {bbl!r}"
 
 
 def test_stack_preserves_post_execution_flow(
@@ -408,9 +380,7 @@ def test_stack_preserves_post_execution_flow(
     assert "continued" in bbl
 
 
-def test_top_after_write_still_writes(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_top_after_write_still_writes(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """top$ interleaved with write$ doesn't corrupt output."""
     bbl, _ = _exec(
         submission_command,
@@ -454,9 +424,7 @@ def test_warning_during_iterate_has_key_metadata(
     warnings = _log_warnings(log)
     assert any(w.get("message", "") == "flag" or "flag" in w.get("message", "") for w in warnings)
     # If the tool populates ``key``, it must equal the current entry.
-    flag_warnings = [
-        w for w in warnings if "flag" in w.get("message", "")
-    ]
+    flag_warnings = [w for w in warnings if "flag" in w.get("message", "")]
     for w in flag_warnings:
         k = w.get("key")
         assert k is None or k == "b", f"warning.key={k!r} does not match iterating entry 'b'"
@@ -498,9 +466,7 @@ def test_warning_multiple_preserves_order(
     second_idx = next((i for i, m in enumerate(msgs) if "second" in m), -1)
     third_idx = next((i for i, m in enumerate(msgs) if "third" in m), -1)
     assert first_idx != -1 and second_idx != -1 and third_idx != -1
-    assert first_idx < second_idx < third_idx, (
-        f"warning emission order not preserved: {msgs}"
-    )
+    assert first_idx < second_idx < third_idx, f"warning emission order not preserved: {msgs}"
 
 
 def test_warning_empty_message_still_emits(
@@ -540,9 +506,7 @@ def test_warning_inside_iterate_emits_per_entry(
     assert count == 3, f"expected 3 warnings (one per entry), got {count}"
 
 
-def test_warning_does_not_affect_stack(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_warning_does_not_affect_stack(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """warning$ consumes one string from the stack but leaves the rest alone."""
     bbl, _ = _exec(
         submission_command,
@@ -567,21 +531,17 @@ def test_chr_to_int_ascii_letter(submission_command: tuple[str, ...], tmp_path: 
     assert bbl.strip() == "65"
 
 
-def test_int_to_chr_ascii_roundtrip(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_int_to_chr_ascii_roundtrip(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """int.to.chr$ of a valid ASCII code produces the corresponding 1-char string."""
     bbl, _ = _exec(
         submission_command,
         tmp_path,
-        '#65 int.to.chr$ write$',
+        "#65 int.to.chr$ write$",
     )
     assert bbl.rstrip("\n") == "A"
 
 
-def test_chr_int_roundtrip_symmetric(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_chr_int_roundtrip_symmetric(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """chr.to.int$ followed by int.to.chr$ returns the original character."""
     bbl, _ = _exec(
         submission_command,
@@ -617,9 +577,7 @@ def test_chr_to_int_multichar_emits_type_error(
 def test_purify_preserves_alphanumerics(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    bbl, _ = _exec(
-        submission_command, tmp_path, '"Hello 2024" purify$ write$'
-    )
+    bbl, _ = _exec(submission_command, tmp_path, '"Hello 2024" purify$ write$')
     assert bbl.rstrip("\n") == "Hello 2024"
 
 
@@ -637,9 +595,7 @@ def test_purify_strips_trailing_punctuation(
     assert "abc" in out and "def" in out
 
 
-def test_purify_hyphen_becomes_space(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_purify_hyphen_becomes_space(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Per bibtex.web §10602: hyphens and tildes become single spaces."""
     bbl, _ = _exec(
         submission_command,
@@ -649,9 +605,7 @@ def test_purify_hyphen_becomes_space(
     assert bbl.rstrip("\n") == "a b"
 
 
-def test_purify_tilde_becomes_space(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_purify_tilde_becomes_space(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(
         submission_command,
         tmp_path,
@@ -675,8 +629,6 @@ def test_purify_ae_ligature_restored_as_letters(
     assert out == "AEther", f"expected 'AEther' per ligature table; got {out!r}"
 
 
-
-
 def test_purify_brace_group_with_only_punct_is_stripped(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
@@ -693,19 +645,12 @@ def test_purify_brace_group_with_only_punct_is_stripped(
     out = bbl.rstrip("\n")
     # Pin the exact output: no punctuation, no braces, just "abcdef".
     assert out == "abcdef", (
-        f"expected 'abcdef' (recursive purify strips interior and "
-        f"unwraps braces); got {out!r}"
+        f"expected 'abcdef' (recursive purify strips interior and unwraps braces); got {out!r}"
     )
 
 
-def test_purify_is_idempotent(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_purify_is_idempotent(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """purify$ applied twice is the same as once."""
-    once, _ = _exec(
-        submission_command, tmp_path, '"abc, def!" purify$ write$'
-    )
-    twice, _ = _exec(
-        submission_command, tmp_path, '"abc, def!" purify$ purify$ write$'
-    )
+    once, _ = _exec(submission_command, tmp_path, '"abc, def!" purify$ write$')
+    twice, _ = _exec(submission_command, tmp_path, '"abc, def!" purify$ purify$ write$')
     assert once.rstrip("\n") == twice.rstrip("\n")

@@ -74,7 +74,7 @@ def test_error_reports_line_column_for_unclosed_entry(
 ) -> None:
     """An unclosed @article entry reports a line/column near the end of
     the file (where EOF was hit unexpectedly)."""
-    bib = "@article{a, title = \"T\"\n"  # no closing brace
+    bib = '@article{a, title = "T"\n'  # no closing brace
     err = _run_for_error(submission_command, tmp_path, bib, MIN_STYLE)
     error = err.get("error")
     assert isinstance(error, dict), f"error JSON missing 'error' object: {err}"
@@ -96,11 +96,9 @@ def test_error_reports_source_bib_for_bib_errors(
         assert error["source"] == "bib", f"expected source=bib, got {error['source']}"
 
 
-def test_error_line_column_are_nonzero(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_error_line_column_are_nonzero(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Line and column should be 1-indexed positive integers, not 0."""
-    bib = "@article{a, title = \"unterminated\n"  # unterminated string
+    bib = '@article{a, title = "unterminated\n'  # unterminated string
     err = _run_for_error(submission_command, tmp_path, bib, MIN_STYLE)
     error = err.get("error")
     assert isinstance(error, dict)
@@ -154,9 +152,7 @@ def test_missing_required_flag_exits_one(
         text=True,
         timeout=30,
     )
-    assert result.returncode == 1, (
-        f"expected exit 1 for missing flags, got {result.returncode}"
-    )
+    assert result.returncode == 1, f"expected exit 1 for missing flags, got {result.returncode}"
 
 
 def test_nonexistent_bib_file_exits_one(
@@ -220,9 +216,7 @@ def test_nonexistent_aux_file_exits_one(
 # ---------------------------------------------------------------------------
 
 
-def test_error_json_is_valid_object(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_error_json_is_valid_object(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Any exit-1 case must produce a JSON object with an 'error' field."""
     # Trigger by giving a malformed bib.
     bib = "@article{\n"  # no key

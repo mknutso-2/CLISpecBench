@@ -25,17 +25,13 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--results-dir", default="transient_results", help="Root results directory"
-    )
+    parser.add_argument("--results-dir", default="transient_results", help="Root results directory")
     parser.add_argument(
         "--task-prefix",
         default="rs274",
         help="Only include task folders whose names start with this (default: rs274)",
     )
-    parser.add_argument(
-        "--output", "-o", default=None, help="Output CSV path (default: stdout)"
-    )
+    parser.add_argument("--output", "-o", default=None, help="Output CSV path (default: stdout)")
     parser.add_argument(
         "--exit-reason",
         default=None,
@@ -114,8 +110,7 @@ def main() -> None:
 
     zero_pass = sum(1 for r in rows if r["passed"] == 0)
     print(
-        f"Wrote {len(rows)} test rows from {runs_loaded} runs "
-        f"(skipped {runs_skipped} unreadable).",
+        f"Wrote {len(rows)} test rows from {runs_loaded} runs (skipped {runs_skipped} unreadable).",
         file=sys.stderr,
     )
     print(f"Tests with zero successes: {zero_pass}", file=sys.stderr)

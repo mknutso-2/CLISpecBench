@@ -5,6 +5,7 @@ These port the CLI-observable behavior from the SDK's
 separate ``validate`` subcommand; instead, ``iges parse`` must reject
 files that fail the shipped structural validation checks.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -28,8 +29,10 @@ def _run_parse(
         [
             *submission_command,
             "parse",
-            "--input", str(iges_path),
-            "--output", str(out_path),
+            "--input",
+            str(iges_path),
+            "--output",
+            str(out_path),
         ],
         capture_output=True,
         check=False,
@@ -44,7 +47,7 @@ def _write_lines(path: Path, lines: Sequence[str]) -> None:
 
 def _replace_field(line: str, start_col: int, width: int, value: str) -> str:
     field = f"{value:>{width}}"
-    return f"{line[:start_col]}{field}{line[start_col + width:]}"
+    return f"{line[:start_col]}{field}{line[start_col + width :]}"
 
 
 def _directory_line_indexes(lines: Sequence[str]) -> tuple[int, int]:
@@ -56,13 +59,15 @@ def _directory_line_indexes(lines: Sequence[str]) -> tuple[int, int]:
 def _make_valid_line_file(submission_command: Sequence[str], tmp_path: Path) -> Path:
     return write_iges_from_json(
         submission_command,
-        wrap_entities([
-            make_entity(
-                de_index=1,
-                entity_type=110,
-                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 1.0, 1.0]},
-            ),
-        ]),
+        wrap_entities(
+            [
+                make_entity(
+                    de_index=1,
+                    entity_type=110,
+                    data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 1.0, 1.0]},
+                ),
+            ]
+        ),
         tmp_path,
         name="valid-line",
     )
@@ -73,19 +78,19 @@ _GLOBAL_FIELD_DEFAULTS: dict[int, str] = {
     4: hollerith("test.igs"),
     5: hollerith("SDK"),
     6: hollerith("1.0"),
-    7: "32",        # integer_bits
-    8: "38",        # sp_magnitude
-    9: "6",         # sp_significance
-    10: "308",      # dp_magnitude
-    11: "15",       # dp_significance
+    7: "32",  # integer_bits
+    8: "38",  # sp_magnitude
+    9: "6",  # sp_significance
+    10: "308",  # dp_magnitude
+    11: "15",  # dp_significance
     12: hollerith("test"),
-    13: "1.0",      # model_space_scale
+    13: "1.0",  # model_space_scale
     14: "2",
     15: hollerith("MM"),
-    16: "1",        # max_line_weight_grads
+    16: "1",  # max_line_weight_grads
     17: "0.01",
     18: hollerith("20260416.120000"),
-    19: "1.0E-6",   # min_resolution
+    19: "1.0E-6",  # min_resolution
     20: "1.0",
     21: hollerith("usr"),
     22: hollerith("site"),
@@ -112,7 +117,8 @@ def _make_valid_empty_iges(
 
 
 def test_parse_accepts_valid_file_with_no_validation_diagnostics(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = _make_valid_line_file(submission_command, tmp_path)
     out_path = tmp_path / "valid-line.json"
@@ -123,7 +129,8 @@ def test_parse_accepts_valid_file_with_no_validation_diagnostics(
 
 
 def test_parse_rejects_invalid_xform_matrix_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = _make_valid_line_file(submission_command, tmp_path)
     lines = iges_path.read_text(encoding="latin-1").splitlines()
@@ -140,7 +147,8 @@ def test_parse_rejects_invalid_xform_matrix_pointer(
 
 
 def test_parse_rejects_invalid_view_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = _make_valid_line_file(submission_command, tmp_path)
     lines = iges_path.read_text(encoding="latin-1").splitlines()
@@ -157,7 +165,8 @@ def test_parse_rejects_invalid_view_pointer(
 
 
 def test_parse_rejects_invalid_label_display_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """TR §1.2: label_display must be validated alongside view / xform_matrix."""
     iges_path = _make_valid_line_file(submission_command, tmp_path)
@@ -176,7 +185,8 @@ def test_parse_rejects_invalid_label_display_pointer(
 
 
 def test_parse_rejects_negative_entity_type(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = _make_valid_line_file(submission_command, tmp_path)
     lines = iges_path.read_text(encoding="latin-1").splitlines()
@@ -194,7 +204,8 @@ def test_parse_rejects_negative_entity_type(
 
 
 def test_parse_rejects_zero_param_line_count_for_non_null_entity(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = _make_valid_line_file(submission_command, tmp_path)
     lines = iges_path.read_text(encoding="latin-1").splitlines()
@@ -211,7 +222,8 @@ def test_parse_rejects_zero_param_line_count_for_non_null_entity(
 
 
 def test_parse_rejects_non_positive_model_space_scale(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = tmp_path / "bad-scale.iges"
     iges_path.write_text(_make_valid_empty_iges(model_space_scale="0.0"), encoding="latin-1")
@@ -225,13 +237,12 @@ def test_parse_rejects_non_positive_model_space_scale(
 
 
 def test_parse_rejects_non_positive_integer_bits(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """TR §1.2 + spec §2.2.4.3.7: integer_bits must be positive."""
     iges_path = tmp_path / "bad-integer-bits.iges"
-    iges_path.write_text(
-        _make_valid_empty_iges(integer_bits="0"), encoding="latin-1"
-    )
+    iges_path.write_text(_make_valid_empty_iges(integer_bits="0"), encoding="latin-1")
 
     out_path = tmp_path / "bad-integer-bits.json"
     completed = _run_parse(submission_command, iges_path, out_path)
@@ -253,8 +264,10 @@ def test_parse_rejects_non_positive_integer_bits(
     ],
 )
 def test_parse_rejects_non_positive_required_global_field(
-    submission_command: Sequence[str], tmp_path: Path,
-    field_num: int, field_name: str,
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    field_num: int,
+    field_name: str,
 ) -> None:
     """TR §1.2: 'any non-positive required Global numeric field such as
     model_space_scale' must exit 1. Parameterized across the remaining
@@ -277,7 +290,8 @@ def test_parse_rejects_non_positive_required_global_field(
 
 
 def test_write_rejects_non_positive_global_field(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """TR §1.2: `iges write` must reject canonical JSON that encodes an
     invalid Global section — specifically non-positive required numeric
@@ -287,13 +301,15 @@ def test_write_rejects_non_positive_global_field(
     Error output for write/roundtrip goes to stderr (see TR §1.4 and the
     ref-impl behavior), so we assert on exit code only.
     """
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
     doc["global"]["min_resolution"] = 0.0
     json_path = tmp_path / "bad-global.json"
     iges_path = tmp_path / "bad-global.iges"
@@ -301,17 +317,24 @@ def test_write_rejects_non_positive_global_field(
 
     completed = subprocess.run(
         [
-            *submission_command, "write",
-            "--input", str(json_path),
-            "--output", str(iges_path),
+            *submission_command,
+            "write",
+            "--input",
+            str(json_path),
+            "--output",
+            str(iges_path),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
 
 
 def test_write_rejects_invalid_xform_matrix_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """TR §1.2: the write path must reject DE cross-references that
     point to non-existent entities, symmetric with the parse-side check.
@@ -319,119 +342,155 @@ def test_write_rejects_invalid_xform_matrix_pointer(
     A file emitted with a dangling xform_matrix pointer would be
     rejected by `iges parse`, so `iges write` must refuse to produce it.
     """
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-            directory_entry_overrides={"xform_matrix": 999},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+                directory_entry_overrides={"xform_matrix": 999},
+            ),
+        ]
+    )
     json_path = tmp_path / "bad-xform.json"
     iges_path = tmp_path / "bad-xform.iges"
     json_path.write_text(json.dumps(doc), encoding="utf-8")
 
     completed = subprocess.run(
         [
-            *submission_command, "write",
-            "--input", str(json_path),
-            "--output", str(iges_path),
+            *submission_command,
+            "write",
+            "--input",
+            str(json_path),
+            "--output",
+            str(iges_path),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
 
 
 def test_write_rejects_invalid_view_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """TR §1.2: mirror of `test_write_rejects_invalid_xform_matrix_pointer`
     for the view cross-reference."""
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-            directory_entry_overrides={"view": 999},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+                directory_entry_overrides={"view": 999},
+            ),
+        ]
+    )
     json_path = tmp_path / "bad-view.json"
     iges_path = tmp_path / "bad-view.iges"
     json_path.write_text(json.dumps(doc), encoding="utf-8")
 
     completed = subprocess.run(
         [
-            *submission_command, "write",
-            "--input", str(json_path),
-            "--output", str(iges_path),
+            *submission_command,
+            "write",
+            "--input",
+            str(json_path),
+            "--output",
+            str(iges_path),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
 
 
 def test_write_rejects_invalid_label_display_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """TR §1.2: mirror of the other write-side cross-reference tests for
     label_display."""
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-            directory_entry_overrides={"label_display": 999},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+                directory_entry_overrides={"label_display": 999},
+            ),
+        ]
+    )
     json_path = tmp_path / "bad-label-display.json"
     iges_path = tmp_path / "bad-label-display.iges"
     json_path.write_text(json.dumps(doc), encoding="utf-8")
 
     completed = subprocess.run(
         [
-            *submission_command, "write",
-            "--input", str(json_path),
-            "--output", str(iges_path),
+            *submission_command,
+            "write",
+            "--input",
+            str(json_path),
+            "--output",
+            str(iges_path),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
 
 
 def test_write_rejects_zero_length_line(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """§3.2.5 symmetric enforcement: the write path must also reject
     degenerate (zero-length) Line entities. Without this check, `iges
     write` would produce an .iges file that `iges parse` rejects — a
     contract violation per TR §1.2."""
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={
-                "start": [1.0, 2.0, 3.0],
-                "terminate": [1.0, 2.0, 3.0],
-            },
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={
+                    "start": [1.0, 2.0, 3.0],
+                    "terminate": [1.0, 2.0, 3.0],
+                },
+            ),
+        ]
+    )
     json_path = tmp_path / "bad-line.json"
     iges_path = tmp_path / "bad-line.iges"
     json_path.write_text(json.dumps(doc), encoding="utf-8")
 
     completed = subprocess.run(
         [
-            *submission_command, "write",
-            "--input", str(json_path),
-            "--output", str(iges_path),
+            *submission_command,
+            "write",
+            "--input",
+            str(json_path),
+            "--output",
+            str(iges_path),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
 
 
 def test_parse_rejects_zero_length_line(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     """Spec §3.2.5: 'All curves shall have non-zero arc length.' A Line
     with coincident start and terminate points is degenerate and must be
@@ -444,10 +503,7 @@ def test_parse_rejects_zero_length_line(
     """
     iges_path = _make_valid_line_file(submission_command, tmp_path)
     lines = iges_path.read_text(encoding="latin-1").splitlines()
-    p_idx = next(
-        i for i, line in enumerate(lines)
-        if len(line) >= 73 and line[72] == "P"
-    )
+    p_idx = next(i for i, line in enumerate(lines) if len(line) >= 73 and line[72] == "P")
     # Preserve columns 65-80 (DE back-pointer + P-section sequence
     # number) and rewrite the free-format PD body so start == terminate.
     suffix = lines[p_idx][64:]
@@ -463,7 +519,8 @@ def test_parse_rejects_zero_length_line(
 
 
 def test_parse_accepts_valid_empty_file_with_no_entities(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     iges_path = tmp_path / "empty-but-valid.iges"
     iges_path.write_text(_make_valid_empty_iges(), encoding="latin-1")
@@ -473,5 +530,3 @@ def test_parse_accepts_valid_empty_file_with_no_entities(
     assert completed.returncode == 0
     payload = json.loads(out_path.read_text(encoding="utf-8"))
     assert payload.get("entities") == []
-
-

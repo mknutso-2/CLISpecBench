@@ -50,24 +50,18 @@ def _raw_prop(ev: dict[str, Any], name: str) -> dict[str, Any] | None:
 # ---------------------------------------------------------------------------
 
 
-def test_structured_data_uri(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_structured_data_uri(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """STRUCTURED-DATA with a URI reference is preserved."""
-    ics = _event_with(
-        'STRUCTURED-DATA;VALUE=URI:https://example.com/schema-org/event.jsonld\n'
-    )
+    ics = _event_with("STRUCTURED-DATA;VALUE=URI:https://example.com/schema-org/event.jsonld\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     assert "STRUCTURED-DATA" in _raw_names(ev)
 
 
-def test_structured_data_inline_text(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_structured_data_inline_text(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """STRUCTURED-DATA inline TEXT with FMTTYPE=application/json."""
     ics = _event_with(
-        'STRUCTURED-DATA;FMTTYPE=application/json;VALUE=TEXT:'
+        "STRUCTURED-DATA;FMTTYPE=application/json;VALUE=TEXT:"
         '{"@context":"https://schema.org"\\,"@type":"Event"}\n'
     )
     out = run_parse(submission_command, ics, tmp_path)
@@ -79,12 +73,8 @@ def test_structured_data_inline_text(
     assert params.get("FMTTYPE") == "application/json"
 
 
-def test_structured_data_binary_base64(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    ics = _event_with(
-        "STRUCTURED-DATA;ENCODING=BASE64;VALUE=BINARY:aGVsbG8=\n"
-    )
+def test_structured_data_binary_base64(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    ics = _event_with("STRUCTURED-DATA;ENCODING=BASE64;VALUE=BINARY:aGVsbG8=\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     prop = _raw_prop(ev, "STRUCTURED-DATA")
@@ -96,9 +86,7 @@ def test_structured_data_binary_base64(
 # ---------------------------------------------------------------------------
 
 
-def test_styled_description_html(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_styled_description_html(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """STYLED-DESCRIPTION with FMTTYPE=text/html."""
     ics = _event_with(
         "STYLED-DESCRIPTION;FMTTYPE=text/html:<p>Rich <b>formatted</b> description</p>\n"
@@ -112,9 +100,7 @@ def test_styled_description_html(
     assert params.get("FMTTYPE") == "text/html"
 
 
-def test_styled_description_markdown(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_styled_description_markdown(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     ics = _event_with(
         "STYLED-DESCRIPTION;FMTTYPE=text/markdown:# Event Title\\n\\n*Details* here\n"
     )
@@ -158,12 +144,8 @@ def test_multiple_styled_descriptions_for_multilingual(
 # ---------------------------------------------------------------------------
 
 
-def test_location_with_location_type(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    ics = _event_with(
-        "LOCATION;LOCATION-TYPE=virtual:https://zoom.us/j/123456\n"
-    )
+def test_location_with_location_type(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    ics = _event_with("LOCATION;LOCATION-TYPE=virtual:https://zoom.us/j/123456\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     prop = _raw_prop(ev, "LOCATION")
@@ -321,9 +303,7 @@ def test_calendar_address_property_preserved(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """CALENDAR-ADDRESS on PARTICIPANT or event is preserved."""
-    ics = _event_with(
-        "CALENDAR-ADDRESS:mailto:cal@example.com\n"
-    )
+    ics = _event_with("CALENDAR-ADDRESS:mailto:cal@example.com\n")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")
     assert "CALENDAR-ADDRESS" in _raw_names(ev)
@@ -334,14 +314,11 @@ def test_calendar_address_property_preserved(
 # ---------------------------------------------------------------------------
 
 
-def test_resources_parameter_on_vevent(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_resources_parameter_on_vevent(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 9073 doesn't change RESOURCES itself; ensures RESOURCES-related
     functionality doesn't regress when event also has RFC 9073 props."""
     ics = _event_with(
-        "RESOURCES:PROJECTOR,WHITEBOARD\n"
-        "STYLED-DESCRIPTION;FMTTYPE=text/html:<p>x</p>\n"
+        "RESOURCES:PROJECTOR,WHITEBOARD\nSTYLED-DESCRIPTION;FMTTYPE=text/html:<p>x</p>\n"
     )
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "e1")

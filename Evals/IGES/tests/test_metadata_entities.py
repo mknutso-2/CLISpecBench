@@ -1,4 +1,5 @@
 """Metadata/reference entity tests for remaining non-geometric §4 items."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -21,11 +22,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -34,7 +40,8 @@ def _roundtrip_single(
 
 
 def test_associativity_definition_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -54,7 +61,8 @@ def test_associativity_definition_roundtrip(
 
 
 def test_line_font_definition_form_one_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -78,7 +86,8 @@ def test_line_font_definition_form_one_roundtrip(
 
 
 def test_line_font_definition_form_two_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -101,7 +110,8 @@ def test_line_font_definition_form_two_roundtrip(
 
 
 def test_text_font_definition_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -113,17 +123,19 @@ def test_text_font_definition_roundtrip(
             "sf": 0,
             "scale": 12,
             "n": 1,
-            "characters": [{
-                "ac": 67,
-                "nx": 11,
-                "ny": 0,
-                "nm": 3,
-                "motions": [
-                    {"pf": 0, "x": 0, "y": 0},
-                    {"pf": 0, "x": 5, "y": 10},
-                    {"pf": 1, "x": 10, "y": 0},
-                ],
-            }],
+            "characters": [
+                {
+                    "ac": 67,
+                    "nx": 11,
+                    "ny": 0,
+                    "nm": 3,
+                    "motions": [
+                        {"pf": 0, "x": 0, "y": 0},
+                        {"pf": 0, "x": 5, "y": 10},
+                        {"pf": 1, "x": 10, "y": 0},
+                    ],
+                }
+            ],
         },
     )
     assert data["fname"] == "MYFONT"
@@ -132,7 +144,8 @@ def test_text_font_definition_roundtrip(
 
 
 def test_text_display_template_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -157,7 +170,8 @@ def test_text_display_template_roundtrip(
 
 
 def test_color_definition_optional_name_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -171,7 +185,8 @@ def test_color_definition_optional_name_roundtrip(
 
 
 def test_units_data_multiple_units_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -192,7 +207,8 @@ def test_units_data_multiple_units_roundtrip(
 
 
 def test_attribute_table_definition_form_two_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -203,16 +219,18 @@ def test_attribute_table_definition_form_two_roundtrip(
             "name": "RT2",
             "alt": 1,
             "na": 1,
-            "attributes": [{
-                "at": 1,
-                "avdt": 1,
-                "avc": 2,
-                "values": [
-                    {"kind": "int", "value": 10},
-                    {"kind": "int", "value": 20},
-                ],
-                "display_ptrs": [101, 201],
-            }],
+            "attributes": [
+                {
+                    "at": 1,
+                    "avdt": 1,
+                    "avc": 2,
+                    "values": [
+                        {"kind": "int", "value": 10},
+                        {"kind": "int", "value": 20},
+                    ],
+                    "display_ptrs": [101, 201],
+                }
+            ],
         },
     )
     assert data["name"] == "RT2"
@@ -221,7 +239,8 @@ def test_attribute_table_definition_form_two_roundtrip(
 
 
 def test_solid_instance_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

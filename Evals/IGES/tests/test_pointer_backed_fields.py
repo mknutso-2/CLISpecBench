@@ -11,6 +11,7 @@ These tests lock the affected fields back into the CLI-observable JSON
 surface by round-tripping representative entities through the full
 ``iges`` executable.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -33,11 +34,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -46,7 +52,8 @@ def _roundtrip_single(
 
 
 def test_plane_unbounded_pointer_field_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -69,7 +76,8 @@ def test_plane_unbounded_pointer_field_roundtrips(
 
 
 def test_node_ndcsp_pointer_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -81,7 +89,8 @@ def test_node_ndcsp_pointer_roundtrips(
 
 
 def test_nodal_displacement_node_pointer_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -91,18 +100,22 @@ def test_nodal_displacement_node_pointer_roundtrips(
             "nc": 1,
             "gp": [11],
             "nn": 1,
-            "nodes": [{
-                "node_id": 5,
-                "np": 7,
-                "cases": [{
-                    "x": 0.1,
-                    "y": 0.2,
-                    "z": 0.3,
-                    "rx": 0.01,
-                    "ry": 0.02,
-                    "rz": 0.03,
-                }],
-            }],
+            "nodes": [
+                {
+                    "node_id": 5,
+                    "np": 7,
+                    "cases": [
+                        {
+                            "x": 0.1,
+                            "y": 0.2,
+                            "z": 0.3,
+                            "rx": 0.01,
+                            "ry": 0.02,
+                            "rz": 0.03,
+                        }
+                    ],
+                }
+            ],
         },
     )
     assert data["gp"] == [11]
@@ -111,7 +124,8 @@ def test_nodal_displacement_node_pointer_roundtrips(
 
 
 def test_nodal_results_gnote_and_np_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -132,7 +146,8 @@ def test_nodal_results_gnote_and_np_roundtrip(
 
 
 def test_element_results_gnote_and_ep_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -145,17 +160,19 @@ def test_element_results_gnote_and_ep_roundtrip(
             "nv": 2,
             "rrf": 0,
             "ne": 1,
-            "elements": [{
-                "en": 21,
-                "ep": 23,
-                "itop": 4,
-                "nl": 1,
-                "dlf": 0,
-                "nrl": 1,
-                "rdrl": [1],
-                "numv": 2,
-                "values": [10.0, 20.0],
-            }],
+            "elements": [
+                {
+                    "en": 21,
+                    "ep": 23,
+                    "itop": 4,
+                    "nl": 1,
+                    "dlf": 0,
+                    "nrl": 1,
+                    "rdrl": [1],
+                    "numv": 2,
+                    "values": [10.0, 20.0],
+                }
+            ],
         },
     )
     assert data["gnote"] == 15
@@ -164,7 +181,8 @@ def test_element_results_gnote_and_ep_roundtrip(
 
 
 def test_network_subfigure_definition_display_pointer_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -187,7 +205,8 @@ def test_network_subfigure_definition_display_pointer_roundtrips(
 
 
 def test_nodal_load_constraint_node_pointer_roundtrips(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -199,7 +218,8 @@ def test_nodal_load_constraint_node_pointer_roundtrips(
 
 
 def test_network_subfigure_instance_definition_and_display_pointers_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

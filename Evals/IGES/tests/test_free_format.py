@@ -1,4 +1,5 @@
 """CLI-level ports of the SDK's §2.2.3 free-formatted-data tests."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -145,11 +146,7 @@ def test_custom_delimiters_do_not_split_hollerith_text(
     parsed = _parse_raw_document(
         submission_command,
         tmp_path,
-        make_empty_iges(
-            build_global_payload(
-                fields, param_delimiter="|", record_delimiter="#"
-            )
-        ),
+        make_empty_iges(build_global_payload(fields, param_delimiter="|", record_delimiter="#")),
         name="custom-hollerith",
     )
 
@@ -181,11 +178,17 @@ def test_prohibited_parameter_delimiter_is_rejected(
 
     completed = subprocess.run(
         [
-            *submission_command, "parse",
-            "--input", str(iges),
-            "--output", str(out),
+            *submission_command,
+            "parse",
+            "--input",
+            str(iges),
+            "--output",
+            str(out),
         ],
-        capture_output=True, check=False, text=True, timeout=30,
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
     )
     assert completed.returncode == 1
     payload_out = json.loads(out.read_text(encoding="utf-8"))

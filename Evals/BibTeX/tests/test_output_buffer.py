@@ -27,9 +27,7 @@ from conftest import run_bibtex
 MINI_BIB = "@misc{a}\n"
 
 
-def _run(
-    submission_command: tuple[str, ...], tmp_path: Path, body: str
-) -> str:
+def _run(submission_command: tuple[str, ...], tmp_path: Path, body: str) -> str:
     style = f"""\
 ENTRY {{ }} {{ }} {{ }}
 FUNCTION {{f}} {{ {body} }}
@@ -45,18 +43,14 @@ EXECUTE {{f}}
 # ---------------------------------------------------------------------------
 
 
-def test_short_line_not_wrapped(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_short_line_not_wrapped(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Lines under 79 columns must not wrap."""
     body = '"hello world" write$ newline$'
     bbl = _run(submission_command, tmp_path, body)
     assert bbl == "hello world\n"
 
 
-def test_line_exactly_79_not_wrapped(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_line_exactly_79_not_wrapped(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A 79-column line is not wrapped: the break condition is strict ``> 79`` (bibtex.web §15)."""
     # 79-char payload: 39 "ab" + 1 "a" = 79
     payload = "ab" * 39 + "a"
@@ -66,9 +60,7 @@ def test_line_exactly_79_not_wrapped(
     assert bbl == payload + "\n"
 
 
-def test_line_exactly_80_wraps(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_line_exactly_80_wraps(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """80 columns triggers the wrap rule when there is whitespace to break at."""
     # Build 80 columns with a single space we can break at.
     # "A" * 50 + " " + "B" * 29 = 80 chars with a space at column 51.
@@ -123,9 +115,7 @@ def test_continuation_has_two_space_indent(
     assert parts[1][2] != " "
 
 
-def test_multiple_wraps_when_very_long(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_multiple_wraps_when_very_long(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A >158-char payload triggers multiple wraps."""
     # 200 "aa" tokens separated by single spaces = 200*2 + 199 = 599 chars.
     tokens = ["aa"] * 200
@@ -198,18 +188,14 @@ def test_multiple_small_writes_wrap_when_combined(
     assert joined.replace("  ", " ").strip() == ("abcdefghij " * 10).strip()
 
 
-def test_newline_flushes_without_wrap(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_newline_flushes_without_wrap(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """``newline$`` always flushes the accumulated line even when short."""
     body = '"abc" write$ newline$ "def" write$ newline$'
     bbl = _run(submission_command, tmp_path, body)
     assert bbl == "abc\ndef\n"
 
 
-def test_empty_write_then_newline(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_empty_write_then_newline(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """An empty ``write$`` followed by ``newline$`` emits one empty line."""
     body = '"" write$ newline$ "next" write$ newline$'
     bbl = _run(submission_command, tmp_path, body)
@@ -291,6 +277,4 @@ def test_bare_write_flushes_at_end_of_run(
     # The exact trailing-newline policy is an impl choice (some flush
     # with a terminating LF, some without). The invariant is that the
     # payload "hello" MUST appear in the .bbl; bbl.strip() normalizes.
-    assert bbl.strip() == "hello", (
-        f"bare write$ must flush at end of run; got {bbl!r}"
-    )
+    assert bbl.strip() == "hello", f"bare write$ must flush at end of run; got {bbl!r}"

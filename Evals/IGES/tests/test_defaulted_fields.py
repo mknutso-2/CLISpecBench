@@ -14,6 +14,7 @@ Spec references:
   §4.22 Network Subfigure Def (320) — PRD defaults to "" (string default)
   §4.41 Rectangular Array (412)    — DDF defaults to 0 (integer default)
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -29,26 +30,28 @@ def test_connect_point_with_defaulted_cid_and_cfn_roundtrips(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     """§4.26: CID (field 7) and CFN (field 9) default to empty string."""
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=132,
-            data={
-                "location": [0.0, 0.0, 0.0],
-                "display_symbol": 0,
-                "tf": 0,
-                "ff": 0,
-                "cid": "",       # defaulted
-                "pttcid": 0,
-                "cfn": "",       # defaulted
-                "pttcfn": 0,
-                "cpid": 0,
-                "fc": 0,
-                "sf": 0,
-                "psfi": 0,
-            },
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=132,
+                data={
+                    "location": [0.0, 0.0, 0.0],
+                    "display_symbol": 0,
+                    "tf": 0,
+                    "ff": 0,
+                    "cid": "",  # defaulted
+                    "pttcid": 0,
+                    "cfn": "",  # defaulted
+                    "pttcfn": 0,
+                    "cpid": 0,
+                    "fc": 0,
+                    "sf": 0,
+                    "psfi": 0,
+                },
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     data = reparsed["entities"][0]["entity"]["data"]
     assert data["cid"] == ""
@@ -60,23 +63,25 @@ def test_network_subfigure_definition_with_defaulted_prd_roundtrips(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     """§4.22: PRD (Primary Reference Designator) defaults to empty string."""
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=320,
-            data={
-                "depth": 1,
-                "name": "NET",
-                "na": 0,
-                "associated": [],
-                "tf": 0,
-                "prd": "",       # defaulted
-                "dptr": 0,
-                "nc": 0,
-                "connects": [],
-            },
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=320,
+                data={
+                    "depth": 1,
+                    "name": "NET",
+                    "na": 0,
+                    "associated": [],
+                    "tf": 0,
+                    "prd": "",  # defaulted
+                    "dptr": 0,
+                    "nc": 0,
+                    "connects": [],
+                },
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     data = reparsed["entities"][0]["entity"]["data"]
     assert data["prd"] == ""
@@ -88,32 +93,34 @@ def test_rectangular_array_with_defaulted_ddf_roundtrips(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     """§4.41: DDF (Do-Don't Flag) defaults to 0 when omitted from the PD."""
-    doc = wrap_entities([
-        # A base entity to point at. Using a Line (110) as the simplest
-        # thing the Rectangular Array can reference.
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-        make_entity(
-            de_index=3,
-            entity_type=412,
-            data={
-                "de": 1,                        # DE pointer to Line above
-                "s": 1.0,
-                "position": [0.0, 0.0, 0.0],
-                "nc": 2,
-                "nr": 2,
-                "dx": 1.0,
-                "dy": 1.0,
-                "ax": 0.0,
-                "lc": 0,
-                "ddf": 0,                       # defaulted
-                "positions": [],
-            },
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            # A base entity to point at. Using a Line (110) as the simplest
+            # thing the Rectangular Array can reference.
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=412,
+                data={
+                    "de": 1,  # DE pointer to Line above
+                    "s": 1.0,
+                    "position": [0.0, 0.0, 0.0],
+                    "nc": 2,
+                    "nr": 2,
+                    "dx": 1.0,
+                    "dy": 1.0,
+                    "ax": 0.0,
+                    "lc": 0,
+                    "ddf": 0,  # defaulted
+                    "positions": [],
+                },
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     array_entity = reparsed["entities"][1]["entity"]
     assert array_entity["type"] == 412

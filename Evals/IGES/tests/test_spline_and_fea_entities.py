@@ -1,4 +1,5 @@
 """CLI-level coverage for spline, NURBS, and FEA-oriented IGES entities."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -28,11 +29,16 @@ def _roundtrip_single(
     form: int = 0,
     data: Mapping[str, Any],
 ) -> dict[str, Any]:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1, entity_type=entity_type, form=form, data=data,
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=entity_type,
+                form=form,
+                data=data,
+            ),
+        ]
+    )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
     entity = reparsed["entities"][0]["entity"]
     assert entity["type"] == entity_type
@@ -41,7 +47,8 @@ def _roundtrip_single(
 
 
 def test_parametric_spline_curve_roundtrips_and_evaluates(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = {
         "ctype": 3,
@@ -50,22 +57,52 @@ def test_parametric_spline_curve_roundtrips_and_evaluates(
         "breakpoints": [0.0, 1.0, 2.0],
         "segments": [
             {
-                "ax": 0.0, "bx": 0.0, "cx": 0.0, "dx": 1.0,
-                "ay": 0.0, "by": 0.0, "cy": 0.0, "dy": 0.0,
-                "az": 0.0, "bz": 0.0, "cz": 0.0, "dz": 0.0,
+                "ax": 0.0,
+                "bx": 0.0,
+                "cx": 0.0,
+                "dx": 1.0,
+                "ay": 0.0,
+                "by": 0.0,
+                "cy": 0.0,
+                "dy": 0.0,
+                "az": 0.0,
+                "bz": 0.0,
+                "cz": 0.0,
+                "dz": 0.0,
             },
             {
-                "ax": 1.0, "bx": 3.0, "cx": 3.0, "dx": 1.0,
-                "ay": 0.0, "by": 0.0, "cy": 0.0, "dy": 0.0,
-                "az": 0.0, "bz": 0.0, "cz": 0.0, "dz": 0.0,
+                "ax": 1.0,
+                "bx": 3.0,
+                "cx": 3.0,
+                "dx": 1.0,
+                "ay": 0.0,
+                "by": 0.0,
+                "cy": 0.0,
+                "dy": 0.0,
+                "az": 0.0,
+                "bz": 0.0,
+                "cz": 0.0,
+                "dz": 0.0,
             },
         ],
-        "tpx0": 8.0, "tpx1": 12.0, "tpx2": 6.0, "tpx3": 1.0,
-        "tpy0": 0.0, "tpy1": 0.0, "tpy2": 0.0, "tpy3": 0.0,
-        "tpz0": 0.0, "tpz1": 0.0, "tpz2": 0.0, "tpz3": 0.0,
+        "tpx0": 8.0,
+        "tpx1": 12.0,
+        "tpx2": 6.0,
+        "tpx3": 1.0,
+        "tpy0": 0.0,
+        "tpy1": 0.0,
+        "tpy2": 0.0,
+        "tpy3": 0.0,
+        "tpz0": 0.0,
+        "tpz1": 0.0,
+        "tpz2": 0.0,
+        "tpz3": 0.0,
     }
     roundtripped = _roundtrip_single(
-        submission_command, tmp_path, entity_type=112, data=data,
+        submission_command,
+        tmp_path,
+        entity_type=112,
+        data=data,
     )
     assert roundtripped["breakpoints"] == [0.0, 1.0, 2.0]
     assert roundtripped["segments"][1]["cx"] == pytest.approx(3.0)
@@ -78,14 +115,20 @@ def test_parametric_spline_curve_roundtrips_and_evaluates(
         name="spline-curve",
     )
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, 0.5, tmp_path, name="spline-curve-eval",
+        submission_command,
+        iges_path,
+        1,
+        0.5,
+        tmp_path,
+        name="spline-curve-eval",
     )
     assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx([0.125, 0.0, 0.0], abs=1e-9)
 
 
 def test_parametric_spline_surface_roundtrips_and_evaluates(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     coeff_x = [0.0] * 16
     coeff_y = [0.0] * 16
@@ -100,14 +143,19 @@ def test_parametric_spline_surface_roundtrips_and_evaluates(
         "N": 1,
         "tu": [0.0, 1.0],
         "tv": [0.0, 1.0],
-        "patches": [{
-            "coeff_x": coeff_x,
-            "coeff_y": coeff_y,
-            "coeff_z": coeff_z,
-        }],
+        "patches": [
+            {
+                "coeff_x": coeff_x,
+                "coeff_y": coeff_y,
+                "coeff_z": coeff_z,
+            }
+        ],
     }
     roundtripped = _roundtrip_single(
-        submission_command, tmp_path, entity_type=114, data=data,
+        submission_command,
+        tmp_path,
+        entity_type=114,
+        data=data,
     )
     assert roundtripped["patches"][0]["coeff_x"][1] == pytest.approx(1.0)
     assert roundtripped["patches"][0]["coeff_y"][4] == pytest.approx(1.0)
@@ -133,7 +181,8 @@ def test_parametric_spline_surface_roundtrips_and_evaluates(
 
 
 def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = {
         "K": 2,
@@ -154,7 +203,10 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
         "plane_normal": [0.0, 0.0, 1.0],
     }
     roundtripped = _roundtrip_single(
-        submission_command, tmp_path, entity_type=126, data=data,
+        submission_command,
+        tmp_path,
+        entity_type=126,
+        data=data,
     )
     assert roundtripped["plane_normal"] == pytest.approx([0.0, 0.0, 1.0])
     assert roundtripped["weights"][1] == pytest.approx(math.sqrt(0.5))
@@ -167,7 +219,12 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
         name="bspline-curve",
     )
     _, payload = evaluate_entity(
-        submission_command, iges_path, 1, 0.5, tmp_path, name="bspline-curve-eval",
+        submission_command,
+        iges_path,
+        1,
+        0.5,
+        tmp_path,
+        name="bspline-curve-eval",
     )
     assert payload.get("ok") is True
     point = payload.get("point")
@@ -179,7 +236,8 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
 
 
 def test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -205,7 +263,8 @@ def test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field(
 
 
 def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = {
         "K1": 1,
@@ -232,7 +291,10 @@ def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
         "v1": 1.0,
     }
     roundtripped = _roundtrip_single(
-        submission_command, tmp_path, entity_type=128, data=data,
+        submission_command,
+        tmp_path,
+        entity_type=128,
+        data=data,
     )
     assert roundtripped["u1"] == pytest.approx(1.0)
     assert roundtripped["v1"] == pytest.approx(1.0)
@@ -258,7 +320,8 @@ def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
 
 
 def test_connect_point_roundtrips_full_metadata_fields(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,
@@ -287,7 +350,8 @@ def test_connect_point_roundtrips_full_metadata_fields(
 
 
 def test_finite_element_roundtrips_connectivity_and_zero_node_pointer(
-    submission_command: Sequence[str], tmp_path: Path,
+    submission_command: Sequence[str],
+    tmp_path: Path,
 ) -> None:
     data = _roundtrip_single(
         submission_command,

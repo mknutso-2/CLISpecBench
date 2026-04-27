@@ -1,4 +1,5 @@
 """CLI-level ports of the SDK's §2.2.4 section-structure tests."""
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -27,14 +28,16 @@ def _copious_data_document() -> dict[str, object]:
     data: list[float] = []
     for i in range(18):
         data.extend([float(i), float(i + 1), float(i + 2)])
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=106,
-            form=12,
-            data={"ip": 2, "n": 18, "zt": 0.0, "data": data},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=106,
+                form=12,
+                data={"ip": 2, "n": 18, "zt": 0.0, "data": data},
+            ),
+        ]
+    )
     doc["start_lines"] = ["first start line", "second start line"]
     return doc
 
@@ -83,18 +86,20 @@ def test_start_section_preserves_multiple_comment_lines(
 def test_directory_section_uses_two_lines_per_entity_and_odd_de_indices(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-        make_entity(
-            de_index=3,
-            entity_type=110,
-            data={"start": [1.0, 0.0, 0.0], "terminate": [2.0, 0.0, 0.0]},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [1.0, 0.0, 0.0], "terminate": [2.0, 0.0, 0.0]},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="two-lines")
 
     grouped = physical_lines_by_section(iges_path)
@@ -110,13 +115,15 @@ def test_directory_section_uses_two_lines_per_entity_and_odd_de_indices(
 def test_parameter_line_uses_column_65_space_and_de_back_pointer(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities([
-        make_entity(
-            de_index=1,
-            entity_type=110,
-            data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-        ),
-    ])
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
     iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="param-line")
 
     param_line = physical_lines_by_section(iges_path)["P"][0]

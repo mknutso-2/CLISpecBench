@@ -121,8 +121,7 @@ def test_rrule_count_without_until_does_not_warn(
     """Complement: COUNT alone (or UNTIL alone) is legal. Guards
     against an over-eager impl that warns on any COUNT presence."""
     ics = wrap_event(
-        "UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\n"
-        "RRULE:FREQ=DAILY;COUNT=5\n"
+        "UID:e1\nDTSTAMP:20260420T120000Z\nDTSTART:20260305T100000Z\nRRULE:FREQ=DAILY;COUNT=5\n"
     )
     out = run_parse(submission_command, ics, tmp_path)
     kinds = [w.get("kind") for w in warnings_of(out)]

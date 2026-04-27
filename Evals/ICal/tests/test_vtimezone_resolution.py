@@ -28,8 +28,12 @@ TAIL = "END:VCALENDAR\n"
 def _wrap_with_tz(tz_body: str, event_body: str) -> str:
     return (
         HEAD
-        + "BEGIN:VTIMEZONE\n" + tz_body + "END:VTIMEZONE\n"
-        + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n"
+        + "BEGIN:VTIMEZONE\n"
+        + tz_body
+        + "END:VTIMEZONE\n"
+        + "BEGIN:VEVENT\n"
+        + event_body
+        + "END:VEVENT\n"
         + TAIL
     )
 
@@ -50,10 +54,7 @@ def test_utc_zone_resolves_without_daylight(
         "TZOFFSETFROM:+0000\nTZOFFSETTO:+0000\n"
         "END:STANDARD\n"
     )
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Etc/UTC:20260601T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Etc/UTC:20260601T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -66,9 +67,7 @@ def test_utc_zone_resolves_without_daylight(
     assert starts == ["2026-06-01T12:00:00Z"]
 
 
-def test_arizona_no_daylight_zone(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_arizona_no_daylight_zone(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Arizona stays at MST year-round (no DAYLIGHT observance)."""
     tz = (
         "TZID:America/Phoenix\n"
@@ -77,10 +76,7 @@ def test_arizona_no_daylight_zone(
         "TZOFFSETFROM:-0700\nTZOFFSETTO:-0700\n"
         "END:STANDARD\n"
     )
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=America/Phoenix:20260615T090000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/Phoenix:20260615T090000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -98,9 +94,7 @@ def test_arizona_no_daylight_zone(
 # ---------------------------------------------------------------------------
 
 
-def test_sydney_dst_month_order(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_sydney_dst_month_order(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Sydney DST: October → April (reversed from northern hemisphere)."""
     tz = (
         "TZID:Australia/Sydney\n"
@@ -116,10 +110,7 @@ def test_sydney_dst_month_order(
         "END:DAYLIGHT\n"
     )
     # Pick January 15, 2026 — firmly in Sydney summer (DST = AEDT +1100).
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Australia/Sydney:20260115T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Australia/Sydney:20260115T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -148,10 +139,7 @@ def test_observance_without_rrule_uses_dtstart_literally(
         "TZOFFSETFROM:+0000\nTZOFFSETTO:+0300\n"
         "END:STANDARD\n"
     )
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Test/Static:20260601T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Test/Static:20260601T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -187,10 +175,7 @@ def test_observance_rdate_adds_transition(
         "END:DAYLIGHT\n"
     )
     # Pick Aug 1, 2026 — after the July 1 2026 RDATE transition to +0000.
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Test/RDate:20260801T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Test/RDate:20260801T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -208,9 +193,7 @@ def test_observance_rdate_adds_transition(
 # ---------------------------------------------------------------------------
 
 
-def test_observance_until_bounds_rrule(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_observance_until_bounds_rrule(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """An observance RRULE UNTIL bounds when the observance's transitions
     apply. After UNTIL, a later observance's rules take over.
 
@@ -232,10 +215,7 @@ def test_observance_until_bounds_rrule(
         "RRULE:FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=1\n"
         "END:STANDARD\n"
     )
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Test/History:20260601T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Test/History:20260601T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -253,9 +233,7 @@ def test_observance_until_bounds_rrule(
 # ---------------------------------------------------------------------------
 
 
-def test_observance_bymonthday(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_observance_bymonthday(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """An observance can use BYMONTHDAY (e.g. always the 1st) instead of BYDAY."""
     tz = (
         "TZID:Test/FirstOfMonth\n"
@@ -271,10 +249,7 @@ def test_observance_bymonthday(
         "END:DAYLIGHT\n"
     )
     # June 2026: should be in STANDARD (+0300).
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Test/FirstOfMonth:20260615T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Test/FirstOfMonth:20260615T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -307,10 +282,7 @@ def test_observance_yearly_bymonthday_transition(
         "RRULE:FREQ=YEARLY;BYMONTH=1;BYMONTHDAY=15\n"
         "END:STANDARD\n"
     )
-    ev = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Test/Anniversary:20260601T120000\n"
-    )
+    ev = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Test/Anniversary:20260601T120000\n"
     out = run_expand(
         submission_command,
         _wrap_with_tz(tz, ev),
@@ -328,13 +300,8 @@ def test_observance_yearly_bymonthday_transition(
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_tzid_emits_warning(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART;TZID=Fictional/Nowhere:20260601T120000\n"
-    )
+def test_unknown_tzid_emits_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Fictional/Nowhere:20260601T120000\n"
     out = run_expand(
         submission_command,
         wrap_event(body),

@@ -46,10 +46,7 @@ def result_path(runs_file: Path, result_link: str) -> Path:
 
 
 def run_key(row: dict[str, Any]) -> str:
-    return "|".join(
-        str(row.get(key, ""))
-        for key in ("task", "agent", "model", "effort", "run_id")
-    )
+    return "|".join(str(row.get(key, "")) for key in ("task", "agent", "model", "effort", "run_id"))
 
 
 def pair_id(row: dict[str, Any]) -> str:
@@ -154,14 +151,15 @@ def build_payload(runs_file: Path) -> dict[str, Any]:
         score_count = row.get("score_count")
         if isinstance(score_count, int) and score_count != passed:
             raise ValueError(
-                f"{path}: score_count {score_count} does not match "
-                f"{passed} passed test outcomes",
+                f"{path}: score_count {score_count} does not match {passed} passed test outcomes",
             )
 
     return {
         "schema_version": "1.0",
         "generated_at": datetime.now().astimezone().isoformat(),
-        "source": "Official completed runs from results-published.json linked curated run JSON files",
+        "source": (
+            "Official completed runs from results-published.json linked curated run JSON files"
+        ),
         "completed_run_count": len(runs),
         "test_result_count": len(rows),
         "unique_test_count": len(unique_tests),

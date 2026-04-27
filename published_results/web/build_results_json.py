@@ -173,14 +173,19 @@ def main() -> None:
     payload = {
         "schema_version": "1.0",
         "generated_at": datetime.now().astimezone().isoformat(),
-        "source": "CLISpecBench curated published run JSON files from published_results/**/run*.json",
+        "source": (
+            "CLISpecBench curated published run JSON files from published_results/**/run*.json"
+        ),
         "rows_are_official_completed_runs": True,
         "completed_count": len(rows),
         "excluded_count": len(excluded),
         "rows": rows,
         "excluded_runs": excluded,
     }
-    args.output.write_text(json.dumps(payload, indent=2, ensure_ascii=True) + "\n", encoding="utf-8")
+    args.output.write_text(
+        json.dumps(payload, indent=2, ensure_ascii=True) + "\n",
+        encoding="utf-8",
+    )
     print(f"Wrote {len(rows)} completed rows and {len(excluded)} excluded rows to {args.output}")
 
 

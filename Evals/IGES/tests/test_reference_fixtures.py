@@ -9,6 +9,7 @@ parser fixes landed 2026-04-14 (Connect Point §4.26 cid/cfn, Network
 Subfigure Definition §4.22 prd, Rectangular Array §4.41 ddf). ex1 in
 particular would fail to parse before those fixes.
 """
+
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
@@ -57,15 +58,13 @@ def test_ex1_parses_with_expected_global_and_start_lines(
     assert g["units"] == "microns"
 
 
-def test_ex1_entity_type_mix(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
+def test_ex1_entity_type_mix(submission_command: Sequence[str], tmp_path: Path) -> None:
     parsed = parse_iges_to_json(submission_command, FIXTURES / "ex1.iges", tmp_path)
     counts = _entity_type_counts(parsed)
 
-    assert counts[308] == 2      # Subfigure Definition (PADBLK, CONTACT)
-    assert counts[106] >= 10     # Copious Data
-    assert counts[406] == 1      # LINWIDTH Property
+    assert counts[308] == 2  # Subfigure Definition (PADBLK, CONTACT)
+    assert counts[106] >= 10  # Copious Data
+    assert counts[406] == 1  # LINWIDTH Property
     # Regression: ex1 contains Connect Point (132), Network Subfigure
     # Definition (320), and Rectangular Array (412) entities with
     # defaulted fields — the three parsers fixed 2026-04-14.
@@ -77,9 +76,7 @@ def test_ex1_entity_type_mix(
 # -----------------------------------------------------------------
 # ex2.iges — Mechanical part with dimensions and annotations
 # -----------------------------------------------------------------
-def test_ex2_parses_with_expected_global(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
+def test_ex2_parses_with_expected_global(submission_command: Sequence[str], tmp_path: Path) -> None:
     parsed = parse_iges_to_json(submission_command, FIXTURES / "ex2.iges", tmp_path)
 
     g = parsed["global"]
@@ -93,20 +90,18 @@ def test_ex2_contains_geometry_and_annotation(
     parsed = parse_iges_to_json(submission_command, FIXTURES / "ex2.iges", tmp_path)
     counts = _entity_type_counts(parsed)
 
-    assert counts[110] > 0                              # Lines
-    assert counts[100] > 0                              # Circular arcs
-    assert counts[116] > 0                              # Points
-    assert counts[212] > 0                              # General Notes
-    assert counts[214] > 0                              # Leader Arrows
+    assert counts[110] > 0  # Lines
+    assert counts[100] > 0  # Circular arcs
+    assert counts[116] > 0  # Points
+    assert counts[212] > 0  # General Notes
+    assert counts[214] > 0  # Leader Arrows
     assert counts[216] + counts[218] + counts[222] > 0  # Dimensions
 
 
 # -----------------------------------------------------------------
 # ex3.iges — View/Drawing with transformation matrices
 # -----------------------------------------------------------------
-def test_ex3_parses_with_expected_global(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
+def test_ex3_parses_with_expected_global(submission_command: Sequence[str], tmp_path: Path) -> None:
     parsed = parse_iges_to_json(submission_command, FIXTURES / "ex3.iges", tmp_path)
 
     g = parsed["global"]
@@ -120,6 +115,6 @@ def test_ex3_contains_view_drawing_and_xform(
     parsed = parse_iges_to_json(submission_command, FIXTURES / "ex3.iges", tmp_path)
     counts = _entity_type_counts(parsed)
 
-    assert counts[410] > 0   # View
-    assert counts[404] > 0   # Drawing
-    assert counts[124] > 0   # Transformation Matrix
+    assert counts[410] > 0  # View
+    assert counts[404] > 0  # Drawing
+    assert counts[124] > 0  # Transformation Matrix

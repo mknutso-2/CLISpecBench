@@ -43,9 +43,7 @@ def _sort_bbl(
         # Branch on cite$ for each known key.
         branches = []
         for k, v in keys.items():
-            branches.append(
-                f'cite$ "{k}" = {{ "{v}" \'sort.key$ := }} {{ skip$ }} if$'
-            )
+            branches.append(f'cite$ "{k}" = {{ "{v}" \'sort.key$ := }} {{ skip$ }} if$')
         presort_body = " ".join(branches)
 
     style_lines = [
@@ -71,25 +69,17 @@ def _sort_bbl(
 # ---------------------------------------------------------------------------
 
 
-def test_sort_is_stable_on_ties(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_sort_is_stable_on_ties(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Two entries with the same sort.key$ preserve READ order.
 
     btxhak §3.2: "If two entries have identical sort keys, they appear in
     the order in which they were READ."
     """
-    bib = (
-        "@misc{a}\n"
-        "@misc{b}\n"
-        "@misc{c}\n"
-    )
+    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
     # Assign identical sort keys to all three.
     keys = {"a": "same", "b": "same", "c": "same"}
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b", "c"], keys=keys)
-    assert bbl.split() == ["a", "b", "c"], (
-        f"stable sort on equal keys violated: {bbl.split()!r}"
-    )
+    assert bbl.split() == ["a", "b", "c"], f"stable sort on equal keys violated: {bbl.split()!r}"
 
 
 def test_sort_is_stable_on_partial_ties(
@@ -207,9 +197,7 @@ ITERATE {emit}
 def test_reverse_after_sort(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """REVERSE iterates in the OPPOSITE of the sorted order."""
     bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
-    bbl = _sort_bbl(
-        submission_command, tmp_path, bib, ["a", "b", "c"], with_reverse=True
-    )
+    bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b", "c"], with_reverse=True)
     # Sorted a<b<c, then REVERSE → c, b, a.
     assert bbl.split() == ["c", "b", "a"]
 
@@ -255,9 +243,7 @@ ITERATE {emit}
 # ---------------------------------------------------------------------------
 
 
-def test_sort_of_single_entry_is_noop(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_sort_of_single_entry_is_noop(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """SORT of one entry is a no-op, not an error."""
     bib = "@misc{only}\n"
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["only"])
@@ -296,9 +282,7 @@ ITERATE {emit}
 # ---------------------------------------------------------------------------
 
 
-def test_two_iterates_are_independent(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_two_iterates_are_independent(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Running ITERATE twice visits every entry again in the same order."""
     bib = "@misc{a}\n@misc{b}\n"
     style = """\

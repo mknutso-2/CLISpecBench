@@ -30,9 +30,7 @@ def _wrap_va(body: str) -> str:
 
 def _availabilities(out: dict[str, Any]) -> list[dict[str, Any]]:
     raw = out.get("availabilities")
-    assert isinstance(raw, list), (
-        f"parse output missing 'availabilities' array: {list(out)}"
-    )
+    assert isinstance(raw, list), f"parse output missing 'availabilities' array: {list(out)}"
     return cast(list[dict[str, Any]], raw)
 
 
@@ -44,10 +42,7 @@ def _availabilities(out: dict[str, Any]) -> list[dict[str, Any]]:
 def test_vavailability_with_uid_and_dtstamp(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    body = (
-        "UID:av1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\nDTEND:20261231T235959Z\n"
-    )
+    body = "UID:av1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T000000Z\nDTEND:20261231T235959Z\n"
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     assert len(vas) == 1
@@ -56,14 +51,8 @@ def test_vavailability_with_uid_and_dtstamp(
     assert vas[0].get("dtend")
 
 
-def test_vavailability_busytype_busy(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    body = (
-        "UID:av1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\n"
-        "BUSYTYPE:BUSY\n"
-    )
+def test_vavailability_busytype_busy(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    body = "UID:av1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T000000Z\nBUSYTYPE:BUSY\n"
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     assert vas[0].get("busytype") == "BUSY"
@@ -78,8 +67,7 @@ def test_vavailability_busytype_absent_emits_null(
     fbtype field which does materialize its default). This
     distinguishes the two availability surfaces."""
     body = (
-        "UID:va1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\nDTEND:20260201T000000Z\n"
+        "UID:va1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T000000Z\nDTEND:20260201T000000Z\n"
         # deliberately no BUSYTYPE line
     )
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
@@ -91,23 +79,15 @@ def test_vavailability_busytype_busy_unavailable(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     body = (
-        "UID:av1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\n"
-        "BUSYTYPE:BUSY-UNAVAILABLE\n"
+        "UID:av1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T000000Z\nBUSYTYPE:BUSY-UNAVAILABLE\n"
     )
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     assert vas[0].get("busytype") == "BUSY-UNAVAILABLE"
 
 
-def test_vavailability_priority(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    body = (
-        "UID:av1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\n"
-        "PRIORITY:5\n"
-    )
+def test_vavailability_priority(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    body = "UID:av1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T000000Z\nPRIORITY:5\n"
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     assert vas[0].get("priority") == 5
@@ -158,9 +138,7 @@ def test_vavailability_multiple_available(
     assert uids == {"a1", "a2"}
 
 
-def test_available_with_rrule(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_available_with_rrule(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """AVAILABLE can carry its own RRULE for recurring availability."""
     body = (
         "UID:av1\nDTSTAMP:20260101T120000Z\n"
@@ -185,9 +163,7 @@ def test_available_with_rrule(
 # ---------------------------------------------------------------------------
 
 
-def test_vavailability_organizer(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_vavailability_organizer(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "UID:av1\nDTSTAMP:20260101T120000Z\n"
         "ORGANIZER;CN=Alice:mailto:alice@example.com\n"
@@ -218,14 +194,9 @@ def test_vavailability_description_unescaped(
 # ---------------------------------------------------------------------------
 
 
-def test_empty_vavailability_parses(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_empty_vavailability_parses(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """A VAVAILABILITY with just UID/DTSTAMP/DTSTART parses; available[] empty."""
-    body = (
-        "UID:av1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\n"
-    )
+    body = "UID:av1\nDTSTAMP:20260101T120000Z\nDTSTART:20260101T000000Z\n"
     out = run_parse(submission_command, _wrap_va(body), tmp_path)
     vas = _availabilities(out)
     assert vas[0].get("available") == []
@@ -318,9 +289,7 @@ def test_available_with_created_and_last_modified(
     assert av.get("last_modified") == "2026-05-01T09:00:00Z"
 
 
-def test_available_with_recurrence_id(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_available_with_recurrence_id(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """RFC 7953 §3.2: RECURRENCE-ID is allowed on AVAILABLE to override a
     specific instance of a recurring availability block. The JSON shape
     MUST match VEvent's recurrence_id object ({value, range, tzid}) so
@@ -407,9 +376,7 @@ def test_available_with_categories_and_comment(
     assert len(comments) == 2
 
 
-def test_available_with_exdate(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_available_with_exdate(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     body = (
         "UID:av1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART:20260101T000000Z\n"

@@ -81,16 +81,15 @@ def test_gmail_export_expands_to_weekly_occurrences(
         tmp_path,
     )
     occs = [
-        o for o in cast(list[dict[str, Any]], out.get("occurrences") or [])
+        o
+        for o in cast(list[dict[str, Any]], out.get("occurrences") or [])
         if o.get("uid") == "gmail-event-0001@google.com"
     ]
     # June 2026 has Tuesdays on 6/2, 6/9, 6/16, 6/23, 6/30 = 5.
     assert len(occs) == 5
 
 
-def test_gmail_export_alarm_parsed(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_gmail_export_alarm_parsed(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     ics = _load("gmail-export.ics")
     out = run_parse(submission_command, ics, tmp_path)
     ev = find_event(out, "gmail-event-0001@google.com")
@@ -113,9 +112,7 @@ def test_outlook_export_parses_successfully(
     assert "Microsoft" in cal.get("prodid", "")
 
 
-def test_outlook_quoted_tzid_parameter(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_outlook_quoted_tzid_parameter(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Outlook emits TZID params with DQUOTE around multi-word zone
     names (RFC 5545 §3.1 quoted-string parameter form). The parser
     may either strip the surrounding DQUOTEs (recommended — yields
@@ -137,9 +134,7 @@ def test_outlook_quoted_tzid_parameter(
     )
 
 
-def test_outlook_x_properties_in_raw(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_outlook_x_properties_in_raw(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Microsoft's X-MICROSOFT-* properties are preserved in raw_properties."""
     ics = _load("outlook-export.ics")
     out = run_parse(submission_command, ics, tmp_path)

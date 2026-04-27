@@ -47,9 +47,7 @@ def test_event_without_alarm_has_empty_alarms_list(
     assert _alarms_of(ev) == []
 
 
-def test_display_alarm_basic_fields(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_display_alarm_basic_fields(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.6.6 DISPLAY alarm exposes action, trigger.value, description."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -94,9 +92,7 @@ def test_trigger_default_related_is_start(
     assert trigger.get("related") == "START"
 
 
-def test_trigger_related_end_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_trigger_related_end_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.2.14: RELATED=END is surfaced on the trigger object."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -134,9 +130,7 @@ def test_trigger_positive_duration_preserved(
     assert alarm["trigger"]["value"] == "PT1H"
 
 
-def test_trigger_absolute_datetime(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_trigger_absolute_datetime(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.8.6.3: TRIGGER;VALUE=DATE-TIME is absolute UTC. Normalize to ISO-8601."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -177,9 +171,7 @@ def test_audio_alarm_action(submission_command: tuple[str, ...], tmp_path: Path)
     assert alarm.get("description") is None
 
 
-def test_email_alarm_full_fields(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_email_alarm_full_fields(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.6.6 emailprop: EMAIL alarm carries summary, description, attendees."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -208,9 +200,7 @@ def test_email_alarm_full_fields(
 # --- DURATION / REPEAT pairing ---
 
 
-def test_duration_and_repeat_together(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_duration_and_repeat_together(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.6.6: DURATION and REPEAT both appear => repeating alarm surfaced as-is."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -228,9 +218,7 @@ def test_duration_and_repeat_together(
     assert alarm.get("repeat") == 4
 
 
-def test_no_repeat_no_duration(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_no_repeat_no_duration(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """If neither DURATION nor REPEAT is present, both fields are null."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -249,9 +237,7 @@ def test_no_repeat_no_duration(
 # --- ATTACH on alarms ---
 
 
-def test_audio_alarm_with_attach(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_audio_alarm_with_attach(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.6.6 AUDIO may include ATTACH pointing to a sound resource."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -274,9 +260,7 @@ def test_audio_alarm_with_attach(
 # --- Multiple alarms ---
 
 
-def test_multiple_alarms_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_multiple_alarms_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.6.6: multiple mutually independent VALARMs may appear per VEVENT."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -307,9 +291,7 @@ def test_multiple_alarms_preserved(
 # --- Acknowledged (RFC 9074, but commonly surfaced) ---
 
 
-def test_acknowledged_property(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_acknowledged_property(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """ACKNOWLEDGED is a DATE-TIME (UTC) tracking last alarm acknowledgement."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
@@ -397,9 +379,7 @@ def test_alarm_on_vtodo(submission_command: tuple[str, ...], tmp_path: Path) -> 
 # --- Unknown action: x-name / iana-token accepted per §3.6.6 lack of enum ---
 
 
-def test_non_standard_action_preserved(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
+def test_non_standard_action_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """§3.6.6 does not enumerate ACTION; implementations should pass through
     the raw token so downstream logic can decide what to do."""
     body = (
