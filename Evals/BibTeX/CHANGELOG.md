@@ -4,6 +4,25 @@
 
 Documentation and prompt-contract cleanup from eval-authoring review.
 
+- **Post-run scoring note — empty-entry fixture cascade**: A review
+  of low-scoring v1.2.1 runs
+  `a60e6c4b-a5ff-4d02-84c4-f671b4de8f84`,
+  `c43bd802-cf2a-42db-a958-7fae69340b3b`, and
+  `d2ade241-afcd-46ca-80ab-0a39e70dd9d9` found that most of their
+  failures were caused by the same `.bib` parser bug: rejecting
+  brace-delimited empty entries such as `@misc{a}` when no comma
+  follows the key. BibTeX accepts that form, so the expected behavior
+  is valid, but the shared fixture precondition cascaded into tests
+  named for output buffering, sorting, BST parser edges, Unicode,
+  cross-entry state, and direct BBL behavior. This makes the affected
+  scores reflect one input-syntax bug more heavily than intended under
+  the independent-tests rule.
+  Opportunities for improvement:
+  - Keep one or a small number of targeted tests for `@misc{a}` /
+    empty comma-less entry parsing.
+  - Change unrelated behavior tests to use a less fragile canonical
+    fixture, such as `@misc{a,}` or an entry with at least one
+    ordinary field.
 - `prompt/docs/summary.md` now makes `width$` unambiguously
   cmr10-exact, removing the previous flat-width allowance and
   matching the byte-exact `alpha.bst` parity contract.
