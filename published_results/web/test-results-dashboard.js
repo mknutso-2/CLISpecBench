@@ -1,4 +1,5 @@
 const DATA_URL = "test-results-published.json";
+const MATRIX_ALL_COLUMN_KEY = "__all_selected_results__";
 const OUTCOME_ORDER = ["failed", "passed", "skipped", "unknown"];
 const OUTCOME_LABELS = {
   failed: "Failed",
@@ -42,8 +43,11 @@ const state = {
   selectedOutcomes: new Set(),
   viewMode: "matrix",
   columnMode: "pair",
+  rowMode: "eval_language",
   onlyDisagreements: false,
   searchText: "",
+  matrixSortKey: "",
+  matrixSortDirection: "asc",
   tableSortKey: "",
   tableSortDirection: "asc",
   detailRows: [],
@@ -78,6 +82,7 @@ function cacheElements() {
     "pair-clear",
     "pair-list",
     "pair-select-all",
+    "row-mode",
     "status",
     "table-count",
     "table-empty",
@@ -110,6 +115,11 @@ function bindStaticControls() {
 
   elements.columnMode.addEventListener("change", () => {
     state.columnMode = elements.columnMode.value;
+    render();
+  });
+
+  elements.rowMode.addEventListener("change", () => {
+    state.rowMode = elements.rowMode.value;
     render();
   });
 
@@ -289,9 +299,10 @@ function getFilteredRows() {
 function renderMatrix(filteredRows) {
   const columns = getMatrixColumns();
   const rowGroups = getMatrixRowGroups(filteredRows, columns);
-  const visibleGroups = state.onlyDisagreements
+  const unsortedVisibleGroups = state.onlyDisagreements
     ? rowGroups.filter((group) => hasDisagreement(group.cells))
     : rowGroups;
+  const visibleGroups = sortMatrixGroups(unsortedVisibleGroups);
 
   elements.matrixCount.textContent = `${formatInteger(visibleGroups.length)} tests, ${formatInteger(
     filteredRows.length,
@@ -306,19 +317,23 @@ function renderMatrix(filteredRows) {
 
   const thead = document.createElement("thead");
   const headerRow = document.createElement("tr");
-  headerRow.append(createTextCell("th", "Eval-Lang"));
-  headerRow.append(createTextCell("th", "Test"));
+  headerRow.append(
+    createMatrixHeader({
+      key: "__scope__",
+      label: state.rowMode === "eval" ? "Eval" : "Eval-Lang",
+      title: state.rowMode === "eval" ? "Sort by eval" : "Sort by eval-language",
+    }),
+  );
+  headerRow.append(createMatrixHeader({ key: "__test__", label: "Test", title: "Sort by test" }));
   columns.forEach((column) => {
-    const th = createTextCell("th", column.label);
-    th.title = column.title;
-    headerRow.append(th);
+    headerRow.append(createMatrixHeader(column));
   });
   thead.append(headerRow);
 
   const tbody = document.createElement("tbody");
   visibleGroups.forEach((group) => {
     const tr = document.createElement("tr");
-    tr.append(createTextCell("td", group.evalLanguage, "table-muted nowrap"));
+    tr.append(createTextCell("td", group.scopeLabel, "table-muted nowrap"));
     const testCell = createTextCell("td", group.testId, "test-id-cell");
     testCell.title = group.testId;
     tr.append(testCell);
@@ -332,8 +347,15 @@ function renderMatrix(filteredRows) {
 }
 
 function getMatrixColumns() {
+  const allColumn = {
+    key: MATRIX_ALL_COLUMN_KEY,
+    label: "All",
+    title: "All selected agent/model results",
+    isSummary: true,
+  };
+
   if (state.columnMode === "run") {
-    return state.runs
+    const runColumns = state.runs
       .filter(
         (run) =>
           state.selectedEvalLanguages.has(run.eval_language) && state.selectedPairs.has(run.pair),
@@ -344,24 +366,44 @@ function getMatrixColumns() {
         title: `${run.eval_language} ${formatPairFull(run)} run ${run.run_id}`,
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
+    return [allColumn, ...runColumns];
   }
 
-  return state.pairOptions
+  const pairColumns = state.pairOptions
     .filter((pair) => state.selectedPairs.has(pair))
     .map((pair) => ({
       key: pair,
       label: formatPairShortFromPair(pair),
       title: formatPairFullFromPair(pair),
     }));
+  return [allColumn, ...pairColumns];
+}
+
+function createMatrixHeader(column) {
+  const th = document.createElement("th");
+  th.title = column.title || column.label;
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "table-sort-button matrix-sort-button";
+  button.addEventListener("click", () => cycleMatrixSort(column.key));
+  const label = document.createElement("span");
+  label.textContent = column.label;
+  const indicator = document.createElement("span");
+  indicator.className = "sort-indicator";
+  indicator.textContent = matrixSortIndicator(column.key);
+  button.append(label, indicator);
+  th.append(button);
+  return th;
 }
 
 function getMatrixRowGroups(filteredRows, columns) {
   const groups = new Map();
   filteredRows.forEach((row) => {
-    const key = `${row.eval_language}\u0000${row.test_id}`;
+    const scopeLabel = getMatrixScopeLabel(row);
+    const key = `${scopeLabel}\u0000${row.test_id}`;
     if (!groups.has(key)) {
       groups.set(key, {
-        evalLanguage: row.eval_language,
+        scopeLabel,
         testId: row.test_id,
         rows: [],
       });
@@ -371,11 +413,14 @@ function getMatrixRowGroups(filteredRows, columns) {
 
   return Array.from(groups.values())
     .sort((a, b) =>
-      a.evalLanguage.localeCompare(b.evalLanguage) || a.testId.localeCompare(b.testId),
+      a.scopeLabel.localeCompare(b.scopeLabel) || a.testId.localeCompare(b.testId),
     )
     .map((group) => {
       const columnRows = new Map(columns.map((column) => [column.key, []]));
       group.rows.forEach((row) => {
+        if (columnRows.has(MATRIX_ALL_COLUMN_KEY)) {
+          columnRows.get(MATRIX_ALL_COLUMN_KEY).push(row);
+        }
         const columnKey = state.columnMode === "run" ? row.run_key : row.pair;
         if (columnRows.has(columnKey)) {
           columnRows.get(columnKey).push(row);
@@ -386,13 +431,19 @@ function getMatrixRowGroups(filteredRows, columns) {
         cells: columns.map((column) => ({
           column,
           rows: columnRows.get(column.key) || [],
-          summary: summarizeCellRows(columnRows.get(column.key) || []),
+          summary: summarizeCellRows(columnRows.get(column.key) || [], {
+            forceRatio: column.isSummary,
+          }),
         })),
       };
     });
 }
 
-function summarizeCellRows(rows) {
+function getMatrixScopeLabel(row) {
+  return state.rowMode === "eval" ? row.eval : row.eval_language;
+}
+
+function summarizeCellRows(rows, options = {}) {
   if (rows.length === 0) {
     return {
       status: "empty",
@@ -423,7 +474,7 @@ function summarizeCellRows(rows) {
   }
 
   const label =
-    state.columnMode === "pair" && total > 1
+    options.forceRatio || (state.columnMode === "pair" && total > 1)
       ? `${passed}/${total}`
       : OUTCOME_SHORT[status] || OUTCOME_SHORT[normalizedOutcome(rows[0].outcome)] || "?";
   const parts = OUTCOME_ORDER.filter((outcome) => counts[outcome]).map(
@@ -439,6 +490,7 @@ function summarizeCellRows(rows) {
 
 function hasDisagreement(cells) {
   const statuses = cells
+    .filter((cell) => !cell.column.isSummary)
     .map((cell) => cell.summary.status)
     .filter((status) => status !== "empty");
   if (statuses.includes("mixed")) {
@@ -447,15 +499,98 @@ function hasDisagreement(cells) {
   return new Set(statuses).size > 1;
 }
 
+function sortMatrixGroups(groups) {
+  const sorted = [...groups];
+  const key = state.matrixSortKey;
+  if (!key) {
+    return sorted;
+  }
+  const direction = state.matrixSortDirection === "desc" ? -1 : 1;
+  return sorted.sort((a, b) => compareMatrixGroups(a, b, key, direction));
+}
+
+function compareMatrixGroups(a, b, key, direction) {
+  let comparison = 0;
+  if (key === "__scope__") {
+    comparison = a.scopeLabel.localeCompare(b.scopeLabel);
+  } else if (key === "__test__") {
+    comparison = a.testId.localeCompare(b.testId);
+  } else {
+    comparison = compareMatrixCells(getMatrixCell(a, key), getMatrixCell(b, key), direction);
+  }
+
+  if (comparison !== 0) {
+    return comparison * direction;
+  }
+  return a.scopeLabel.localeCompare(b.scopeLabel) || a.testId.localeCompare(b.testId);
+}
+
+function getMatrixCell(group, key) {
+  return group.cells.find((cell) => cell.column.key === key);
+}
+
+function compareMatrixCells(a, b, direction) {
+  const aRows = a?.rows.length || 0;
+  const bRows = b?.rows.length || 0;
+  if (aRows === 0 && bRows === 0) {
+    return 0;
+  }
+  if (aRows === 0) {
+    return direction;
+  }
+  if (bRows === 0) {
+    return -direction;
+  }
+
+  const aScore = matrixCellScore(a);
+  const bScore = matrixCellScore(b);
+  if (aScore !== bScore) {
+    return aScore - bScore;
+  }
+  return aRows - bRows;
+}
+
+function matrixCellScore(cell) {
+  const total = cell.rows.length;
+  if (total === 0) {
+    return Number.NaN;
+  }
+  return (cell.summary.counts.passed || 0) / total;
+}
+
+function cycleMatrixSort(key) {
+  if (state.matrixSortKey !== key) {
+    state.matrixSortKey = key;
+    state.matrixSortDirection = "asc";
+  } else if (state.matrixSortDirection === "asc") {
+    state.matrixSortDirection = "desc";
+  } else {
+    state.matrixSortKey = "";
+    state.matrixSortDirection = "asc";
+  }
+  renderMatrix(getFilteredRows());
+}
+
+function matrixSortIndicator(key) {
+  if (state.matrixSortKey !== key) {
+    return "";
+  }
+  return state.matrixSortDirection === "asc" ? "asc" : "desc";
+}
+
 function createMatrixCell(cell, group) {
-  const td = createTextCell("td", cell.summary.label, `matrix-cell ${cell.summary.status}`);
+  const classes = ["matrix-cell", cell.summary.status];
+  if (cell.column.isSummary) {
+    classes.push("summary-cell");
+  }
+  const td = createTextCell("td", cell.summary.label, classes.join(" "));
   td.title = cell.summary.title;
   if (cell.rows.length > 0) {
     td.tabIndex = 0;
     td.setAttribute("role", "button");
     td.addEventListener("click", () => {
       state.detailRows = cell.rows;
-      state.detailTitle = `${group.evalLanguage} ${group.testId} - ${cell.column.title}`;
+      state.detailTitle = `${group.scopeLabel} ${group.testId} - ${cell.column.title}`;
       renderDetail();
     });
     td.addEventListener("keydown", (event) => {
