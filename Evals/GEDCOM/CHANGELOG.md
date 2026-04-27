@@ -1,5 +1,55 @@
 # Changelog
 
+## Investigation — 2026-04-27 (no version change)
+
+- Reviewed GEDCOM frontier-agent results after v3.2.1 because successful runs
+  from OpenAI and Anthropic models clustered around 45-52% while the same
+  models score 90%+ on other evals. The Python reference implementation still
+  passes the full suite (`203 passed`), so the low scores do not appear to come
+  from a broken eval runtime or an unsatisfiable reference/test mismatch.
+- Across the 19 non-busted published runs that passed at least 80 tests, models
+  almost always implemented the core parser/renderer: parse coverage was
+  usually 46-47/47 and schema coverage was 3/3. The consistent gap is full
+  GEDCOM 7 validation: 69 tests failed in every one of those 19 runs, and 97
+  tests failed in at least 17 of them.
+- The consistent failures are concentrated in a few rule families, not in
+  GEDZIP or basic tree handling. All 19 non-busted runs missed all 32
+  `Y|<NULL>` event-payload rejection cases, 19 datatype-render/validation
+  cases, 6 pointer-target-type cases, and 9 render-side validation cases.
+  Xref-required record tests failed in 17-18 of 19 runs. GEDZIP was not the
+  primary cause; it is hard in C++/Rust under the stdlib-only rule, but it is
+  only 9 tests and many runs passed most or all of it.
+- Found one prompt-packaging cleanup issue: `base-prompt.md` says the request
+  and response contract is described in `technical-requirements-prompt.md`, but
+  the harness mounts only the assembled `prompt.md` plus `docs/`. The contract
+  text is present in `prompt.md`, so this is unlikely to explain a 50% score by
+  itself, but at least one agent explicitly wasted effort looking for the
+  missing standalone file.
+- Proposed prompt/docs fixes: remove the stale standalone-file reference; add a
+  short mounted docs navigation note that makes the intended validation scope
+  explicit without introducing new behavior beyond the official spec; and call
+  out that a conforming solution is expected to validate GEDCOM line grammar,
+  official structure cardinalities, pointer target types, datatype syntax, and
+  GEDZIP attachment rules rather than only parse/render a generic tree.
+- Proposed scoring/test cleanup: keep the single GEDCOM eval, but make the
+  reported subscores clearly distinguish core parse/render, structure
+  validation, datatype validation, and GEDZIP, and avoid letting one generalized
+  missed rule dominate raw score. The 32 `Y|<NULL>` parametrized cases are
+  independent examples, but they currently behave like one missed implementation
+  concept repeated 32 times.
+- Expected model capability after cleanup: fixing the stale contract reference
+  alone should recover little, probably 0-5% of the 69 currently consistent
+  failures. A concise spec-navigation/validation-scope note should make the
+  simpler table-driven families attainable, plausibly recovering about 20-35%
+  of the consistent failures, especially generalized event payloads, required
+  child/cardinality checks, and pointer target maps. The remaining 65-80% of
+  current consistent failures should be expected to continue failing for most
+  one-shot frontier-agent runs unless agents are given more explicit derived
+  tables; current runs do not show reliable ability to derive and implement
+  exact GEDCOM date/calendar grammar, BCP 47 language validation, media type and
+  local-file path rules, coordinate bounds, and comprehensive render-side
+  validation from the 38k-word official HTML corpus.
+
 ## v3.2.1 — 2026-04-24
 
 - Removed `tests/test_official_data_rules.py`; the maintainer-only
