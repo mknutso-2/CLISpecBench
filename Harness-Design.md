@@ -227,9 +227,15 @@ collector configured inside the container. The adapter sets
 collector endpoint, then parses the `claude_code.token.usage` metric from the
 exported data after the run completes.
 
-**Codex CLI.** Invoked via `codex exec --json`. Token usage is parsed directly
+**Codex CLI.** Invoked via `codex exec --json`. Token usage is parsed first
 from the JSONL event stream — `turn.completed` events contain `input_tokens`,
-`cached_input_tokens`, and `output_tokens`. The adapter sums across all turns.
+`cached_input_tokens`, and `output_tokens`. If the run ends with `turn.failed`,
+the event stream does not carry a final usage object, so the adapter falls back
+to Codex's persisted session rollouts under `/root/.codex/sessions/` and reads
+the latest `token_count.info.total_token_usage` snapshot. That fallback is
+marked `is_partial: true` because it is authoritative only through the last
+model response for which Codex received `response.completed`; it cannot include
+tokens from a provider stream that failed before completion.
 
 **Gemini CLI.** Invoked in non-interactive mode. Token usage is extracted via
 OpenTelemetry export (similar to Claude Code) or parsed from the `/stats`
@@ -278,7 +284,7 @@ agent has different requirements (verified via smoke testing):
 | Agent | Host files | Mount strategy |
 |-------|-----------|----------------|
 | Claude Code | `~/.claude/.credentials.json` (read-only), `~/.claude/settings.json` (read-only) | Mount the two files individually `:ro` |
-| Codex CLI | `~/.codex/auth.json` (read-only, file only) | Mount single file `:ro`; rest of `.codex/` stays writable |
+| Codex CLI | `~/.codex/auth.json` (read/write, file only) | Mount single file `:rw`; rest of `.codex/` stays writable |
 | Gemini CLI | `~/.gemini/oauth_creds.json`, `google_accounts.json`, `settings.json` | Copy to writable dir at startup; seed `projects.json` |
 
 Notes:
@@ -592,7 +598,7 @@ analysis of token efficiency (correctness per token) and cost estimation.
 | Agent | Collection method | Granularity |
 |-------|-------------------|-------------|
 | Claude Code | OpenTelemetry file export inside container; parse `claude_code.token.usage` metric | Per-metric-type (input, output, cache_read, cache_creation) |
-| Codex CLI | Parse JSONL event stream from `codex exec --json`; sum `turn.completed` events | Per-turn, summed to session total |
+| Codex CLI | Parse `turn.completed.usage` from `codex exec --json`; if absent, parse latest session-rollout `token_count` snapshot from `/root/.codex/sessions/` | Completed-turn total; fallback is last completed model-response snapshot |
 | Gemini CLI | OpenTelemetry export or capture `/stats` output at session end | Session total |
 
 ### 11.2 Normalized Schema
@@ -604,18 +610,29 @@ All adapters normalize to:
 class TokenUsage:
     input_tokens: int
     output_tokens: int
-    cached_input_tokens: int | None = None
-    total_tokens: int | None = None
+    cache_read_input_tokens: int | None = None
+    cache_creation_input_tokens: int | None = None
+    tool_calls: int | None = None
+    reported_cost_usd: float | None = None
+    estimated_cost_usd: float | None = None
+    cost_estimate_blocked_reason: str | None = None
+    source: str | None = None
+    is_partial: bool = False
 ```
 
-`total_tokens` is computed as `input_tokens + output_tokens` if not provided
-natively. `cached_input_tokens` is null for agents that don't report it.
+`total_tokens` is computed as `input_tokens + output_tokens` in the serialized
+result. `source` records the telemetry path that produced the measurement, and
+`is_partial` is set when the adapter can only prove usage through an intermediate
+completed response.
 
 ### 11.3 Limitations
 
 - Token counts are best-effort. If an agent crashes or is force-killed,
   partial usage may be lost. The result records `token_usage: null` in this
   case rather than inventing a number.
+- Codex session-rollout fallback is not visible-log estimation. It uses
+  Codex's own persisted `token_count` events, but failed provider streams still
+  have no exact token report until Codex receives `response.completed`.
 - Different agents count tokens differently (tokenizer differences, whether
   system prompts are counted, etc.). Cross-agent token comparisons are
   directionally useful but not exact apples-to-apples.

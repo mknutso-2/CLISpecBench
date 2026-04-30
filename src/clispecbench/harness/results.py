@@ -61,6 +61,11 @@ class TokenUsage:
     # ``estimated_cost_usd`` is missing. For example, Claude's mixed-model
     # ``modelUsage`` can aggregate token counts from multiple priced models.
     cost_estimate_blocked_reason: str | None = None
+    # Machine-readable provenance for adapters that have multiple telemetry
+    # paths. Example: Codex can report completed-turn usage via exec JSONL, or
+    # recover a lower-bound count from its persisted session rollout.
+    source: str | None = None
+    is_partial: bool = False
 
     @property
     def total_tokens(self) -> int:
@@ -488,6 +493,8 @@ def load_result(path: Path) -> RunResult:
             reported_cost_usd=data["token_usage"].get("reported_cost_usd"),
             estimated_cost_usd=data["token_usage"].get("estimated_cost_usd"),
             cost_estimate_blocked_reason=data["token_usage"].get("cost_estimate_blocked_reason"),
+            source=data["token_usage"].get("source"),
+            is_partial=data["token_usage"].get("is_partial", False),
         )
         if data.get("token_usage")
         else None

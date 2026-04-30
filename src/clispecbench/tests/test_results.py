@@ -13,6 +13,7 @@ from clispecbench.harness.results import (
     Scores,
     TestSummary,
     TokenUsage,
+    load_result,
 )
 
 
@@ -151,3 +152,24 @@ class TestBenchmarkCostPolicy:
 
         assert result.benchmark_cost_usd == 0.75
         assert result.benchmark_cost_source == "estimated"
+
+    def test_token_usage_source_and_partial_flag_round_trip(self, tmp_path: Path) -> None:
+        path = tmp_path / "result.json"
+        result = _make_run_result(
+            "codex-cli",
+            TokenUsage(
+                input_tokens=100,
+                output_tokens=50,
+                cache_read_input_tokens=25,
+                estimated_cost_usd=0.001,
+                source="codex_session_rollout_token_count",
+                is_partial=True,
+            ),
+        )
+
+        result.write(path)
+        loaded = load_result(path)
+
+        assert loaded.token_usage is not None
+        assert loaded.token_usage.source == "codex_session_rollout_token_count"
+        assert loaded.token_usage.is_partial is True

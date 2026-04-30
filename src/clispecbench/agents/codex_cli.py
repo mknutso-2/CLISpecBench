@@ -23,6 +23,10 @@ DOCKERFILE = (
 # Path inside the container where we tee the JSONL event stream
 EVENT_LOG_PATH = "/tmp/codex-events.jsonl"
 
+# Codex persists normal session rollout JSONL here. Those files contain
+# EventMsg::TokenCount snapshots that survive a later turn.failed event.
+SESSION_ROLLOUT_DIR = "/root/.codex/sessions"
+
 
 class CodexCLIAdapter(AgentAdapter):
     """Adapter for OpenAI Codex CLI (``codex``)."""
@@ -76,31 +80,18 @@ class CodexCLIAdapter(AgentAdapter):
         container_fs: Path,
         container_logs: str = "",
     ) -> TokenUsage | None:
-        """Parse token usage from the JSONL event stream.
+        """Parse token usage from Codex CLI telemetry.
 
-        Codex CLI only attaches ``usage`` to ``turn.completed`` events.
-        ``turn.failed`` (e.g. on context_exhausted / max_output_tokens
-        / remote-compact failure) carries no usage record, so runs that
-        die mid-turn return None here.
+        Primary source: ``codex exec --json`` emits ``turn.completed.usage``.
+        Fallback source: Codex's persisted session rollout files contain
+        ``token_count`` snapshots after completed model responses. This can
+        recover an authoritative lower-bound token count for runs whose final
+        event is ``turn.failed``. It still cannot recover tokens for an API
+        stream that fails before Codex receives ``response.completed``.
 
-        Do not try to recover token counts after a turn failure. The
-        signals that look promising are not actually comparable to the
-        ``reported`` cumulative-input metric:
-
-        - ``last_api_response_total_tokens=N`` in Codex's compact_remote
-          ERROR log is the size of the *most recent single API request*,
-          not the cumulative sum across all calls in the turn. For a
-          run with N tool-calls these differ by a factor of ~N/2 (each
-          call's input re-sends prior context).
-        - Byte-summing the visible event stream (prompt + tool outputs +
-          agent messages) misses the prompt itself, Codex's internal
-          system prompts and tool schemas, reasoning tokens, and the
-          API-call multiplication just mentioned. Measured against a
-          completed run this undercounts by 16-95x — useless as a proxy.
-
-        The qualitative signal (``metadata.notes = "context_exhausted"``)
-        is the meaningful information for failed runs; a fake token
-        count is worse than no token count.
+        We deliberately avoid visible-log byte/token estimation. It misses
+        hidden prompts, tool schemas, reasoning tokens, and API-call
+        multiplication, so a fake count is worse than no count.
         """
         sources: list[str] = []
         if container_logs:
@@ -110,41 +101,19 @@ class CodexCLIAdapter(AgentAdapter):
         if event_log.is_file():
             sources.append(event_log.read_text(encoding="utf-8"))
 
-        if not sources:
+        tool_calls = _count_tool_calls(container_logs)
+        if sources:
+            usage = _parse_exec_event_usage(sources, tool_calls)
+            if usage is not None:
+                return usage
+        else:
             log.info("No Codex event data found")
-            return None
 
-        input_tokens = 0
-        output_tokens = 0
-        cached_input_tokens = 0
-
-        for source in sources:
-            for event in _iter_dict_events(source):
-                if event.get("type") == "turn.completed":
-                    usage = event.get("usage")
-                    if not isinstance(usage, dict):
-                        continue
-                    usage_d = cast(dict[str, Any], usage)
-                    input_tokens += int(usage_d.get("input_tokens", 0) or 0)
-                    output_tokens += int(usage_d.get("output_tokens", 0) or 0)
-                    cached_input_tokens += int(usage_d.get("cached_input_tokens", 0) or 0)
-                    break  # Only one turn in exec mode
-            if input_tokens > 0:
-                break  # Found usage, don't double-count from second source
-
-        if input_tokens == 0 and output_tokens == 0:
-            return None
-
-        return TokenUsage(
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cache_read_input_tokens=cached_input_tokens or None,
-            tool_calls=_count_tool_calls(container_logs),
-        )
+        return _parse_session_rollout_usage(container_fs, tool_calls)
 
     @property
     def telemetry_paths(self) -> list[str]:
-        return [EVENT_LOG_PATH]
+        return [EVENT_LOG_PATH, SESSION_ROLLOUT_DIR]
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         # Mount only the auth file, not the whole .codex/ dir, to avoid
@@ -183,6 +152,100 @@ class CodexCLIAdapter(AgentAdapter):
             if isinstance(text, str) and text.strip():
                 return text
         return None
+
+
+def _parse_exec_event_usage(sources: list[str], tool_calls: int | None = None) -> TokenUsage | None:
+    for source in sources:
+        for event in _iter_dict_events(source):
+            if event.get("type") != "turn.completed":
+                continue
+            usage = event.get("usage")
+            if not isinstance(usage, dict):
+                continue
+            return _token_usage_from_codex_usage(
+                cast(dict[str, Any], usage),
+                source="codex_exec_turn_completed",
+                is_partial=False,
+                tool_calls=tool_calls,
+            )
+    return None
+
+
+def _parse_session_rollout_usage(
+    container_fs: Path,
+    tool_calls: int | None = None,
+) -> TokenUsage | None:
+    # copy_out() extracts /root/.codex/sessions → extract_dir/sessions
+    sessions_dir = container_fs / "sessions"
+    if not sessions_dir.is_dir():
+        log.info("No Codex session rollout directory found at %s", sessions_dir)
+        return None
+
+    latest: TokenUsage | None = None
+    # Codex uses ISO-like rollout filenames under YYYY/MM/DD directories, so
+    # lexical path order matches chronological order for the current schema.
+    for rollout_file in sorted(sessions_dir.rglob("*.jsonl")):
+        try:
+            text = rollout_file.read_text(encoding="utf-8")
+        except OSError:
+            log.debug("Could not read Codex rollout file %s", rollout_file, exc_info=True)
+            continue
+        for event in _iter_dict_events(text):
+            total_usage = _token_count_total_usage(event)
+            if total_usage is None:
+                continue
+            latest = _token_usage_from_codex_usage(
+                total_usage,
+                source="codex_session_rollout_token_count",
+                is_partial=True,
+                tool_calls=tool_calls,
+            )
+    return latest
+
+
+def _token_count_total_usage(event: dict[str, Any]) -> dict[str, Any] | None:
+    payload: object
+    if event.get("type") == "event_msg":
+        payload = event.get("payload")
+    else:
+        payload = event
+
+    if not isinstance(payload, dict):
+        return None
+    payload_d = cast(dict[str, Any], payload)
+    if payload_d.get("type") != "token_count":
+        return None
+    info = payload_d.get("info")
+    if not isinstance(info, dict):
+        return None
+    total_usage = cast(dict[str, Any], info).get("total_token_usage")
+    if not isinstance(total_usage, dict):
+        return None
+    return cast(dict[str, Any], total_usage)
+
+
+def _token_usage_from_codex_usage(
+    usage: dict[str, Any],
+    *,
+    source: str,
+    is_partial: bool,
+    tool_calls: int | None = None,
+) -> TokenUsage | None:
+    input_tokens = int(usage.get("input_tokens", 0) or 0)
+    output_tokens = int(usage.get("output_tokens", 0) or 0)
+    cached_input_tokens = int(
+        usage.get("cached_input_tokens", usage.get("cache_read_input_tokens", 0)) or 0
+    )
+    if input_tokens == 0 and output_tokens == 0:
+        return None
+    return TokenUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        cache_read_input_tokens=cached_input_tokens or None,
+        tool_calls=tool_calls,
+        source=source,
+        is_partial=is_partial,
+    )
 
 
 def _count_tool_calls(container_logs: str) -> int:

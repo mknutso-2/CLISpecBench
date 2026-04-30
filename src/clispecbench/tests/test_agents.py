@@ -224,6 +224,7 @@ class TestTelemetryPaths:
     def test_codex_has_event_log_path(self) -> None:
         adapter = CodexCLIAdapter()
         assert any("codex-events" in p for p in adapter.telemetry_paths)
+        assert any("/root/.codex/sessions" == p for p in adapter.telemetry_paths)
 
     def test_gemini_has_no_telemetry_paths(self) -> None:
         adapter = GeminiCLIAdapter()
@@ -400,3 +401,199 @@ class TestClaudeCodeTokenUsage:
         assert usage.estimated_cost_usd is None
         assert usage.cost_estimate_blocked_reason is None
         assert usage.reported_cost_usd == pytest.approx(1.23)
+
+
+class TestCodexCLITokenUsage:
+    def test_parse_token_usage_prefers_completed_turn_usage(self, tmp_path: Path) -> None:
+        adapter = CodexCLIAdapter()
+        logs = "\n".join(
+            [
+                json.dumps({"type": "item.completed", "item": {"type": "command_execution"}}),
+                json.dumps(
+                    {
+                        "type": "turn.completed",
+                        "usage": {
+                            "input_tokens": 1000,
+                            "cached_input_tokens": 250,
+                            "output_tokens": 125,
+                        },
+                    }
+                ),
+            ]
+        )
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is not None
+        assert usage.input_tokens == 1000
+        assert usage.output_tokens == 125
+        assert usage.cache_read_input_tokens == 250
+        assert usage.tool_calls == 1
+        assert usage.source == "codex_exec_turn_completed"
+        assert usage.is_partial is False
+
+    def test_parse_token_usage_reads_completed_turn_from_event_log(self, tmp_path: Path) -> None:
+        adapter = CodexCLIAdapter()
+        (tmp_path / "codex-events.jsonl").write_text(
+            json.dumps(
+                {
+                    "type": "turn.completed",
+                    "usage": {
+                        "input_tokens": 2000,
+                        "cached_input_tokens": 500,
+                        "output_tokens": 250,
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        usage = adapter.parse_token_usage(tmp_path)
+
+        assert usage is not None
+        assert usage.input_tokens == 2000
+        assert usage.output_tokens == 250
+        assert usage.cache_read_input_tokens == 500
+        assert usage.source == "codex_exec_turn_completed"
+        assert usage.is_partial is False
+
+    def test_parse_token_usage_falls_back_to_session_rollout_token_count(
+        self, tmp_path: Path
+    ) -> None:
+        adapter = CodexCLIAdapter()
+        rollout = tmp_path / "sessions" / "2026" / "04" / "29"
+        rollout.mkdir(parents=True)
+        (rollout / "rollout-2026-04-29T01-02-03-thread.jsonl").write_text(
+            "\n".join(
+                [
+                    json.dumps(
+                        {
+                            "timestamp": "2026-04-29T01:02:03Z",
+                            "type": "event_msg",
+                            "payload": {
+                                "type": "token_count",
+                                "info": {
+                                    "total_token_usage": {
+                                        "input_tokens": 1000,
+                                        "cached_input_tokens": 200,
+                                        "output_tokens": 100,
+                                        "reasoning_output_tokens": 50,
+                                        "total_tokens": 1100,
+                                    },
+                                    "last_token_usage": {
+                                        "input_tokens": 1000,
+                                        "cached_input_tokens": 200,
+                                        "output_tokens": 100,
+                                        "reasoning_output_tokens": 50,
+                                        "total_tokens": 1100,
+                                    },
+                                    "model_context_window": 400000,
+                                },
+                                "rate_limits": None,
+                            },
+                        }
+                    ),
+                    json.dumps(
+                        {
+                            "timestamp": "2026-04-29T01:03:03Z",
+                            "type": "event_msg",
+                            "payload": {
+                                "type": "token_count",
+                                "info": {
+                                    "total_token_usage": {
+                                        "input_tokens": 3000,
+                                        "cached_input_tokens": 900,
+                                        "output_tokens": 450,
+                                        "reasoning_output_tokens": 200,
+                                        "total_tokens": 3450,
+                                    },
+                                    "last_token_usage": {
+                                        "input_tokens": 2000,
+                                        "cached_input_tokens": 700,
+                                        "output_tokens": 350,
+                                        "reasoning_output_tokens": 150,
+                                        "total_tokens": 2350,
+                                    },
+                                    "model_context_window": 400000,
+                                },
+                                "rate_limits": None,
+                            },
+                        }
+                    ),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        logs = "\n".join(
+            [
+                json.dumps({"type": "item.completed", "item": {"type": "command_execution"}}),
+                json.dumps({"type": "turn.failed", "error": {"message": "context exhausted"}}),
+            ]
+        )
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is not None
+        assert usage.input_tokens == 3000
+        assert usage.output_tokens == 450
+        assert usage.cache_read_input_tokens == 900
+        assert usage.tool_calls == 1
+        assert usage.source == "codex_session_rollout_token_count"
+        assert usage.is_partial is True
+
+    def test_parse_token_usage_prefers_exec_usage_over_rollout_fallback(
+        self, tmp_path: Path
+    ) -> None:
+        adapter = CodexCLIAdapter()
+        rollout = tmp_path / "sessions" / "2026" / "04" / "29"
+        rollout.mkdir(parents=True)
+        (rollout / "rollout-2026-04-29T01-02-03-thread.jsonl").write_text(
+            json.dumps(
+                {
+                    "type": "event_msg",
+                    "payload": {
+                        "type": "token_count",
+                        "info": {
+                            "total_token_usage": {
+                                "input_tokens": 9999,
+                                "cached_input_tokens": 1111,
+                                "output_tokens": 888,
+                            }
+                        },
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        logs = json.dumps(
+            {
+                "type": "turn.completed",
+                "usage": {
+                    "input_tokens": 123,
+                    "cached_input_tokens": 45,
+                    "output_tokens": 67,
+                },
+            }
+        )
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is not None
+        assert usage.input_tokens == 123
+        assert usage.output_tokens == 67
+        assert usage.cache_read_input_tokens == 45
+        assert usage.source == "codex_exec_turn_completed"
+        assert usage.is_partial is False
+
+    def test_parse_token_usage_returns_none_without_completed_usage_or_rollout(
+        self, tmp_path: Path
+    ) -> None:
+        adapter = CodexCLIAdapter()
+        logs = json.dumps({"type": "turn.failed", "error": {"message": "rate limited"}})
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is None
