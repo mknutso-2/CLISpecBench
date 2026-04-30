@@ -1,0 +1,2927 @@
+{
+  "schema_version": "2.0",
+  "metadata": {
+    "run_uid": "5f6360b8-e813-442f-b3fd-ef7babafd68c",
+    "task": "ical-rs",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-04-29T06:51:19.405577+00:00",
+    "test_suite_version": "507eb19",
+    "eval_version": "3.0.0",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 2898.5629999999983,
+    "exit_reason": "completed",
+    "model": "gpt-5.4-mini",
+    "effort": "xhigh",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "d06320052c8c2d1d2398c494c2377c6a649238453fd383a7403a276e317532b0",
+    "test_suite_sha": "eff18d4351425d9464a9d05729853ca19d6218b3e5a3df0423d79fd0d757983c",
+    "agent_last_message": "Implemented in `/workspace/output` as a std-only Rust 2021 Cargo binary named `ical`.\n\nWhat changed:\n- CLI entrypoint and error handling in [main.rs](/workspace/output/src/main.rs)\n- Full schema parsing and validation in [parser.rs](/workspace/output/src/parser.rs)\n- Recurrence expansion and timezone resolution in [expand.rs](/workspace/output/src/expand.rs)\n- RRULE engine in [rrule.rs](/workspace/output/src/rrule.rs)\n- JSON emission and shared types in [json.rs](/workspace/output/src/json.rs) and [types.rs](/workspace/output/src/types.rs)\n\nVerified:\n- `cargo build --release --manifest-path /workspace/output/Cargo.toml`\n- `ical expand` on a recurring event sample\n- DST gap/fold resolution with a VTIMEZONE sample\n- `RANGE=THISANDFUTURE` cancellation and shift behavior\n- unresolved `TZID` continuation behavior\n\nNotable fixes:\n- Optional date-time fields now serialize as `null` instead of empty strings.\n- VTIMEZONE observances are parsed correctly from the normalized parse output.\n- Zoned occurrences resolve through in-file VTIMEZONE data, including gap/fold warnings.\n- `RECURRENCE-ID` overrides work for both datetime and date-only series.\n- `THISANDFUTURE` cancellations keep original timestamps and mark future instances cancelled.\n\n"
+  },
+  "token_usage": {
+    "input_tokens": 14957755,
+    "output_tokens": 344223,
+    "cache_read_input_tokens": 14414976,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 172,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 3.037211,
+    "cost_estimate_blocked_reason": null,
+    "total_tokens": 15301978
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.019180134000635007,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_spring_forward_day_3am",
+      "outcome": "passed",
+      "duration_seconds": 2.9360503230018367,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_spring_forward_day_1am_before_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.017031917999702273,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_fall_back_day_after_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.0160745599969232,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_recurring_event_crosses_spring_forward",
+      "outcome": "passed",
+      "duration_seconds": 0.015983440000127302,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_london_timezone_gmt_vs_bst",
+      "outcome": "passed",
+      "duration_seconds": 0.015295783996407408,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_london_winter_gmt",
+      "outcome": "passed",
+      "duration_seconds": 0.01601531600317685,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_multi_year_tz_resolution",
+      "outcome": "passed",
+      "duration_seconds": 0.016300703999149846,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_hourly_crosses_midnight",
+      "outcome": "passed",
+      "duration_seconds": 0.01686849999896367,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_minutely_crosses_hour",
+      "outcome": "passed",
+      "duration_seconds": 0.017891382001835154,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_hourly_crosses_month",
+      "outcome": "passed",
+      "duration_seconds": 0.015785147003043676,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_weekly_with_byhour",
+      "outcome": "passed",
+      "duration_seconds": 0.019838714997604256,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_monthly_byday_ordinal_plus_byhour",
+      "outcome": "passed",
+      "duration_seconds": 0.01666176399885444,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_yearly_bymonth_bymonthday_byhour",
+      "outcome": "passed",
+      "duration_seconds": 0.01559211099811364,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_range_thisandfuture_replaces_future",
+      "outcome": "failed",
+      "duration_seconds": 0.01904343199930736,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_range_thisandfuture_repla0')\n\n    def test_range_thisandfuture_replaces_future(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        # Daily at 10:00, COUNT=5. On 2026-03-07, apply THISANDFUTURE to move to 15:00.\n        # Expected: 3/5 10:00, 3/6 10:00, 3/7 15:00, 3/8 15:00, 3/9 15:00.\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VEVENT\\n\"\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260305T100000Z\\n\"\n            \"RRULE:FREQ=DAILY;COUNT=5\\nEND:VEVENT\\n\"\n            \"BEGIN:VEVENT\\n\"\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID;RANGE=THISANDFUTURE:20260307T100000Z\\n\"\n            \"DTSTART:20260307T150000Z\\n\"\n            \"END:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_expand(\n            submission_command,\n            ics,\n            \"2026-03-01T00:00:00Z\",\n            \"2026-03-15T00:00:00Z\",\n            tmp_path,\n        )\n        starts = starts_for(out[\"occurrences\"], \"e1\")\n        assert \"2026-03-05T10:00:00Z\" in starts\n        assert \"2026-03-06T10:00:00Z\" in starts\n        # From 3/7 onwards, everything should be at 15:00, not 10:00.\n        assert \"2026-03-07T10:00:00Z\" not in starts\n>       assert \"2026-03-07T15:00:00Z\" in starts\nE       AssertionError: assert '2026-03-07T15:00:00Z' in ['2026-03-05T10:00:00Z', '2026-03-06T10:00:00Z', '2026-03-07T05:00:00Z', '2026-03-08T05:00:00Z', '2026-03-09T05:00:00Z']\n\n/tmp/tests/test_adversarial_corners.py:377: AssertionError"
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_exrule_monthly_second_friday",
+      "outcome": "passed",
+      "duration_seconds": 0.016705345995433163,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_exrule_combined_with_exdate",
+      "outcome": "passed",
+      "duration_seconds": 0.01531143100510235,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_yearly_byyearday_specific_day",
+      "outcome": "passed",
+      "duration_seconds": 0.015677506002248265,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_yearly_byyearday_negative",
+      "outcome": "passed",
+      "duration_seconds": 0.017233312002645107,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_attendee_value_is_cal_address_uri",
+      "outcome": "passed",
+      "duration_seconds": 0.01574158199946396,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_attendee_non_mailto_scheme",
+      "outcome": "passed",
+      "duration_seconds": 0.0180860720029159,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cn_unquoted",
+      "outcome": "passed",
+      "duration_seconds": 0.019485442997392965,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cn_quoted_with_comma",
+      "outcome": "passed",
+      "duration_seconds": 0.02852759399684146,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cutype_group",
+      "outcome": "passed",
+      "duration_seconds": 0.020433921003132127,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cutype_room",
+      "outcome": "passed",
+      "duration_seconds": 0.017678758002148243,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_role_chair",
+      "outcome": "passed",
+      "duration_seconds": 0.020935884000209626,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_role_opt_participant_hyphen_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.015956029001245042,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_partstat_needs_action",
+      "outcome": "passed",
+      "duration_seconds": 0.016205775002163136,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_rsvp_true_becomes_boolean",
+      "outcome": "passed",
+      "duration_seconds": 0.017772387000150047,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_rsvp_false_becomes_boolean",
+      "outcome": "passed",
+      "duration_seconds": 0.016585905003012158,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_member_single_quoted",
+      "outcome": "passed",
+      "duration_seconds": 0.019229434001317713,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_member_multiple_comma_separated",
+      "outcome": "passed",
+      "duration_seconds": 0.01373973700174247,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_delegated_from",
+      "outcome": "passed",
+      "duration_seconds": 0.014699288996780524,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_delegated_to_multiple",
+      "outcome": "passed",
+      "duration_seconds": 0.016672617999574868,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_dir_quoted_uri",
+      "outcome": "passed",
+      "duration_seconds": 0.01529507500163163,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_sent_by",
+      "outcome": "passed",
+      "duration_seconds": 0.015667294999730075,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_language_tag",
+      "outcome": "passed",
+      "duration_seconds": 0.01596156699815765,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_combined_parameters_all",
+      "outcome": "passed",
+      "duration_seconds": 0.015221789995848667,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_folded_attendee_across_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.016767605000495678,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_multiple_attendees_order_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01524825900560245,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_absent_params_are_null_or_missing",
+      "outcome": "passed",
+      "duration_seconds": 0.017985882001084974,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_parameter_name_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.014753933999600122,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cutype_x_name_passthrough",
+      "outcome": "passed",
+      "duration_seconds": 0.014618001001508674,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_organizer_uses_cal_address_object",
+      "outcome": "passed",
+      "duration_seconds": 0.01584532799824956,
+      "message": null
+    },
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.019180134000635007,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_has_rfc7986_keys_even_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.014974186997278593,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_name_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.023155109000072116,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_name_with_text_escapes",
+      "outcome": "passed",
+      "duration_seconds": 0.027913621004699962,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_description_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.01713343500159681,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_refresh_interval_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.015765488002216443,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_refresh_interval_complex_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.017847036997409305,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_source_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.01824222700088285,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_color_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.019862194003508193,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_url_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.01765838799838093,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_categories_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.01566166300108307,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_categories_multiple_properties_union",
+      "outcome": "passed",
+      "duration_seconds": 0.01894883199929609,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_image_uri_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0150443139973504,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_image_multiple_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.017306694000581047,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_image_display_values_comma_list",
+      "outcome": "failed",
+      "duration_seconds": 0.015023995001683943,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_calendar_image_display_va0')\n\n    def test_calendar_image_display_values_comma_list(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 7986 \u00a76.1 allows the DISPLAY parameter to carry multiple values\n        (comma-separated): `DISPLAY=BADGE,THUMBNAIL`. The entire DISPLAY string\n        should be surfaced; we accept either the raw joined string or a semantic\n        split (depending on harness preference).\"\"\"\n        out = run_parse(\n            submission_command,\n            _wrap_calprops(\n                \"IMAGE;VALUE=URI;DISPLAY=BADGE,THUMBNAIL;FMTTYPE=image/png:\"\n                \"https://example.com/weather-cloudy.png\\n\"\n            ),\n            tmp_path,\n        )\n        images = _dict_list_field(_cal(out), \"images\")\n        assert len(images) == 1\n        display = cast(str, images[0].get(\"display\") or \"\")\n>       assert \"BADGE\" in display and \"THUMBNAIL\" in display\nE       AssertionError: assert ('BADGE' in 'BADGE' and 'THUMBNAIL' in 'BADGE')\n\n/tmp/tests/test_calendar_properties.py:315: AssertionError"
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_conference_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.016747320001741173,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_conference_multiple_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.01636050899833208,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_all_rfc7986_properties_together",
+      "outcome": "passed",
+      "duration_seconds": 0.020016837999719428,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_properties_without_any_component",
+      "outcome": "passed",
+      "duration_seconds": 0.022745162994397106,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_fall_back_ambiguous_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01993483499609283,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_fall_back_unambiguous_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.022417227999540046,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_spring_forward_gap_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0186983669991605,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_spring_forward_before_gap_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.015913027000351576,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_spring_forward_after_gap_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.016439859002275625,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_no_dst_zone_does_not_emit_fold_warnings",
+      "outcome": "passed",
+      "duration_seconds": 0.016264333000435727,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_floating_time_does_not_trigger_dst_warnings",
+      "outcome": "passed",
+      "duration_seconds": 0.017952232996321982,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_historical_fold_on_pre_2007_date",
+      "outcome": "passed",
+      "duration_seconds": 0.016836439001053805,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_historical_post_2007_fold_still_fires",
+      "outcome": "passed",
+      "duration_seconds": 0.01936989000023459,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_rdate_driven_fold_fires_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.021673227001883788,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_recurring_event_crossing_dst_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.01648840400230256,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_yearend_gap_detected_via_neighbor_year_scan",
+      "outcome": "passed",
+      "duration_seconds": 0.01771262800320983,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_yearend_gap_mirror_detected_via_same_year_scan",
+      "outcome": "passed",
+      "duration_seconds": 0.01765392199740745,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_json_has_error_object",
+      "outcome": "passed",
+      "duration_seconds": 0.01570829800402862,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_has_line_field",
+      "outcome": "passed",
+      "duration_seconds": 0.0184198919996561,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_has_column_field",
+      "outcome": "passed",
+      "duration_seconds": 0.014181258000462549,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_has_message_field",
+      "outcome": "passed",
+      "duration_seconds": 0.018004650999500882,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_unclosed_vevent_is_error",
+      "outcome": "passed",
+      "duration_seconds": 0.01764402600019821,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_mismatched_end_component",
+      "outcome": "passed",
+      "duration_seconds": 0.019075699001405155,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_malformed_value_does_not_exit_one",
+      "outcome": "passed",
+      "duration_seconds": 0.015439070997672388,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_unknown_component_is_warning_not_error",
+      "outcome": "passed",
+      "duration_seconds": 0.015773497998452513,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_warning_includes_uid_when_applicable",
+      "outcome": "failed",
+      "duration_seconds": 0.01588995399652049,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_includes_uid_when0')\n\n    def test_warning_includes_uid_when_applicable(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Warnings emitted during event parsing should carry the event's uid\n        in the `uid` field (per warning schema).\"\"\"\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VEVENT\\n\"\n            \"UID:test-event-xyz\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            \"GEO:garbage\\n\"  # malformed \u2192 warning carries uid\n            \"END:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_parse(submission_command, ics, tmp_path)\n        warnings = cast(list[dict[str, Any]], out.get(\"warnings\") or [])\n        # Find the malformed_value warning.\n        malformed = [w for w in warnings if w.get(\"kind\") == \"malformed_value\"]\n>       assert len(malformed) >= 1, f\"expected malformed_value warning: {warnings!r}\"\nE       AssertionError: expected malformed_value warning: []\nE       assert 0 >= 1\nE        +  where 0 = len([])\n\n/tmp/tests/test_error_precision.py:198: AssertionError"
+    },
+    {
+      "node_id": "test_errors.py::test_unmatched_begin_end",
+      "outcome": "passed",
+      "duration_seconds": 0.017343331001029583,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_malformed_content_line",
+      "outcome": "passed",
+      "duration_seconds": 0.01764995200210251,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_unclosed_vcalendar",
+      "outcome": "passed",
+      "duration_seconds": 0.018662194997887127,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_error_has_line_message",
+      "outcome": "passed",
+      "duration_seconds": 0.01481538199732313,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_invalid_expand_bounds",
+      "outcome": "passed",
+      "duration_seconds": 0.015975471997080604,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_priority_integer",
+      "outcome": "passed",
+      "duration_seconds": 0.015919093995762523,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_priority_absent_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.01559754600020824,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_transp_opaque",
+      "outcome": "passed",
+      "duration_seconds": 0.016861497999343555,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_transp_transparent",
+      "outcome": "passed",
+      "duration_seconds": 0.01716002899411251,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_url_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.014815714002907043,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_url_absent_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.018471972998668207,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_geo_two_floats",
+      "outcome": "passed",
+      "duration_seconds": 0.015188086003036005,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_geo_absent_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.018269669999426696,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_geo_malformed_emits_warning",
+      "outcome": "failed",
+      "duration_seconds": 0.016959214000962675,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_geo_malformed_emits_warni0')\n\n    def test_geo_malformed_emits_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"Malformed GEO value emits `malformed_value` warning; geo stays null.\"\"\"\n        out = run_parse(\n            submission_command,\n            _event_with(\"GEO:not-a-geo\\n\"),\n            tmp_path,\n        )\n        ev = find_event(out, \"e1\")\n        assert ev.get(\"geo\") is None\n        warnings = cast(list[dict[str, Any]], out.get(\"warnings\") or [])\n        kinds = [w.get(\"kind\") for w in warnings]\n>       assert \"malformed_value\" in kinds\nE       AssertionError: assert 'malformed_value' in []\n\n/tmp/tests/test_event_fields.py:126: AssertionError"
+    },
+    {
+      "node_id": "test_event_fields.py::test_resources_comma_separated_list",
+      "outcome": "passed",
+      "duration_seconds": 0.01811580800494994,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_resources_absent_is_empty_list",
+      "outcome": "passed",
+      "duration_seconds": 0.017596368998056278,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_contact_text",
+      "outcome": "passed",
+      "duration_seconds": 0.019026490997930523,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_created_utc_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.016747153997130226,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_last_modified_utc_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.013977242997498251,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_attach_uri_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.014860774001135724,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_attach_fmttype_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.016520572997251293,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_attach_inline_base64_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01615053500063368,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_color_preserved_on_event",
+      "outcome": "passed",
+      "duration_seconds": 0.016318946003593737,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_image_on_event",
+      "outcome": "passed",
+      "duration_seconds": 0.016696287002559984,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_conference_on_event",
+      "outcome": "passed",
+      "duration_seconds": 0.018051913004455855,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_unfolded_line_over_75_octets_warns",
+      "outcome": "passed",
+      "duration_seconds": 0.017223333998117596,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_exactly_75_octet_line_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.01751164999586763,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_properly_folded_long_line_does_not_warn",
+      "outcome": "failed",
+      "duration_seconds": 0.0175977779981622,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_properly_folded_long_line0')\n\n    def test_properly_folded_long_line_does_not_warn(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"A long logical line that's been properly folded into 75-octet chunks\n        should not trigger line_too_long.\"\"\"\n        # Build a DESCRIPTION that unfolds to ~200 bytes, but each physical line\n        # is folded at 74 octets + CRLF + SP.\n        # Physical line 1: \"DESCRIPTION:\" (12) + 63 X's = 75 octets \u2192 fits.\n        # Continuation: \" \" (1) + 74 X's = 75 octets \u2192 fits.\n        # Continuation: \" \" (1) + remaining\n        ics = (\n            b\"BEGIN:VCALENDAR\\r\\nVERSION:2.0\\r\\nPRODID:-//T//EN\\r\\n\"\n            b\"BEGIN:VEVENT\\r\\n\"\n            b\"UID:e1\\r\\nDTSTAMP:20260101T120000Z\\r\\nDTSTART:20260301T100000Z\\r\\n\"\n            b\"DESCRIPTION:\" + b\"X\" * 63 + b\"\\r\\n\"\n            b\" \" + b\"X\" * 74 + b\"\\r\\n\"\n            b\" \" + b\"X\" * 60 + b\"\\r\\n\"\n            b\"END:VEVENT\\r\\n\"\n            b\"END:VCALENDAR\\r\\n\"\n        )\n        code, data = _parse_raw(submission_command, tmp_path, ics)\n        assert code == 0\n        warnings = cast(list[dict[str, Any]], data.get(\"warnings\") or [])\n        kinds = [w.get(\"kind\") for w in warnings]\n>       assert \"line_too_long\" not in kinds\nE       AssertionError: assert 'line_too_long' not in ['line_too_long']\n\n/tmp/tests/test_folding_edges.py:120: AssertionError"
+    },
+    {
+      "node_id": "test_folding_edges.py::test_fold_before_escape_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.01632543599771452,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_multibyte_char_straddling_75_octet_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.017004766999889398,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_publish_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.01652153599570738,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_request_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.01626245899751666,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_reply_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.02021917600359302,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_request_missing_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.016272364995529642,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_well_formed_request_emits_no_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01654872199651436,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_reply_missing_attendee_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.017408541996701388,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_reply_missing_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.02663938400291954,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_reply_attendee_without_partstat_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.019520787998771993,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_well_formed_reply_emits_no_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01754826199976378,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_with_status_cancelled_is_valid",
+      "outcome": "passed",
+      "duration_seconds": 0.014797629999520723,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_without_explicit_status_is_valid",
+      "outcome": "passed",
+      "duration_seconds": 0.01540341200234252,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_missing_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.015821238994249143,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_status_if_present_must_be_cancelled",
+      "outcome": "failed",
+      "duration_seconds": 0.017988655003136955,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_cancel_status_if_present_0')\n\n    def test_cancel_status_if_present_must_be_cancelled(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 5546 \u00a73.2.5 STATUS row: \"MUST be set to CANCELLED to cancel\n        the entire event.\" A CANCEL that carries STATUS with any value\n        other than CANCELLED (e.g. TENTATIVE or CONFIRMED) is internally\n        inconsistent \u2014 the METHOD says \"cancel\" but the STATUS does not.\n        Validator must warn.\"\"\"\n        body = _BASE_WITH_ORGANIZER + \"STATUS:TENTATIVE\\n\"\n        ics = _wrap_with_method(\"CANCEL\", body)\n        out = run_parse(submission_command, ics, tmp_path)\n>       assert \"itip_missing_property\" in _warn_kinds(out)\nE       AssertionError: assert 'itip_missing_property' in []\nE        +  where [] = _warn_kinds({'availabilities': [], 'calendar': {'calscale': None, 'categories': [], 'color': None, 'conferences': [], ...}, 'events': [{'alarms': [], 'attachments': [], 'attendees': [], 'categories': [], ...}], 'freebusy': [], ...})\n\n/tmp/tests/test_itip_methods.py:239: AssertionError"
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_status_cancelled_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.01532822499939357,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01468912399650435,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_attendee_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.014708402995893266,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_dtstart_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.018659653997019632,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_summary_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01576775999274105,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_no_method_means_no_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.024387009994825348,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_calendar_method_null_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.018734150999080157,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_value_canonicalized_uppercase",
+      "outcome": "passed",
+      "duration_seconds": 0.016230425997491693,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_publish_forbids_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.015452572995855007,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_publish_without_attendee_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.017989236999710556,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.018551566998212365,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_with_organizer_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.01676400799624389,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_sequence_must_be_greater_than_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.01792026999828522,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.015514026003074832,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.01846586699684849,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_with_both_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.01655559199571144,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_forbids_sequence",
+      "outcome": "failed",
+      "duration_seconds": 0.018950653000501916,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_refresh_forbids_sequence0')\n\n    def test_refresh_forbids_sequence(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"RFC 5546 \u00a73.2.6 table row: SEQUENCE \"0\" \u2014 MUST NOT be present on a\n        REFRESH. Inclusion of SEQUENCE is a semantic violation.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nSEQUENCE:2\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n            \"ATTENDEE:mailto:a@example.com\\n\"\n        )\n        out = run_parse(submission_command, _wrap(\"REFRESH\", body), tmp_path)\n>       assert \"itip_missing_property\" in _warn_kinds(out)\nE       AssertionError: assert 'itip_missing_property' in []\nE        +  where [] = _warn_kinds({'availabilities': [], 'calendar': {'calscale': None, 'categories': [], 'color': None, 'conferences': [], ...}, 'event...': None, 'cutype': None, 'delegated_from': [], 'delegated_to': [], ...}], 'categories': [], ...}], 'freebusy': [], ...})\n\n/tmp/tests/test_itip_methods_deep.py:160: AssertionError"
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.019044210996071342,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_does_not_require_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.016508623004483525,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_requires_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.014516298000671668,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_with_both_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.015884379994531628,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_declinecounter_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.015572799002256943,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_declinecounter_with_organizer_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.01637292899977183,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_method_value_canonicalization",
+      "outcome": "passed",
+      "duration_seconds": 0.020441145003132988,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_cancel_requires_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.015617461998772342,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_request_allows_omitted_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.014750328002264723,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_itip_requires_dtstamp",
+      "outcome": "passed",
+      "duration_seconds": 0.01543705900257919,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_declinecounter_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.016630303998681484,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_request_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.015459914997336455,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_publish_does_not_require_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.014090304001001641,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_itip_warning_per_event",
+      "outcome": "passed",
+      "duration_seconds": 0.014232433997676708,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_request_is_undefined_method",
+      "outcome": "failed",
+      "duration_seconds": 0.018136728001991287,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_vjournal_request_is_undef0')\n\n    def test_vjournal_request_is_undefined_method(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 5546 \u00a73.5 does not define REQUEST for VJOURNAL. Emitting\n        METHOD:REQUEST on a VJOURNAL-bearing calendar MUST warn.\"\"\"\n        body = (\n            \"UID:j1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T100000Z\\nSUMMARY:Entry\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n        )\n        out = run_parse(submission_command, _vjournal_calendar(\"REQUEST\", body), tmp_path)\n        warnings = _warnings(out)\n>       assert _has_itip_warning(warnings, \"REQUEST\", \"VJOURNAL\"), warnings\nE       AssertionError: [{'column': None, 'component': 'VJOURNAL', 'kind': 'itip_missing_property', 'line': None, ...}]\nE       assert False\nE        +  where False = _has_itip_warning([{'column': None, 'component': 'VJOURNAL', 'kind': 'itip_missing_property', 'line': None, ...}], 'REQUEST', 'VJOURNAL')\n\n/tmp/tests/test_itip_per_component.py:87: AssertionError"
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_refresh_is_undefined_method",
+      "outcome": "failed",
+      "duration_seconds": 0.016059672001574654,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_vjournal_refresh_is_undef0')\n\n    def test_vjournal_refresh_is_undefined_method(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Same rule for REFRESH \u2014 not in the \u00a73.5 table. Fixture\n        carries DTSTART, ORGANIZER, and DESCRIPTION so if the impl\n        were to fall back to PUBLISH-style validation, it would\n        emit no property-missing warnings. The structured warning\n        metadata isolates the undefined-method path.\"\"\"\n        body = (\n            \"UID:j1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T100000Z\\nDESCRIPTION:Retro notes\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n        )\n        out = run_parse(submission_command, _vjournal_calendar(\"REFRESH\", body), tmp_path)\n        warnings = _warnings(out)\n>       assert _has_itip_warning(warnings, \"REFRESH\", \"VJOURNAL\"), warnings\nE       AssertionError: [{'column': None, 'component': 'VJOURNAL', 'kind': 'itip_missing_property', 'line': None, ...}]\nE       assert False\nE        +  where False = _has_itip_warning([{'column': None, 'component': 'VJOURNAL', 'kind': 'itip_missing_property', 'line': None, ...}], 'REFRESH', 'VJOURNAL')\n\n/tmp/tests/test_itip_per_component.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.015396424001664855,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_with_organizer_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.015203158000076655,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_add_requires_sequence_greater_than_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.017284752004343318,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_requires_description",
+      "outcome": "passed",
+      "duration_seconds": 0.020148067003901815,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_requires_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.01738861899866606,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_add_requires_description_and_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.01630171599390451,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_counter_requires_priority",
+      "outcome": "passed",
+      "duration_seconds": 0.01503296800001408,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_counter_requires_summary",
+      "outcome": "passed",
+      "duration_seconds": 0.017244953000044916,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_counter_with_priority_and_summary_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.017546470000525005,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_publish_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.01918849000139744,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_publish_requires_priority",
+      "outcome": "passed",
+      "duration_seconds": 0.015619865000189748,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_request_requires_priority_and_summary",
+      "outcome": "passed",
+      "duration_seconds": 0.018971479996253038,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_cancel_is_undefined_method",
+      "outcome": "failed",
+      "duration_seconds": 0.015182700997684151,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_vfreebusy_cancel_is_undef0')\n\n    def test_vfreebusy_cancel_is_undefined_method(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 5546 \u00a73.3 does not define CANCEL for VFREEBUSY.\"\"\"\n        body = (\n            \"UID:f1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T000000Z\\nDTEND:20260302T000000Z\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n        )\n        out = run_parse(submission_command, _vfreebusy_calendar(\"CANCEL\", body), tmp_path)\n        warnings = _warnings(out)\n>       assert _has_itip_warning(warnings, \"CANCEL\", \"VFREEBUSY\"), warnings\nE       AssertionError: [{'column': None, 'component': 'VFREEBUSY', 'kind': 'itip_missing_property', 'line': None, ...}]\nE       assert False\nE        +  where False = _has_itip_warning([{'column': None, 'component': 'VFREEBUSY', 'kind': 'itip_missing_property', 'line': None, ...}], 'CANCEL', 'VFREEBUSY')\n\n/tmp/tests/test_itip_per_component.py:329: AssertionError"
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_request_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.017584987996087875,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_publish_requires_dtstart_and_dtend",
+      "outcome": "passed",
+      "duration_seconds": 0.017477954999776557,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_shared_checks_carry_structured_metadata",
+      "outcome": "passed",
+      "duration_seconds": 0.017702924000332132,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_publish_forbids_attendee",
+      "outcome": "failed",
+      "duration_seconds": 0.015772418995766202,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_vfreebusy_publish_forbids0')\n\n    def test_vfreebusy_publish_forbids_attendee(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"VFREEBUSY PUBLISH \u00a73.3.1 ATTENDEE row is `0` (MUST NOT).\"\"\"\n        body = (\n            \"UID:f1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T000000Z\\nDTEND:20260302T000000Z\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n            \"ATTENDEE:mailto:a@example.com\\n\"  # MUST NOT be present\n        )\n        out = run_parse(submission_command, _vfreebusy_calendar(\"PUBLISH\", body), tmp_path)\n        warnings = _warnings(out)\n>       assert _has_itip_warning(warnings, \"PUBLISH\", \"VFREEBUSY\", \"ATTENDEE\"), warnings\nE       AssertionError: []\nE       assert False\nE        +  where False = _has_itip_warning([], 'PUBLISH', 'VFREEBUSY', 'ATTENDEE')\n\n/tmp/tests/test_itip_per_component.py:398: AssertionError"
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_publish_well_formed_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.01665722800316871,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_bysetpos_with_byhour_picks_last_time_slot",
+      "outcome": "passed",
+      "duration_seconds": 0.015041330003441544,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_bysetpos_multiple_positions",
+      "outcome": "passed",
+      "duration_seconds": 0.015990899002645165,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_weekly_wkst_sunday_changes_week_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.017762802002835087,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_exdate_removes_before_override_replaces",
+      "outcome": "passed",
+      "duration_seconds": 0.018730781001067953,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_orphan_override_non_matching_uid",
+      "outcome": "failed",
+      "duration_seconds": 0.017635530999541515,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_orphan_override_non_match0')\n\n    def test_orphan_override_non_matching_uid(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        # An override referencing a UID that has no base event.\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VEVENT\\n\"\n            \"UID:ghost\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID:20260305T100000Z\\nDTSTART:20260305T150000Z\\n\"\n            \"END:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_expand(\n            submission_command, ics, \"2026-03-01T00:00:00Z\", \"2026-04-01T00:00:00Z\", tmp_path\n        )\n        kinds = [w.get(\"kind\") for w in warnings_of(out)]\n>       assert \"orphan_override\" in kinds\nE       AssertionError: assert 'orphan_override' in []\n\n/tmp/tests/test_library_divergence.py:163: AssertionError"
+    },
+    {
+      "node_id": "test_library_divergence.py::test_orphan_override_time_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.018468909998773597,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_dst_fall_back_ambiguous_time_uses_pre_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.01605313300024136,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_dst_spring_forward_nonexistent_time_uses_post_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.01593719999800669,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_crlf_space_joins_zero_space",
+      "outcome": "passed",
+      "duration_seconds": 0.018238360000395915,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_crlf_tab_also_unfolds",
+      "outcome": "passed",
+      "duration_seconds": 0.014845749003143283,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_preserves_extra_whitespace_in_continuation",
+      "outcome": "passed",
+      "duration_seconds": 0.015370270997664193,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_multiple_consecutive_folds",
+      "outcome": "passed",
+      "duration_seconds": 0.018762019997666357,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_does_not_join_lines_without_ws",
+      "outcome": "passed",
+      "duration_seconds": 0.015557890998024959,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_utf8_two_byte_char_preserved_after_unfold",
+      "outcome": "passed",
+      "duration_seconds": 0.01667110700145713,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_utf8_three_byte_char_intact_across_fold",
+      "outcome": "passed",
+      "duration_seconds": 0.014766802993108286,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_long_description_with_utf8_folded_at_char_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.016838311003084527,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_four_byte_emoji_intact_across_fold",
+      "outcome": "passed",
+      "duration_seconds": 0.01578766699822154,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_utf8_prefix_exactly_75_octets_then_fold",
+      "outcome": "passed",
+      "duration_seconds": 0.01882942100201035,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_folding_at_realistic_75_octet_wrap",
+      "outcome": "passed",
+      "duration_seconds": 0.01997158400627086,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_short_line_without_fold_unchanged",
+      "outcome": "passed",
+      "duration_seconds": 0.023697438005910954,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_caret_apostrophe_decodes_to_quote",
+      "outcome": "passed",
+      "duration_seconds": 0.016035350996389752,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_caret_n_decodes_to_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.016275459998723818,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_double_caret_decodes_to_single_caret",
+      "outcome": "passed",
+      "duration_seconds": 0.019061003997194348,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_three_carets",
+      "outcome": "passed",
+      "duration_seconds": 0.023661129001993686,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_unknown_sequence_preserves_both_chars",
+      "outcome": "passed",
+      "duration_seconds": 0.017176258999825222,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_trailing_caret_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01613429400458699,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_not_applied_to_property_text_value",
+      "outcome": "passed",
+      "duration_seconds": 0.015822687000763835,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_works_inside_quoted_value",
+      "outcome": "passed",
+      "duration_seconds": 0.014760315003513824,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_reflected_in_raw_properties",
+      "outcome": "passed",
+      "duration_seconds": 0.016627331999188755,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_multiple_params_with_escapes",
+      "outcome": "passed",
+      "duration_seconds": 0.016782988994236803,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_simple_vevent",
+      "outcome": "passed",
+      "duration_seconds": 0.015496039999561617,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_content_line_unfolding",
+      "outcome": "passed",
+      "duration_seconds": 0.018487340003048303,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_text_escape_backslash",
+      "outcome": "passed",
+      "duration_seconds": 0.01698525299798348,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_text_escape_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.015971911998349242,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_text_escape_semicolon",
+      "outcome": "passed",
+      "duration_seconds": 0.02005650699720718,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_property_name_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.015128001003176905,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_property_parameter_parsing",
+      "outcome": "passed",
+      "duration_seconds": 0.01527435300158686,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_quoted_parameter_value",
+      "outcome": "passed",
+      "duration_seconds": 0.014380025997525081,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_date_value_type",
+      "outcome": "passed",
+      "duration_seconds": 0.014243933001125697,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_floating_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.014593259002140258,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_utc_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.014412353993975557,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_two_events",
+      "outcome": "passed",
+      "duration_seconds": 0.01837176900153281,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_categories_split",
+      "outcome": "passed",
+      "duration_seconds": 0.014934357004676713,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_tzid_param_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.015288688995497068,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_explicit_parsed",
+      "outcome": "failed",
+      "duration_seconds": 0.017502970997156808,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rdate_period_explicit_par0')\n\n    def test_rdate_period_explicit_parsed(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"\u00a73.3.9 period-explicit: start/end DATE-TIMEs joined by SOLIDUS.\n        Parsed into `{\"start\": ..., \"end\": ...}` object in the rdate list.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            \"RDATE;VALUE=PERIOD:20260310T090000Z/20260310T110000Z\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        rdates = _rdate_of(find_event(out, \"e1\"))\n        assert len(rdates) == 1\n        entry_raw = rdates[0]\n        assert isinstance(entry_raw, dict), (\n            f\"period RDATE must parse to an object, got {type(entry_raw).__name__}\"\n        )\n        entry = cast(dict[str, Any], entry_raw)\n>       assert entry.get(\"start\") == \"2026-03-10T09:00:00Z\"\nE       AssertionError: assert '20260310T090000Z' == '2026-03-10T09:00:00Z'\nE         \nE         - 2026-03-10T09:00:00Z\nE         ?     -  -     -  -\nE         + 20260310T090000Z\n\n/tmp/tests/test_rdate_period.py:49: AssertionError"
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_start_duration_parsed",
+      "outcome": "failed",
+      "duration_seconds": 0.017920813003001967,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rdate_period_start_durati0')\n\n    def test_rdate_period_start_duration_parsed(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.3.9 period-start: start DATE-TIME and positive duration.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            \"RDATE;VALUE=PERIOD:20260310T090000Z/PT2H30M\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        entry_raw = _rdate_of(find_event(out, \"e1\"))[0]\n        assert isinstance(entry_raw, dict)\n        entry = cast(dict[str, Any], entry_raw)\n>       assert entry.get(\"start\") == \"2026-03-10T09:00:00Z\"\nE       AssertionError: assert '20260310T090000Z' == '2026-03-10T09:00:00Z'\nE         \nE         - 2026-03-10T09:00:00Z\nE         ?     -  -     -  -\nE         + 20260310T090000Z\n\n/tmp/tests/test_rdate_period.py:65: AssertionError"
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_multiple_comma_separated",
+      "outcome": "failed",
+      "duration_seconds": 0.017558413004735485,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rdate_period_multiple_com0')\n\n    def test_rdate_period_multiple_comma_separated(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.8.5.2 RDATE accepts a comma-separated list of period values.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            \"RDATE;VALUE=PERIOD:\"\n            \"20260310T090000Z/20260310T110000Z,\"\n            \"20260311T090000Z/PT1H\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        rdates = _rdate_of(find_event(out, \"e1\"))\n        assert len(rdates) == 2\n        # First entry is explicit period; second is start+duration.\n        first, second = rdates\n>       assert first.get(\"start\") == \"2026-03-10T09:00:00Z\"\nE       AssertionError: assert '20260310T090000Z' == '2026-03-10T09:00:00Z'\nE         \nE         - 2026-03-10T09:00:00Z\nE         ?     -  -     -  -\nE         + 20260310T090000Z\n\n/tmp/tests/test_rdate_period.py:86: AssertionError"
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_mixed_value_types_not_allowed_but_period_only_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.016495264004333876,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_adds_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.015885856995737413,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_explicit_sets_occurrence_end",
+      "outcome": "passed",
+      "duration_seconds": 0.020006571998237632,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_invalid_end_before_start_warns",
+      "outcome": "failed",
+      "duration_seconds": 0.015655373001209227,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rdate_period_invalid_end_0')\n\n    def test_rdate_period_invalid_end_before_start_warns(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.3.9: \"The start MUST be before the end.\" A reversed period is malformed;\n        the parser emits `malformed_value` and either drops the entry or preserves\n        it untouched, but MUST NOT crash.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            # end < start\n            \"RDATE;VALUE=PERIOD:20260310T110000Z/20260310T090000Z\\n\"\n            \"SUMMARY:ok\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        ev = find_event(out, \"e1\")\n        # Event itself must remain intact.\n        assert ev.get(\"summary\") == \"ok\"\n        kinds = [w.get(\"kind\") for w in out.get(\"warnings\", [])]\n>       assert \"malformed_value\" in kinds\nE       AssertionError: assert 'malformed_value' in []\n\n/tmp/tests/test_rdate_period.py:170: AssertionError"
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_raw_property_retained",
+      "outcome": "passed",
+      "duration_seconds": 0.017910460999701172,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_parses_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.016736302997742314,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_surfaces_timezone",
+      "outcome": "passed",
+      "duration_seconds": 0.016680460001225583,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_event_has_full_attendee_grammar",
+      "outcome": "passed",
+      "duration_seconds": 0.016208796001592418,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_expands_to_weekly_occurrences",
+      "outcome": "passed",
+      "duration_seconds": 0.017967624000448268,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_alarm_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.01742790500065894,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_outlook_export_parses_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.015372309997474076,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_outlook_quoted_tzid_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.01609686700248858,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_outlook_x_properties_in_raw",
+      "outcome": "passed",
+      "duration_seconds": 0.017762131999916164,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_itip_request_has_organizer_and_three_attendees",
+      "outcome": "passed",
+      "duration_seconds": 0.015619190995494137,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_itip_request_no_missing_property_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01494064699363662,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_recurrence_id_without_range_has_null_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0181111019992386,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_recurrence_id_with_range_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.015221713998471387,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_shifts_all_future_occurrences",
+      "outcome": "failed",
+      "duration_seconds": 0.014490768997347914,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_range_shifts_all_future_o0')\n\n    def test_range_shifts_all_future_occurrences(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.8.4.4: rescheduling one instance with RANGE=THISANDFUTURE shifts\n        that instance and every subsequent instance by the same delta.\"\"\"\n        # Daily at 10:00 for 5 days (3/1..3/5). Override 3/3 with +4h.\n        # Expected: 3/1 10:00, 3/2 10:00, 3/3 14:00, 3/4 14:00, 3/5 14:00.\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T100000Z\\nRRULE:FREQ=DAILY;COUNT=5\\nEND:VEVENT\\n\"\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID;RANGE=THISANDFUTURE:20260303T100000Z\\n\"\n            \"DTSTART:20260303T140000Z\\nEND:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_expand(\n            submission_command, ics, \"2026-03-01T00:00:00Z\", \"2026-04-01T00:00:00Z\", tmp_path\n        )\n        starts = sorted(starts_for(occurrences_of(out), \"e1\"))\n>       assert starts == [\n            \"2026-03-01T10:00:00Z\",\n            \"2026-03-02T10:00:00Z\",\n            \"2026-03-03T14:00:00Z\",\n            \"2026-03-04T14:00:00Z\",\n            \"2026-03-05T14:00:00Z\",\n        ]\nE       AssertionError: assert ['2026-03-01T...05T06:00:00Z'] == ['2026-03-01T...05T14:00:00Z']\nE         \nE         At index 2 diff: '2026-03-03T06:00:00Z' != '2026-03-03T14:00:00Z'\nE         Use -v to get more diff\n\n/tmp/tests/test_recurrence_id_range.py:106: AssertionError"
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_does_not_affect_past_occurrences",
+      "outcome": "passed",
+      "duration_seconds": 0.014527204999467358,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_flag_surfaces_on_override_occurrence",
+      "outcome": "failed",
+      "duration_seconds": 0.015089052994881058,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_range_flag_surfaces_on_ov0')\n\n    def test_range_flag_surfaces_on_override_occurrence(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.8.4.4: the override occurrence exposes `range=THISANDFUTURE` and `override=true`.\"\"\"\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T100000Z\\nRRULE:FREQ=DAILY;COUNT=3\\nEND:VEVENT\\n\"\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID;RANGE=THISANDFUTURE:20260302T100000Z\\n\"\n            \"DTSTART:20260302T150000Z\\nEND:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_expand(\n            submission_command, ics, \"2026-03-01T00:00:00Z\", \"2026-04-01T00:00:00Z\", tmp_path\n        )\n        anchor = [o for o in occurrences_of(out) if o.get(\"dtstart\") == \"2026-03-02T15:00:00Z\"]\n>       assert len(anchor) == 1\nE       assert 0 == 1\nE        +  where 0 = len([])\n\n/tmp/tests/test_recurrence_id_range.py:156: AssertionError"
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_with_unbounded_rrule",
+      "outcome": "failed",
+      "duration_seconds": 0.014790675999392988,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_range_with_unbounded_rrul0')\n\n    def test_range_with_unbounded_rrule(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"\u00a73.8.4.4: THISANDFUTURE on an unbounded RRULE shifts every instance from\n        the anchor forward; the test window bounds what we can observe.\"\"\"\n        # Daily with no COUNT/UNTIL; window is [3/1, 3/6).\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T100000Z\\nRRULE:FREQ=DAILY\\nEND:VEVENT\\n\"\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID;RANGE=THISANDFUTURE:20260303T100000Z\\n\"\n            \"DTSTART:20260303T160000Z\\nEND:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_expand(\n            submission_command, ics, \"2026-03-01T00:00:00Z\", \"2026-03-06T00:00:00Z\", tmp_path\n        )\n        starts = sorted(starts_for(occurrences_of(out), \"e1\"))\n>       assert starts == [\n            \"2026-03-01T10:00:00Z\",\n            \"2026-03-02T10:00:00Z\",\n            \"2026-03-03T16:00:00Z\",\n            \"2026-03-04T16:00:00Z\",\n            \"2026-03-05T16:00:00Z\",\n        ]\nE       AssertionError: assert ['2026-03-01T...05T04:00:00Z'] == ['2026-03-01T...05T16:00:00Z']\nE         \nE         At index 2 diff: '2026-03-03T04:00:00Z' != '2026-03-03T16:00:00Z'\nE         Use -v to get more diff\n\n/tmp/tests/test_recurrence_id_range.py:179: AssertionError"
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_does_not_affect_other_uid",
+      "outcome": "passed",
+      "duration_seconds": 0.014639198005170329,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_with_mismatched_recurrence_id_warns",
+      "outcome": "failed",
+      "duration_seconds": 0.015995216996088857,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_range_with_mismatched_rec0')\n\n    def test_range_with_mismatched_recurrence_id_warns(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.8.4.4: RECURRENCE-ID value must correspond to an instance generated\n        by the base series. An orphan override (no matching instance in the\n        recurrence set) should produce an `orphan_override` warning.\"\"\"\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            # Weekly MO \u2014 no Tuesday in the series.\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260302T100000Z\\nRRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=4\\nEND:VEVENT\\n\"\n            # Override anchored to a Tuesday that doesn't belong to the series.\n            \"BEGIN:VEVENT\\nUID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID;RANGE=THISANDFUTURE:20260303T100000Z\\n\"\n            \"DTSTART:20260303T140000Z\\nEND:VEVENT\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_parse(submission_command, ics, tmp_path)\n        kinds = [w.get(\"kind\") for w in out.get(\"warnings\", [])]\n>       assert \"orphan_override\" in kinds\nE       AssertionError: assert 'orphan_override' in []\n\n/tmp/tests/test_recurrence_id_range.py:237: AssertionError"
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_orphan_override_on_vjournal_warns",
+      "outcome": "failed",
+      "duration_seconds": 0.015178270998148946,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_orphan_override_on_vjourn0')\n\n    def test_orphan_override_on_vjournal_warns(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 5545 \u00a73.8.4.4 RECURRENCE-ID semantics are identical on\n        VEVENT / VTODO / VJOURNAL. A VJOURNAL override pointing at an\n        instance not produced by the base series must also trigger the\n        `orphan_override` warning \u2014 iter 6 flagged that prior impls\n        scoped the check to `cal.events` only and silently accepted\n        broken journal overrides.\n    \n        Fixture: weekly Monday VJOURNAL series, override pointing at a\n        Tuesday (not in the series). Tuesday has no base instance.\"\"\"\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VJOURNAL\\nUID:j1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260302T100000Z\\nDESCRIPTION:Retro\\n\"\n            \"RRULE:FREQ=WEEKLY;BYDAY=MO;COUNT=3\\nEND:VJOURNAL\\n\"\n            # Orphan override on a Tuesday\n            \"BEGIN:VJOURNAL\\nUID:j1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID:20260303T100000Z\\n\"\n            \"DTSTART:20260303T100000Z\\nDESCRIPTION:Oops\\n\"\n            \"END:VJOURNAL\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_parse(submission_command, ics, tmp_path)\n        kinds = [w.get(\"kind\") for w in out.get(\"warnings\", [])]\n>       assert \"orphan_override\" in kinds\nE       AssertionError: assert 'orphan_override' in []\n\n/tmp/tests/test_recurrence_id_range.py:266: AssertionError"
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_orphan_override_on_vtodo_warns",
+      "outcome": "failed",
+      "duration_seconds": 0.016254242000286467,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_orphan_override_on_vtodo_0')\n\n    def test_orphan_override_on_vtodo_warns(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Same rule applies to VTODO: RECURRENCE-ID must match a base\n        series instance. Fixture: daily todo, override pointing 3 days\n        past the COUNT=2 series end.\"\"\"\n        ics = (\n            \"BEGIN:VCALENDAR\\nVERSION:2.0\\nPRODID:-//T//EN\\n\"\n            \"BEGIN:VTODO\\nUID:t1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260302T100000Z\\nSUMMARY:Daily task\\nPRIORITY:5\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n            \"RRULE:FREQ=DAILY;COUNT=2\\nEND:VTODO\\n\"\n            # Override: day 5 of a COUNT=2 series \u2014 doesn't exist.\n            \"BEGIN:VTODO\\nUID:t1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"RECURRENCE-ID:20260305T100000Z\\n\"\n            \"DTSTART:20260305T100000Z\\nSUMMARY:Oops\\nPRIORITY:5\\n\"\n            \"END:VTODO\\n\"\n            \"END:VCALENDAR\\n\"\n        )\n        out = run_parse(submission_command, ics, tmp_path)\n        kinds = [w.get(\"kind\") for w in out.get(\"warnings\", [])]\n>       assert \"orphan_override\" in kinds\nE       AssertionError: assert 'orphan_override' in []\n\n/tmp/tests/test_recurrence_id_range.py:290: AssertionError"
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_single_instance_override_does_not_shift_future",
+      "outcome": "passed",
+      "duration_seconds": 0.015026649001811165,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_flag_null_for_single_instance_overrides",
+      "outcome": "passed",
+      "duration_seconds": 0.015970787004334852,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_structured_data_uri",
+      "outcome": "passed",
+      "duration_seconds": 0.014992459997301921,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_structured_data_inline_text",
+      "outcome": "passed",
+      "duration_seconds": 0.01665346700247028,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_structured_data_binary_base64",
+      "outcome": "passed",
+      "duration_seconds": 0.017844232999777887,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_styled_description_html",
+      "outcome": "passed",
+      "duration_seconds": 0.014518044994474621,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_styled_description_markdown",
+      "outcome": "passed",
+      "duration_seconds": 0.0157376649985963,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_styled_description_with_language",
+      "outcome": "passed",
+      "duration_seconds": 0.01673131999996258,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_multiple_styled_descriptions_for_multilingual",
+      "outcome": "passed",
+      "duration_seconds": 0.01628379599787877,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_location_with_location_type",
+      "outcome": "passed",
+      "duration_seconds": 0.014292836993263336,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_participant_component_is_not_dropped",
+      "outcome": "passed",
+      "duration_seconds": 0.01595609500509454,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_vlocation_component_does_not_crash_parser",
+      "outcome": "passed",
+      "duration_seconds": 0.018248715001391247,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_vresource_component_does_not_crash_parser",
+      "outcome": "passed",
+      "duration_seconds": 0.015123517001484288,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_known_component_nested_in_unknown_does_not_escape",
+      "outcome": "passed",
+      "duration_seconds": 0.01878533499984769,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_rfc9073_props_alongside_standard_event",
+      "outcome": "passed",
+      "duration_seconds": 0.016641219997836743,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_calendar_address_property_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01734802399732871,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_resources_parameter_on_vevent",
+      "outcome": "passed",
+      "duration_seconds": 0.01635618099680869,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_link_property_preserved_in_raw",
+      "outcome": "passed",
+      "duration_seconds": 0.017691755998384906,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_link_with_linkrel_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.01793591600289801,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_related_to_gap_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.016528416999790352,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_reltype_finishtofinish",
+      "outcome": "passed",
+      "duration_seconds": 0.01618940099797328,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_reltype_dependson",
+      "outcome": "passed",
+      "duration_seconds": 0.019437613998888992,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_structured_categories_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.017650687994319014,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_concept_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01673147199835512,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_refid_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.014310615999420406,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_event_related_to_surfaced_as_typed_field",
+      "outcome": "passed",
+      "duration_seconds": 0.014972179000324104,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_journal_related_to_surfaced_as_typed_field",
+      "outcome": "passed",
+      "duration_seconds": 0.017994317997363396,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_daily_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.016305110999383032,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_daily_interval",
+      "outcome": "passed",
+      "duration_seconds": 0.017426676000468433,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_daily_until",
+      "outcome": "failed",
+      "duration_seconds": 0.014446801997110015,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_daily_until0')\n\n    def test_daily_until(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        starts = _expand(\n            submission_command,\n            tmp_path,\n            \"20260305T100000Z\",\n            \"FREQ=DAILY;UNTIL=20260308T100000Z\",\n            \"2026-03-01T00:00:00Z\",\n            \"2026-04-01T00:00:00Z\",\n        )\n>       assert starts == [\n            \"2026-03-05T10:00:00Z\",\n            \"2026-03-06T10:00:00Z\",\n            \"2026-03-07T10:00:00Z\",\n            \"2026-03-08T10:00:00Z\",\n        ]\nE       AssertionError: assert ['2026-03-05T...:00:00Z', ...] == ['2026-03-05T...08T10:00:00Z']\nE         \nE         Left contains 23 more items, first extra item: '2026-03-09T10:00:00Z'\nE         Use -v to get more diff\n\n/tmp/tests/test_rrule_expand.py:68: AssertionError"
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_weekly_byday_multiple",
+      "outcome": "passed",
+      "duration_seconds": 0.015539996995357797,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_weekly_interval_2",
+      "outcome": "passed",
+      "duration_seconds": 0.014368511998327449,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bymonthday",
+      "outcome": "passed",
+      "duration_seconds": 0.01945766700009699,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_byday_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.01671282200186397,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_byday_negative_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.015974853002262535,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bymonthday_invalid_dates_dropped",
+      "outcome": "passed",
+      "duration_seconds": 0.015965009002684383,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bysetpos_last",
+      "outcome": "passed",
+      "duration_seconds": 0.02131558499968378,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bymonthday_plus_byday_filter",
+      "outcome": "passed",
+      "duration_seconds": 0.015146588000789052,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_yearly_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.017702848999761045,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_yearly_bymonth",
+      "outcome": "passed",
+      "duration_seconds": 0.014214500999514712,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_exdate_removes_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.017423274999600835,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_rdate_adds_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.014417669997783378,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_occurrences_sorted_ascending",
+      "outcome": "passed",
+      "duration_seconds": 0.015137274000153411,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_window_excludes_outside",
+      "outcome": "passed",
+      "duration_seconds": 0.015529273998254212,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_non_recurring_event_in_window",
+      "outcome": "passed",
+      "duration_seconds": 0.015499578999879304,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_non_recurring_event_outside_window",
+      "outcome": "passed",
+      "duration_seconds": 0.015946333998726914,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_freq",
+      "outcome": "passed",
+      "duration_seconds": 0.015830029002245283,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_interval_default_1",
+      "outcome": "passed",
+      "duration_seconds": 0.02062838399433531,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_interval_custom",
+      "outcome": "passed",
+      "duration_seconds": 0.016740961000323296,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_count",
+      "outcome": "passed",
+      "duration_seconds": 0.019394095997995464,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_until",
+      "outcome": "passed",
+      "duration_seconds": 0.017427587001293432,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_byday",
+      "outcome": "passed",
+      "duration_seconds": 0.014003133997903205,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_byday_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.01603069299744675,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_byday_negative_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.014497173000563635,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_bymonthday",
+      "outcome": "passed",
+      "duration_seconds": 0.016488356995978393,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_bymonth",
+      "outcome": "passed",
+      "duration_seconds": 0.015797520994965453,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_bysetpos",
+      "outcome": "passed",
+      "duration_seconds": 0.01487614100187784,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_wkst",
+      "outcome": "passed",
+      "duration_seconds": 0.01569187000131933,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_hourly_freq_supported_v02",
+      "outcome": "passed",
+      "duration_seconds": 0.01925389299503877,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_byhour_supported_v02",
+      "outcome": "passed",
+      "duration_seconds": 0.015092874000401935,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_count_and_until_mutually_exclusive",
+      "outcome": "failed",
+      "duration_seconds": 0.016272679997200612,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rrule_count_and_until_mut0')\n\n    def test_rrule_count_and_until_mutually_exclusive(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 5545 \u00a73.3.10: UNTIL and COUNT MUST NOT occur in the same\n        'recur' part. When an RRULE carries both, the parser emits a\n        `malformed_value` warning. We parse both keys so the raw RRULE\n        round-trips in the JSON (downstream tooling can inspect the\n        invalid state); the warning signals the violation.\"\"\"\n        ics = wrap_event(\n            \"UID:e1\\nDTSTAMP:20260420T120000Z\\nDTSTART:20260305T100000Z\\n\"\n            \"RRULE:FREQ=DAILY;COUNT=5;UNTIL=20260401T000000Z\\n\"\n        )\n        out = run_parse(submission_command, ics, tmp_path)\n        kinds = [w.get(\"kind\") for w in warnings_of(out)]\n>       assert \"malformed_value\" in kinds\nE       AssertionError: assert 'malformed_value' in []\n\n/tmp/tests/test_rrule_parse.py:115: AssertionError"
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_count_without_until_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.016499798999575432,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_gregorian_parsed_on_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.014948780000850093,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_gregorian_yearly_expands_correctly",
+      "outcome": "passed",
+      "duration_seconds": 0.015639473000192083,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_gregorian_skip_forward_fills_missing_dates",
+      "outcome": "failed",
+      "duration_seconds": 0.014683390007121488,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rscale_gregorian_skip_for0')\n\n    def test_rscale_gregorian_skip_forward_fills_missing_dates(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"RFC 7529 \u00a74.3.4 example: `DTSTART=20120229;RRULE=RSCALE=GREGORIAN;\n        FREQ=YEARLY;SKIP=FORWARD` fills in non-leap years by moving Feb 29 to\n        March 1. Implementations that support RSCALE=GREGORIAN should handle SKIP\n        (no separate non-Gregorian library needed). If the implementation can't\n        handle SKIP it MAY emit `rscale_unsupported` and preserve the RRULE.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20120101T120000Z\\nDTSTART;VALUE=DATE:20120229\\n\"\n            \"RRULE:RSCALE=GREGORIAN;FREQ=YEARLY;SKIP=FORWARD;COUNT=4\\n\"\n        )\n        out = run_expand(\n            submission_command,\n            wrap_event(body),\n            \"2012-01-01T00:00:00Z\",\n            \"2017-01-01T00:00:00Z\",\n            tmp_path,\n        )\n        kinds = [w.get(\"kind\") for w in warnings_of(out)]\n        starts = starts_for(out.get(\"occurrences\") or [], \"e1\")\n        if \"rscale_unsupported\" in kinds:\n            # Accept fallback: the RRULE is preserved in raw_properties, and no\n            # expansion is required.\n            parsed = run_parse(submission_command, wrap_event(body), tmp_path)\n            ev = find_event(parsed, \"e1\")\n            raw = _raw_rrule(ev) or \"\"\n            assert \"SKIP=FORWARD\" in raw\n            assert \"RSCALE=GREGORIAN\" in raw\n        else:\n            # If the implementation claims support, it must produce the expected\n            # filled-in dates: 2012-02-29, 2013-03-01, 2014-03-01, 2015-03-01.\n            assert \"2012-02-29\" in starts\n>           assert \"2013-03-01\" in starts\nE           AssertionError: assert '2013-03-01' in ['2012-02-29', '2016-02-29']\n\n/tmp/tests/test_rscale.py:129: AssertionError"
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_chinese_either_expand_or_unsupported_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.033494878000055905,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_hebrew_either_expand_or_unsupported_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.032936386996880174,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_islamic_warning_preserves_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.014823120000073686,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_surfaces_on_rrule_object",
+      "outcome": "passed",
+      "duration_seconds": 0.02024368600541493,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_skip_field_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.01673176500116824,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_parse_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.016666563005856005,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_parse_top_level_keys_all_present",
+      "outcome": "passed",
+      "duration_seconds": 0.016642634003801504,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_expand_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.017058991998055717,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_expand_top_level_keys_all_present",
+      "outcome": "passed",
+      "duration_seconds": 0.015361480000137817,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_calendar_has_prodid_version",
+      "outcome": "passed",
+      "duration_seconds": 0.017045684002368944,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_events_array_is_always_a_list",
+      "outcome": "passed",
+      "duration_seconds": 0.020602081003744388,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_empty_calendar_has_empty_arrays_not_nulls",
+      "outcome": "passed",
+      "duration_seconds": 0.01690211799723329,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_warnings_entries_have_kind_key",
+      "outcome": "passed",
+      "duration_seconds": 0.0219985009971424,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_event_dtstart_matches_iso_format",
+      "outcome": "passed",
+      "duration_seconds": 0.01848734799932572,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_occurrence_dtstart_matches_iso_utc",
+      "outcome": "passed",
+      "duration_seconds": 0.01771646399720339,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_occurrences_sorted_by_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.014901505997841014,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_occurrences_uid_tiebreak_on_equal_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.015773883995279903,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_calendar_object_has_all_rfc7986_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.014840992997051217,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_calendar_categories_array_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.014889662001223769,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_calendar_images_array_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.014350945995829534,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_event_has_all_required_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.016881316998478724,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_parse_500_events_in_reasonable_time",
+      "outcome": "passed",
+      "duration_seconds": 0.023569199001940433,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_rrule_count_1000_expands",
+      "outcome": "passed",
+      "duration_seconds": 0.018686083996726666,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_rrule_hourly_expansion_bounded_by_window",
+      "outcome": "passed",
+      "duration_seconds": 0.016986200003884733,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_deep_override_chain",
+      "outcome": "passed",
+      "duration_seconds": 0.017725927998981206,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_malformed_midfile_preserves_later_valid_events",
+      "outcome": "passed",
+      "duration_seconds": 0.017758150996087352,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_many_alarms_on_one_event",
+      "outcome": "passed",
+      "duration_seconds": 0.020607767000910826,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_yearly_bymonthday_across_decade",
+      "outcome": "passed",
+      "duration_seconds": 0.01721170299788355,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_until_at_exact_window_boundary",
+      "outcome": "failed",
+      "duration_seconds": 0.017036747995007318,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_until_at_exact_window_bou0')\n\n    def test_until_at_exact_window_boundary(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"UNTIL at exactly the window end is inclusive per RFC 5545 \u00a73.3.10.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\n\"\n            \"DTSTART:20260301T100000Z\\n\"\n            \"RRULE:FREQ=DAILY;UNTIL=20260305T100000Z\\n\"\n        )\n        ics = HEAD + \"BEGIN:VEVENT\\n\" + body + \"END:VEVENT\\n\" + TAIL\n        out = run_expand(\n            submission_command,\n            ics,\n            \"2026-03-01T00:00:00Z\",\n            \"2026-03-10T00:00:00Z\",\n            tmp_path,\n        )\n        starts = starts_for(out.get(\"occurrences\") or [], \"e1\")\n        # 3/1, 3/2, 3/3, 3/4, 3/5 \u2014 5 occurrences inclusive of UNTIL.\n>       assert len(starts) == 5\nE       AssertionError: assert 9 == 5\nE        +  where 9 = len(['2026-03-01T10:00:00Z', '2026-03-02T10:00:00Z', '2026-03-03T10:00:00Z', '2026-03-04T10:00:00Z', '2026-03-05T10:00:00Z', '2026-03-06T10:00:00Z', ...])\n\n/tmp/tests/test_stress.py:223: AssertionError"
+    },
+    {
+      "node_id": "test_stress.py::test_expand_window_before_event_is_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.015799392996996175,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_mixed_timekinds_coexist",
+      "outcome": "passed",
+      "duration_seconds": 0.016588871003477834,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_hourly_expansion",
+      "outcome": "passed",
+      "duration_seconds": 0.019612810003309278,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_minutely_expansion",
+      "outcome": "passed",
+      "duration_seconds": 0.016541907996725058,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_secondly_expansion",
+      "outcome": "passed",
+      "duration_seconds": 0.016419923002104042,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_daily_byhour_expands",
+      "outcome": "passed",
+      "duration_seconds": 0.017115106002165703,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_daily_byhour_byminute_grid",
+      "outcome": "passed",
+      "duration_seconds": 0.018990841999766417,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_recurrence_id_replaces_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.020506187000137288,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_recurrence_id_cancel_marks_occurrence_cancelled",
+      "outcome": "passed",
+      "duration_seconds": 0.01702196799669764,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_override_flag_set",
+      "outcome": "passed",
+      "duration_seconds": 0.01596167300158413,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_exrule_subtracts",
+      "outcome": "passed",
+      "duration_seconds": 0.01457012399987434,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_exrule_emits_deprecated_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.015343859999120468,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_vtodo_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.014676878996397136,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_vjournal_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.016074388000561157,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_vfreebusy_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.015318582998588681,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_calendar_method_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.019863634995999746,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_calendar_calscale_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.017374342001858167,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_attendee_partstat_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.024727010997594334,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_event_without_alarm_has_empty_alarms_list",
+      "outcome": "passed",
+      "duration_seconds": 0.01686654000513954,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_display_alarm_basic_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.017000621002807748,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_default_related_is_start",
+      "outcome": "failed",
+      "duration_seconds": 0.01790520199938328,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_trigger_default_related_i0')\n\n    def test_trigger_default_related_is_start(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.2.14: if RELATED is not specified on a DURATION-valued TRIGGER, default is START.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            \"BEGIN:VALARM\\n\"\n            \"ACTION:DISPLAY\\n\"\n            \"TRIGGER:-PT30M\\n\"\n            \"DESCRIPTION:half hour early\\n\"\n            \"END:VALARM\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        alarm = _alarms_of(find_event(out, \"e1\"))[0]\n        trigger_raw = alarm.get(\"trigger\")\n        assert isinstance(trigger_raw, dict)\n        trigger = cast(dict[str, Any], trigger_raw)\n>       assert trigger.get(\"related\") == \"START\"\nE       AssertionError: assert None == 'START'\nE        +  where None = <built-in method get of dict object at 0x7fb23eef8b80>('related')\nE        +    where <built-in method get of dict object at 0x7fb23eef8b80> = {'related': None, 'value': '-PT30M'}.get\n\n/tmp/tests/test_valarm.py:92: AssertionError"
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_related_end_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.017658919998211786,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_positive_duration_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.017670752997219097,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_absolute_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.021013828001741786,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_audio_alarm_action",
+      "outcome": "passed",
+      "duration_seconds": 0.018903539996244945,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_email_alarm_full_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.02121214799626614,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_duration_and_repeat_together",
+      "outcome": "passed",
+      "duration_seconds": 0.01972192899847869,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_no_repeat_no_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.018993650999618694,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_audio_alarm_with_attach",
+      "outcome": "passed",
+      "duration_seconds": 0.021242534996417817,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_multiple_alarms_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.019142690998705802,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_acknowledged_property",
+      "outcome": "passed",
+      "duration_seconds": 0.016754733005654998,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_alarm_raw_properties_include_action_trigger",
+      "outcome": "passed",
+      "duration_seconds": 0.017579176997969626,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_alarm_on_vtodo",
+      "outcome": "passed",
+      "duration_seconds": 0.01618618499924196,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_non_standard_action_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01612471700354945,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_missing_required_alarm_properties_warns",
+      "outcome": "failed",
+      "duration_seconds": 0.017860363997897366,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_missing_required_alarm_pr0')\n\n    def test_missing_required_alarm_properties_warns(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.6.6: ACTION and TRIGGER are REQUIRED in every VALARM.\n        A VALARM missing either should emit a malformed_value warning but should\n        NOT abort parsing of the surrounding event.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\nSUMMARY:ok\\n\"\n            \"BEGIN:VALARM\\n\"\n            \"ACTION:DISPLAY\\n\"\n            # no TRIGGER\n            \"DESCRIPTION:broken\\n\"\n            \"END:VALARM\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        ev = find_event(out, \"e1\")\n        # Event itself must still be intact.\n        assert ev[\"summary\"] == \"ok\"\n        kinds = [w.get(\"kind\") for w in out.get(\"warnings\", [])]\n>       assert \"malformed_value\" in kinds\nE       AssertionError: assert 'malformed_value' in []\n\n/tmp/tests/test_valarm.py:419: AssertionError"
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_valarm_uid_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0190545170007681,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_acknowledged_absolute_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.022317500002827728,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_acknowledged_absence_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.021676613007002743,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_arrive",
+      "outcome": "passed",
+      "duration_seconds": 0.014404651996301254,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_depart",
+      "outcome": "passed",
+      "duration_seconds": 0.01495612099824939,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_xname_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.015608526999130845,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_absence_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.019246930998633616,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_related_to_plain_uid",
+      "outcome": "passed",
+      "duration_seconds": 0.015889731999777723,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_related_to_with_reltype",
+      "outcome": "passed",
+      "duration_seconds": 0.01545677799731493,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_related_to_multiple_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.017909796002641087,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_snooze_via_repeat_and_acknowledged",
+      "outcome": "passed",
+      "duration_seconds": 0.018633013998623937,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_rfc9074_properties_in_raw_even_if_unfielded",
+      "outcome": "passed",
+      "duration_seconds": 0.01966695000010077,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_with_uid_and_dtstamp",
+      "outcome": "passed",
+      "duration_seconds": 0.018235683997772867,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_busytype_busy",
+      "outcome": "passed",
+      "duration_seconds": 0.016552106997551164,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_busytype_absent_emits_null",
+      "outcome": "passed",
+      "duration_seconds": 0.018792409005982336,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_busytype_busy_unavailable",
+      "outcome": "passed",
+      "duration_seconds": 0.019908197999029653,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_priority",
+      "outcome": "passed",
+      "duration_seconds": 0.016630294998321915,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_with_one_available",
+      "outcome": "passed",
+      "duration_seconds": 0.016279723000479862,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_multiple_available",
+      "outcome": "passed",
+      "duration_seconds": 0.01674901599835721,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.018837191004422493,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.016616739001619862,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_description_unescaped",
+      "outcome": "passed",
+      "duration_seconds": 0.019076306001807097,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_empty_vavailability_parses",
+      "outcome": "passed",
+      "duration_seconds": 0.023251007998624118,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_multiple_vavailability_components",
+      "outcome": "passed",
+      "duration_seconds": 0.017168581995065324,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_availabilities_key_present_when_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.018151131997001357,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_location_and_contact",
+      "outcome": "passed",
+      "duration_seconds": 0.01816623100239667,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_created_and_last_modified",
+      "outcome": "passed",
+      "duration_seconds": 0.02345715199771803,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_recurrence_id",
+      "outcome": "passed",
+      "duration_seconds": 0.019378738998057088,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_recurrence_id_with_tzid_and_range",
+      "outcome": "passed",
+      "duration_seconds": 0.015567113001452526,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_categories_and_comment",
+      "outcome": "passed",
+      "duration_seconds": 0.01791551699716365,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_exdate",
+      "outcome": "passed",
+      "duration_seconds": 0.018049725997116184,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_with_one_freebusy_property",
+      "outcome": "passed",
+      "duration_seconds": 0.022097425997344544,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_default_fbtype_is_busy",
+      "outcome": "passed",
+      "duration_seconds": 0.019261507000919664,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_fbtype_free",
+      "outcome": "passed",
+      "duration_seconds": 0.015663236001273617,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_fbtype_busy_unavailable",
+      "outcome": "passed",
+      "duration_seconds": 0.015469826001208276,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_fbtype_busy_tentative",
+      "outcome": "passed",
+      "duration_seconds": 0.01863346299796831,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_multiple_freebusy_properties_accumulate",
+      "outcome": "passed",
+      "duration_seconds": 0.015341004000219982,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_comma_separated_periods",
+      "outcome": "passed",
+      "duration_seconds": 0.015560638999886578,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_period_with_explicit_end",
+      "outcome": "passed",
+      "duration_seconds": 0.015202294998744037,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_period_with_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.014655229002528358,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_reports_uid_and_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.015141822997975396,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_organizer_is_cal_address",
+      "outcome": "passed",
+      "duration_seconds": 0.01973381000061636,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_attendees_accumulate",
+      "outcome": "passed",
+      "duration_seconds": 0.015369928001746302,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_xname_fbtype_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.01642285599882598,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_without_freebusy_property",
+      "outcome": "passed",
+      "duration_seconds": 0.01947134600050049,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_vtimezone_parsed_into_timezones",
+      "outcome": "passed",
+      "duration_seconds": 0.017669895001745317,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_vtimezone_observance_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.016945262999797706,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_tzid_resolves_to_utc_in_expand",
+      "outcome": "passed",
+      "duration_seconds": 0.01681705599912675,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_tzid_resolves_in_standard_time",
+      "outcome": "passed",
+      "duration_seconds": 0.01761643900317722,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_unresolved_tzid_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01861385500160395,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_last_modified",
+      "outcome": "passed",
+      "duration_seconds": 0.01565977300197119,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_last_modified_absence_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.015197891003481345,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_tzurl",
+      "outcome": "passed",
+      "duration_seconds": 0.01814090799962287,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_single_comment",
+      "outcome": "passed",
+      "duration_seconds": 0.017728798997268314,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_multiple_comments",
+      "outcome": "passed",
+      "duration_seconds": 0.016292917000100715,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_absence_is_empty_comment_list",
+      "outcome": "passed",
+      "duration_seconds": 0.01808128300399403,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_duplicate_uid_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.01924863699969137,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_override_same_uid_does_not_warn_duplicate",
+      "outcome": "passed",
+      "duration_seconds": 0.017797204996895744,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_unique_uids_no_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.014913938994141063,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_utc_offset_seconds_preserved_on_output",
+      "outcome": "passed",
+      "duration_seconds": 0.015969510001013987,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_utc_offset_without_seconds_stays_hhmm",
+      "outcome": "passed",
+      "duration_seconds": 0.01550037900233292,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_vtimezone_two_standard_observances",
+      "outcome": "passed",
+      "duration_seconds": 0.014891307004290866,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_vtimezone_two_daylight_observances",
+      "outcome": "passed",
+      "duration_seconds": 0.022228355996048776,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_observance_dtstart_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.015049152003484778,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_observance_rrule_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.015464779000467388,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2005_uses_pre_2007_april_rule",
+      "outcome": "passed",
+      "duration_seconds": 0.01688569100224413,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2005_early_march_is_standard_time",
+      "outcome": "passed",
+      "duration_seconds": 0.019142308996379143,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2010_uses_post_2007_march_rule",
+      "outcome": "passed",
+      "duration_seconds": 0.01645144200301729,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2010_late_october_is_still_dst",
+      "outcome": "passed",
+      "duration_seconds": 0.019846028000756633,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2005_late_october_is_standard_time",
+      "outcome": "passed",
+      "duration_seconds": 0.018491506998543628,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_recurring_event_spans_rule_change_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.015038600999105256,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_event_before_any_observance_dtstart_uses_earliest_observance",
+      "outcome": "passed",
+      "duration_seconds": 0.015361547000793507,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_observance_dtstart_is_floating_not_utc",
+      "outcome": "passed",
+      "duration_seconds": 0.01812528299706173,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_tzoffsets_normalized_with_colon",
+      "outcome": "passed",
+      "duration_seconds": 0.01724973100135685,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_observances_preserve_tzname",
+      "outcome": "passed",
+      "duration_seconds": 0.01564510699972743,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_three_era_observance_stack",
+      "outcome": "passed",
+      "duration_seconds": 0.015483714996662457,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_vtimezone_no_warnings",
+      "outcome": "passed",
+      "duration_seconds": 0.017027238005539402,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_utc_zone_resolves_without_daylight",
+      "outcome": "passed",
+      "duration_seconds": 0.016350063004210824,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_arizona_no_daylight_zone",
+      "outcome": "passed",
+      "duration_seconds": 0.018450436000421178,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_sydney_dst_month_order",
+      "outcome": "passed",
+      "duration_seconds": 0.015639605993783334,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_without_rrule_uses_dtstart_literally",
+      "outcome": "passed",
+      "duration_seconds": 0.016693257995939348,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_rdate_adds_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.01866956800222397,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_until_bounds_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.01781710499926703,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_bymonthday",
+      "outcome": "passed",
+      "duration_seconds": 0.019738880000659265,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_yearly_bymonthday_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.015448758997081313,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_unknown_tzid_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.016833153000334278,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 437,
+    "failed": 28,
+    "skipped": 0,
+    "error": 0,
+    "total": 465
+  },
+  "scores": {
+    "correctness": 0.9397849462365592,
+    "self_test_coverage": null,
+    "code_quality": null,
+    "task_score": 0.9397849462365592,
+    "extension_scores": {
+      "subscore.adversarial_corners.passed": 17.0,
+      "subscore.adversarial_corners.total": 18.0,
+      "subscore.attendee_grammar.passed": 25.0,
+      "subscore.attendee_grammar.total": 25.0,
+      "subscore.calendar_properties.passed": 17.0,
+      "subscore.calendar_properties.total": 18.0,
+      "subscore.dst_warnings.passed": 13.0,
+      "subscore.dst_warnings.total": 13.0,
+      "subscore.error_precision.passed": 8.0,
+      "subscore.error_precision.total": 9.0,
+      "subscore.errors.passed": 5.0,
+      "subscore.errors.total": 5.0,
+      "subscore.event_fields.passed": 19.0,
+      "subscore.event_fields.total": 20.0,
+      "subscore.folding_edges.passed": 4.0,
+      "subscore.folding_edges.total": 5.0,
+      "subscore.itip_methods.passed": 20.0,
+      "subscore.itip_methods.total": 21.0,
+      "subscore.itip_methods_deep.passed": 22.0,
+      "subscore.itip_methods_deep.total": 23.0,
+      "subscore.itip_per_component.passed": 16.0,
+      "subscore.itip_per_component.total": 20.0,
+      "subscore.library_divergence.passed": 7.0,
+      "subscore.library_divergence.total": 8.0,
+      "subscore.line_folding_octets.passed": 12.0,
+      "subscore.line_folding_octets.total": 12.0,
+      "subscore.param_escape.passed": 10.0,
+      "subscore.param_escape.total": 10.0,
+      "subscore.parse.passed": 14.0,
+      "subscore.parse.total": 14.0,
+      "subscore.rdate_period.passed": 4.0,
+      "subscore.rdate_period.total": 8.0,
+      "subscore.real_world_corpora.passed": 10.0,
+      "subscore.real_world_corpora.total": 10.0,
+      "subscore.recurrence_id_range.passed": 6.0,
+      "subscore.recurrence_id_range.total": 12.0,
+      "subscore.rfc9073_event_publishing.passed": 15.0,
+      "subscore.rfc9073_event_publishing.total": 15.0,
+      "subscore.rfc9253_relationships.passed": 10.0,
+      "subscore.rfc9253_relationships.total": 10.0,
+      "subscore.rrule_expand.passed": 18.0,
+      "subscore.rrule_expand.total": 19.0,
+      "subscore.rrule_parse.passed": 15.0,
+      "subscore.rrule_parse.total": 16.0,
+      "subscore.rscale.passed": 7.0,
+      "subscore.rscale.total": 8.0,
+      "subscore.schema.passed": 5.0,
+      "subscore.schema.total": 5.0,
+      "subscore.schema_depth.passed": 11.0,
+      "subscore.schema_depth.total": 11.0,
+      "subscore.stress.passed": 9.0,
+      "subscore.stress.total": 10.0,
+      "subscore.v02_features.passed": 16.0,
+      "subscore.v02_features.total": 16.0,
+      "subscore.valarm.passed": 15.0,
+      "subscore.valarm.total": 17.0,
+      "subscore.valarm_rfc9074.passed": 12.0,
+      "subscore.valarm_rfc9074.total": 12.0,
+      "subscore.vavailability.passed": 19.0,
+      "subscore.vavailability.total": 19.0,
+      "subscore.vfreebusy.passed": 14.0,
+      "subscore.vfreebusy.total": 14.0,
+      "subscore.vtimezone.passed": 5.0,
+      "subscore.vtimezone.total": 5.0,
+      "subscore.vtimezone_fields.passed": 11.0,
+      "subscore.vtimezone_fields.total": 11.0,
+      "subscore.vtimezone_historical.passed": 16.0,
+      "subscore.vtimezone_historical.total": 16.0,
+      "subscore.vtimezone_resolution.passed": 9.0,
+      "subscore.vtimezone_resolution.total": 9.0
+    }
+  },
+  "source_stats": {
+    "file_count": 7,
+    "lines_of_code": 4666
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims complete with partial hidden-test pass rate (437/465); Implemented in /workspace/output as a std-only Rust 2021 Cargo binary named ical..",
+    "commentary": null
+  }
+}
