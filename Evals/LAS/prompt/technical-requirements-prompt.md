@@ -1,8 +1,7 @@
-The program must be runnable as:
+The program must accept these command-line flags:
 
-```text
-python main.py --input <request.json> --output <response.json>
-```
+- `--input <path>`: path to a JSON file containing the request.
+- `--output <path>`: path where the program writes its JSON response.
 
 ## Request schema
 

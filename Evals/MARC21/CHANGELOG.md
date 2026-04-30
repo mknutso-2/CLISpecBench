@@ -1,5 +1,48 @@
 # Changelog
 
+## v3.0.0 — 2026-04-29
+
+**Breaking — invocation form is no longer Python-specific.**
+
+`prompt/technical-requirements-prompt.md` previously opened with:
+
+> The program must be runnable as:
+> ```
+> python main.py --input <request.json> --output <response.json>
+> ```
+
+That phrasing was authored when `marc21` was registered only in `py`.
+After the harness language-decoupling refactor (clispecbench commit
+`0e1d965`), `marc21-cpp`, `marc21-js`, and `marc21-rs` are now valid
+task ids — but the prompt was still telling agents the literal
+invocation form was `python main.py …`. Cross-language agents
+reconciled this by shipping a real native implementation alongside a
+`main.py` Python wrapper that accepts `--input/--output` and exec's
+the binary. The harness ignores the wrapper and invokes the native
+binary directly, so the agent's binary must independently honor
+`--input/--output`. When it didn't (e.g. the binary used positional
+args and relied on the wrapper to translate), tests failed with
+`returncode != 0` even though the agent's logic was correct.
+
+The contract is now language-agnostic:
+
+> The program must accept these command-line flags:
+> - `--input <path>`: path to a JSON file containing the request.
+> - `--output <path>`: path where the program writes its JSON response.
+
+This is the same flag-shape contract used by BibTeX, ICal, IGES,
+RS274, and WordCount.
+
+**Breaks:** all prior `marc21-cpp`, `marc21-js`, `marc21-rs` runs are
+invalidated; their agents were given a Python-specific invocation form
+that is no longer the contract. Prior `marc21-py` runs remain valid in
+spirit (the new prompt is a strict generalization — `python main.py
+--input X --output Y` still satisfies it) but should be re-run for
+prompt-version uniformity.
+
+The self-containment clause and CLI smoke gate from v2.8.2 remain in
+place.
+
 ## v2.8.2 — 2026-04-25
 
 Two follow-ups from a multi-run analysis on v2.8.1 that surfaced a rule-3
