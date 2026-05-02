@@ -173,3 +173,13 @@ class TestBenchmarkCostPolicy:
         assert loaded.token_usage is not None
         assert loaded.token_usage.source == "codex_session_rollout_token_count"
         assert loaded.token_usage.is_partial is True
+
+    def test_exit_class_round_trips(self, tmp_path: Path) -> None:
+        path = tmp_path / "result.json"
+        result = _make_run_result("codex-cli", None)
+        result.metadata.exit_class = "completed"
+
+        result.write(path)
+        loaded = load_result(path)
+
+        assert loaded.metadata.exit_class == "completed"

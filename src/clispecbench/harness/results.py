@@ -204,6 +204,9 @@ class RunMetadata:
     # Last text message from the agent — helps identify whether the agent
     # considered the task complete vs. acknowledged it was incomplete.
     agent_last_message: str | None = None
+    # Machine-readable completion classification derived from exit_reason,
+    # adapter errors, and transcript signals. Older result files omit it.
+    exit_class: str | None = None
 
 
 @dataclass
