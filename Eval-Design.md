@@ -266,7 +266,7 @@ The harness then calls `build.sh` on the resulting directory and proceeds to sco
 
 ### 5.2 Infrastructure Requirements
 
-**Sandboxing.** Agent runs must execute in Docker containers with no outbound network access, resource limits (CPU, memory), and filesystem isolation. An agent that can execute arbitrary shell commands must not be able to affect the host system or contact external services.
+**Sandboxing.** Agent runs must execute in Docker containers with resource limits (CPU, memory) and filesystem isolation. The original design intent was no outbound network access except the agent's API endpoint. A May 2026 audit found that already-published runs did not fully enforce that API-only policy, so the current study preserves the same effective web-access level for consistency. A future offline/API-only series must be labeled separately and should not be mixed with the current results.
 
 **No artificial timeouts.** Agent sessions run until the agent exits naturally. The harness has a 24-hour safety backstop to catch truly hung containers, but this is not intended as a meaningful constraint. Agents that need hours to iterate should be allowed to finish — killing a run mid-execution produces artificially low scores and wastes compute.
 
@@ -331,7 +331,7 @@ clispecbench run --task rs274-cpp --agent claude-code --skip-extensions
 | Input | Assembled prompt + documentation corpus in a clean working directory |
 | Iteration | Agent iterates freely until it signals completion or the safety backstop fires |
 | Output | Directory of source files, build config, and tests produced by the agent |
-| Scaffolding | Docker sandbox with compiler toolchain; network restricted to the agent's API host |
+| Scaffolding | Docker sandbox with compiler toolchain; network-access condition documented in `Agent-Run-Notes.md` |
 | Runs per result | 3 (mean ± stddev reported) |
 
 ---

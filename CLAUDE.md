@@ -7,7 +7,7 @@ CLISpecBench is a benchmark for evaluating AI coding agents on doc-driven implem
 ## Architecture
 
 - **`src/clispecbench/`** is the harness package. Key areas: `harness/` (task registry + run pipeline), `agents/` (per-agent CLI adapters and Docker invocation), `build/` (CMake/build helpers), `tests/` (repo-level harness/adapter/build tests), `cli.py` (the `clispecbench` entrypoint), and `pytest_plugin.py` (shared fixtures re-exported by each eval's `conftest.py`).
-- **Eval pipeline**: assemble prompt (`base-prompt.md` + `technical-requirements-prompt.md` + `docs/`) -> run agent CLI in Docker with prompt/docs mounted and network locked to the API host -> build the agent output -> run the hidden pytest suite via `pytest-json-report` -> write a `RunResult` JSON.
+- **Eval pipeline**: assemble prompt (`base-prompt.md` + `technical-requirements-prompt.md` + `docs/`) -> run agent CLI in Docker with prompt/docs mounted under the network-access condition documented in `Agent-Run-Notes.md` -> build the agent output -> run the hidden pytest suite via `pytest-json-report` -> write a `RunResult` JSON.
 - **Multi-language refs**: each `Evals/<Task>/` may include `reference-implementation-cpp/` plus other language variants. Tests are language-agnostic and use the `submission_command` fixture from `pytest_plugin`; `--language=<lang>` is required, and `--implementation-root=<path>` selects an explicit target when you are not using a configured reference implementation for that language.
 - **Task registration** lives in `src/clispecbench/harness/task.py` via `_KNOWN_TASKS`, with explicit language suffixes such as `rs274-cpp` and `wordcount-rs`.
 - **Agent credential mounting** happens at runtime. On Windows + WSL2 Docker, authenticate `claude`, `codex`, and `gemini` on Windows; `scripts/smoke-test-*.sh` is the source of truth for the mount strategy.
@@ -21,6 +21,7 @@ CLISpecBench is a benchmark for evaluating AI coding agents on doc-driven implem
 
 - `Eval-Design.md` — benchmark-level design
 - `Harness-Design.md` — harness architecture
+- `Agent-Run-Notes.md` — cross-agent operational findings, including network-access audit and study-consistency notes
 - `Evals/RS274/README.md` — RS274 task design
 - `Evals/RS274/tests/` — RS274 tests run against submissions and reference implementations
 - `Evals/RS274/prompt/base-prompt.md` — non-technical prompt shown to the coding agent

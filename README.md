@@ -156,7 +156,10 @@ Each eval task follows a standard pipeline:
 
 2. **Agent invocation** -- The agent runs inside a Docker container with the
    prompt, docs, and the host auth credentials for the coding agents mounted.
-   Network access is restricted to the agent's API host.
+   Network access follows the study condition documented in
+   `Agent-Run-Notes.md`. The original API-only intent was not enforced for
+   already-published runs, so the current study preserves the same effective
+   access level for comparability.
 
 3. **Build** -- The agent output is prepared and run via a language-specific backend in the
    harness: C++ is built with CMake, Rust with Cargo, and Python/JavaScript submissions
@@ -348,7 +351,10 @@ Adding a new coding agent is currently spread across a few touchpoints.
   so adding the Dockerfile is enough for that script to build the new image.
 - For CLI agents, credentials should be exposed through the adapter via
   `credential_mounts()` and/or environment variables.
-- If the agent needs special network access, update the adapter's `allowed_hosts`.
+- If the agent needs special network access, update the adapter's
+  `allowed_hosts` and verify the runner actually enforces the resulting
+  network policy before starting a separately labeled restricted-access run
+  series.
 
 ## Adding a New Eval
 

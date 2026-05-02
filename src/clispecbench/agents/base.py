@@ -119,10 +119,11 @@ class AgentAdapter(ABC):
 
     @property
     def allowed_hosts(self) -> list[str]:
-        """Network hosts the container is allowed to reach.
+        """Network hosts the container should be allowed to reach.
 
-        Override this to return the agent's API endpoint(s).  All other
-        outbound traffic is blocked by the sandbox network policy.
+        Override this to return the agent's API endpoint(s). This declaration
+        is not a sandbox by itself; callers must wire it into the Docker
+        network policy before starting a restricted-access run series.
         """
         return []
 

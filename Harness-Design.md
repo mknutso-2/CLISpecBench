@@ -306,15 +306,32 @@ See `scripts/smoke-test-docker-auth.sh` for the tested mounting commands.
 
 ### 6.3 Network Policy
 
-Containers are created with restricted network access, allowing only traffic
-to the agent's API host:
+Original intended policy: containers would be created with restricted network
+access, allowing only traffic to the agent's API host:
 
 - Claude Code: `api.anthropic.com`
 - Codex CLI: `chatgpt.com` (not `api.openai.com` — Codex uses WebSocket)
 - Gemini CLI: `generativelanguage.googleapis.com`, `oauth2.googleapis.com`
 
-All other outbound traffic is dropped. The agent cannot fetch packages, clone
+Under that original offline/API-only condition, all other outbound traffic
+would be dropped. The agent would not be able to fetch packages, clone
 repositories, or contact any other external service.
+
+**Known historical issue.** A May 2026 audit found that this policy was
+documented and represented by adapter `allowed_hosts` declarations, but not
+actually enforced for historical agent runs: the runner created agent
+containers on Docker's default bridge network. Some published Codex CLI /
+OpenAI transcripts contain real `web_search` events as a result. Published
+Claude Code / Anthropic transcripts audited at the same time advertised
+`WebSearch` / `WebFetch` tools but showed no actual web tool-use events and
+zero reported web-search/web-fetch requests.
+
+**Current study policy.** Because published results already used this effective
+access level, changing egress or disabling web-search tools mid-study would
+create a new experimental condition. Continue using the same effective access
+level for the current study, and treat any future API-only/offline runs as a
+separate, clearly labeled run series. See `Agent-Run-Notes.md` before
+publishing or comparing agent results across network-access conditions.
 
 ### 6.4 Resource Limits
 
