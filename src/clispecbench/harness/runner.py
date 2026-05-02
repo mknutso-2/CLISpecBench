@@ -108,6 +108,9 @@ def _write_infrastructure_failure_result(
         docker_image_sha=docker_image_sha,
         wall_clock_seconds=wall_clock_seconds,
         exit_reason="error",
+        # An infrastructure failure (Docker build, sandbox crash, etc.) happens
+        # before the agent ever ran — model capability cannot be measured.
+        exit_class="infra_other",
         model=adapter.model,
         effort=adapter.effort,
         notes=notes,
@@ -368,6 +371,19 @@ def run_evaluation(
                 container_run.wall_clock_seconds,
             )
 
+        # Classify failure mode for the report's inclusion rule. See
+        # skills/eval-runs/SKILL.md and harness/exit_class.py.
+        from clispecbench.harness.exit_class import classify_exit
+
+        exit_class = classify_exit(
+            exit_reason=exit_reason,
+            agent_last_message=agent_last_message,
+            wall_clock_seconds=container_run.wall_clock_seconds,
+            has_source_files=any(submission_dir.iterdir()),
+            build_success=build_result.success,
+            test_total=test_summary.total,
+        )
+
         metadata = RunMetadata(
             run_uid=run_uid,
             task=task.task_id,
@@ -382,6 +398,7 @@ def run_evaluation(
             docker_image_sha=docker_image_sha,
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
+            exit_class=exit_class,
             model=adapter.model,
             effort=adapter.effort,
             benchmark_cost_preference=_benchmark_cost_preference(adapter.name),
