@@ -430,100 +430,6 @@ def _cmd_results(args: argparse.Namespace) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _cmd_backfill_exit_class(args: argparse.Namespace) -> None:
-    """Backfill ``metadata.exit_class`` into existing result.json files.
-
-    Re-runs :func:`classify_exit` over the data already in each file —
-    pure function of ``exit_reason`` + ``agent_last_message`` +
-    ``wall_clock_seconds`` + presence of source files + build success +
-    test count. Idempotent: files that already have ``exit_class`` are
-    skipped unless ``--force``. Prints one line per file.
-    """
-    import json
-
-    from clispecbench.harness.exit_class import classify_exit
-
-    output_dir = Path(args.output_dir)
-    if not output_dir.is_dir():
-        print(f"No results directory found at {output_dir}", file=sys.stderr)
-        sys.exit(1)
-
-    # Accept both transient (result.json) and published (runN.json) layouts.
-    files = sorted({*output_dir.rglob("result.json"), *output_dir.rglob("run*.json")})
-    if not files:
-        print(f"No result.json or run*.json files under {output_dir}")
-        return
-
-    n_updated = 0
-    n_skipped_existing = 0
-    n_errors = 0
-    bucket_tally: dict[str, int] = {}
-
-    for f in files:
-        rel = f.relative_to(output_dir)
-        try:
-            data = json.loads(f.read_text(encoding="utf-8"))
-        except Exception as exc:
-            print(f"  error  {rel}: could not parse ({exc})")
-            n_errors += 1
-            continue
-
-        meta = data.get("metadata") or {}
-        if not isinstance(meta, dict):
-            n_errors += 1
-            continue
-        if meta.get("exit_class") and not args.force:
-            n_skipped_existing += 1
-            continue
-
-        build = data.get("build") or {}
-        build_success = build.get("success") if isinstance(build, dict) else None
-
-        ts = data.get("test_summary") or {}
-        test_total = int(ts.get("total", 0)) if isinstance(ts, dict) else 0
-
-        # Source file presence — for transient layouts, check the
-        # sibling ``source/`` directory. For published layouts (no
-        # source/ retained), infer from the test report: if pytest
-        # collected/ran tests, the submission directory must have
-        # existed and held source.
-        source_dir = f.parent / "source"
-        if source_dir.is_dir():
-            has_source = any(
-                p for p in source_dir.iterdir() if p.name not in {"__pycache__"}
-            )
-        elif test_total > 0:
-            has_source = True
-        else:
-            has_source = False
-
-        bucket = classify_exit(
-            exit_reason=str(meta.get("exit_reason", "")),
-            agent_last_message=meta.get("agent_last_message"),
-            wall_clock_seconds=float(meta.get("wall_clock_seconds", 0.0) or 0.0),
-            has_source_files=has_source,
-            build_success=build_success,
-            test_total=test_total,
-        )
-
-        bucket_tally[bucket] = bucket_tally.get(bucket, 0) + 1
-        if args.dry_run:
-            print(f"  DRY    {rel}  -> {bucket}")
-        else:
-            meta["exit_class"] = bucket
-            data["metadata"] = meta
-            f.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
-            print(f"  ok     {rel}  -> {bucket}")
-        n_updated += 1
-
-    print()
-    verb = "would update" if args.dry_run else "updated"
-    print(f"{verb}: {n_updated}   skipped-existing: {n_skipped_existing}   errors: {n_errors}")
-    print("buckets:")
-    for b in sorted(bucket_tally):
-        print(f"  {b}: {bucket_tally[b]}")
-
-
 def _cmd_backfill_subscores(args: argparse.Namespace) -> None:
     """Backfill per-capability subscores into existing result.json files.
 
@@ -802,23 +708,6 @@ def main(argv: list[str] | None = None) -> None:
         help="Recompute subscores even if the file already has them",
     )
 
-    # --- backfill-exit-class ---
-    ec_parser = subparsers.add_parser(
-        "backfill-exit-class",
-        help="Backfill metadata.exit_class on existing result.json files",
-    )
-    ec_parser.add_argument("--output-dir", default="transient_results")
-    ec_parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Print bucket assignments without writing files",
-    )
-    ec_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Recompute exit_class even if the file already has one",
-    )
-
     # --- hash ---
     hash_parser = subparsers.add_parser(
         "hash",
@@ -892,8 +781,6 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_run(args)
     elif args.command == "results":
         _cmd_results(args)
-    elif args.command == "backfill-exit-class":
-        _cmd_backfill_exit_class(args)
     elif args.command == "backfill-subscores":
         _cmd_backfill_subscores(args)
     elif args.command == "hash":

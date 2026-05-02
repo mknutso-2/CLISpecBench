@@ -190,17 +190,11 @@ class RunMetadata:
     harness_version: str
     docker_image_sha: str
     wall_clock_seconds: float
-    exit_reason: str  # "completed" | "timeout" | "token_limit" | "error" | "no_output"
+    exit_reason: str  # "completed" | "timeout" | "token_limit" | "error"
     model: str | None = None
     effort: str | None = None
     notes: str | None = None
     benchmark_cost_preference: str | None = None
-    # Failure-mode bucket for reporting — see skills/eval-runs/SKILL.md.
-    # One of: "completed" | "model_capped" | "model_timeout" |
-    # "model_context_exhausted" | "model_no_code" | "model_build_failure" |
-    # "model_agent_error" | "infra_auth" | "infra_rate_limit" | "infra_other".
-    # Inclusion in Best/Mean: starts_with("model_") or == "completed".
-    exit_class: str | None = None
     # Content hashes — machine-checkable backstop for the manual
     # `eval_version` bump. ``prompt_content_sha`` covers the assembled
     # prompt + docs (what the agent sees); ``test_suite_sha`` covers the
@@ -484,7 +478,6 @@ def load_result(path: Path) -> RunResult:
     meta.setdefault("prompt_content_sha", "unknown")
     meta.setdefault("test_suite_sha", "unknown")
     meta.setdefault("agent_last_message", None)
-    meta.setdefault("exit_class", None)
     metadata = RunMetadata(**meta)
     token_usage = (
         TokenUsage(
