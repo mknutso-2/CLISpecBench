@@ -25,11 +25,9 @@ const AGENT_FULL_NAMES = {
 };
 const MODEL_SHORT_NAMES = {
   "claude-opus-4-7": "O-4.7",
-  "gpt-5.5": "GPT-5.5",
 };
 const MODEL_FULL_NAMES = {
   "claude-opus-4-7": "Claude Opus 4.7",
-  "gpt-5.5": "GPT-5.5",
 };
 
 const state = {
@@ -905,10 +903,22 @@ function formatAgentFull(agent) {
 }
 
 function formatModelShort(model) {
+  const normalized = String(model || "").toLowerCase();
+  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
+  if (gptMatch) {
+    const suffix = gptMatch[2] === "mini" ? "-m" : gptMatch[2] === "codex" ? "-c" : "";
+    return `${gptMatch[1]}${suffix}`;
+  }
   return MODEL_SHORT_NAMES[model] || String(model || "").toUpperCase();
 }
 
 function formatModelFull(model) {
+  const normalized = String(model || "").toLowerCase();
+  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
+  if (gptMatch) {
+    const suffix = gptMatch[2] === "mini" ? " Mini" : gptMatch[2] === "codex" ? " Codex" : "";
+    return `GPT-${gptMatch[1]}${suffix}`;
+  }
   return MODEL_FULL_NAMES[model] || titleCaseIdentifier(model);
 }
 

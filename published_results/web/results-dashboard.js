@@ -447,14 +447,6 @@ function attachEvents() {
   pairListEl.addEventListener('change', () => {
     const selected = getCheckedValues(pairListEl, 'pair');
     STATE.selectedPairs = new Set(selected);
-    if (STATE.selectedPairs.size === 0) {
-      const fallbackInput = Array.from(
-        pairListEl.querySelectorAll('input[data-group="pair"]:not([disabled])'),
-      )[0];
-      const fallback = fallbackInput?.value;
-      if (fallback) STATE.selectedPairs.add(fallback);
-      if (fallbackInput) fallbackInput.checked = true;
-    }
     render();
   });
 
@@ -1427,8 +1419,11 @@ function abbreviateModel(model) {
   if (claudeMatch) {
     return `${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${claudeMatch[3]}`;
   }
-  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)/);
-  if (gptMatch) return `GPT-${gptMatch[1]}`;
+  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
+  if (gptMatch) {
+    const suffix = gptMatch[2] === 'mini' ? '-m' : gptMatch[2] === 'codex' ? '-c' : '';
+    return `${gptMatch[1]}${suffix}`;
+  }
   const geminiMatch = normalized.match(/^gemini-(\d+(?:\.\d+)?)(?:-[^-]+)*?(flash|pro)?/);
   if (geminiMatch) {
     const tier = geminiMatch[2] ? `-${geminiMatch[2][0].toUpperCase()}` : '';
