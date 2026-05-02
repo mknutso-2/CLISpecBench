@@ -97,6 +97,7 @@ class TestGeminiCLICredentialMounts:
         assert "cp /tmp/gemini-auth/*" in bash_script
         assert "projects.json" in bash_script
         assert "--yolo" in bash_script
+        assert "--skip-trust" in bash_script
         assert "--output-format stream-json" in bash_script
 
 
@@ -183,6 +184,7 @@ class TestModelAndEffort:
         bash_script = cmd[2]
         assert '--model "gemini-2.5-pro"' in bash_script
         assert "--yolo" in bash_script
+        assert "--skip-trust" in bash_script
 
     def test_copilot_model_in_command(self) -> None:
         adapter = CopilotCLIAdapter(model="gpt-5.2", effort="high")

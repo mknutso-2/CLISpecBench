@@ -34,6 +34,6 @@ $DOCKER_CMD run --rm \
         mkdir -p /root/.gemini
         cp /tmp/gemini-auth/* /root/.gemini/
         echo "{\"projects\":{}}" > /root/.gemini/projects.json
-        gemini -p "respond with just the word hello"
+        gemini --skip-trust -p "respond with just the word hello"
     '
 echo "PASS: Gemini CLI"

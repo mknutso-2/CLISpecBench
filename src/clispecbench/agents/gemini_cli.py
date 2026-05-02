@@ -83,7 +83,7 @@ class GeminiCLIAdapter(AgentAdapter):
             " && cp /tmp/gemini-auth/* /root/.gemini/"
             " && echo '{\"projects\":{}}' > /root/.gemini/projects.json"
         )
-        flags = "--yolo --output-format stream-json"
+        flags = "--yolo --skip-trust --output-format stream-json"
         if self._model:
             flags += f' --model "{self._model}"'
         return [

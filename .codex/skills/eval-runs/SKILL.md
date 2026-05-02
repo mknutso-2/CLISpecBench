@@ -27,6 +27,7 @@ Meta: This file is a breathing document. If you read it and find that any of the
 - Use `clispecbench run ...` if the console script is available; otherwise use `uv run clispecbench run ...`.
 - Use `clispecbench results` or `uv run clispecbench results` to inspect aggregate run output after completion.
 - On Windows + WSL2 Docker, authenticate `claude`, `codex`, and `gemini` on Windows, not inside WSL. Credential paths under `C:\Users\<you>\.claude`, `.codex`, and `.gemini` are translated to `/mnt/c/...` for the WSL daemon; `scripts/smoke-test-*.sh` is the source of truth for the mount strategy.
+- Gemini CLI headless runs must bypass the workspace trust prompt (`--skip-trust`, currently handled by the adapter). If Gemini exits immediately with "not running in a trusted directory", treat those results as operator/environment failures and rerun after fixing the adapter or smoke-test command.
 
 Example:
 
