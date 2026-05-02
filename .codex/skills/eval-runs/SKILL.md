@@ -46,7 +46,6 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
 ## Post-run inspection
 
 - After every eval run completes, inspect the result JSON and `transcript.jsonl` before moving on. Do not batch review later.
-- Use the `metadata.notes` field in the result JSON for root-cause observations when the file is still editable.
 - For every run that scores `0/N`, classify the root cause as one of:
   - `timeout`: the agent was still actively working when killed; note whether source files exist and whether they build.
   - `auth_failure`: 401/403 errors or expired credentials; the agent never started real work.
@@ -56,8 +55,11 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
   - `build_failure`: the agent wrote source but it does not compile; capture the build diagnostics.
   - `agent_error`: the agent crashed or threw an unhandled exception.
   - `model_error`: the model API returned server or capacity errors unrelated to auth or rate limits.
-- Record the classification and a brief explanation in `metadata.notes`, or report it explicitly if the result file is already finalized.
+- Use the `metadata.notes` field in the result JSON for root-cause observations when the file is still editable.
+- Record the classification and a substantive explanation in `metadata.notes`, or report it explicitly if the result file is already finalized. The notes should be comprehensive enough to explain the submission's concrete shortcomings, the evidence supporting the diagnosis, and whether the failure reflects missing code, incomplete behavior, schema/contract mismatch, infrastructure, or another cause.
 - For every run that scores above zero, confirm from the transcript whether the agent acknowledged it was done, voluntarily exited, was still working when killed, asked for input but got none, or hit an error/rate limit partway through.
+- For unexpectedly low nonzero scores, use `metadata.notes` for a specific root-cause analysis. Call out whether the implementation was substantial or incomplete, identify the dominant failure class, and include concrete evidence from both the test report and source. Good example:
+  `Unexpected low score root cause: The run was completed voluntarily and produced a substantial C++ implementation (~3K nonblank LOC, 10 published files) that built successfully, but it failed the eval largely because its observable JSON contract did not match the test suite. It emitted axis values as arrays instead of {x,y,z,a,b,c} objects, used g_modal/m_modal instead of active_modal_g_codes/active_modal_m_codes, used coord_system_offsets instead of coordinate_system_offsets, emitted lowercase spindle directions, and omitted the required top-level error string on failing inputs. These schema issues alone caused broad failures across position tracking, modal state, output schema, error, and trace suites. Additional semantic gaps were incomplete cutter-radius compensation (CRC arcs explicitly unsupported and corner lookahead skipped), trace entries using source_line/position instead of line_number/machine_position with missing top-level trace error fields, weak invalid-input validation (duplicate A/B/C accepted, noninteger D/H rounded, negative spindle speed accepted, some invalid TLO/tool/G53/linear-motion cases accepted), missing canned-cycle P/negative-P checks, simplified probing behavior, and parameter output that only wrote nonzero params instead of the required parameter set. The agent's final 'fully functional' claim is therefore grossly overstated, but the failure is not no_code_written or near-empty code; it is a substantial implementation with major public-contract and edge-case completeness failures.`
 
 ## Reporting rules
 
