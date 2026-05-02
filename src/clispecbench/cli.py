@@ -556,6 +556,59 @@ def _cmd_hash(args: argparse.Namespace) -> None:
 DEFAULT_PUBLISHED_DIR = "published_results"
 
 
+def _rebuild_dashboard_data(repo_root: Path) -> int:
+    """Regenerate ``results-published.json`` and ``test-results-published.json``.
+
+    The dashboard reads those two files; they're built from ``published_results/``
+    by two scripts in ``published_results/web/``. ``clispecbench publish`` only
+    writes the per-run files, so the dashboard goes stale until these are
+    rebuilt. This helper runs both scripts, in order, with the active uv
+    environment so they pick up the right Python.
+
+    Returns 0 on success, non-zero if either script fails. Writes its own
+    diagnostics to stderr so the caller can surface a clean message.
+    """
+    import subprocess
+
+    web_dir = repo_root / "published_results" / "web"
+    scripts = [
+        web_dir / "build_results_json.py",
+        web_dir / "build_test_results_json.py",
+    ]
+    for script in scripts:
+        if not script.is_file():
+            print(f"rebuild-dashboard: missing {script}", file=sys.stderr)
+            return 1
+        # Use the same interpreter we're running under so the script gets the
+        # right env (uv-managed venv, project deps, etc.) without needing
+        # `uv run` reentrancy.
+        result = subprocess.run(
+            [sys.executable, str(script)],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            print(
+                f"rebuild-dashboard: {script.name} failed (exit {result.returncode})",
+                file=sys.stderr,
+            )
+            if result.stderr:
+                print(result.stderr, file=sys.stderr)
+            return result.returncode
+        # Forward the script's own one-line summary so the user sees the
+        # row count and output path.
+        if result.stdout:
+            print(result.stdout.rstrip())
+    return 0
+
+
+def _cmd_rebuild_dashboard(args: argparse.Namespace) -> None:
+    repo_root = _find_repo_root()
+    sys.exit(_rebuild_dashboard_data(repo_root))
+
+
 def _cmd_publish(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
 
@@ -600,6 +653,11 @@ def _cmd_publish(args: argparse.Namespace) -> None:
         print(str(rel))
     except ValueError:
         print(str(target))
+
+    if getattr(args, "rebuild_dashboard", False):
+        rc = _rebuild_dashboard_data(repo_root)
+        if rc != 0:
+            sys.exit(rc)
 
 
 def _cmd_validate(args: argparse.Namespace) -> None:
@@ -756,6 +814,27 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="Overwrite an existing publication sharing the same run_uid",
     )
+    publish_parser.add_argument(
+        "--rebuild-dashboard",
+        action="store_true",
+        help=(
+            "After publishing, regenerate the dashboard's results-published.json "
+            "and test-results-published.json so the new run shows up. Recommended "
+            "for one-shot publishes; for batch publishes, omit this and run "
+            "'clispecbench rebuild-dashboard' once at the end."
+        ),
+    )
+
+    # --- rebuild-dashboard ---
+    rebuild_parser = subparsers.add_parser(
+        "rebuild-dashboard",
+        help=(
+            "Regenerate published_results/web/{results,test-results}-published.json "
+            "from the current published_results/ tree."
+        ),
+    )
+    # Reserved for future flags; argparse needs at least the subparser to dispatch.
+    rebuild_parser.set_defaults(_subcommand="rebuild-dashboard")
 
     # --- validate ---
     validate_parser = subparsers.add_parser("validate", help="Validate a task definition")
@@ -787,6 +866,8 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_hash(args)
     elif args.command == "publish":
         _cmd_publish(args)
+    elif args.command == "rebuild-dashboard":
+        _cmd_rebuild_dashboard(args)
     elif args.command == "validate":
         _cmd_validate(args)
 

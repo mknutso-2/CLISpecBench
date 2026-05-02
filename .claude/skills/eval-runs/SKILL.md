@@ -93,3 +93,7 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
   - `model_agent_error` → `--status "Agent error"`
 - Do **not** publish `infra_*` runs. They contain no model-capability signal; rerun them instead.
 - When publishing a `model_capped` or `model_timeout` run, include a Last Message summary that explicitly notes the cap/timeout and the wall-time at which it tripped, so the dashboard reader knows the agent was cut short and didn't choose to stop.
+- The dashboard reads `published_results/web/results-published.json` and `published_results/web/test-results-published.json`, which are *not* updated by `clispecbench publish` itself. After publishing, regenerate them or the dashboard will silently drift behind the published files. Two ways:
+  - One-shot publish: pass `--rebuild-dashboard` to `clispecbench publish` and the rebuild runs immediately.
+  - Batch publish (multiple results in a row): omit the flag on each publish and run `clispecbench rebuild-dashboard` once after the whole batch — the rebuild walks every published file, so doing it per-publish is wasteful.
+- Commit both `results-published.json` and `test-results-published.json` alongside the new `runN.json` files. They're regenerated artifacts but checked in so consumers don't have to rebuild before opening the dashboard.
