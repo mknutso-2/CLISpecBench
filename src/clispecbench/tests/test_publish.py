@@ -32,6 +32,8 @@ def _make_result_file(
     agent: str = "claude-code",
     model: str | None = "claude-opus-4-7",
     effort: str | None = "max",
+    exit_reason: str = "completed",
+    agent_last_message: str | None = None,
 ) -> RunResult:
     """Write a minimal RunResult to ``path`` and return it."""
     result = RunResult(
@@ -48,9 +50,10 @@ def _make_result_file(
             harness_version="0.1.0",
             docker_image_sha="sha256:test",
             wall_clock_seconds=1.0,
-            exit_reason="completed",
+            exit_reason=exit_reason,
             model=model,
             effort=effort,
+            agent_last_message=agent_last_message,
         ),
         token_usage=None,
         build=BuildResult(success=True, duration_seconds=0.0),
@@ -61,6 +64,15 @@ def _make_result_file(
     path.parent.mkdir(parents=True, exist_ok=True)
     result.write(path)
     return result
+
+
+def _write_codex_event_log(source: Path, message: str, *, completed: bool = False) -> None:
+    event = (
+        {"type": "turn.completed", "usage": {"input_tokens": 1, "output_tokens": 1}}
+        if completed
+        else {"type": "turn.failed", "error": {"message": message}}
+    )
+    (source.parent / "codex-events.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
 
 
 def test_published_runs_dir_includes_model_effort(tmp_path: Path) -> None:
@@ -129,6 +141,94 @@ def test_publish_rejects_result_without_run_uid(tmp_path: Path) -> None:
 
     with pytest.raises(PublishError, match="no run_uid"):
         publish_result(source, published_root, status="Complete", last_message="x")
+
+
+def test_publish_rejects_codex_usage_limit_stop(tmp_path: Path) -> None:
+    source = tmp_path / "transient" / "result.json"
+    _make_result_file(
+        source,
+        run_uid="uid-usage-limit",
+        agent="codex-cli",
+        model="gpt-5.4-mini",
+        effort="xhigh",
+    )
+    _write_codex_event_log(
+        source,
+        "You've hit your usage limit. Visit https://chatgpt.com/codex/settings/usage.",
+    )
+
+    with pytest.raises(PublishError, match="account/usage limit"):
+        publish_result(
+            source,
+            tmp_path / "published",
+            status="Complete",
+            last_message="incomplete",
+        )
+
+
+def test_publish_rejects_codex_stream_disconnect_stop(tmp_path: Path) -> None:
+    source = tmp_path / "transient" / "result.json"
+    _make_result_file(
+        source,
+        run_uid="uid-stream",
+        agent="codex-cli",
+        model="gpt-5.4-mini",
+        effort="xhigh",
+    )
+    _write_codex_event_log(
+        source,
+        "stream disconnected before completion: idle timeout waiting for model",
+    )
+
+    with pytest.raises(PublishError, match="stream disconnect"):
+        publish_result(
+            source,
+            tmp_path / "published",
+            status="Complete",
+            last_message="incomplete",
+        )
+
+
+def test_publish_allows_codex_context_limit_stop(tmp_path: Path) -> None:
+    source = tmp_path / "transient" / "result.json"
+    _make_result_file(
+        source,
+        run_uid="uid-context",
+        agent="codex-cli",
+        model="gpt-5.4-mini",
+        effort="xhigh",
+    )
+    _write_codex_event_log(
+        source,
+        "Codex ran out of room in the model's context window.",
+    )
+
+    target = publish_result(
+        source,
+        tmp_path / "published",
+        status="Complete",
+        last_message="incomplete because context was exhausted",
+    )
+
+    assert target.exists()
+
+
+def test_publish_rejects_agent_last_message_usage_limit(tmp_path: Path) -> None:
+    source = tmp_path / "transient" / "result.json"
+    _make_result_file(
+        source,
+        run_uid="uid-agent-message-usage",
+        exit_reason="error",
+        agent_last_message="You've hit your limit \u00b7 resets 5:40pm (UTC)",
+    )
+
+    with pytest.raises(PublishError, match="account/usage limit"):
+        publish_result(
+            source,
+            tmp_path / "published",
+            status="Capped (model)",
+            last_message="hit usage cap",
+        )
 
 
 def test_publish_rejects_duplicate_run_uid_without_force(tmp_path: Path) -> None:

@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 from clispecbench.harness.results import load_result
 
@@ -23,6 +24,13 @@ log = logging.getLogger(__name__)
 
 class PublishError(Exception):
     """Raised when a result cannot be published."""
+
+
+UNPUBLISHABLE_STOP_REASON_LABELS = {
+    "usage_limit": "account/usage limit",
+    "stream_disconnect": "local/network stream disconnect",
+    "auth_failure": "authentication failure",
+}
 
 
 def published_runs_dir(
@@ -103,6 +111,88 @@ def _find_commentary_file(published_root: Path, slug: str) -> Path | None:
     return None
 
 
+def _classify_unpublishable_stop_message(message: str) -> str | None:
+    text = message.strip().lower()
+    if not text:
+        return None
+    if "usage limit" in text or "you've hit your limit" in text or "usage cap" in text:
+        return "usage_limit"
+    if (
+        "stream disconnected" in text
+        or "idle timeout" in text
+        or "websocket" in text
+        or "connection reset" in text
+    ):
+        return "stream_disconnect"
+    if (
+        "401" in text
+        or "403" in text
+        or "unauthorized" in text
+        or "invalid api key" in text
+        or "expired credential" in text
+        or "missing api key" in text
+    ):
+        return "auth_failure"
+    return None
+
+
+def _iter_jsonl_dicts(path: Path):
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict):
+            yield event
+
+
+def _final_codex_turn_failure_message(source: Path) -> str | None:
+    event_log = source.parent / "codex-events.jsonl"
+    if not event_log.is_file():
+        return None
+
+    final_turn: dict[str, Any] | None = None
+    for event in _iter_jsonl_dicts(event_log):
+        if event.get("type") in {"turn.completed", "turn.failed"}:
+            final_turn = event
+
+    if not final_turn or final_turn.get("type") != "turn.failed":
+        return None
+
+    error = final_turn.get("error")
+    if isinstance(error, dict):
+        message = error.get("message")
+        return message if isinstance(message, str) else None
+    return error if isinstance(error, str) else None
+
+
+def _unpublishable_stop_reason(source: Path, result, status: str, last_message: str) -> str | None:
+    if result.metadata.agent == "codex-cli":
+        reason = _classify_unpublishable_stop_message(
+            _final_codex_turn_failure_message(source) or ""
+        )
+        if reason:
+            return reason
+
+    candidates = [
+        result.metadata.agent_last_message or "",
+        result.metadata.notes or "",
+        status,
+        last_message,
+    ]
+    for candidate in candidates:
+        reason = _classify_unpublishable_stop_message(candidate)
+        if reason:
+            return reason
+    return None
+
+
 def publish_result(
     source: Path,
     published_root: Path,
@@ -123,6 +213,14 @@ def publish_result(
         raise PublishError(
             f"{source}: result has no run_uid (pre-2.0 file). "
             "Re-run the evaluation to produce a publishable result."
+        )
+
+    stop_reason = _unpublishable_stop_reason(source, result, status, last_message)
+    if stop_reason:
+        label = UNPUBLISHABLE_STOP_REASON_LABELS[stop_reason]
+        raise PublishError(
+            f"{source}: not publishable because the run stopped due to {label}, "
+            "which is a user/environment failure rather than model or harness behavior."
         )
 
     existing_matches = find_duplicate_publications(published_root, meta.run_uid)

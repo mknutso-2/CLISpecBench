@@ -6,6 +6,7 @@ import argparse
 import json
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from clispecbench.harness.pricing import estimate_cost
 
@@ -22,6 +23,14 @@ EVAL_NAMES = {
     "marc21": "MARC21",
     "rs274": "RS274",
     "wordcount": "WordCount",
+}
+
+OMIT_AGENT_STOP_REASONS = {
+    "usage_limit",
+    "stream_disconnect",
+    "auth_failure",
+    "credential_error",
+    "local_interruption",
 }
 
 
@@ -98,6 +107,173 @@ def result_link(web_dir: Path, path: Path) -> str:
     return "../" + path.resolve().relative_to(web_dir.parent.resolve()).as_posix()
 
 
+def iter_jsonl_dicts(path: Path):
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return
+    for line in lines:
+        if not line.strip():
+            continue
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict):
+            yield event
+
+
+def classify_agent_stop_message(message: str) -> tuple[str, str] | None:
+    text = message.strip()
+    if not text:
+        return None
+    lowered = text.lower()
+    if (
+        "output token maximum" in lowered
+        or "output token cap" in lowered
+        or ("per-response" in lowered and "token cap" in lowered)
+    ):
+        return "output_token_limit", "Output token cap"
+    if (
+        "context window" in lowered
+        or "ran out of room" in lowered
+        or "input exceeds the context" in lowered
+    ):
+        return "context_window_exhausted", "Context limit"
+    if "usage limit" in lowered or "you've hit your limit" in lowered or "usage cap" in lowered:
+        return "usage_limit", "Usage limit"
+    if (
+        "stream disconnected" in lowered
+        or "idle timeout" in lowered
+        or "websocket" in lowered
+        or "connection reset" in lowered
+    ):
+        return "stream_disconnect", "Stream disconnect"
+    return None
+
+
+def transient_event_log_for(path: Path, published_root: Path, metadata: dict[str, Any]) -> Path | None:
+    repo_root = published_root.parent
+    task = metadata.get("task") or path.parts[-4]
+    agent = metadata.get("agent") or ""
+    model = metadata.get("model") or ""
+    effort = metadata.get("effort") or ""
+    run_number_value = metadata.get("run_number") or run_number(path, metadata)
+    run_dir_name = f"run{run_number_value}"
+    model_dir = f"{model}_{effort}" if effort else model
+    base = repo_root / "transient_results" / task / agent / model_dir
+    if not base.is_dir():
+        return None
+
+    candidates = sorted(base.glob(f"eval*/{run_dir_name}/codex-events.jsonl"))
+    if not candidates:
+        return None
+
+    run_uid = metadata.get("run_uid")
+    if run_uid:
+        for candidate in candidates:
+            result_path = candidate.parent / "result.json"
+            if not result_path.is_file():
+                continue
+            try:
+                result_payload = json.loads(result_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            result_metadata = result_payload.get("metadata") or {}
+            if result_metadata.get("run_uid") == run_uid:
+                return candidate
+
+    return candidates[-1]
+
+
+def codex_agent_stop(path: Path, published_root: Path, metadata: dict[str, Any]) -> dict[str, str] | None:
+    event_log = transient_event_log_for(path, published_root, metadata)
+    if event_log is None:
+        return None
+
+    final_turn: dict[str, Any] | None = None
+    for event in iter_jsonl_dicts(event_log):
+        if event.get("type") in {"turn.completed", "turn.failed"}:
+            final_turn = event
+
+    if final_turn is None:
+        return {
+            "agent_stop_reason": "unknown",
+            "agent_stop_label": "Unknown",
+            "agent_stop_message": "",
+            "agent_stop_source": "codex-events",
+        }
+    if final_turn.get("type") == "turn.completed":
+        return {
+            "agent_stop_reason": "finished",
+            "agent_stop_label": "Finished",
+            "agent_stop_message": "",
+            "agent_stop_source": "codex-events",
+        }
+
+    error = final_turn.get("error")
+    message = ""
+    if isinstance(error, dict):
+        message = str(error.get("message") or "")
+    elif isinstance(error, str):
+        message = error
+    classified = classify_agent_stop_message(message)
+    if classified is None:
+        classified = ("agent_turn_failed", "Agent error")
+    reason, label = classified
+    return {
+        "agent_stop_reason": reason,
+        "agent_stop_label": label,
+        "agent_stop_message": message,
+        "agent_stop_source": "codex-events",
+    }
+
+
+def agent_stop_info(path: Path, web_dir: Path, payload: dict[str, Any]) -> dict[str, str]:
+    metadata = payload.get("metadata") or {}
+    editorial = payload.get("editorial") or {}
+    published_root = web_dir.parent.resolve()
+    exit_reason = metadata.get("exit_reason") or ""
+
+    if metadata.get("agent") == "codex-cli":
+        from_events = codex_agent_stop(path, published_root, metadata)
+        if from_events is not None:
+            return from_events
+
+    message_candidates = [
+        metadata.get("agent_last_message") or "",
+        editorial.get("last_message") or "",
+        metadata.get("notes") or "",
+        editorial.get("commentary") or "",
+    ]
+    for message in message_candidates:
+        classified = classify_agent_stop_message(message)
+        if classified is not None:
+            reason, label = classified
+            return {
+                "agent_stop_reason": reason,
+                "agent_stop_label": label,
+                "agent_stop_message": message,
+                "agent_stop_source": "result-json",
+            }
+
+    if exit_reason == "completed":
+        return {
+            "agent_stop_reason": "finished",
+            "agent_stop_label": "Finished",
+            "agent_stop_message": "",
+            "agent_stop_source": "result-json",
+        }
+
+    status = editorial.get("status") or exit_reason or "Error"
+    return {
+        "agent_stop_reason": exit_reason or "error",
+        "agent_stop_label": status,
+        "agent_stop_message": metadata.get("agent_last_message") or editorial.get("last_message") or "",
+        "agent_stop_source": "result-json",
+    }
+
+
 def build_row(path: Path, web_dir: Path) -> dict:
     payload = json.loads(path.read_text(encoding="utf-8"))
     metadata = payload.get("metadata") or {}
@@ -105,6 +281,8 @@ def build_row(path: Path, web_dir: Path) -> dict:
     usage = payload.get("token_usage") or {}
     stats = payload.get("source_stats") or {}
     editorial = payload.get("editorial") or {}
+    exit_reason = metadata.get("exit_reason") or ""
+    status = editorial.get("status") or ("Complete" if exit_reason == "completed" else exit_reason)
 
     task = metadata.get("task") or path.parts[-4]
     eval_name, language = task_eval_language(task)
@@ -117,6 +295,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
     total_tokens = usage.get("total_tokens")
     if total_tokens is None:
         total_tokens = input_tokens + output_tokens
+    stop_info = agent_stop_info(path, web_dir, payload)
 
     return {
         "task": task,
@@ -128,7 +307,10 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "eval": eval_name,
         "eval_instance": f"run{run_id}" if run_id else "",
         "eval_version": metadata.get("eval_version") or "",
-        "exit_reason": metadata.get("exit_reason") or "",
+        "exit_reason": exit_reason,
+        "status": status,
+        **stop_info,
+        "notes": metadata.get("notes") or editorial.get("commentary") or "",
         "score_count": passed,
         "score_total": total,
         "score_pct": score_pct,
@@ -158,11 +340,15 @@ def main() -> None:
     web_dir = args.output.resolve().parent
     rows = []
     excluded = []
+    omitted = []
 
     for path in sorted(published_root.rglob("run*.json")):
         if "web" in path.relative_to(published_root).parts:
             continue
         row = build_row(path, web_dir)
+        if row.get("agent_stop_reason") in OMIT_AGENT_STOP_REASONS:
+            omitted.append(row)
+            continue
         if row["exit_reason"] == "completed":
             rows.append(row)
         else:
@@ -177,8 +363,10 @@ def main() -> None:
             "CLISpecBench curated published run JSON files from published_results/**/run*.json"
         ),
         "rows_are_official_completed_runs": True,
+        "omits_user_environment_stops": True,
         "completed_count": len(rows),
         "excluded_count": len(excluded),
+        "omitted_count": len(omitted),
         "rows": rows,
         "excluded_runs": excluded,
     }
@@ -186,7 +374,10 @@ def main() -> None:
         json.dumps(payload, indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
     )
-    print(f"Wrote {len(rows)} completed rows and {len(excluded)} excluded rows to {args.output}")
+    print(
+        f"Wrote {len(rows)} completed rows, {len(excluded)} excluded rows, "
+        f"and omitted {len(omitted)} user/environment stops to {args.output}"
+    )
 
 
 if __name__ == "__main__":

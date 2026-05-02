@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """Launch the results dashboard web page.
 
-This script starts a local Python HTTP server for `published_results/web` if one is
+This script starts a local Python HTTP server for `published_results` if one is
 not already serving the dashboard, then opens the dashboard in the default browser.
+Serving the published root keeps dashboard result links such as
+`../rs274-cpp/.../run1.json` reachable from `web/results-dashboard.html`.
 """
 
 from __future__ import annotations
@@ -15,12 +17,13 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 import webbrowser
 from pathlib import Path
 
 DEFAULT_PORT = 8000
-DEFAULT_DASHBOARD = "results-dashboard.html"
+DEFAULT_DASHBOARD = "web/results-dashboard.html"
 DASHBOARD_MARKER = "CLISpecBench Results Explorer"
 EXPECTED_DATA_PATH = "results-published.json"
 EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id", "score_pct"}
@@ -44,7 +47,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--dashboard",
         default=DEFAULT_DASHBOARD,
-        help=f"Dashboard file to open (default: {DEFAULT_DASHBOARD}).",
+        help=f"Dashboard file relative to published_results/ (default: {DEFAULT_DASHBOARD}).",
     )
     parser.add_argument(
         "--max-ports",
@@ -70,6 +73,11 @@ def dashboard_url(base: str, dashboard: str) -> str:
     return f"{base.rstrip('/')}/{dashboard.lstrip('/')}"
 
 
+def dashboard_data_url(base: str, dashboard: str) -> str:
+    """Return the URL for the data file loaded next to *dashboard*."""
+    return urllib.parse.urljoin(dashboard_url(base, dashboard), EXPECTED_DATA_PATH)
+
+
 def is_dashboard_running(base: str, dashboard: str) -> bool:
     try:
         with urllib.request.urlopen(dashboard_url(base, dashboard), timeout=1.0) as response:
@@ -80,7 +88,7 @@ def is_dashboard_running(base: str, dashboard: str) -> bool:
                 return False
 
         with urllib.request.urlopen(
-            dashboard_url(base, EXPECTED_DATA_PATH),
+            dashboard_data_url(base, dashboard),
             timeout=1.0,
         ) as data_response:
             if data_response.status != 200:
@@ -142,7 +150,7 @@ def main() -> None:
     host = args.host
     requested_port = args.port
     dashboard = args.dashboard
-    dashboard_dir = script_dir / "web"
+    dashboard_dir = script_dir
     status, port = find_port(host, requested_port, dashboard, args.max_ports)
 
     if status is None:

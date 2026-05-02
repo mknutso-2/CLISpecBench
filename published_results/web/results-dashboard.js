@@ -9,7 +9,8 @@ const AXIS_OPTIONS = [
   { id: 'wall', label: 'Wall Clock Time' },
   { id: 'tools', label: 'Tools Used' },
   { id: 'loc', label: 'LOC' },
-  { id: 'language', label: 'Language', axisOnly: true },
+  { id: 'language', label: 'Language', axisOnly: true, selectionLabel: 'languages' },
+  { id: 'eval', label: 'Eval', axisOnly: true, selectionLabel: 'evals' },
 ];
 
 const COLOR_MODE_OPTIONS = [
@@ -43,6 +44,7 @@ const TABLE_SORT_OPTIONS = {
     { id: 'tokens', label: 'Tokens' },
     { id: 'tools', label: 'Tools' },
     { id: 'loc', label: 'LOC' },
+    { id: 'excluded', label: 'Excluded/error', requiresExcluded: true },
   ],
   runs: [
     { id: '', label: 'No ordering' },
@@ -50,7 +52,7 @@ const TABLE_SORT_OPTIONS = {
     { id: 'pair', label: 'Agent/model' },
     { id: 'run', label: 'Run' },
     { id: 'version', label: 'Version' },
-    { id: 'status', label: 'Status', requiresExcluded: true },
+    { id: 'status', label: 'Agent stop' },
     { id: 'percent', label: 'Pass rate' },
     { id: 'cost', label: 'Cost' },
     { id: 'wall', label: 'Wall time' },
@@ -164,7 +166,7 @@ const AXIS_PADDING = {
   top: 12,
   bottom: 12,
 };
-const LANGUAGE_AXIS_X_PADDING = 24;
+const CATEGORY_AXIS_X_PADDING = 24;
 const AXIS_TICK_SEGMENTS = 5;
 const AXIS_DOMAIN_PADDING_FRACTION = 0.06;
 const AXIS_DOMAIN_MIN_PADDING = 0.5;
@@ -316,7 +318,8 @@ function initializeDashboard(data, sourceName, { preserveView = false } = {}) {
   initSelectionDefaults({ preserveView });
   buildControls();
   render();
-  statusEl.textContent = `Loaded ${STATE.rows.length} runs from ${sourceName || DATA_PATH}.`;
+  const excludedSuffix = STATE.excludedRows.length ? ` and ${STATE.excludedRows.length} excluded/error runs` : '';
+  statusEl.textContent = `Loaded ${STATE.rows.length} official runs${excludedSuffix} from ${sourceName || DATA_PATH}.`;
   clearError();
 }
 
@@ -466,8 +469,8 @@ function attachEvents() {
       ).find((input) => input.value === fallback);
       if (fallbackInput) fallbackInput.checked = true;
     }
-    syncErrorBarModeWithDefaults();
     updateAxisSelectors();
+    syncErrorBarModeWithDefaults();
     render();
   });
 
@@ -478,6 +481,8 @@ function attachEvents() {
       Array.from(evalListEl.querySelectorAll('input[data-group="eval"]')).forEach((input) => {
         input.checked = true;
       });
+      updateAxisSelectors();
+      syncErrorBarModeWithDefaults();
       render();
     });
   }
@@ -488,6 +493,8 @@ function attachEvents() {
       Array.from(evalListEl.querySelectorAll('input[data-group="eval"]')).forEach((input) => {
         input.checked = false;
       });
+      updateAxisSelectors();
+      syncErrorBarModeWithDefaults();
       render();
     });
   }
@@ -495,6 +502,8 @@ function attachEvents() {
   evalListEl.addEventListener('change', () => {
     const selected = getCheckedValues(evalListEl, 'eval');
     STATE.selectedEvals = new Set(selected);
+    updateAxisSelectors();
+    syncErrorBarModeWithDefaults();
     render();
   });
 
@@ -641,20 +650,19 @@ function renderEvalList() {
 }
 
 function updateAxisSelectors() {
-  const canUseLanguageAxis = STATE.selectedLanguages.size > 1;
-
   xAxisSelect.replaceChildren();
   AXIS_OPTIONS.forEach((axis) => {
     const option = document.createElement('option');
     option.value = axis.id;
     option.textContent = axis.label;
-    if (axis.axisOnly && !canUseLanguageAxis) {
+    const categoryCount = getSelectedAxisCategories(axis.id).length;
+    if (axis.axisOnly && categoryCount < 2) {
       option.disabled = true;
-      option.textContent = `${axis.label} (select 2+ languages)`;
+      option.textContent = `${axis.label} (select 2+ ${axis.selectionLabel || 'values'})`;
     }
     xAxisSelect.appendChild(option);
   });
-  if (STATE.xAxis === 'language' && !canUseLanguageAxis) {
+  if (isCategoricalXAxis(STATE.xAxis) && getSelectedAxisCategories(STATE.xAxis).length < 2) {
     STATE.xAxis = 'cost';
   } else if (!xAxisSelect.querySelector(`option[value="${STATE.xAxis}"]`)) {
     STATE.xAxis = 'cost';
@@ -761,6 +769,7 @@ function getTableSortOptions(tableMode = STATE.tableMode) {
 }
 
 function syncViewModeControls() {
+  document.body.classList.toggle('table-view-active', STATE.viewMode === 'table');
   viewModeEl.querySelectorAll('button[data-view-mode]').forEach((button) => {
     const pressed = button.dataset.viewMode === STATE.viewMode;
     button.setAttribute('aria-pressed', pressed ? 'true' : 'false');
@@ -782,7 +791,7 @@ function syncControlsColumn() {
 }
 
 function getDefaultErrorBarMode() {
-  if (STATE.selectedLanguages.size > 1 && STATE.xAxis !== 'language') {
+  if (STATE.selectedLanguages.size > 1 && !isCategoricalXAxis(STATE.xAxis)) {
     return 'std';
   }
   return 'range';
@@ -886,8 +895,15 @@ function validateSelection() {
   if (!STATE.selectedLanguages.size) {
     return { ok: false, message: 'Choose at least one language.' };
   }
-  if (STATE.viewMode === 'graph' && STATE.xAxis === 'language' && STATE.selectedLanguages.size < 2) {
-    return { ok: false, message: 'Language is available when at least two languages are selected.' };
+  if (STATE.viewMode === 'graph' && isCategoricalXAxis(STATE.xAxis)) {
+    const categories = getSelectedAxisCategories(STATE.xAxis);
+    const axis = AXIS_OPTIONS.find((option) => option.id === STATE.xAxis);
+    if (categories.length < 2) {
+      return {
+        ok: false,
+        message: `${axis?.label || STATE.xAxis} is available when at least two ${axis?.selectionLabel || 'values'} are selected.`,
+      };
+    }
   }
   return { ok: true };
 }
@@ -946,10 +962,20 @@ function buildSummaryTableRows() {
   getRowsForCurrentSelection(STATE.rows).forEach((row) => {
     const group = getSummaryGroup(row);
     if (!groups.has(group.key)) {
-      groups.set(group.key, { ...group, rows: [] });
+      groups.set(group.key, { ...group, rows: [], excludedRows: [] });
     }
     groups.get(group.key).rows.push(row);
   });
+
+  if (STATE.tableShowExcluded) {
+    getRowsForCurrentSelection(STATE.excludedRows).forEach((row) => {
+      const group = getSummaryGroup(row);
+      if (!groups.has(group.key)) {
+        groups.set(group.key, { ...group, rows: [], excludedRows: [] });
+      }
+      groups.get(group.key).excludedRows.push(row);
+    });
+  }
 
   return Array.from(groups.values()).map((group) => {
     const summaries = summarizePointDetails(group.rows);
@@ -965,6 +991,8 @@ function buildSummaryTableRows() {
       languageLabel,
       evalLanguageLabel,
       runs: group.rows.length,
+      excludedRuns: group.excludedRows.length,
+      statusSummary: formatStatusBreakdown(group.excludedRows),
       evals,
       languages,
       summaries,
@@ -978,6 +1006,7 @@ function buildSummaryTableRows() {
         tokens: summaries.tokens_total?.mean,
         tools: summaries.tools?.mean,
         loc: summaries.loc?.mean,
+        excluded: group.excludedRows.length,
       },
     };
   });
@@ -1039,18 +1068,50 @@ function getRunSortValues(row) {
 }
 
 function getRunStatusLabel(row) {
+  const stopLabel = firstPresent(row.agent_stop_label, '');
+  if (stopLabel) return stopLabel;
+  const exitReason = firstPresent(row.exit_reason, row.isExcluded ? 'excluded' : 'completed');
+  if (exitReason === 'completed') return 'Finished';
   return firstPresent(
+    row.status,
     row.failure_class,
-    row.exit_reason,
-    row.isExcluded ? 'excluded' : 'completed',
+    exitReason,
+    'completed',
   );
 }
 
 function getRunStatusTitle(row) {
+  const stopLabel = getRunStatusLabel(row);
   const exitReason = firstPresent(row.exit_reason, row.isExcluded ? 'excluded' : 'completed');
   const failureClass = firstPresent(row.failure_class, '');
-  if (failureClass && failureClass !== exitReason) return `${exitReason} / ${failureClass}`;
-  return exitReason;
+  const stopReason = firstPresent(row.agent_stop_reason, '');
+  const stopMessage = firstPresent(row.agent_stop_message, '');
+  const notes = firstPresent(row.notes, '');
+  const lastMessage = firstPresent(row.last_message, '');
+  const parts = [`Agent stop: ${stopLabel}`];
+  if (stopReason && stopReason !== stopLabel) parts.push(`Reason: ${stopReason}`);
+  if (stopMessage) parts.push(`Stop message: ${stopMessage}`);
+  if (exitReason) parts.push(`Harness exit: ${exitReason}`);
+  if (failureClass && failureClass !== stopLabel && failureClass !== exitReason) parts.push(`Class: ${failureClass}`);
+  if (Number.isFinite(row.score_count) && Number.isFinite(row.score_total) && row.score_total > 0) {
+    parts.push(`Score: ${formatCount(row.score_count)}/${formatCount(row.score_total)} (${formatAxisValue('percent', row.score_pct)})`);
+  }
+  if (lastMessage) parts.push(`Last Message: ${lastMessage}`);
+  if (notes) parts.push(`Notes: ${notes}`);
+  return parts.join('\n');
+}
+
+function formatStatusBreakdown(rows) {
+  if (!rows.length) return '';
+  const counts = new Map();
+  rows.forEach((row) => {
+    const status = getRunStatusLabel({ ...row, isExcluded: true });
+    counts.set(status, (counts.get(status) || 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([status, count]) => `${status}: ${count}`)
+    .join('; ');
 }
 
 function getRowsForCurrentSelection(rows) {
@@ -1063,7 +1124,7 @@ function getRowsForCurrentSelection(rows) {
 }
 
 function getSummaryTableColumns() {
-  return [
+  const columns = [
     {
       key: 'pair',
       label: 'Agent / Model',
@@ -1114,6 +1175,16 @@ function getSummaryTableColumns() {
       render: (row) => formatSummaryMetric('loc', row.summaries.loc),
     },
   ];
+  if (STATE.tableShowExcluded) {
+    columns.splice(3, 0, {
+      key: 'excluded',
+      label: 'Excluded',
+      numeric: true,
+      render: (row) => (row.excludedRuns ? formatCount(row.excludedRuns) : ''),
+      title: (row) => row.statusSummary,
+    });
+  }
+  return columns;
 }
 
 function getRunTableColumns() {
@@ -1132,6 +1203,13 @@ function getRunTableColumns() {
     },
     { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
     { key: 'version', label: 'Version', render: (row) => row.eval_version || 'n/a' },
+    {
+      key: 'status',
+      label: 'Agent Stop',
+      className: 'table-status',
+      render: (row) => getRunStatusLabel(row),
+      title: (row) => getRunStatusTitle(row),
+    },
     { key: 'score', sortKey: 'percent', label: 'Score', numeric: true, render: (row) => formatScore(row) },
     { key: 'cost', label: 'Cost', numeric: true, render: (row) => formatAxisValue('cost', row.cost_usd) },
     { key: 'wall', label: 'Wall', numeric: true, render: (row) => formatAxisValue('wall', row.wall_min) },
@@ -1148,14 +1226,6 @@ function getRunTableColumns() {
       title: (row) => getLastMessageTooltip(row),
     },
   ];
-  if (STATE.tableShowExcluded) {
-    columns.splice(4, 0, {
-      key: 'status',
-      label: 'Status',
-      render: (row) => getRunStatusLabel(row),
-      title: (row) => getRunStatusTitle(row),
-    });
-  }
   return columns;
 }
 
@@ -1390,6 +1460,7 @@ function buildResultLink(row) {
 
 function buildPoints(colorMap, rowsByPairOverride) {
   const selectedLanguages = Array.from(STATE.selectedLanguages).sort();
+  const selectedCategories = getSelectedAxisCategories(STATE.xAxis);
   const rowsByPair =
     rowsByPairOverride && rowsByPairOverride.size !== undefined
       ? rowsByPairOverride
@@ -1402,20 +1473,41 @@ function buildPoints(colorMap, rowsByPairOverride) {
     if (!rows.length) return;
     const fallbackColor = PALETTE[index % PALETTE.length];
 
-    if (STATE.xAxis === 'language') {
-      selectedLanguages.forEach((language) => {
-        const subset = rows.filter((r) => r.language === language);
-        const colorModeKey = getColorModeKey(pairId, language);
-        const color = colorMap.get(colorModeKey) || fallbackColor;
-        const point = summarizePoint(pairId, color, subset, language, {
-          xAxis: STATE.xAxis,
-          yAxis: STATE.yAxis,
-          xAsLanguage: true,
-          xCategoryLabel: language,
-        });
-        if (point) {
-          point.colorModeKey = colorModeKey;
-          points.push(point);
+    if (isCategoricalXAxis(STATE.xAxis)) {
+      selectedCategories.forEach((category) => {
+        const categoryRows = rows.filter((row) => getRowCategoryValue(row, STATE.xAxis) === category);
+        if (STATE.colorMode === 'language' && STATE.xAxis !== 'language') {
+          selectedLanguages.forEach((language) => {
+            const subset = categoryRows.filter((row) => row.language === language);
+            const colorModeKey = getColorModeKey(pairId, language);
+            const color = colorMap.get(colorModeKey) || fallbackColor;
+            const point = summarizePoint(pairId, color, subset, language, {
+              xAxis: STATE.xAxis,
+              yAxis: STATE.yAxis,
+              xAsCategory: true,
+              xCategoryLabel: category,
+              xCategoryValue: category,
+            });
+            if (point) {
+              point.colorModeKey = colorModeKey;
+              points.push(point);
+            }
+          });
+        } else {
+          const language = STATE.xAxis === 'language' ? category : null;
+          const colorModeKey = getColorModeKey(pairId, language);
+          const color = colorMap.get(colorModeKey) || fallbackColor;
+          const point = summarizePoint(pairId, color, categoryRows, language, {
+            xAxis: STATE.xAxis,
+            yAxis: STATE.yAxis,
+            xAsCategory: true,
+            xCategoryLabel: category,
+            xCategoryValue: category,
+          });
+          if (point) {
+            point.colorModeKey = colorModeKey;
+            points.push(point);
+          }
         }
       });
     } else if (STATE.colorMode === 'language') {
@@ -1426,7 +1518,7 @@ function buildPoints(colorMap, rowsByPairOverride) {
         const point = summarizePoint(pairId, color, subset, language, {
           xAxis: STATE.xAxis,
           yAxis: STATE.yAxis,
-          xAsLanguage: false,
+          xAsCategory: false,
           xCategoryLabel: language,
         });
         if (point) {
@@ -1441,7 +1533,7 @@ function buildPoints(colorMap, rowsByPairOverride) {
       const point = summarizePoint(pairId, color, rows, null, {
         xAxis: STATE.xAxis,
         yAxis: STATE.yAxis,
-        xAsLanguage: false,
+        xAsCategory: false,
         xCategoryLabel: allLanguageLabel,
       });
       if (point) {
@@ -1497,12 +1589,18 @@ function canRenderPair(rows, selectedLanguages) {
     return false;
   }
 
-  if (xAxis === 'language') {
-    return selectedLanguages.some((language) => {
-      const subset = rows.filter((row) => row.language === language);
-      if (!subset.length) return false;
-      const summary = summarizeMetric(subset, yAxis);
-      return summary.hasData;
+  if (isCategoricalXAxis(xAxis)) {
+    return getSelectedAxisCategories(xAxis).some((category) => {
+      const categoryRows = rows.filter((row) => getRowCategoryValue(row, xAxis) === category);
+      if (!categoryRows.length) return false;
+      if (STATE.colorMode === 'language' && xAxis !== 'language') {
+        return selectedLanguages.some((language) => {
+          const subset = categoryRows.filter((row) => row.language === language);
+          if (!subset.length) return false;
+          return summarizeMetric(subset, yAxis).hasData;
+        });
+      }
+      return summarizeMetric(categoryRows, yAxis).hasData;
     });
   }
 
@@ -1543,19 +1641,22 @@ function summarizePoint(pairId, color, rows, language, options) {
     language,
     rows,
     languages: Array.from(new Set(rows.map((row) => row.language))).sort(),
-    xAsLanguage: options.xAsLanguage,
+    evals: Array.from(new Set(rows.map((row) => row.eval))).sort(),
+    xAsCategory: Boolean(options.xAsCategory),
+    xAsLanguage: Boolean(options.xAsCategory && options.xAxis === 'language'),
     xSummary,
     ySummary,
     xValue: getReportValue(xSummary, STATE.reportType),
     yValue: getReportValue(ySummary, STATE.reportType),
     xCategoryLabel: options.xCategoryLabel,
+    xCategoryValue: options.xCategoryValue || options.xCategoryLabel,
     xAxis: options.xAxis,
     yAxis: options.yAxis,
   };
 }
 
 function summarizeMetric(rows, metricId) {
-  if (metricId === 'language') {
+  if (metricId === 'language' || metricId === 'eval') {
     return {
       hasData: true,
       worst: 0,
@@ -1850,7 +1951,7 @@ function getColorModeLabel(key) {
 
 function drawFrontierConnector(points, frontierSet, xScale, yScale, layer) {
   if (frontierSet.size < 2) return;
-  if (STATE.xAxis === 'language') return;
+  if (isCategoricalXAxis(STATE.xAxis)) return;
   const sorted = Array.from(frontierSet).slice().sort((a, b) => a.xValue - b.xValue);
   const coords = sorted
     .filter((p) => Number.isFinite(p.xValue) && Number.isFinite(p.yValue))
@@ -1865,7 +1966,7 @@ function drawFrontierConnector(points, frontierSet, xScale, yScale, layer) {
 
 function computeParetoFrontier(points, xAxis, yAxis) {
   const frontier = new Set();
-  if (xAxis === 'language') return frontier;
+  if (isCategoricalXAxis(xAxis)) return frontier;
   const xDir = METRICS[xAxis]?.higherIsBetter ? 1 : -1;
   const yDir = METRICS[yAxis]?.higherIsBetter ? 1 : -1;
   const valid = points.filter(
@@ -1904,8 +2005,8 @@ function renderPlot(points) {
 
   const xDomain = buildDomain(points, STATE.xAxis);
   const yDomain = buildDomain(points, STATE.yAxis);
-  const selectedLanguages = Array.from(STATE.selectedLanguages).sort();
-  const xScale = createXScale(xDomain, selectedLanguages, plotLeft, plotRight);
+  const xCategories = getSelectedAxisCategories(STATE.xAxis);
+  const xScale = createXScale(xDomain, xCategories, plotLeft, plotRight);
   const yScale = createYScale(yDomain, plotTop, plotHeight);
 
   const panel = createSvgElement('rect');
@@ -1929,7 +2030,7 @@ function renderPlot(points) {
     yScale,
     xDomain,
     yDomain,
-    selectedLanguages,
+    xCategories,
   });
 
   const defs = createSvgElement('defs');
@@ -1958,8 +2059,8 @@ function renderPlot(points) {
     const baseRadius = 7.3;
     const hoverRadius = 8.8;
 
-    const x = point.xAsLanguage
-      ? xScale(selectedLanguages.indexOf(point.language))
+    const x = point.xAsCategory
+      ? xScale(xCategories.indexOf(point.xCategoryValue))
       : xScale(point.xValue);
     const y = yScale(point.yValue);
 
@@ -1976,7 +2077,7 @@ function renderPlot(points) {
     });
 
     const canShowErrorBars =
-      STATE.xAxis !== 'language' && STATE.errorBarMode !== 'none';
+      !isCategoricalXAxis(STATE.xAxis) && STATE.errorBarMode !== 'none';
     const xBarRange = canShowErrorBars
       ? getErrorBarRange(point.xSummary, STATE.errorBarMode, STATE.reportType, STATE.xAxis)
       : null;
@@ -1984,7 +2085,7 @@ function renderPlot(points) {
       ? getErrorBarRange(point.ySummary, STATE.errorBarMode, STATE.reportType, STATE.yAxis)
       : null;
 
-    if (!point.xAsLanguage && xBarRange) {
+    if (!point.xAsCategory && xBarRange) {
       const left = xScale(xBarRange.min);
       const right = xScale(xBarRange.max);
       const rangeLine = createSvgElement('line');
@@ -2381,7 +2482,7 @@ function drawAxes({
   yScale,
   xDomain,
   yDomain,
-  selectedLanguages,
+  xCategories,
 }) {
   const xAxisY = plotBottom;
   const xAxisLeft = typeof xScale.axisLeft === 'number' ? xScale.axisLeft : plotLeft;
@@ -2394,8 +2495,8 @@ function drawAxes({
     STATE.yAxis,
   );
   const xTicks =
-    STATE.xAxis === 'language'
-      ? selectedLanguages.map((_, index) => index)
+    isCategoricalXAxis(STATE.xAxis)
+      ? xCategories.map((_, index) => index)
       : buildNiceAxisTicks(xDomain.min, xDomain.max, AXIS_TICK_SEGMENTS, STATE.xAxis);
   const safeYTicks = yTicks.length ? yTicks : [yDomain.min, yDomain.max];
   const safeXTicks = xTicks.length ? xTicks : [xDomain.min, xDomain.max];
@@ -2448,9 +2549,9 @@ function drawAxes({
   xAxisLine.setAttribute('class', 'axis-line');
   chartSvg.appendChild(xAxisLine);
 
-  if (STATE.xAxis === 'language') {
-    selectedLanguages.forEach((language) => {
-      const x = xScale(selectedLanguages.indexOf(language));
+  if (isCategoricalXAxis(STATE.xAxis)) {
+    xCategories.forEach((category) => {
+      const x = xScale(xCategories.indexOf(category));
       const tick = createSvgElement('line');
       tick.setAttribute('x1', String(x));
       tick.setAttribute('x2', String(x));
@@ -2463,7 +2564,7 @@ function drawAxes({
       text.setAttribute('y', String(xAxisY + 24));
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('class', 'axis-text');
-      text.textContent = language;
+      text.textContent = category;
       chartSvg.appendChild(text);
     });
   } else {
@@ -2489,8 +2590,8 @@ function drawAxes({
 }
 
 function buildDomain(points, axisId) {
-  if (axisId === 'language') {
-    const count = STATE.selectedLanguages.size;
+  if (isCategoricalXAxis(axisId)) {
+    const count = getSelectedAxisCategories(axisId).length;
     if (count <= 1) return { min: 0, max: 1 };
     return { min: 0, max: count - 1 };
   }
@@ -2632,35 +2733,35 @@ function fixFloat(value) {
   return Number.parseFloat(value.toFixed(12));
 }
 
-function getLanguageAxisSpan(plotLeft, plotRight, selectedLanguages) {
+function getCategoryAxisSpan(plotLeft, plotRight, categories) {
   const totalSpan = plotRight - plotLeft;
-  if (!selectedLanguages.length || selectedLanguages.length <= 1 || totalSpan <= 0) {
+  if (!categories.length || categories.length <= 1 || totalSpan <= 0) {
     return { left: plotLeft, right: plotRight };
   }
 
-  const left = plotLeft + LANGUAGE_AXIS_X_PADDING;
-  const right = plotRight - LANGUAGE_AXIS_X_PADDING;
+  const left = plotLeft + CATEGORY_AXIS_X_PADDING;
+  const right = plotRight - CATEGORY_AXIS_X_PADDING;
   if (right <= left) return { left: plotLeft, right: plotRight };
 
   return { left, right };
 }
 
-function createXScale(domain, selectedLanguages, plotLeft, plotRight) {
+function createXScale(domain, categories, plotLeft, plotRight) {
   const left = plotLeft;
   const right = plotRight;
 
-  if (STATE.xAxis === 'language') {
-    const { left: paddedLeft, right: paddedRight } = getLanguageAxisSpan(plotLeft, plotRight, selectedLanguages);
+  if (isCategoricalXAxis(STATE.xAxis)) {
+    const { left: paddedLeft, right: paddedRight } = getCategoryAxisSpan(plotLeft, plotRight, categories);
     const scale = (value) => {
-      if (!selectedLanguages.length) return (left + right) / 2;
-      if (selectedLanguages.length === 1) return (left + right) / 2;
+      if (!categories.length) return (left + right) / 2;
+      if (categories.length === 1) return (left + right) / 2;
       if (paddedRight <= paddedLeft) return (left + right) / 2;
 
       const clamped = Math.min(
         Math.max(Number(value), 0),
-        selectedLanguages.length - 1,
+        categories.length - 1,
       );
-      return paddedLeft + (clamped / (selectedLanguages.length - 1)) * (paddedRight - paddedLeft);
+      return paddedLeft + (clamped / (categories.length - 1)) * (paddedRight - paddedLeft);
     };
     scale.axisLeft = paddedLeft;
     scale.axisRight = paddedRight;
@@ -2688,6 +2789,7 @@ function createYScale(domain, plotTop, plotHeight) {
 
 function getAxisMeta(axisId) {
   if (axisId === 'language') return { label: 'Language' };
+  if (axisId === 'eval') return { label: 'Eval' };
   return METRICS[axisId] || { label: axisId };
 }
 
@@ -2888,7 +2990,7 @@ function buildMarkerAriaLabel(point) {
   const yMeta = getAxisMeta(point.yAxis);
   const name = point.pairLabel || rowPairId(point.pairId);
   const xPart =
-    point.xAxis === 'language'
+    isCategoricalXAxis(point.xAxis)
       ? `${xMeta.label} ${point.xCategoryLabel || ''}`
       : `${xMeta.label} ${formatAxisValue(point.xAxis, point.xValue)}`;
   const yPart = `${yMeta.label} ${formatAxisValue(point.yAxis, point.yValue)}`;
@@ -2899,6 +3001,7 @@ function buildTooltip(point) {
   const xMeta = getAxisMeta(point.xAxis);
   const yMeta = getAxisMeta(point.yAxis);
   const languages = point.languages?.length ? point.languages : [];
+  const evals = point.evals?.length ? point.evals : [];
   const xRunCount = point.xSummary?.count || 0;
   const yRunCount = point.ySummary?.count || 0;
   const runCountLabel =
@@ -2918,8 +3021,9 @@ function buildTooltip(point) {
       ? `Language: ${point.language}`
       : null,
     languages.length > 1 ? `Languages: ${languages.join(', ')}` : null,
+    evals.length > 1 && point.xAxis !== 'eval' ? `Evals: ${evals.join(', ')}` : null,
     runCountLabel,
-    point.xAxis === 'language'
+    isCategoricalXAxis(point.xAxis)
       ? `${xMeta.label}: ${point.xCategoryLabel}`
       : `${xMeta.label} (${reportTypeLabel}): ${formatAxisReportValue(point.xAxis, point.xSummary)}`,
     `${yMeta.label} (${reportTypeLabel}): ${formatAxisReportValue(point.yAxis, point.ySummary)}`,
@@ -3012,6 +3116,26 @@ function getEvals() {
     if (Number.isNaN(aNum) || Number.isNaN(bNum)) return a.localeCompare(b);
     return aNum - bNum;
   });
+}
+
+function isCategoricalXAxis(axisId = STATE.xAxis) {
+  return axisId === 'language' || axisId === 'eval';
+}
+
+function getSelectedAxisCategories(axisId) {
+  if (axisId === 'language') {
+    return getLanguages().filter((language) => STATE.selectedLanguages.has(language));
+  }
+  if (axisId === 'eval') {
+    return getEvals().filter((evalName) => STATE.selectedEvals.has(evalName));
+  }
+  return [];
+}
+
+function getRowCategoryValue(row, axisId) {
+  if (axisId === 'language') return row.language;
+  if (axisId === 'eval') return row.eval;
+  return '';
 }
 
 function setError(message) {
@@ -3148,7 +3272,13 @@ function coerceRow(raw) {
     eval_instance: firstPresent(raw.eval_instance, ''),
     eval_version: firstPresent(raw.eval_version, ''),
     exit_reason: firstPresent(raw.exit_reason, raw.excluded ? 'excluded' : 'completed'),
+    status: firstPresent(raw.status, ''),
+    agent_stop_reason: firstPresent(raw.agent_stop_reason, ''),
+    agent_stop_label: firstPresent(raw.agent_stop_label, ''),
+    agent_stop_message: firstPresent(raw.agent_stop_message, ''),
+    agent_stop_source: firstPresent(raw.agent_stop_source, ''),
     failure_class: firstPresent(raw.failure_class, ''),
+    notes: firstPresent(raw.notes, ''),
     eval_raw: firstPresent(raw.eval, ''),
     score_count: scoreCount,
     score_total: scoreTotal,
@@ -3187,6 +3317,12 @@ function rowFromHarnessResult(result) {
     eval: evalLabelFromTask(task),
     eval_version: metadata.eval_version || '',
     exit_reason: metadata.exit_reason || '',
+    status: (result.editorial || {}).status || '',
+    agent_stop_reason: metadata.exit_reason === 'completed' ? 'finished' : metadata.exit_reason || '',
+    agent_stop_label: metadata.exit_reason === 'completed' ? 'Finished' : (result.editorial || {}).status || metadata.exit_reason || '',
+    agent_stop_message: metadata.agent_last_message || '',
+    agent_stop_source: 'loaded-result-json',
+    notes: metadata.notes || (result.editorial || {}).commentary || '',
     score_count: summary.passed,
     score_total: summary.total,
     wall_min: metadata.wall_clock_seconds ? metadata.wall_clock_seconds / 60 : undefined,
