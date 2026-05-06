@@ -434,10 +434,9 @@ function attachEvents() {
   if (pairSelectAllButton) {
     pairSelectAllButton.addEventListener('click', () => {
       const allPairInputs = Array.from(pairListEl.querySelectorAll('input[data-group="pair"]'));
-      const selectablePairIds = allPairInputs.filter((input) => !input.disabled).map((input) => input.value);
-      STATE.selectedPairs = new Set(selectablePairIds);
+      STATE.selectedPairs = new Set(getPairs());
       allPairInputs.forEach((input) => {
-        input.checked = !input.disabled;
+        input.checked = true;
       });
       render();
     });
@@ -617,18 +616,18 @@ function renderPairList(canRenderPairById) {
     const isSelectable = availabilityMap.get(pairId) ?? true;
     const { agent, model } = splitPairId(pairId);
 
-    if (!isSelectable) {
-      if (STATE.selectedPairs.has(pairId)) STATE.selectedPairs.delete(pairId);
+    if (!isSelectable && STATE.selectedPairs.has(pairId)) {
       unavailableLabels.push(`${agent} / ${model}`);
-      return;
     }
 
     const row = document.createElement('label');
+    row.classList.toggle('unavailable-option', !isSelectable);
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.dataset.group = 'pair';
     cb.value = pairId;
     cb.checked = STATE.selectedPairs.has(pairId);
+    cb.disabled = !isSelectable;
     row.appendChild(cb);
     row.appendChild(document.createTextNode(`${agent} / ${model}`));
     pairListEl.appendChild(row);
@@ -896,13 +895,6 @@ function render() {
     STATE.viewMode === 'table'
       ? getPairAvailabilityForRows(rowsByPair)
       : getPairAvailability(rowsByPair);
-  const selectedPairs = new Set();
-  STATE.selectedPairs.forEach((pairId) => {
-    if (canRenderPairById.get(pairId)) {
-      selectedPairs.add(pairId);
-    }
-  });
-  STATE.selectedPairs = selectedPairs;
   renderPairList(canRenderPairById);
 
   if (STATE.viewMode === 'table') {
