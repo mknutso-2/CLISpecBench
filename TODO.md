@@ -1,4 +1,5 @@
 Review pre-3.0 CNCSim test changes.
+Replace the committed per-test dashboard aggregate with a generated local SQLite DB plus static-friendly sharded JSON for published dashboards.
 Update agent CLI versions
 Ensure MCPs / local configs aren't leaking
 rewrite EvalDesign (4 core requirements)
