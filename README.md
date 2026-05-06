@@ -264,6 +264,14 @@ clispecbench publish transient_results/<task>/<agent>/<model-effort>/eval<eval>/
 Set `--published-dir` to your target official root (for example `official_results`), and
 optionally add `--commentary <slug>` if you want to attach a markdown commentary file.
 
+After publishing, regenerate dashboard data with `clispecbench rebuild-dashboard`, or
+pass `--rebuild-dashboard` for one-shot publishes. The run-level
+`published_results/web/results-published.json` file is tracked. The per-test
+`published_results/web/test-results-published.json` file is a generated local
+aggregate for the per-test explorer; it is intentionally ignored because it can
+grow past GitHub's file-size limits. Rebuild it locally when needed, but do not
+stage it.
+
 ## Running Tests
 
 This project has four categories of tests. CI runs the first three on

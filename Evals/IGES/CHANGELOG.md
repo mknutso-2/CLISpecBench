@@ -1,6 +1,6 @@
 # IGES Changelog
 
-## v1.0.15 — unreleased
+## v1.0.15 — 2026-04-19
 
 ### Added
 
@@ -344,7 +344,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.8 — unreleased
+## v1.0.8 — 2026-04-16
 
 ### Added
 
@@ -366,7 +366,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.7 — unreleased
+## v1.0.7 — 2026-04-16
 
 ### Added
 
@@ -399,7 +399,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.6 — unreleased
+## v1.0.6 — 2026-04-16
 
 ### Added
 
@@ -423,7 +423,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.5 — unreleased
+## v1.0.5 — 2026-04-16
 
 ### Changed
 
@@ -443,7 +443,7 @@
 - Prompt/schema review reconciled against the C++ ref-impl and hidden
   test expectations on 2026-04-16.
 
-## v1.0.4 — unreleased
+## v1.0.4 — 2026-04-16
 
 ### Added
 
@@ -463,7 +463,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.3 — unreleased
+## v1.0.3 — 2026-04-16
 
 ### Added
 
@@ -487,7 +487,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.2 — unreleased
+## v1.0.2 — 2026-04-16
 
 ### Added
 
@@ -509,7 +509,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.1 — unreleased
+## v1.0.1 — 2026-04-16
 
 ### Added
 
@@ -537,7 +537,7 @@
 - `uv run ruff check` and `uv run pyright` pass repo-wide
   (2026-04-16).
 
-## v1.0.0 — unreleased
+## v1.0.0 — 2026-04-16
 
 Initial IGES eval release. The task is now functional end-to-end with a
 buildable C++ reference implementation, prompt/docs bundle, and full

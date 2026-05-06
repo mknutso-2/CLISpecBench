@@ -557,13 +557,15 @@ DEFAULT_PUBLISHED_DIR = "published_results"
 
 
 def _rebuild_dashboard_data(repo_root: Path) -> int:
-    """Regenerate ``results-published.json`` and ``test-results-published.json``.
+    """Regenerate dashboard data files from ``published_results/``.
 
-    The dashboard reads those two files; they're built from ``published_results/``
-    by two scripts in ``published_results/web/``. ``clispecbench publish`` only
-    writes the per-run files, so the dashboard goes stale until these are
-    rebuilt. This helper runs both scripts, in order, with the active uv
-    environment so they pick up the right Python.
+    ``results-published.json`` is the tracked run-level summary.
+    ``test-results-published.json`` is an ignored local per-test aggregate for
+    the per-test explorer; it can exceed GitHub's large-file limits and should
+    not be committed. ``clispecbench publish`` only writes the per-run files,
+    so the dashboard goes stale until these summaries are rebuilt. This helper
+    runs both scripts, in order, with the active uv environment so they pick up
+    the right Python.
 
     Returns 0 on success, non-zero if either script fails. Writes its own
     diagnostics to stderr so the caller can surface a clean message.
@@ -818,10 +820,11 @@ def main(argv: list[str] | None = None) -> None:
         "--rebuild-dashboard",
         action="store_true",
         help=(
-            "After publishing, regenerate the dashboard's results-published.json "
-            "and test-results-published.json so the new run shows up. Recommended "
-            "for one-shot publishes; for batch publishes, omit this and run "
-            "'clispecbench rebuild-dashboard' once at the end."
+            "After publishing, regenerate the dashboard's tracked "
+            "results-published.json and ignored local test-results-published.json "
+            "so the new run shows up. Recommended for one-shot publishes; for "
+            "batch publishes, omit this and run 'clispecbench rebuild-dashboard' "
+            "once at the end."
         ),
     )
 
@@ -829,8 +832,8 @@ def main(argv: list[str] | None = None) -> None:
     rebuild_parser = subparsers.add_parser(
         "rebuild-dashboard",
         help=(
-            "Regenerate published_results/web/{results,test-results}-published.json "
-            "from the current published_results/ tree."
+            "Regenerate tracked run-level and ignored local per-test dashboard "
+            "JSON from the current published_results/ tree."
         ),
     )
     # Reserved for future flags; argparse needs at least the subparser to dispatch.
