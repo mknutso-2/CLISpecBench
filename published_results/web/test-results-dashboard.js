@@ -37,6 +37,8 @@ const state = {
   pairOptions: [],
   outcomeOptions: [],
   selectedEvalLanguages: new Set(),
+  selectedEvalVersions: new Map(),
+  expandedVersionEvals: new Set(),
   selectedPairs: new Set(),
   selectedOutcomes: new Set(),
   viewMode: "matrix",
@@ -88,6 +90,7 @@ function cacheElements() {
     "test-matrix-table",
     "test-results-table",
     "test-search",
+    "version-list",
     "view-mode",
   ].forEach((id) => {
     elements[toCamelCase(id)] = document.getElementById(id);
@@ -137,6 +140,40 @@ function bindStaticControls() {
   elements.evalList.addEventListener("change", (event) => {
     updateSelectionFromCheckbox(event, state.selectedEvalLanguages);
   });
+  elements.versionList.addEventListener("click", (event) => {
+    const button = event.target.closest('button[data-action="toggle-versions"]');
+    if (!button) {
+      return;
+    }
+    const evalName = button.dataset.eval || "";
+    if (!evalName) {
+      return;
+    }
+    if (state.expandedVersionEvals.has(evalName)) {
+      state.expandedVersionEvals.delete(evalName);
+    } else {
+      state.expandedVersionEvals.add(evalName);
+    }
+    renderVersionFilters();
+  });
+  elements.versionList.addEventListener("change", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.dataset.group !== "eval-version") {
+      return;
+    }
+    const evalName = input.dataset.eval || "";
+    if (!state.selectedEvalVersions.has(evalName)) {
+      state.selectedEvalVersions.set(evalName, new Set());
+    }
+    const selectedVersions = state.selectedEvalVersions.get(evalName);
+    if (input.checked) {
+      selectedVersions.add(versionKey(input.value));
+    } else {
+      selectedVersions.delete(versionKey(input.value));
+    }
+    renderVersionFilters();
+    render();
+  });
   elements.outcomeList.addEventListener("change", (event) => {
     updateSelectionFromCheckbox(event, state.selectedOutcomes);
   });
@@ -179,6 +216,8 @@ async function loadData() {
       state.rows.some((row) => normalizedOutcome(row.outcome) === outcome),
     );
     state.selectedEvalLanguages = new Set(state.evalOptions);
+    state.selectedEvalVersions = getDefaultEvalVersionSelections();
+    state.expandedVersionEvals = new Set();
     state.selectedPairs = new Set(state.pairOptions);
     state.selectedOutcomes = new Set(state.outcomeOptions);
     renderFilters();
@@ -203,9 +242,57 @@ function renderFilters() {
   renderCheckboxList(elements.evalList, state.evalOptions, state.selectedEvalLanguages, {
     className: "eval-filter",
   });
+  renderVersionFilters();
   renderCheckboxList(elements.outcomeList, state.outcomeOptions, state.selectedOutcomes, {
     className: "outcome-filter",
     label: (outcome) => OUTCOME_LABELS[outcome] || outcome,
+  });
+}
+
+function renderVersionFilters() {
+  elements.versionList.replaceChildren();
+  getEvals().forEach((evalName) => {
+    const item = document.createElement("div");
+    item.className = "eval-filter-item";
+
+    const main = document.createElement("div");
+    main.className = "eval-filter-main";
+    const title = createTextCell("span", evalName, "eval-version-title");
+    const versions = getEvalVersions(evalName);
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "version-toggle";
+    toggle.dataset.action = "toggle-versions";
+    toggle.dataset.eval = evalName;
+    toggle.textContent = formatVersionSummary(evalName);
+    toggle.title = `Choose ${evalName} versions`;
+    toggle.setAttribute("aria-expanded", state.expandedVersionEvals.has(evalName) ? "true" : "false");
+    toggle.disabled = versions.length <= 1;
+    main.append(title, toggle);
+    item.append(main);
+
+    if (versions.length > 1) {
+      const versionList = document.createElement("div");
+      versionList.className = "version-list";
+      if (!state.expandedVersionEvals.has(evalName)) {
+        versionList.classList.add("hidden");
+      }
+      versions.forEach((version) => {
+        const label = document.createElement("label");
+        label.className = "version-option";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.dataset.group = "eval-version";
+        input.dataset.eval = evalName;
+        input.value = version;
+        input.checked = isEvalVersionSelected(evalName, version);
+        label.append(input, document.createTextNode(formatVersionLabel(version)));
+        versionList.append(label);
+      });
+      item.append(versionList);
+    }
+
+    elements.versionList.append(item);
   });
 }
 
@@ -268,6 +355,9 @@ function getFilteredRows() {
   const query = state.searchText;
   return state.rows.filter((row) => {
     if (!state.selectedEvalLanguages.has(row.eval_language)) {
+      return false;
+    }
+    if (!isRowVersionSelected(row)) {
       return false;
     }
     if (!state.selectedPairs.has(row.pair)) {
@@ -356,12 +446,14 @@ function getMatrixColumns() {
     const runColumns = state.runs
       .filter(
         (run) =>
-          state.selectedEvalLanguages.has(run.eval_language) && state.selectedPairs.has(run.pair),
+          state.selectedEvalLanguages.has(run.eval_language) &&
+          state.selectedPairs.has(run.pair) &&
+          isRunVersionSelected(run),
       )
       .map((run) => ({
         key: run.run_key,
         label: `${run.eval_language} ${formatPairShort(run)} #${run.run_id}`,
-        title: `${run.eval_language} ${formatPairFull(run)} run ${run.run_id}`,
+        title: `${run.eval_language} ${formatPairFull(run)} run ${run.run_id} (${formatVersionLabel(run.eval_version)})`,
       }))
       .sort((a, b) => a.label.localeCompare(b.label));
     return [allColumn, ...runColumns];
@@ -685,6 +777,13 @@ function getTableColumns() {
       },
     },
     {
+      key: "eval_version",
+      label: "Version",
+      render: (td, row) => {
+        td.textContent = formatVersionLabel(row.eval_version);
+      },
+    },
+    {
       key: "outcome",
       label: "Outcome",
       render: (td, row) => {
@@ -869,6 +968,114 @@ function normalizedOutcome(outcome) {
 
 function uniqueSorted(values) {
   return Array.from(new Set(values.filter(Boolean))).sort((a, b) => a.localeCompare(b));
+}
+
+function versionKey(version) {
+  return String(version ?? "");
+}
+
+function formatVersionLabel(version) {
+  return versionKey(version) || "n/a";
+}
+
+function parseVersionParts(version) {
+  return versionKey(version)
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .map((part) => Number(part));
+}
+
+function compareVersions(a, b) {
+  const aParts = parseVersionParts(a);
+  const bParts = parseVersionParts(b);
+  const maxLength = Math.max(aParts.length, bParts.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const diff = (aParts[index] || 0) - (bParts[index] || 0);
+    if (diff) {
+      return diff;
+    }
+  }
+  return versionKey(a).localeCompare(versionKey(b), undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+}
+
+function versionMajorKey(version) {
+  const parts = parseVersionParts(version);
+  if (parts.length) {
+    return String(parts[0]);
+  }
+  return versionKey(version) || "__unversioned__";
+}
+
+function getEvals() {
+  return uniqueSorted(state.rows.map((row) => row.eval));
+}
+
+function getEvalVersions(evalName) {
+  const versionSet = new Set();
+  state.rows.forEach((row) => {
+    if (row.eval === evalName) {
+      versionSet.add(versionKey(row.eval_version));
+    }
+  });
+  return Array.from(versionSet).sort((a, b) => compareVersions(b, a));
+}
+
+function getDefaultEvalVersionSelections() {
+  const selections = new Map();
+  getEvals().forEach((evalName) => {
+    const versions = getEvalVersions(evalName);
+    if (!versions.length) {
+      selections.set(evalName, new Set());
+      return;
+    }
+    const newestMajor = versionMajorKey(versions[0]);
+    selections.set(
+      evalName,
+      new Set(versions.filter((version) => versionMajorKey(version) === newestMajor)),
+    );
+  });
+  return selections;
+}
+
+function isEvalVersionSelected(evalName, version) {
+  const selectedVersions = state.selectedEvalVersions.get(evalName);
+  return Boolean(selectedVersions && selectedVersions.has(versionKey(version)));
+}
+
+function isRowVersionSelected(row) {
+  return isEvalVersionSelected(row.eval, row.eval_version);
+}
+
+function isRunVersionSelected(run) {
+  return isEvalVersionSelected(run.eval, run.eval_version);
+}
+
+function formatVersionSummary(evalName) {
+  const versions = getEvalVersions(evalName);
+  if (versions.length <= 1) {
+    return `Version: ${formatVersionLabel(versions[0])}`;
+  }
+  const selectedVersions = versions.filter((version) => isEvalVersionSelected(evalName, version));
+  if (!selectedVersions.length) {
+    return "Versions: none";
+  }
+  if (selectedVersions.length === versions.length) {
+    return "Versions: all";
+  }
+  const selectedMajors = new Set(selectedVersions.map(versionMajorKey));
+  const selectedMajor = Array.from(selectedMajors)[0];
+  const allMajorVersionsSelected =
+    selectedMajors.size === 1 &&
+    versions
+      .filter((version) => versionMajorKey(version) === selectedMajor)
+      .every((version) => selectedVersions.includes(version));
+  if (allMajorVersionsSelected) {
+    return `Versions: ${selectedMajor}.x`;
+  }
+  return `Versions: ${selectedVersions.map(formatVersionLabel).join(", ")}`;
 }
 
 function formatPairShort(row) {

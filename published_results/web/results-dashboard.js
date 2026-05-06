@@ -190,6 +190,8 @@ const STATE = {
   selectedPairs: new Set(),
   selectedLanguages: new Set(),
   selectedEvals: new Set(),
+  selectedEvalVersions: new Map(),
+  expandedVersionEvals: new Set(),
   viewMode: 'graph',
   xAxis: 'cost',
   yAxis: 'percent',
@@ -332,6 +334,8 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         reportType: STATE.reportType,
         errorBarMode: STATE.errorBarMode,
         selectedEvals: new Set(STATE.selectedEvals),
+        selectedEvalVersions: cloneVersionSelection(STATE.selectedEvalVersions),
+        expandedVersionEvals: new Set(STATE.expandedVersionEvals),
         viewMode: STATE.viewMode,
         tableMode: STATE.tableMode,
         tableGroupBy: STATE.tableGroupBy,
@@ -345,6 +349,8 @@ function initSelectionDefaults({ preserveView = false } = {}) {
   STATE.selectedPairs = new Set();
   STATE.selectedLanguages = new Set();
   STATE.selectedEvals = new Set();
+  STATE.selectedEvalVersions = getDefaultEvalVersionSelections();
+  STATE.expandedVersionEvals = new Set();
   STATE.hiddenColorKeys = new Set();
   const pairs = getPairs();
   const languages = getLanguages();
@@ -363,6 +369,10 @@ function initSelectionDefaults({ preserveView = false } = {}) {
   if (previousView) {
     const preservedEvals = evals.filter((evalName) => previousView.selectedEvals.has(evalName));
     STATE.selectedEvals = new Set(preservedEvals.length ? preservedEvals : evals);
+    STATE.selectedEvalVersions = mergeVersionSelectionWithDefaults(previousView.selectedEvalVersions);
+    STATE.expandedVersionEvals = new Set(
+      Array.from(previousView.expandedVersionEvals).filter((evalName) => evals.includes(evalName)),
+    );
     STATE.xAxis = previousView.xAxis;
     STATE.yAxis = previousView.yAxis;
     STATE.colorMode = previousView.colorMode;
@@ -470,9 +480,7 @@ function attachEvents() {
     evalSelectAllButton.addEventListener('click', () => {
       const evals = getEvals();
       STATE.selectedEvals = new Set(evals);
-      Array.from(evalListEl.querySelectorAll('input[data-group="eval"]')).forEach((input) => {
-        input.checked = true;
-      });
+      renderEvalList();
       updateAxisSelectors();
       syncErrorBarModeWithDefaults();
       render();
@@ -482,18 +490,46 @@ function attachEvents() {
   if (evalClearButton) {
     evalClearButton.addEventListener('click', () => {
       STATE.selectedEvals = new Set();
-      Array.from(evalListEl.querySelectorAll('input[data-group="eval"]')).forEach((input) => {
-        input.checked = false;
-      });
+      renderEvalList();
       updateAxisSelectors();
       syncErrorBarModeWithDefaults();
       render();
     });
   }
 
-  evalListEl.addEventListener('change', () => {
-    const selected = getCheckedValues(evalListEl, 'eval');
-    STATE.selectedEvals = new Set(selected);
+  evalListEl.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-action="toggle-versions"]');
+    if (!button) return;
+    const evalName = button.dataset.eval || '';
+    if (!evalName) return;
+    if (STATE.expandedVersionEvals.has(evalName)) {
+      STATE.expandedVersionEvals.delete(evalName);
+    } else {
+      STATE.expandedVersionEvals.add(evalName);
+    }
+    renderEvalList();
+  });
+
+  evalListEl.addEventListener('change', (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement)) return;
+    if (input.dataset.group === 'eval') {
+      const selected = getCheckedValues(evalListEl, 'eval');
+      STATE.selectedEvals = new Set(selected);
+      renderEvalList();
+    } else if (input.dataset.group === 'eval-version') {
+      const evalName = input.dataset.eval || '';
+      if (!STATE.selectedEvalVersions.has(evalName)) {
+        STATE.selectedEvalVersions.set(evalName, new Set());
+      }
+      const selectedVersions = STATE.selectedEvalVersions.get(evalName);
+      if (input.checked) {
+        selectedVersions.add(versionKey(input.value));
+      } else {
+        selectedVersions.delete(versionKey(input.value));
+      }
+      renderEvalList();
+    }
     updateAxisSelectors();
     syncErrorBarModeWithDefaults();
     render();
@@ -629,15 +665,60 @@ function renderLanguageList() {
 function renderEvalList() {
   evalListEl.replaceChildren();
   getEvals().forEach((evalName) => {
-    const row = document.createElement('label');
+    const item = document.createElement('div');
+    item.className = 'eval-filter-item';
+
+    const row = document.createElement('div');
+    row.className = 'eval-filter-main';
+    const label = document.createElement('label');
+    label.className = 'eval-filter-label';
     const cb = document.createElement('input');
     cb.type = 'checkbox';
     cb.dataset.group = 'eval';
     cb.value = evalName;
     cb.checked = STATE.selectedEvals.has(evalName);
-    row.appendChild(cb);
-    row.appendChild(document.createTextNode(evalName));
-    evalListEl.appendChild(row);
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(evalName));
+
+    const versions = getEvalVersions(evalName);
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'version-toggle';
+    toggle.dataset.action = 'toggle-versions';
+    toggle.dataset.eval = evalName;
+    toggle.textContent = formatVersionSummary(evalName);
+    toggle.title = `Choose ${evalName} versions`;
+    toggle.setAttribute('aria-expanded', STATE.expandedVersionEvals.has(evalName) ? 'true' : 'false');
+    toggle.disabled = versions.length <= 1;
+
+    row.append(label, toggle);
+    item.appendChild(row);
+
+    if (versions.length > 1) {
+      const versionList = document.createElement('div');
+      versionList.className = 'version-list';
+      if (!STATE.expandedVersionEvals.has(evalName)) {
+        versionList.classList.add('hidden');
+      }
+      versionList.dataset.eval = evalName;
+      versions.forEach((version) => {
+        const versionLabel = document.createElement('label');
+        versionLabel.className = 'version-option';
+        const versionInput = document.createElement('input');
+        versionInput.type = 'checkbox';
+        versionInput.dataset.group = 'eval-version';
+        versionInput.dataset.eval = evalName;
+        versionInput.value = version;
+        versionInput.checked = isEvalVersionSelected(evalName, version);
+        versionInput.disabled = !STATE.selectedEvals.has(evalName);
+        versionLabel.appendChild(versionInput);
+        versionLabel.appendChild(document.createTextNode(formatVersionLabel(version)));
+        versionList.appendChild(versionLabel);
+      });
+      item.appendChild(versionList);
+    }
+
+    evalListEl.appendChild(item);
   });
 }
 
@@ -881,6 +962,9 @@ function validateSelection() {
   if (!STATE.selectedEvals.size) {
     return { ok: false, message: 'Choose at least one eval.' };
   }
+  if (!getSelectedEvalVersionCount()) {
+    return { ok: false, message: 'Choose at least one version for the selected evals.' };
+  }
   if (!STATE.selectedPairs.size) {
     return { ok: false, message: 'Choose at least one agent/model pair.' };
   }
@@ -1109,6 +1193,7 @@ function formatStatusBreakdown(rows) {
 function getRowsForCurrentSelection(rows) {
   return rows.filter((row) => {
     if (!STATE.selectedEvals.has(row.eval)) return false;
+    if (!isRowVersionSelected(row)) return false;
     if (!STATE.selectedLanguages.has(row.language)) return false;
     if (!STATE.selectedPairs.has(rowPairId(row))) return false;
     return true;
@@ -1546,6 +1631,7 @@ function getRowsByPairForCurrentSelection() {
 
   STATE.rows.forEach((row) => {
     if (!STATE.selectedEvals.has(row.eval)) return;
+    if (!isRowVersionSelected(row)) return;
     if (!STATE.selectedLanguages.has(row.language)) return;
     const pairId = rowPairId(row);
     if (!rowsByPair.has(pairId)) rowsByPair.set(pairId, []);
@@ -3111,6 +3197,134 @@ function getEvals() {
     if (Number.isNaN(aNum) || Number.isNaN(bNum)) return a.localeCompare(b);
     return aNum - bNum;
   });
+}
+
+function getAllRows() {
+  return [...STATE.rows, ...STATE.excludedRows];
+}
+
+function versionKey(version) {
+  return String(version ?? '');
+}
+
+function formatVersionLabel(version) {
+  return versionKey(version) || 'n/a';
+}
+
+function parseVersionParts(version) {
+  return versionKey(version)
+    .split(/[^0-9]+/)
+    .filter(Boolean)
+    .map((part) => Number(part));
+}
+
+function compareVersions(a, b) {
+  const aParts = parseVersionParts(a);
+  const bParts = parseVersionParts(b);
+  const maxLength = Math.max(aParts.length, bParts.length);
+  for (let index = 0; index < maxLength; index += 1) {
+    const diff = (aParts[index] || 0) - (bParts[index] || 0);
+    if (diff) return diff;
+  }
+  return versionKey(a).localeCompare(versionKey(b), undefined, {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
+function versionMajorKey(version) {
+  const parts = parseVersionParts(version);
+  if (parts.length) return String(parts[0]);
+  return versionKey(version) || '__unversioned__';
+}
+
+function getEvalVersions(evalName) {
+  const versionSet = new Set();
+  getAllRows().forEach((row) => {
+    if (row.eval === evalName) versionSet.add(versionKey(row.eval_version));
+  });
+  return Array.from(versionSet).sort((a, b) => compareVersions(b, a));
+}
+
+function getDefaultEvalVersionSelections() {
+  const selections = new Map();
+  getEvals().forEach((evalName) => {
+    const versions = getEvalVersions(evalName);
+    if (!versions.length) {
+      selections.set(evalName, new Set());
+      return;
+    }
+    const newestMajor = versionMajorKey(versions[0]);
+    selections.set(
+      evalName,
+      new Set(versions.filter((version) => versionMajorKey(version) === newestMajor)),
+    );
+  });
+  return selections;
+}
+
+function cloneVersionSelection(selection) {
+  const clone = new Map();
+  selection.forEach((versions, evalName) => {
+    clone.set(evalName, new Set(versions));
+  });
+  return clone;
+}
+
+function mergeVersionSelectionWithDefaults(previousSelection) {
+  const defaults = getDefaultEvalVersionSelections();
+  const merged = new Map();
+  getEvals().forEach((evalName) => {
+    const availableVersions = new Set(getEvalVersions(evalName).map(versionKey));
+    const previousVersions = previousSelection.get(evalName);
+    const preserved = previousVersions
+      ? Array.from(previousVersions).filter((version) => availableVersions.has(versionKey(version)))
+      : [];
+    merged.set(
+      evalName,
+      new Set(preserved.length ? preserved.map(versionKey) : Array.from(defaults.get(evalName) || [])),
+    );
+  });
+  return merged;
+}
+
+function isEvalVersionSelected(evalName, version) {
+  const selectedVersions = STATE.selectedEvalVersions.get(evalName);
+  return Boolean(selectedVersions && selectedVersions.has(versionKey(version)));
+}
+
+function isRowVersionSelected(row) {
+  return isEvalVersionSelected(row.eval, row.eval_version);
+}
+
+function getSelectedEvalVersionCount() {
+  let count = 0;
+  STATE.selectedEvals.forEach((evalName) => {
+    const selectedVersions = STATE.selectedEvalVersions.get(evalName);
+    if (!selectedVersions) return;
+    count += selectedVersions.size;
+  });
+  return count;
+}
+
+function formatVersionSummary(evalName) {
+  const versions = getEvalVersions(evalName);
+  if (versions.length <= 1) {
+    return `Version: ${formatVersionLabel(versions[0])}`;
+  }
+  const selectedVersions = versions.filter((version) => isEvalVersionSelected(evalName, version));
+  if (!selectedVersions.length) return 'Versions: none';
+  if (selectedVersions.length === versions.length) return 'Versions: all';
+  const selectedMajors = new Set(selectedVersions.map(versionMajorKey));
+  const allMajorVersionsSelected =
+    selectedMajors.size === 1 &&
+    versions
+      .filter((version) => versionMajorKey(version) === Array.from(selectedMajors)[0])
+      .every((version) => selectedVersions.includes(version));
+  if (allMajorVersionsSelected) {
+    return `Versions: ${Array.from(selectedMajors)[0]}.x`;
+  }
+  return `Versions: ${selectedVersions.map(formatVersionLabel).join(', ')}`;
 }
 
 function isCategoricalXAxis(axisId = STATE.xAxis) {
