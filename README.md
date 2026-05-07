@@ -1,7 +1,7 @@
 # CLISpecBench
 
 A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from well-defined specifications.
-Agents receive a specification and domain docs, then are asked to produce a working CLI application that satisfies the spec. The submitted
+Agents receive a specification and domain docs, then are asked to produce a working CLI application that satisfies the spec. The documentation for these tasks is substantial, ranging from around 130k to over 2.8M tokens - requiring agents to make efficient use of search, context and compaction. The submitted
 code is built and run again a test suite (hidden from the agent) to measure adherence to the specification.
 Asking the agent to produce a CLI application allows us to evaluate its output when the submitted code is written in virtually any language (though the harness currently supports C++, Rust, Python and JavaScript).
 
@@ -261,8 +261,9 @@ clispecbench publish transient_results/<task>/<agent>/<model-effort>/eval<eval>/
   --published-dir published_results
 ```
 
-Set `--published-dir` to your target official root (for example `official_results`), and
-optionally add `--commentary <slug>` if you want to attach a markdown commentary file.
+The default official root is `published_results`; set `--published-dir` only when
+publishing into a different root. Optionally add `--commentary <slug>` if you want
+to attach a markdown commentary file.
 
 After publishing, regenerate dashboard data with `clispecbench rebuild-dashboard`, or
 pass `--rebuild-dashboard` for one-shot publishes. The run-level
