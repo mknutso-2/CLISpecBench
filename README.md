@@ -16,6 +16,7 @@ Asking the agent to produce a CLI application allows us to evaluate its output w
 - [How the Harness Runs an Eval](#how-the-harness-runs-an-eval)
 - [Running an Eval](#running-an-eval)
 - [Publish Official Results](#publish-official-results)
+- [Viewing Published Results](#viewing-published-results)
 - [Running Tests](#running-tests)
 - [Adding a Coding Agent](#adding-a-coding-agent)
 - [Adding a New Eval](#adding-a-new-eval)
@@ -262,6 +263,18 @@ pass `--rebuild-dashboard` for one-shot publishes. The run-level
 aggregate for the per-test explorer; it is intentionally ignored because it can
 grow past GitHub's file-size limits. Rebuild it locally when needed, but do not
 stage it.
+
+## Viewing Published Results
+
+Use the bundled launcher, which picks a free port, starts (or reuses) a local
+HTTP server, and opens the run-level explorer in your browser:
+
+```bash
+python published_results/start-dashboard.py
+```
+
+VS Code users can run the **Serve: Published Results Dashboard** task
+(`Ctrl+Shift+P` → *Tasks: Run Task*) instead of invoking the script manually.
 
 ## Running Tests
 
