@@ -5,6 +5,23 @@ Agents receive a specification and domain docs, then are asked to produce a work
 code is built and run again a test suite (hidden from the agent) to measure adherence to the specification.
 Asking the agent to produce a CLI application allows us to evaluate its output when the submitted code is written in virtually any language (though the harness currently supports C++, Rust, Python and JavaScript).
 
+## Table of Contents
+
+- [Core Concepts](#core-concepts)
+- [Repository Layout](#repository-layout)
+- [Eval List](#eval-list)
+- [Requirements](#requirements)
+- [Linting and Formatting](#linting-and-formatting)
+- [Environment Setup](#environment-setup)
+- [How the Harness Runs an Eval](#how-the-harness-runs-an-eval)
+- [Running an Eval](#running-an-eval)
+- [Publish Official Results](#publish-official-results)
+- [Running Tests](#running-tests)
+- [Adding a Coding Agent](#adding-a-coding-agent)
+- [Adding a New Eval](#adding-a-new-eval)
+- [Adding a Reference Implementation to an Existing Eval](#adding-a-reference-implementation-to-an-existing-eval)
+- [Adding a New Shared Evaluation Language](#adding-a-new-shared-evaluation-language)
+
 ## Core Concepts
 
 The repo is organized around a few core concepts:
@@ -16,12 +33,6 @@ The repo is organized around a few core concepts:
 | **Task** | A eval-language pair. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
 | **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/clispecbench/harness/`, `src/clispecbench/build/`, `src/clispecbench/cli.py` |
 | **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/clispecbench/tests/` |
-
-Two useful distinctions:
-
-- A **coding agent** is the external product being benchmarked.
-- An **agent adapter** is this repo's wrapper for that coding agent: auth mounting,
-  Docker image selection, CLI invocation, and token/message extraction.
 
 ## Repository Layout
 
@@ -46,67 +57,34 @@ docker/                  # Dockerfiles (base image + per-agent images)
 scripts/                 # Setup and utility scripts
 ```
 
-Design docs:
+## Eval List
 
-- `Eval-Design.md` -- benchmark-level design (scoring, task anatomy, eval modes)
-- `Harness-Design.md` -- evaluation harness architecture and implementation
-- `Evals/RS274/README.md` -- RS274 task design and test categories
-- `Evals/IGES/README.md` -- IGES eval design, scope, and contract notes
+RS274 serves as the flagship eval of the benchmark. The documentation corpus and hidden test suite were curated by a domain expert
+to create a comprehensive, challenging task for coding agents. The tests were written with the aid of coding agents but manually
+reviewed by that domain expert.
 
-## Benchmark Size and Runtime Estimates
+The other evals were chosen, designed, implemented, and critiqued primarily by coding agents without domain-expert review. The
+signal from these evals is likely weaker than RS274's and should be interpreted accordingly.
 
-Prompt and documentation token counts are local estimates, not provider-reported
-billing telemetry. They were counted on 2026-05-02 with `tiktoken`'s
+Token counts for each eval are presented below. Prompt and documentation token counts are local estimates, not provider-reported
+billing telemetry. They were counted with `tiktoken`'s
 `o200k_base` encoding over the raw UTF-8 prompt and `docs/` file text as
 shipped in the repo, with no Markdown, HTML, TeX, or other markup stripping.
-Actual provider tokenizers can vary; Anthropic documents that Opus 4.7 uses a
-new tokenizer that may count the same fixed text differently.
+Actual provider tokenizers can vary.
 
 Current shared language prompt sizes are: C++ 72 tokens, Python 72 tokens,
 JavaScript 90 tokens, and Rust 155 tokens.
 
 | Eval | Base prompt tokens | Technical prompt tokens | Language prompt range | `docs/` tokens |
 |---|---:|---:|---:|---:|
+| RS274 | 211 | 6,195 | 72-155 | 1,160,866 |
 | BibTeX | 429 | 778 | 72-155 | 153,023 |
 | GEDCOM | 179 | 1,119 | 72-155 | 138,470 |
 | ICal | 488 | 4,302 | 72-155 | 226,246 |
 | IGES | 142 | 18,817 | 72-155 | 1,253,040 |
 | LAS | 325 | 2,756 | 72-155 | 362,021 |
 | MARC21 | 271 | 1,103 | 72-155 | 2,838,927 |
-| RS274 | 211 | 6,195 | 72-155 | 1,160,866 |
 | WordCount | 76 | 160 | 72-155 | 638 |
-
-Run estimates below are medians with min-max ranges in parentheses, aggregated
-across completed published base-prompt runs in `published_results` for
-`claude-code` + `claude-opus-4-7` and `codex-cli` + `gpt-5.5`. Dollar estimates
-use the stored benchmark cost when present, or are recomputed from stored token
-usage using `src/clispecbench/harness/pricing.py`. Pricing assumptions match
-standard API rates verified on 2026-05-02: GPT-5.5 at $5.00/MTok input,
-$0.50/MTok cached input, and $30.00/MTok output
-([OpenAI API pricing](https://openai.com/api/pricing/)); Claude Opus 4.7 at
-$5/MTok base input, $10/MTok 1-hour cache write, $0.50/MTok cache read, and
-$25/MTok output
-([Anthropic pricing](https://platform.claude.com/docs/en/about-claude/pricing)).
-Batch and data-residency multipliers are not included.
-
-| Eval | Model | Runs | Languages | Total tokens | Cost | Wall time |
-|---|---|---:|---|---:|---:|---:|
-| BibTeX | Opus 4.7 | 8 | js, py, rs | 34.7M (14.0M-46.7M) | $27.85 ($12.59-$33.52) | 49.4 min (28.2-56.0 min) |
-| BibTeX | GPT 5.5 | 12 | cpp, js, py, rs | 5.1M (2.7M-8.5M) | $4.67 ($3.01-$6.72) | 17.8 min (14.0-21.9 min) |
-| GEDCOM | Opus 4.7 | 8 | cpp, js, rs | 7.8M (4.8M-9.2M) | $7.84 ($5.73-$10.34) | 19.2 min (15.4-30.9 min) |
-| GEDCOM | GPT 5.5 | 12 | cpp, js, py, rs | 3.3M (1.3M-6.9M) | $3.58 ($1.83-$5.28) | 15.0 min (9.7-20.8 min) |
-| ICal | Opus 4.7 | 9 | js, py, rs | 22.2M (11.2M-32.1M) | $17.93 ($11.58-$23.49) | 36.9 min (29.7-46.9 min) |
-| ICal | GPT 5.5 | 12 | cpp, js, py, rs | 5.6M (3.6M-9.6M) | $5.19 ($4.08-$7.65) | 21.9 min (17.2-27.3 min) |
-| IGES | Opus 4.7 | 10 | cpp, js, py, rs | 22.1M (15.0M-26.2M) | $19.26 ($13.57-$22.95) | 30.8 min (26.0-44.8 min) |
-| IGES | GPT 5.5 | 12 | cpp, js, py, rs | 8.6M (5.0M-11.3M) | $7.72 ($5.04-$10.78) | 25.9 min (17.8-40.0 min) |
-| LAS | Opus 4.7 | 8 | js, py, rs | 11.0M (6.0M-20.5M) | $12.81 ($8.88-$19.01) | 32.1 min (22.7-44.6 min) |
-| LAS | GPT 5.5 | 12 | cpp, js, py, rs | 2.8M (1.1M-6.0M) | $3.48 ($2.07-$6.16) | 19.6 min (13.2-28.3 min) |
-| MARC21 | Opus 4.7 | 4 | cpp, py | 15.9M (11.1M-20.1M) | $12.54 ($9.72-$15.09) | 19.0 min (17.4-23.3 min) |
-| MARC21 | GPT 5.5 | 13 | cpp, js, py, rs | 4.8M (3.6M-6.0M) | $4.85 ($3.47-$5.98) | 16.0 min (13.2-24.5 min) |
-| RS274 | Opus 4.7 | 12 | cpp, js, py, rs | 40.1M (22.9M-52.3M) | $30.97 ($19.90-$36.11) | 48.6 min (31.5-61.8 min) |
-| RS274 | GPT 5.5 | 12 | cpp, js, py, rs | 6.3M (3.1M-11.2M) | $5.87 ($3.80-$8.33) | 23.5 min (16.7-31.7 min) |
-| WordCount | Opus 4.7 | n/a | n/a | n/a | n/a | n/a |
-| WordCount | GPT 5.5 | n/a | n/a | n/a | n/a | n/a |
 
 ## Requirements
 
@@ -135,6 +113,18 @@ Requirements depend on what you plan to do on the **host machine**:
 - **Bundled in the Docker images, so not required on the host just to run evals**
   - **Node.js 22+** for the CLI-agent containers
   - **Rust stable** in `docker/base.Dockerfile` for sandbox/test-runner `--language=rs` workflows
+
+## Linting and Formatting
+
+This repository uses [Ruff](https://docs.astral.sh/ruff/) for linting and
+formatting, and [Pyright](https://github.com/microsoft/pyright) for type
+checking. Both are enforced in CI.
+
+```bash
+uv run ruff check          # lint
+uv run ruff format         # format
+uv run pyright             # type-check
+```
 
 ## Environment Setup
 
@@ -577,28 +567,6 @@ it has no configured reference implementation for that language. In that case,
 provide an explicit target with `--implementation-root` (or the eval-specific
 environment variable used by `EVAL_CONFIG`).
 
-## Exposing an Eval Through Harness Task IDs
-
-This is a **harness registration** change. Do this when you want an eval to be
-invokable through:
-
-- `clispecbench run --task ...`
-- `clispecbench validate --task ...`
-
-Add an entry to `_KNOWN_EVALS` in `src/clispecbench/harness/task.py`:
-
-```python
-_KNOWN_EVALS: dict[str, str] = {
-    "mytask": "Evals/MyTask",
-}
-```
-
-Task IDs are then exposed as `<eval>-<language>` for every shared language
-prompt in `Evals/_shared/`. This registration is separate from adding a
-reference implementation. Pytest can still exercise an explicit submission in a
-supported language via `--implementation-root` even if no configured reference
-implementation exists for that eval-language pair.
-
 ## Adding a New Shared Evaluation Language
 
 This is a **repo-wide language-support** change. Do this only when the harness
@@ -620,15 +588,3 @@ After that repo-wide support exists, you can separately choose whether to:
 
 - add reference implementations for specific evals in that language
 - expose specific eval-language pairs as harness tasks in `task.py`
-
-## Linting and Formatting
-
-This repository uses [Ruff](https://docs.astral.sh/ruff/) for linting and
-formatting, and [Pyright](https://github.com/microsoft/pyright) for type
-checking. Both are enforced in CI.
-
-```bash
-uv run ruff check          # lint
-uv run ruff format         # format
-uv run pyright             # type-check
-```
