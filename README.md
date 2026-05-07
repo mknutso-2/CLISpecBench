@@ -10,18 +10,21 @@ Asking the agent to produce a CLI application allows us to evaluate its output w
 - [Core Concepts](#core-concepts)
 - [Repository Layout](#repository-layout)
 - [Eval List](#eval-list)
-- [Requirements](#requirements)
-- [Linting and Formatting](#linting-and-formatting)
-- [Environment Setup](#environment-setup)
-- [How the Harness Runs an Eval](#how-the-harness-runs-an-eval)
+- [Getting Started](#getting-started)
+  - [Requirements](#requirements)
+  - [Linting and Formatting](#linting-and-formatting)
+  - [Environment Setup](#environment-setup)
+  - [Running Tests](#running-tests)
 - [Running an Eval](#running-an-eval)
-- [Publish Official Results](#publish-official-results)
-- [Viewing Published Results](#viewing-published-results)
-- [Running Tests](#running-tests)
-- [Adding a Coding Agent](#adding-a-coding-agent)
-- [Adding a New Eval](#adding-a-new-eval)
-- [Adding a Reference Implementation to an Existing Eval](#adding-a-reference-implementation-to-an-existing-eval)
-- [Adding a New Shared Evaluation Language](#adding-a-new-shared-evaluation-language)
+  - [How the Harness Runs an Eval](#how-the-harness-runs-an-eval)
+  - [Quickstart](#quickstart)
+  - [Publish Official Results](#publish-official-results)
+  - [Viewing Published Results](#viewing-published-results)
+- [Adding to the Benchmark](#adding-to-the-benchmark)
+  - [Adding a Coding Agent](#adding-a-coding-agent)
+  - [Adding a New Eval](#adding-a-new-eval)
+  - [Adding a Reference Implementation to an Existing Eval](#adding-a-reference-implementation-to-an-existing-eval)
+  - [Adding a New Shared Evaluation Language](#adding-a-new-shared-evaluation-language)
 
 ## Core Concepts
 
@@ -87,7 +90,9 @@ JavaScript 90 tokens, and Rust 155 tokens.
 | MARC21 | 271 | 1,103 | 72-155 | 2,838,927 |
 | WordCount | 76 | 160 | 72-155 | 638 |
 
-## Requirements
+## Getting Started
+
+### Requirements
 
 Requirements depend on what you plan to do on the **host machine**:
 
@@ -115,7 +120,7 @@ Requirements depend on what you plan to do on the **host machine**:
   - **Node.js 22+** for the CLI-agent containers
   - **Rust stable** in `docker/base.Dockerfile` for sandbox/test-runner `--language=rs` workflows
 
-## Linting and Formatting
+### Linting and Formatting
 
 This repository uses [Ruff](https://docs.astral.sh/ruff/) for linting and
 formatting, and [Pyright](https://github.com/microsoft/pyright) for type
@@ -127,15 +132,15 @@ uv run ruff format         # format
 uv run pyright             # type-check
 ```
 
-## Environment Setup
+### Environment Setup
 
-### 1. Install Python dependencies
+#### 1. Install Python dependencies
 
 ```bash
 uv sync          # or: pip install -e ".[dev]"
 ```
 
-### 2. Install Docker (Windows, one-time)
+#### 2. Install Docker (Windows, one-time)
 
 Run the install script from a WSL terminal (requires sudo password).
 This only needs to be done once per machine -- Docker persists across reboots.
@@ -153,7 +158,7 @@ exit
 wsl --shutdown
 ```
 
-### 3. Build Docker images
+#### 3. Build Docker images
 
 Build the base image and per-agent images:
 
@@ -166,7 +171,7 @@ and CLI agent images (`clispecbench-claude-code`,
 `clispecbench-codex-cli`, `clispecbench-copilot-cli`,
 `clispecbench-gemini-cli`) that extend it.
 
-### 4. Authenticate CLI agents
+#### 4. Authenticate CLI agents
 
 Log in to each agent CLI **on the host that runs the Python harness** --
 the harness mounts that host's home-directory credentials into the
@@ -196,87 +201,7 @@ harness and smoke tests.
 To verify auth works end-to-end inside containers, see the **Auth smoke
 tests** sub-section under [Running Tests](#running-tests).
 
-## How the Harness Runs an Eval
-
-Each eval task follows a standard pipeline:
-
-1. **Prompt assembly** -- The harness concatenates a base prompt (written in the voice of a domain expert with no coding knowledge)
- with the technical requirements prompt (which define the command line interface required by the test suite), implementation-language specific instructions,
- e.g. using C++20. The base prompt may also reference a `docs/` folder which can contain any relevant documentation that the agent may consult during implementation.
-
-2. **Agent invocation** -- The agent runs inside a Docker container with the
-   prompt, docs, and the host auth credentials for the coding agents mounted.
-   Network access follows the study condition documented in
-   `Agent-Run-Notes.md`. The original API-only intent was not enforced for
-   already-published runs, so the current study preserves the same effective
-   access level for comparability.
-
-3. **Build** -- The agent output is prepared and run via a language-specific backend in the
-   harness: C++ is built with CMake, Rust with Cargo, and Python/JavaScript submissions
-   are run directly.
-
-4. **Test** -- The eval's hidden pytest test suite runs against the built executable.
-   Results are captured as structured JSON via pytest-json-report.
-
-5. **Scoring** -- Per-test pass/fail, token usage, timing, and composite scores
-   are written to a `RunResult` JSON file at
-   `transient_results/<task>/<agent>/<model-effort>/eval<N>/run<M>/result.json`.
-   The run folder also stores sibling artifacts (`transcript.jsonl`, `source/`,
-   telemetry copies), and `eval<N>/progress.txt` is updated after each completed run.
-
-6. **Publish (optional)** -- Promote a transient result to the official published tree
-   by using the `clispecbench publish` command (shown in the next section).
-
-## Running an Eval
-
-```bash
-clispecbench run --task wordcount-cpp --agent claude-code
-clispecbench run --task rs274-cpp --agent codex-cli
-clispecbench run --task iges-cpp --agent copilot-cli
-```
-
-View results:
-
-```bash
-clispecbench results
-```
-
-## Publish Official Results
-
-Use `clispecbench publish` to copy a transient result into the published results tree:
-
-```bash
-clispecbench publish transient_results/<task>/<agent>/<model-effort>/eval<eval>/run<run>/result.json \
-  --status "Complete" \
-  --last-message "..." \
-  --published-dir published_results
-```
-
-The default official root is `published_results`; set `--published-dir` only when
-publishing into a different root. Optionally add `--commentary <slug>` if you want
-to attach a markdown commentary file.
-
-After publishing, regenerate dashboard data with `clispecbench rebuild-dashboard`, or
-pass `--rebuild-dashboard` for one-shot publishes. The run-level
-`published_results/web/results-published.json` file is tracked. The per-test
-`published_results/web/test-results-published.json` file is a generated local
-aggregate for the per-test explorer; it is intentionally ignored because it can
-grow past GitHub's file-size limits. Rebuild it locally when needed, but do not
-stage it.
-
-## Viewing Published Results
-
-Use the bundled launcher, which picks a free port, starts (or reuses) a local
-HTTP server, and opens the run-level explorer in your browser:
-
-```bash
-python published_results/start-dashboard.py
-```
-
-VS Code users can run the **Serve: Published Results Dashboard** task
-(`Ctrl+Shift+P` → *Tasks: Run Task*) instead of invoking the script manually.
-
-## Running Tests
+### Running Tests
 
 This project has four categories of tests. CI runs the first three on
 every PR; the fourth is a hand-run diagnostic for new-machine setup.
@@ -288,7 +213,7 @@ every PR; the fourth is a hand-run diagnostic for new-machine setup.
 | [**Container smoke tests**](#harness-tests)               | `src/clispecbench/tests/` (`docker` marker)  | `pytest` | No API cost         | Docker daemon + built images         |
 | [**Auth smoke tests**](#auth-smoke-tests)                 | `scripts/smoke-test-*.sh`                      | bash     | ~pennies of tokens  | Docker + agent creds + built images  |
 
-### Eval reference tests
+#### Eval reference tests
 
 Each task's hidden test suite, run against its reference implementation:
 
@@ -314,7 +239,7 @@ pytest Evals/WordCount/tests --language=cpp --implementation-root /path/to/agent
 pytest Evals/WordCount/tests --language=py --implementation-root /path/to/py-output
 ```
 
-### Harness tests
+#### Harness tests
 
 The harness has its own pytest suite under `src/clispecbench/tests/`.
 Tests are tagged with markers so you can pick a subset:
@@ -348,7 +273,7 @@ MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 
 (See [3. Build Docker images](#3-build-docker-images) for details.)
 
-#### Windows: pointing pytest at the WSL2 Docker daemon
+##### Windows: pointing pytest at the WSL2 Docker daemon
 
 On Windows, the Python `docker` library's auto-detection doesn't always
 find the WSL2 daemon. If a `docker`-marked test fails with
@@ -361,7 +286,7 @@ DOCKER_HOST=tcp://localhost:2375 uv run pytest src/clispecbench/tests -m "docker
 This points the harness at the TCP listener that
 `scripts/install-docker-wsl.sh` configures on the WSL daemon.
 
-### Auth smoke tests
+#### Auth smoke tests
 
 To verify each agent CLI authenticates correctly inside its container,
 run the per-agent smoke-test scripts. These send a one-word prompt
@@ -396,7 +321,91 @@ These are standalone diagnostics -- not part of `pytest` and not run by
 CI. They are the right place to look for the per-agent credential
 mounting strategy that the harness uses.
 
-## Adding a Coding Agent
+## Running an Eval
+
+### How the Harness Runs an Eval
+
+Each eval task follows a standard pipeline:
+
+1. **Prompt assembly** -- The harness concatenates a base prompt (written in the voice of a domain expert with no coding knowledge)
+ with the technical requirements prompt (which define the command line interface required by the test suite), implementation-language specific instructions,
+ e.g. using C++20. The base prompt may also reference a `docs/` folder which can contain any relevant documentation that the agent may consult during implementation.
+
+2. **Agent invocation** -- The agent runs inside a Docker container with the
+   prompt, docs, and the host auth credentials for the coding agents mounted.
+   Network access follows the study condition documented in
+   `Agent-Run-Notes.md`. The original API-only intent was not enforced for
+   already-published runs, so the current study preserves the same effective
+   access level for comparability.
+
+3. **Build** -- The agent output is prepared and run via a language-specific backend in the
+   harness: C++ is built with CMake, Rust with Cargo, and Python/JavaScript submissions
+   are run directly.
+
+4. **Test** -- The eval's hidden pytest test suite runs against the built executable.
+   Results are captured as structured JSON via pytest-json-report.
+
+5. **Scoring** -- Per-test pass/fail, token usage, timing, and composite scores
+   are written to a `RunResult` JSON file at
+   `transient_results/<task>/<agent>/<model-effort>/eval<N>/run<M>/result.json`.
+   The run folder also stores sibling artifacts (`transcript.jsonl`, `source/`,
+   telemetry copies), and `eval<N>/progress.txt` is updated after each completed run.
+
+6. **Publish (optional)** -- Promote a transient result to the official published tree
+   by using the `clispecbench publish` command (shown in the next section).
+
+### Quickstart
+
+```bash
+clispecbench run --task wordcount-cpp --agent claude-code
+clispecbench run --task rs274-cpp --agent codex-cli
+clispecbench run --task iges-cpp --agent copilot-cli
+```
+
+View results:
+
+```bash
+clispecbench results
+```
+
+### Publish Official Results
+
+Use `clispecbench publish` to copy a transient result into the published results tree:
+
+```bash
+clispecbench publish transient_results/<task>/<agent>/<model-effort>/eval<eval>/run<run>/result.json \
+  --status "Complete" \
+  --last-message "..." \
+  --published-dir published_results
+```
+
+The default official root is `published_results`; set `--published-dir` only when
+publishing into a different root. Optionally add `--commentary <slug>` if you want
+to attach a markdown commentary file.
+
+After publishing, regenerate dashboard data with `clispecbench rebuild-dashboard`, or
+pass `--rebuild-dashboard` for one-shot publishes. The run-level
+`published_results/web/results-published.json` file is tracked. The per-test
+`published_results/web/test-results-published.json` file is a generated local
+aggregate for the per-test explorer; it is intentionally ignored because it can
+grow past GitHub's file-size limits. Rebuild it locally when needed, but do not
+stage it.
+
+### Viewing Published Results
+
+Use the bundled launcher, which picks a free port, starts (or reuses) a local
+HTTP server, and opens the run-level explorer in your browser:
+
+```bash
+python published_results/start-dashboard.py
+```
+
+VS Code users can run the **Serve: Published Results Dashboard** task
+(`Ctrl+Shift+P` → *Tasks: Run Task*) instead of invoking the script manually.
+
+## Adding to the Benchmark
+
+### Adding a Coding Agent
 
 Adding a new coding agent is currently spread across a few touchpoints.
 
@@ -427,7 +436,7 @@ Adding a new coding agent is currently spread across a few touchpoints.
   network policy before starting a separately labeled restricted-access run
   series.
 
-## Adding a New Eval
+### Adding a New Eval
 
 1. **Create the eval directory** under `Evals/<Task>/`.
 2. **Add the prompt/docs/tests/reference implementation** under that directory.
@@ -506,7 +515,7 @@ pytest Evals/MyTask/tests --language=cpp -v
 pytest Evals/MyTask/tests --language=py -v       # if a Python reference exists
 ```
 
-### Versioning
+#### Versioning
 
 Each eval has a `VERSION` file (semver) and a `CHANGELOG.md`. **Both must be
 bumped on any change an agent or scoring run can observe.** That includes:
@@ -534,7 +543,7 @@ records `test_suite_version` from the git SHA on every run, but the per-eval
 keep the changelog entry concrete enough that you could regenerate the diff
 from the description.
 
-### Prompt authoring guidelines
+#### Prompt authoring guidelines
 
 - `base-prompt.md` should describe the task from a domain expert perspective
   without engineering guidance. The agent should figure out the implementation.
@@ -549,7 +558,7 @@ from the description.
   an existing one.
 - `docs/` contains reference material the agent can use (specs, standards, etc.).
 
-## Adding a Reference Implementation to an Existing Eval
+### Adding a Reference Implementation to an Existing Eval
 
 This is an **eval-local** change. You are adding a reference implementation for
 an existing eval in a language the repo already knows how to build and run.
@@ -580,7 +589,7 @@ it has no configured reference implementation for that language. In that case,
 provide an explicit target with `--implementation-root` (or the eval-specific
 environment variable used by `EVAL_CONFIG`).
 
-## Adding a New Shared Evaluation Language
+### Adding a New Shared Evaluation Language
 
 This is a **repo-wide language-support** change. Do this only when the harness
 does not yet know how to build/run a language at all.
