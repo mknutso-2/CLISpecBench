@@ -1,0 +1,2358 @@
+{
+  "schema_version": "2.0",
+  "metadata": {
+    "run_uid": "a2dc953d-592e-4bec-a4dd-a9076da5599e",
+    "task": "bibtex-js",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 3,
+    "timestamp": "2026-05-07T02:52:31.888073+00:00",
+    "test_suite_version": "411405a",
+    "eval_version": "1.2.1",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 1329.3440000000046,
+    "exit_reason": "completed",
+    "model": "gpt-5.3-codex",
+    "effort": "xhigh",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "8f92eb619416d681e693a7d7d7b52184b1b2f9158e83439b81fe961776ce3446",
+    "test_suite_sha": "d5de7dfc019b8743cdd04561365a1d55cce015aa5ea99ea6ca4886861c831d49",
+    "agent_last_message": "Implemented in [output/main.js](/workspace/output/main.js).\n\nWhat\u2019s included:\n\n- Full CLI handling for:\n  - `--bib`, `--style`, `--cites`, `--aux`, `--output`, optional `--log`\n  - `--cites` + `--aux` concatenation order with deduplication\n- `.bib` parser with:\n  - regular entries, `@string`, `@preamble`, `@comment`\n  - `{}` and `()` entry delimiters\n  - `#` concatenation\n  - predefined month macros + user macro overrides\n  - unresolved macro warnings\n  - duplicate key warnings\n  - case-insensitive cite matching\n  - crossref inheritance (non-transitive), unresolved/cycle warnings\n- `.bst` parser/interpreter with:\n  - top-level commands (`ENTRY`, `INTEGERS`, `STRINGS`, `FUNCTION`, `MACRO`, `READ`, `EXECUTE`, `ITERATE`, `REVERSE`, `SORT`)\n  - function literals, quoted function refs, integers, strings, operators\n  - symbol resolution + load-time undefined checks\n  - runtime stack machine execution\n  - built-ins needed by canonical styles (`plain/alpha/unsrt/abbrv`) including:\n    - `format.name$`, `num.names$`, `purify$`, `change.case$`, `text.length$`, `text.prefix$`, `width$`, `substring$`, etc.\n- `.bbl` writer with LF output and BibTeX-style 79-column wrapping behavior.\n- Error contract:\n  - exit `1` for parse/load/runtime failures in contract scope\n  - exit `2` for unexpected internal errors\n  - on exit `1`, writes structured error JSON to `--output`\n- Structured `--log` JSON generation (always JSON if requested), including counters and chronological warnings.\n\nI also ran functional checks against all four canonical styles using sample `.bib` inputs and verified successful execution paths and failure JSON behavior.",
+    "exit_class": null
+  },
+  "token_usage": {
+    "input_tokens": 6029041,
+    "output_tokens": 54292,
+    "cache_read_input_tokens": 5800832,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 66,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 2.174599,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 6083333
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.027061864000643254,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_bib_parsing.py::test_simple_article",
+      "outcome": "passed",
+      "duration_seconds": 0.03367828500086034,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_entry_type_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.03324547499869368,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_key_case_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.03350436700202408,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_field_name_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.037162606999118,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_paren_delimited_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.034315465001782286,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_braced_field_value",
+      "outcome": "passed",
+      "duration_seconds": 0.03419276399836235,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_number_field_value",
+      "outcome": "passed",
+      "duration_seconds": 0.0304548350013647,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_non_entry_text_before_at_ignored",
+      "outcome": "passed",
+      "duration_seconds": 0.036768711999684456,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_trailing_comma_accepted",
+      "outcome": "passed",
+      "duration_seconds": 0.03389031899860129,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_string_macro_resolution",
+      "outcome": "passed",
+      "duration_seconds": 0.030921898000087822,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_string_macro_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.038120127997899544,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_string_concatenation_hash",
+      "outcome": "passed",
+      "duration_seconds": 0.03494263799802866,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_predefined_month_jan",
+      "outcome": "passed",
+      "duration_seconds": 0.03083435400367307,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_string_macro_overrides_month",
+      "outcome": "passed",
+      "duration_seconds": 0.02636034799979825,
+      "message": null
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_crossref_inheritance",
+      "outcome": "failed",
+      "duration_seconds": 0.027419056998041924,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_crossref_inheritance0')\n\n    def test_crossref_inheritance(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        bib = \"\"\"\n    @proceedings{parent, title = \"Proc Volume\", year = 2020, publisher = \"ACM\"}\n    @inproceedings{child, author = \"Jones\", title = \"Paper X\", crossref = \"parent\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, [\"child\"], tmp_path)\n        rec = _entries(bbl)[\"child\"]\n>       assert rec[\"year\"] == \"2020\"\n               ^^^^^^^^^^^\nE       KeyError: 'year'\n\n/tmp/tests/test_bib_parsing.py:118: KeyError"
+    },
+    {
+      "node_id": "test_bib_parsing.py::test_crossref_case_insensitive_lookup",
+      "outcome": "failed",
+      "duration_seconds": 0.03384881600140943,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_crossref_case_insensitive0')\n\n    def test_crossref_case_insensitive_lookup(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        bib = (\n            \"@proceedings{Parent, year = 2020}\\n\"\n            '@inproceedings{child, crossref = \"PARENT\", title = \"x\"}\\n'\n        )\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, [\"child\"], tmp_path)\n>       assert _entries(bbl)[\"child\"][\"year\"] == \"2020\"\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       KeyError: 'year'\n\n/tmp/tests/test_bib_parsing.py:131: KeyError"
+    },
+    {
+      "node_id": "test_bst_language.py::test_add",
+      "outcome": "passed",
+      "duration_seconds": 0.030667246997836628,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_sub",
+      "outcome": "passed",
+      "duration_seconds": 0.02773021499888273,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_greater_than",
+      "outcome": "passed",
+      "duration_seconds": 0.03055035600118572,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_less_than",
+      "outcome": "passed",
+      "duration_seconds": 0.0335668869993242,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_equal_int",
+      "outcome": "passed",
+      "duration_seconds": 0.027854631001900998,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_equal_string",
+      "outcome": "passed",
+      "duration_seconds": 0.03023768399907567,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_string_concat",
+      "outcome": "passed",
+      "duration_seconds": 0.030650135000541923,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_pop",
+      "outcome": "passed",
+      "duration_seconds": 0.027720329999283422,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_swap",
+      "outcome": "passed",
+      "duration_seconds": 0.029330651999771362,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_duplicate",
+      "outcome": "passed",
+      "duration_seconds": 0.030522883998855832,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_if_true_branch",
+      "outcome": "passed",
+      "duration_seconds": 0.028077817001758376,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_if_false_branch",
+      "outcome": "passed",
+      "duration_seconds": 0.029677792999791563,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_while_loop",
+      "outcome": "passed",
+      "duration_seconds": 0.03049521899811225,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_skip_is_noop",
+      "outcome": "passed",
+      "duration_seconds": 0.028942519000338507,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_add_period",
+      "outcome": "passed",
+      "duration_seconds": 0.027282871002171305,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_add_period_preserves_final_punct",
+      "outcome": "passed",
+      "duration_seconds": 0.0296599029970821,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_chr_to_int",
+      "outcome": "passed",
+      "duration_seconds": 0.02718329999879643,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_int_to_chr",
+      "outcome": "passed",
+      "duration_seconds": 0.036924871999872266,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_int_to_str",
+      "outcome": "passed",
+      "duration_seconds": 0.03098962999865762,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_substring",
+      "outcome": "passed",
+      "duration_seconds": 0.02950398199936899,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_text_length",
+      "outcome": "passed",
+      "duration_seconds": 0.030417450001550606,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_text_length_brace_group_counts_contents",
+      "outcome": "passed",
+      "duration_seconds": 0.029136447998098447,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_text_prefix",
+      "outcome": "passed",
+      "duration_seconds": 0.029252255999381305,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_change_case_lower",
+      "outcome": "passed",
+      "duration_seconds": 0.030721129001904046,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_change_case_upper",
+      "outcome": "passed",
+      "duration_seconds": 0.029111047997503192,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_change_case_title",
+      "outcome": "passed",
+      "duration_seconds": 0.031329077000918915,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_change_case_protects_braces",
+      "outcome": "passed",
+      "duration_seconds": 0.02797647599800257,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_purify_strips_punctuation",
+      "outcome": "failed",
+      "duration_seconds": 0.04344051699808915,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_purify_strips_punctuation0')\n\n    def test_purify_strips_punctuation(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        bbl = _run_with_execute(submission_command, tmp_path, '\"Hello, World!\" purify$ write$')\n>       assert bbl.strip() == \"Hello World\"\nE       AssertionError: assert 'HelloWorld' == 'Hello World'\nE         \nE         - Hello World\nE         ?      -\nE         + HelloWorld\n\n/tmp/tests/test_bst_language.py:239: AssertionError"
+    },
+    {
+      "node_id": "test_bst_language.py::test_quote_pushes_double_quote",
+      "outcome": "passed",
+      "duration_seconds": 0.03379018399937195,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_cite_in_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.03324684399922262,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_type_in_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.034139680001317174,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_empty_on_missing_field",
+      "outcome": "failed",
+      "duration_seconds": 0.03028826400077378,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_empty_on_missing_field0')\n\n    def test_empty_on_missing_field(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n>       bbl = _run_with_body(submission_command, tmp_path, \"journal empty$ int.to.str$ write$\")\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_bst_language.py:261: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_bst_language.py:46: in _run_with_body\n    bbl, _ = run_bibtex(submission_command, bib, style, cites or [\"a\"], tmp_path)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ('/usr/bin/node', '/tmp/submission/output/main.js')\nbib_text = '@article{a, author = \"Smith\", title = \"TA\", year = 2024}\\n'\nstyle_text = 'ENTRY { author title year } { } { }\\nFUNCTION {f} { journal empty$ int.to.str$ write$ newline$ }\\nREAD\\nITERATE {f}\\n'\ncites = ['a']\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_empty_on_missing_field0')\n\n    def run_bibtex(\n        command: tuple[str, ...],\n        bib_text: str,\n        style_text: str,\n        cites: list[str] | str,\n        tmp_path: Path,\n        *,\n        timeout: int = 30,\n        expect_exit: int = 0,\n        with_log: bool = False,\n        aux_text: str | None = None,\n    ) -> tuple[str, dict[str, Any] | None]:\n        \"\"\"Run bibtex with a bib, a style, and cites (or aux). Returns (bbl_text,\n        log_dict_or_None). Asserts exit code.\"\"\"\n        bib_file = tmp_path / \"refs.bib\"\n        bst_file = tmp_path / \"style.bst\"\n        output_file = tmp_path / \"out.bbl\"\n        log_file = tmp_path / \"out.log\" if with_log else None\n        bib_file.write_text(bib_text, encoding=\"utf-8\")\n        bst_file.write_text(style_text, encoding=\"utf-8\")\n    \n        args: list[str] = [\n            *command,\n            \"--bib\",\n            str(bib_file),\n            \"--style\",\n            str(bst_file),\n            \"--output\",\n            str(output_file),\n        ]\n        if aux_text is not None:\n            aux_file = tmp_path / \"paper.aux\"\n            aux_file.write_text(aux_text, encoding=\"utf-8\")\n            args += [\"--aux\", str(aux_file)]\n        if cites or aux_text is None:\n            cites_file = tmp_path / \"cites.txt\"\n            cites_text = cites if isinstance(cites, str) else \"\\n\".join(cites) + \"\\n\"\n            cites_file.write_text(cites_text, encoding=\"utf-8\")\n            args += [\"--cites\", str(cites_file)]\n        if log_file is not None:\n            args += [\"--log\", str(log_file)]\n    \n        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)\n>       assert result.returncode == expect_exit, (\n            f\"bibtex exited with {result.returncode} (expected {expect_exit})\\n\"\n            f\"stdout: {result.stdout}\\nstderr: {result.stderr}\"\n        )\nE       AssertionError: bibtex exited with 1 (expected 0)\nE         stdout: \nE         stderr: \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--bib', '/tmp/pytest-of-root/pytest-0/test_... '--cites', '/tmp/pytest-of-root/pytest-0/test_empty_on_missing_field0/cites.txt'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/conftest.py:221: AssertionError"
+    },
+    {
+      "node_id": "test_bst_language.py::test_empty_on_nonempty_string",
+      "outcome": "passed",
+      "duration_seconds": 0.02943041899925447,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_missing_on_missing",
+      "outcome": "failed",
+      "duration_seconds": 0.035338028999831295,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_missing_on_missing0')\n\n    def test_missing_on_missing(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n>       bbl = _run_with_body(submission_command, tmp_path, \"journal missing$ int.to.str$ write$\")\n              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_bst_language.py:271: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_bst_language.py:46: in _run_with_body\n    bbl, _ = run_bibtex(submission_command, bib, style, cites or [\"a\"], tmp_path)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ('/usr/bin/node', '/tmp/submission/output/main.js')\nbib_text = '@article{a, author = \"Smith\", title = \"TA\", year = 2024}\\n'\nstyle_text = 'ENTRY { author title year } { } { }\\nFUNCTION {f} { journal missing$ int.to.str$ write$ newline$ }\\nREAD\\nITERATE {f}\\n'\ncites = ['a']\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_missing_on_missing0')\n\n    def run_bibtex(\n        command: tuple[str, ...],\n        bib_text: str,\n        style_text: str,\n        cites: list[str] | str,\n        tmp_path: Path,\n        *,\n        timeout: int = 30,\n        expect_exit: int = 0,\n        with_log: bool = False,\n        aux_text: str | None = None,\n    ) -> tuple[str, dict[str, Any] | None]:\n        \"\"\"Run bibtex with a bib, a style, and cites (or aux). Returns (bbl_text,\n        log_dict_or_None). Asserts exit code.\"\"\"\n        bib_file = tmp_path / \"refs.bib\"\n        bst_file = tmp_path / \"style.bst\"\n        output_file = tmp_path / \"out.bbl\"\n        log_file = tmp_path / \"out.log\" if with_log else None\n        bib_file.write_text(bib_text, encoding=\"utf-8\")\n        bst_file.write_text(style_text, encoding=\"utf-8\")\n    \n        args: list[str] = [\n            *command,\n            \"--bib\",\n            str(bib_file),\n            \"--style\",\n            str(bst_file),\n            \"--output\",\n            str(output_file),\n        ]\n        if aux_text is not None:\n            aux_file = tmp_path / \"paper.aux\"\n            aux_file.write_text(aux_text, encoding=\"utf-8\")\n            args += [\"--aux\", str(aux_file)]\n        if cites or aux_text is None:\n            cites_file = tmp_path / \"cites.txt\"\n            cites_text = cites if isinstance(cites, str) else \"\\n\".join(cites) + \"\\n\"\n            cites_file.write_text(cites_text, encoding=\"utf-8\")\n            args += [\"--cites\", str(cites_file)]\n        if log_file is not None:\n            args += [\"--log\", str(log_file)]\n    \n        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)\n>       assert result.returncode == expect_exit, (\n            f\"bibtex exited with {result.returncode} (expected {expect_exit})\\n\"\n            f\"stdout: {result.stdout}\\nstderr: {result.stderr}\"\n        )\nE       AssertionError: bibtex exited with 1 (expected 0)\nE         stdout: \nE         stderr: \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--bib', '/tmp/pytest-of-root/pytest-0/test_...bl', '--cites', '/tmp/pytest-of-root/pytest-0/test_missing_on_missing0/cites.txt'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/conftest.py:221: AssertionError"
+    },
+    {
+      "node_id": "test_bst_language.py::test_preamble",
+      "outcome": "passed",
+      "duration_seconds": 0.03953161999925214,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_assign_global_integer",
+      "outcome": "passed",
+      "duration_seconds": 0.03161551600169332,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_assign_global_string",
+      "outcome": "passed",
+      "duration_seconds": 0.03397195900288352,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_num_names",
+      "outcome": "passed",
+      "duration_seconds": 0.031033102999572293,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_format_name_first_last",
+      "outcome": "passed",
+      "duration_seconds": 0.03976442100065469,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_sort_by_sort_key",
+      "outcome": "passed",
+      "duration_seconds": 0.03324465999867243,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_reverse_iterates_backward",
+      "outcome": "passed",
+      "duration_seconds": 0.03468259999863221,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_log_records_iterations",
+      "outcome": "passed",
+      "duration_seconds": 0.031119961000513285,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_log_records_missing_cite",
+      "outcome": "passed",
+      "duration_seconds": 0.029410828999971272,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_language.py::test_log_records_macros",
+      "outcome": "passed",
+      "duration_seconds": 0.03475648400126374,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_negative_integer_literal",
+      "outcome": "passed",
+      "duration_seconds": 0.036145371001111926,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_zero_integer_literal",
+      "outcome": "passed",
+      "duration_seconds": 0.031059303999427357,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_integer_literal_arithmetic",
+      "outcome": "passed",
+      "duration_seconds": 0.030809736001174315,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_negative_minus_positive_arithmetic",
+      "outcome": "passed",
+      "duration_seconds": 0.032467032000568,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_nested_function_literal_via_while",
+      "outcome": "passed",
+      "duration_seconds": 0.02996077300122124,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_function_literal_as_if_branch",
+      "outcome": "passed",
+      "duration_seconds": 0.029950864000056754,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_deeply_nested_function_literals",
+      "outcome": "passed",
+      "duration_seconds": 0.029778416999761248,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_comment_at_eol_after_expression",
+      "outcome": "passed",
+      "duration_seconds": 0.03255755600002885,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_full_line_comment",
+      "outcome": "passed",
+      "duration_seconds": 0.039668742998401285,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_iterate_before_read_is_error",
+      "outcome": "failed",
+      "duration_seconds": 0.03633412099952693,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_iterate_before_read_is_er0')\n\n    def test_iterate_before_read_is_error(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"Per btxhak \u00a73.1, ITERATE requires READ to have run first.\"\"\"\n        style = \"\"\"\\\n    ENTRY { } { } { }\n    FUNCTION {f} { cite$ write$ newline$ }\n    ITERATE {f}\n    READ\n    \"\"\"\n>       bbl, _ = run_bibtex(submission_command, MINI_BIB, style, [\"a\"], tmp_path, expect_exit=1)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_bst_parser_edges.py:184: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ('/usr/bin/node', '/tmp/submission/output/main.js')\nbib_text = '@misc{a}\\n'\nstyle_text = 'ENTRY { } { } { }\\nFUNCTION {f} { cite$ write$ newline$ }\\nITERATE {f}\\nREAD\\n'\ncites = ['a']\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_iterate_before_read_is_er0')\n\n    def run_bibtex(\n        command: tuple[str, ...],\n        bib_text: str,\n        style_text: str,\n        cites: list[str] | str,\n        tmp_path: Path,\n        *,\n        timeout: int = 30,\n        expect_exit: int = 0,\n        with_log: bool = False,\n        aux_text: str | None = None,\n    ) -> tuple[str, dict[str, Any] | None]:\n        \"\"\"Run bibtex with a bib, a style, and cites (or aux). Returns (bbl_text,\n        log_dict_or_None). Asserts exit code.\"\"\"\n        bib_file = tmp_path / \"refs.bib\"\n        bst_file = tmp_path / \"style.bst\"\n        output_file = tmp_path / \"out.bbl\"\n        log_file = tmp_path / \"out.log\" if with_log else None\n        bib_file.write_text(bib_text, encoding=\"utf-8\")\n        bst_file.write_text(style_text, encoding=\"utf-8\")\n    \n        args: list[str] = [\n            *command,\n            \"--bib\",\n            str(bib_file),\n            \"--style\",\n            str(bst_file),\n            \"--output\",\n            str(output_file),\n        ]\n        if aux_text is not None:\n            aux_file = tmp_path / \"paper.aux\"\n            aux_file.write_text(aux_text, encoding=\"utf-8\")\n            args += [\"--aux\", str(aux_file)]\n        if cites or aux_text is None:\n            cites_file = tmp_path / \"cites.txt\"\n            cites_text = cites if isinstance(cites, str) else \"\\n\".join(cites) + \"\\n\"\n            cites_file.write_text(cites_text, encoding=\"utf-8\")\n            args += [\"--cites\", str(cites_file)]\n        if log_file is not None:\n            args += [\"--log\", str(log_file)]\n    \n        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)\n>       assert result.returncode == expect_exit, (\n            f\"bibtex exited with {result.returncode} (expected {expect_exit})\\n\"\n            f\"stdout: {result.stdout}\\nstderr: {result.stderr}\"\n        )\nE       AssertionError: bibtex exited with 0 (expected 1)\nE         stdout: \nE         stderr: \nE       assert 0 == 1\nE        +  where 0 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--bib', '/tmp/pytest-of-root/pytest-0/test_...-cites', '/tmp/pytest-of-root/pytest-0/test_iterate_before_read_is_er0/cites.txt'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/conftest.py:221: AssertionError"
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_execute_before_read_is_permitted",
+      "outcome": "passed",
+      "duration_seconds": 0.0308857550007815,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_missing_entry_declaration_prevents_entry_access",
+      "outcome": "failed",
+      "duration_seconds": 0.02883485200072755,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_missing_entry_declaration0')\n\n    def test_missing_entry_declaration_prevents_entry_access(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Without ENTRY, entry-scoped field access is unavailable. The tool\n        may either reject the .bst at load time or silently return empty/missing\n        when the undefined fields are referenced; we only assert that the tool\n        does not produce an .bbl containing nonsense field values.\"\"\"\n        # A .bst that doesn't declare ENTRY at all but tries to access a field.\n        style = \"\"\"\\\n    FUNCTION {f} { title write$ }\n    READ\n    EXECUTE {f}\n    \"\"\"\n>       bbl, log = run_bibtex(\n            submission_command,\n            '@article{a, title = \"T\"}\\n',\n            style,\n            [\"a\"],\n            tmp_path,\n            expect_exit=0,  # Accept either behavior\n            with_log=True,\n        )\n\n/tmp/tests/test_bst_parser_edges.py:216: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ('/usr/bin/node', '/tmp/submission/output/main.js')\nbib_text = '@article{a, title = \"T\"}\\n'\nstyle_text = 'FUNCTION {f} { title write$ }\\nREAD\\nEXECUTE {f}\\n', cites = ['a']\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_missing_entry_declaration0')\n\n    def run_bibtex(\n        command: tuple[str, ...],\n        bib_text: str,\n        style_text: str,\n        cites: list[str] | str,\n        tmp_path: Path,\n        *,\n        timeout: int = 30,\n        expect_exit: int = 0,\n        with_log: bool = False,\n        aux_text: str | None = None,\n    ) -> tuple[str, dict[str, Any] | None]:\n        \"\"\"Run bibtex with a bib, a style, and cites (or aux). Returns (bbl_text,\n        log_dict_or_None). Asserts exit code.\"\"\"\n        bib_file = tmp_path / \"refs.bib\"\n        bst_file = tmp_path / \"style.bst\"\n        output_file = tmp_path / \"out.bbl\"\n        log_file = tmp_path / \"out.log\" if with_log else None\n        bib_file.write_text(bib_text, encoding=\"utf-8\")\n        bst_file.write_text(style_text, encoding=\"utf-8\")\n    \n        args: list[str] = [\n            *command,\n            \"--bib\",\n            str(bib_file),\n            \"--style\",\n            str(bst_file),\n            \"--output\",\n            str(output_file),\n        ]\n        if aux_text is not None:\n            aux_file = tmp_path / \"paper.aux\"\n            aux_file.write_text(aux_text, encoding=\"utf-8\")\n            args += [\"--aux\", str(aux_file)]\n        if cites or aux_text is None:\n            cites_file = tmp_path / \"cites.txt\"\n            cites_text = cites if isinstance(cites, str) else \"\\n\".join(cites) + \"\\n\"\n            cites_file.write_text(cites_text, encoding=\"utf-8\")\n            args += [\"--cites\", str(cites_file)]\n        if log_file is not None:\n            args += [\"--log\", str(log_file)]\n    \n        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)\n>       assert result.returncode == expect_exit, (\n            f\"bibtex exited with {result.returncode} (expected {expect_exit})\\n\"\n            f\"stdout: {result.stdout}\\nstderr: {result.stderr}\"\n        )\nE       AssertionError: bibtex exited with 1 (expected 0)\nE         stdout: \nE         stderr: \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--bib', '/tmp/pytest-of-root/pytest-0/test_..., '--log', '/tmp/pytest-of-root/pytest-0/test_missing_entry_declaration0/out.log'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/conftest.py:221: AssertionError"
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_duplicate_function_definition_is_either_error_or_override",
+      "outcome": "passed",
+      "duration_seconds": 0.03315489100350533,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_bst_macro_definition_is_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.034130699999877834,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_quoted_name_assigns_function_by_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.03479990199957683,
+      "message": null
+    },
+    {
+      "node_id": "test_bst_parser_edges.py::test_unknown_function_reference_fails_or_warns",
+      "outcome": "passed",
+      "duration_seconds": 0.0343345089986542,
+      "message": null
+    },
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.027061864000643254,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_single_lowercase_letter_is_cmr10_value",
+      "outcome": "passed",
+      "duration_seconds": 0.03195468600097229,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_space_is_cmr10_value",
+      "outcome": "passed",
+      "duration_seconds": 0.036056271001143614,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_uppercase_letter_not_less_than_lowercase",
+      "outcome": "passed",
+      "duration_seconds": 0.0672721620012453,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_three_letters_sums",
+      "outcome": "passed",
+      "duration_seconds": 0.06876453099903301,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_brace_group_sums_interior",
+      "outcome": "passed",
+      "duration_seconds": 0.05998824600101216,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_ligature_ae_is_positive",
+      "outcome": "failed",
+      "duration_seconds": 0.030893381997884717,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_width_ligature_ae_is_posi0')\n\n    def test_width_ligature_ae_is_positive(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"The AE ligature special {\\\\AE} has a positive, non-zero width.\"\"\"\n        bbl, _ = _exec(submission_command, tmp_path, r'\"{\\AE}\" width$ int.to.str$ write$')\n>       assert int(bbl.strip()) > 0\nE       AssertionError: assert 0 > 0\nE        +  where 0 = int('0')\nE        +    where '0' = <built-in method strip of str object at 0x7fb90dafbc60>()\nE        +      where <built-in method strip of str object at 0x7fb90dafbc60> = '0\\n'.strip\n\n/tmp/tests/test_builtins_deep.py:172: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_space_less_than_letter",
+      "outcome": "passed",
+      "duration_seconds": 0.036461535999478656,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_width_used_as_sort_key_breaks_ties_by_read_order",
+      "outcome": "passed",
+      "duration_seconds": 0.03250349100017047,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_lower_preserves_brace_group_ascii",
+      "outcome": "passed",
+      "duration_seconds": 0.039933598000061465,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_upper_preserves_brace_group",
+      "outcome": "passed",
+      "duration_seconds": 0.035146213998814346,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_title_preserves_after_colon_space",
+      "outcome": "passed",
+      "duration_seconds": 0.029505096999855596,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_title_does_not_preserve_after_period_space",
+      "outcome": "passed",
+      "duration_seconds": 0.03203362000022025,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_title_does_not_preserve_after_comma",
+      "outcome": "passed",
+      "duration_seconds": 0.036022147000039695,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_title_preserves_first_letter",
+      "outcome": "passed",
+      "duration_seconds": 0.03411595999932615,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_mode_char_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.065377331997297,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_upper_mode_char_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.07016800900055387,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_empty_string_returns_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.036362481998367,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_change_case_preserves_digits_and_punct",
+      "outcome": "passed",
+      "duration_seconds": 0.03308004399877973,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_top_preserves_following_stack",
+      "outcome": "passed",
+      "duration_seconds": 0.03069548000348732,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_stack_dumps_without_affecting_output",
+      "outcome": "passed",
+      "duration_seconds": 0.04311209199659061,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_stack_preserves_post_execution_flow",
+      "outcome": "passed",
+      "duration_seconds": 0.03753478199905658,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_top_after_write_still_writes",
+      "outcome": "passed",
+      "duration_seconds": 0.031947522998962086,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_stack_between_writes_does_not_drop_earlier_output",
+      "outcome": "passed",
+      "duration_seconds": 0.035765598999205395,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_warning_during_iterate_has_key_metadata",
+      "outcome": "failed",
+      "duration_seconds": 0.03903608099972189,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_during_iterate_ha0')\n\n    def test_warning_during_iterate_has_key_metadata(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"warning$ emitted inside ITERATE should carry the current entry's key\n        (spec \u00a75.4 warning schema permits optional ``key`` field; if the tool\n        sets it, it must match the iterating entry).\"\"\"\n        _, log = _iterate(\n            submission_command,\n            tmp_path,\n            '\"flag\" warning$',\n            cites=[\"b\"],\n            with_log=True,\n        )\n        warnings = _log_warnings(log)\n>       assert any(w.get(\"message\", \"\") == \"flag\" or \"flag\" in w.get(\"message\", \"\") for w in warnings)\nE       assert False\nE        +  where False = any(<generator object test_warning_during_iterate_has_key_metadata.<locals>.<genexpr> at 0x7fb90dd020a0>)\n\n/tmp/tests/test_builtins_deep.py:425: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_warning_during_execute_has_null_key",
+      "outcome": "failed",
+      "duration_seconds": 0.04049213700091059,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_during_execute_ha0')\n\n    def test_warning_during_execute_has_null_key(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"warning$ emitted inside EXECUTE (no current entry) has key=null or absent.\"\"\"\n        _, log = _exec(\n            submission_command,\n            tmp_path,\n            '\"no-ctx\" warning$',\n            with_log=True,\n        )\n        warnings = _log_warnings(log)\n        flag_warnings = [w for w in warnings if \"no-ctx\" in w.get(\"message\", \"\")]\n>       assert flag_warnings\nE       assert []\n\n/tmp/tests/test_builtins_deep.py:445: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_warning_multiple_preserves_order",
+      "outcome": "failed",
+      "duration_seconds": 0.048225350999928196,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_multiple_preserve0')\n\n    def test_warning_multiple_preserves_order(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Multiple warning$ emissions appear in the log in emission order.\"\"\"\n        _, log = _exec(\n            submission_command,\n            tmp_path,\n            '\"first\" warning$ \"second\" warning$ \"third\" warning$',\n            with_log=True,\n        )\n        warnings = _log_warnings(log)\n        msgs = [w.get(\"message\", \"\") for w in warnings]\n        # Find the three markers in the list; their relative order must match.\n        first_idx = next((i for i, m in enumerate(msgs) if \"first\" in m), -1)\n        second_idx = next((i for i, m in enumerate(msgs) if \"second\" in m), -1)\n        third_idx = next((i for i, m in enumerate(msgs) if \"third\" in m), -1)\n>       assert first_idx != -1 and second_idx != -1 and third_idx != -1\nE       assert (-1 != -1)\n\n/tmp/tests/test_builtins_deep.py:468: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_warning_empty_message_still_emits",
+      "outcome": "failed",
+      "duration_seconds": 0.03568534000078216,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_empty_message_sti0')\n\n    def test_warning_empty_message_still_emits(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"warning$ with an empty string still produces a warning entry (spec \u00a75.3).\"\"\"\n        _, log = _exec(\n            submission_command,\n            tmp_path,\n            '\"marker-a\" warning$ \"\" warning$ \"marker-b\" warning$',\n            with_log=True,\n        )\n        warnings = _log_warnings(log)\n        # At least the two marker warnings must be present; the empty one is\n        # harder to detect definitively (we don't pin what kind field it carries),\n        # so only assert the markers surround it in count.\n        marker_count = sum(\n            1\n            for w in warnings\n            if \"marker-a\" in w.get(\"message\", \"\") or \"marker-b\" in w.get(\"message\", \"\")\n        )\n>       assert marker_count >= 2\nE       assert 0 >= 2\n\n/tmp/tests/test_builtins_deep.py:491: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_warning_inside_iterate_emits_per_entry",
+      "outcome": "failed",
+      "duration_seconds": 0.036488201996689895,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_inside_iterate_em0')\n\n    def test_warning_inside_iterate_emits_per_entry(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"One warning$ per entry across ITERATE = one warning per entry in log.\"\"\"\n        _, log = _iterate(\n            submission_command,\n            tmp_path,\n            '\"per-entry\" warning$',\n            with_log=True,\n        )\n        warnings = _log_warnings(log)\n        count = sum(1 for w in warnings if \"per-entry\" in w.get(\"message\", \"\"))\n>       assert count == 3, f\"expected 3 warnings (one per entry), got {count}\"\nE       AssertionError: expected 3 warnings (one per entry), got 0\nE       assert 0 == 3\n\n/tmp/tests/test_builtins_deep.py:506: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_warning_does_not_affect_stack",
+      "outcome": "passed",
+      "duration_seconds": 0.03616602899819554,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_chr_to_int_ascii_letter",
+      "outcome": "passed",
+      "duration_seconds": 0.031256028998541296,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_int_to_chr_ascii_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04025854300016363,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_chr_int_roundtrip_symmetric",
+      "outcome": "passed",
+      "duration_seconds": 0.0356049960009841,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_chr_to_int_multichar_emits_type_error",
+      "outcome": "passed",
+      "duration_seconds": 0.03187312699992617,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_preserves_alphanumerics",
+      "outcome": "failed",
+      "duration_seconds": 0.03546395599914831,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_purify_preserves_alphanum0')\n\n    def test_purify_preserves_alphanumerics(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        bbl, _ = _exec(submission_command, tmp_path, '\"Hello 2024\" purify$ write$')\n>       assert bbl.rstrip(\"\\n\") == \"Hello 2024\"\nE       AssertionError: assert 'Hello2024' == 'Hello 2024'\nE         \nE         - Hello 2024\nE         ?      -\nE         + Hello2024\n\n/tmp/tests/test_builtins_deep.py:581: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_strips_trailing_punctuation",
+      "outcome": "passed",
+      "duration_seconds": 0.03185588899941649,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_hyphen_becomes_space",
+      "outcome": "passed",
+      "duration_seconds": 0.03991903899805038,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_tilde_becomes_space",
+      "outcome": "passed",
+      "duration_seconds": 0.041261544998633326,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_ae_ligature_restored_as_letters",
+      "outcome": "passed",
+      "duration_seconds": 0.03321336499902827,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_brace_group_with_only_punct_is_stripped",
+      "outcome": "passed",
+      "duration_seconds": 0.0351871820002998,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_deep.py::test_purify_is_idempotent",
+      "outcome": "passed",
+      "duration_seconds": 0.07684076800069306,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_plus_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03608179500042752,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_plus_zero_identity",
+      "outcome": "passed",
+      "duration_seconds": 0.03854402900105924,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_plus_negative",
+      "outcome": "passed",
+      "duration_seconds": 0.033910209998794016,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_plus_type_error_pushes_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.03221031400244101,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_minus_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03900536499895679,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_minus_negative_result",
+      "outcome": "passed",
+      "duration_seconds": 0.04047053799877176,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_minus_zero_edge",
+      "outcome": "passed",
+      "duration_seconds": 0.03351683899927593,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_greater_true",
+      "outcome": "passed",
+      "duration_seconds": 0.03733520400237467,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_greater_false",
+      "outcome": "passed",
+      "duration_seconds": 0.042769072999362834,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_greater_equal_is_false",
+      "outcome": "passed",
+      "duration_seconds": 0.04364168900065124,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_less_true",
+      "outcome": "passed",
+      "duration_seconds": 0.0423495750001166,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_less_false",
+      "outcome": "passed",
+      "duration_seconds": 0.037758602999019786,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_equal_int_true",
+      "outcome": "passed",
+      "duration_seconds": 0.034737108000626904,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_equal_int_false",
+      "outcome": "passed",
+      "duration_seconds": 0.028829213000790332,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_equal_string_true",
+      "outcome": "passed",
+      "duration_seconds": 0.02957698299906042,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_equal_string_false",
+      "outcome": "passed",
+      "duration_seconds": 0.03295932999753859,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_equal_empty_strings",
+      "outcome": "passed",
+      "duration_seconds": 0.032950505999906454,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_equal_cross_type_is_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.03738588300257106,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_concat_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03738978299952578,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_concat_empty_left",
+      "outcome": "passed",
+      "duration_seconds": 0.039029552001011325,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_concat_empty_right",
+      "outcome": "passed",
+      "duration_seconds": 0.041244664000259945,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_concat_type_error_pushes_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.04321598900241952,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_assign_integer",
+      "outcome": "passed",
+      "duration_seconds": 0.04024888199819543,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_assign_string",
+      "outcome": "passed",
+      "duration_seconds": 0.039737892999255564,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_assign_empty_string_edge",
+      "outcome": "passed",
+      "duration_seconds": 0.03790817499975674,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_substring_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.037281259001247236,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_substring_zero_length",
+      "outcome": "passed",
+      "duration_seconds": 0.03506762200049707,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_substring_from_end_negative_start",
+      "outcome": "passed",
+      "duration_seconds": 0.03959227099767304,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_text_length_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03400090799914324,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_text_length_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.03552299199873232,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_text_length_control_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.038184603001354844,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_text_prefix_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.04704705699987244,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_text_prefix_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.04582775200105971,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_text_prefix_longer_than_string",
+      "outcome": "passed",
+      "duration_seconds": 0.039628488000744255,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_width_nonzero_on_text",
+      "outcome": "passed",
+      "duration_seconds": 0.04142592300013348,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_width_empty_is_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.03975672899832716,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_width_longer_string_has_greater_width",
+      "outcome": "passed",
+      "duration_seconds": 0.03944194300129311,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_add_period_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.041456801001913846,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_add_period_preserves_existing_period",
+      "outcome": "passed",
+      "duration_seconds": 0.03317561800031399,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_add_period_preserves_question_mark",
+      "outcome": "passed",
+      "duration_seconds": 0.03767070199864975,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_add_period_preserves_exclamation",
+      "outcome": "passed",
+      "duration_seconds": 0.0410287779995997,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_add_period_ignores_trailing_braces",
+      "outcome": "passed",
+      "duration_seconds": 0.03902226899845118,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_change_case_lower",
+      "outcome": "passed",
+      "duration_seconds": 0.04160982399844215,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_change_case_upper",
+      "outcome": "passed",
+      "duration_seconds": 0.04432682699916768,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_change_case_title",
+      "outcome": "passed",
+      "duration_seconds": 0.04473168499862368,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_change_case_preserves_braces",
+      "outcome": "passed",
+      "duration_seconds": 0.039764511997418595,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_change_case_on_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.037992113997461274,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_chr_to_int_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03461384299953352,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_chr_to_int_lowercase",
+      "outcome": "passed",
+      "duration_seconds": 0.03662886299935053,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_chr_to_int_wrong_length_is_error",
+      "outcome": "passed",
+      "duration_seconds": 0.035188296000342234,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_int_to_chr_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03769632200055639,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_int_to_chr_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.03693438399932347,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_int_to_str_positive",
+      "outcome": "passed",
+      "duration_seconds": 0.04157934799877694,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_int_to_str_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.03880313099944033,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_int_to_str_negative",
+      "outcome": "passed",
+      "duration_seconds": 0.03906539599665848,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_purify_normal",
+      "outcome": "failed",
+      "duration_seconds": 0.03620466699976532,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_purify_normal0')\n\n    def test_purify_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        bbl, _ = _exec(submission_command, tmp_path, '\"Hello, World!\" purify$ write$')\n>       assert bbl.strip() == \"Hello World\"\nE       AssertionError: assert 'HelloWorld' == 'Hello World'\nE         \nE         - Hello World\nE         ?      -\nE         + HelloWorld\n\n/tmp/tests/test_builtins_exhaustive.py:492: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_purify_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.03567531900080212,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_purify_only_punctuation",
+      "outcome": "passed",
+      "duration_seconds": 0.037668977998691844,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_format_name_last",
+      "outcome": "passed",
+      "duration_seconds": 0.03726361600092787,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_format_name_first_initial",
+      "outcome": "passed",
+      "duration_seconds": 0.03392619599981117,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_format_name_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.03363103499941644,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_num_names_one",
+      "outcome": "passed",
+      "duration_seconds": 0.03655980700204964,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_num_names_three",
+      "outcome": "passed",
+      "duration_seconds": 0.0346998530003475,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_if_true_branch",
+      "outcome": "passed",
+      "duration_seconds": 0.03039391500169586,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_if_false_branch",
+      "outcome": "passed",
+      "duration_seconds": 0.03154091499891365,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_if_nonzero_is_true",
+      "outcome": "failed",
+      "duration_seconds": 0.03399351999905775,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_if_nonzero_is_true0')\n\n    def test_if_nonzero_is_true(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"Per spec, condition is \"nonzero \u2192 true\", not just 1.\"\"\"\n        bbl, _ = _exec(\n            submission_command,\n            tmp_path,\n            '#-1 { \"yes\" write$ } { \"no\" write$ } if$',\n        )\n>       assert bbl.strip() == \"yes\"\nE       AssertionError: assert 'no' == 'yes'\nE         \nE         - yes\nE         + no\n\n/tmp/tests/test_builtins_exhaustive.py:609: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_while_counts_down",
+      "outcome": "passed",
+      "duration_seconds": 0.030087835000813357,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_while_condition_false_from_start",
+      "outcome": "passed",
+      "duration_seconds": 0.03158693800105539,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_skip_is_noop",
+      "outcome": "passed",
+      "duration_seconds": 0.02814866799781157,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_skip_leaves_stack_untouched",
+      "outcome": "passed",
+      "duration_seconds": 0.034688899000684614,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_pop_discards_top",
+      "outcome": "passed",
+      "duration_seconds": 0.028800028998375637,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_swap_two",
+      "outcome": "passed",
+      "duration_seconds": 0.02846437900007004,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_duplicate",
+      "outcome": "passed",
+      "duration_seconds": 0.029565864999312907,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_cite",
+      "outcome": "passed",
+      "duration_seconds": 0.02887776399984432,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_type_is_lowercased",
+      "outcome": "passed",
+      "duration_seconds": 0.03482968899879779,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_call_type_dispatches",
+      "outcome": "passed",
+      "duration_seconds": 0.03606720600146218,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_empty_on_missing_field",
+      "outcome": "passed",
+      "duration_seconds": 0.036971034000089276,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_empty_on_whitespace_string",
+      "outcome": "passed",
+      "duration_seconds": 0.04128391899939743,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_empty_on_nonempty_string",
+      "outcome": "passed",
+      "duration_seconds": 0.03306789199996274,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_missing_on_missing_field",
+      "outcome": "passed",
+      "duration_seconds": 0.03470029100026295,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_missing_vs_empty_string",
+      "outcome": "passed",
+      "duration_seconds": 0.034710846999587375,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_preamble_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03256474599947978,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_preamble_empty_when_none",
+      "outcome": "passed",
+      "duration_seconds": 0.03667458000018087,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_preamble_concatenated",
+      "outcome": "passed",
+      "duration_seconds": 0.03386361699995177,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_write_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.03305599600025744,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_write_empty_string",
+      "outcome": "passed",
+      "duration_seconds": 0.03545430800113536,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_newline_emits_lf",
+      "outcome": "passed",
+      "duration_seconds": 0.03365401799965184,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_quote_pushes_double_quote",
+      "outcome": "passed",
+      "duration_seconds": 0.029924823998953798,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_quote_within_string_build",
+      "outcome": "passed",
+      "duration_seconds": 0.03283292000014626,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_top_is_noop_on_output",
+      "outcome": "passed",
+      "duration_seconds": 0.028580523998243734,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_stack_does_not_crash",
+      "outcome": "passed",
+      "duration_seconds": 0.02918714899715269,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_warning_emits_entry_in_log",
+      "outcome": "failed",
+      "duration_seconds": 0.030245294999986072,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_warning_emits_entry_in_lo0')\n\n    def test_warning_emits_entry_in_log(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"warning$ appends to the warnings log (spec \u00a75.2/\u00a75.3).\"\"\"\n        _, log = _exec(\n            submission_command,\n            tmp_path,\n            '\"something odd\" warning$',\n            with_log=True,\n        )\n        assert log is not None\n        # The warning must be present somewhere. We don't pin the exact kind \u2014\n        # only that the user-supplied message appears in the warnings list.\n        msgs = [w.get(\"message\", \"\") for w in log.get(\"warnings\", [])]\n>       assert any(\"something odd\" in m for m in msgs)\nE       assert False\nE        +  where False = any(<generator object test_warning_emits_entry_in_log.<locals>.<genexpr> at 0x7fb90dbec520>)\n\n/tmp/tests/test_builtins_exhaustive.py:853: AssertionError"
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_warning_does_not_abort",
+      "outcome": "passed",
+      "duration_seconds": 0.03804760599996371,
+      "message": null
+    },
+    {
+      "node_id": "test_builtins_exhaustive.py::test_warning_empty_message_allowed",
+      "outcome": "passed",
+      "duration_seconds": 0.03450386099939351,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_concat_two_literals",
+      "outcome": "passed",
+      "duration_seconds": 0.027462650001325528,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_concat_three_literals",
+      "outcome": "passed",
+      "duration_seconds": 0.028418346999387722,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_concat_with_empty_is_identity",
+      "outcome": "passed",
+      "duration_seconds": 0.030173082999681355,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_concat_number_and_string",
+      "outcome": "passed",
+      "duration_seconds": 0.02885670800060325,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_concat_two_numbers",
+      "outcome": "passed",
+      "duration_seconds": 0.0290003970003454,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_macro_used_in_concatenation",
+      "outcome": "passed",
+      "duration_seconds": 0.027994313999442966,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_macro_redefinition_last_wins",
+      "outcome": "passed",
+      "duration_seconds": 0.026890059998549987,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_macro_redefinition_does_not_affect_prior_uses",
+      "outcome": "passed",
+      "duration_seconds": 0.02720348900038516,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_macro_concat_with_self",
+      "outcome": "passed",
+      "duration_seconds": 0.03074215799824742,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_macro_chain",
+      "outcome": "passed",
+      "duration_seconds": 0.027544890001081512,
+      "message": null
+    },
+    {
+      "node_id": "test_concat_and_macros.py::test_macro_case_insensitive_concat",
+      "outcome": "passed",
+      "duration_seconds": 0.02814914900045551,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_global_integer_persists_across_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.025942991000192706,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_global_string_persists_across_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.026298755998141132,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_entry_integer_resets_between_entries",
+      "outcome": "failed",
+      "duration_seconds": 0.0299942799974815,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_entry_integer_resets_betw0')\n\n    def test_entry_integer_resets_between_entries(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"An ENTRY-scoped INTEGER initialized to 0 per entry is always 0 on\n        entry into each iteration, regardless of what the previous iteration\n        set it to.\"\"\"\n        style = \"\"\"\\\n    ENTRY { } { slot } { }\n    FUNCTION {check.and.bump}\n    { slot int.to.str$ write$ \" \" * write$\n      slot #99 + 'slot := }\n    FUNCTION {init.slot} { #0 'slot := }\n    READ\n    ITERATE {init.slot}\n    ITERATE {check.and.bump}\n    \"\"\"\n>       bbl, _ = run_bibtex(submission_command, THREE_BIB, style, [\"a\", \"b\", \"c\"], tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_cross_entry_state.py:92: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ('/usr/bin/node', '/tmp/submission/output/main.js')\nbib_text = '@misc{a}\\n@misc{b}\\n@misc{c}\\n'\nstyle_text = 'ENTRY { } { slot } { }\\nFUNCTION {check.and.bump}\\n{ slot int.to.str$ write$ \" \" * write$\\n  slot #99 + \\'slot := }\\nFUNCTION {init.slot} { #0 \\'slot := }\\nREAD\\nITERATE {init.slot}\\nITERATE {check.and.bump}\\n'\ncites = ['a', 'b', 'c']\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_entry_integer_resets_betw0')\n\n    def run_bibtex(\n        command: tuple[str, ...],\n        bib_text: str,\n        style_text: str,\n        cites: list[str] | str,\n        tmp_path: Path,\n        *,\n        timeout: int = 30,\n        expect_exit: int = 0,\n        with_log: bool = False,\n        aux_text: str | None = None,\n    ) -> tuple[str, dict[str, Any] | None]:\n        \"\"\"Run bibtex with a bib, a style, and cites (or aux). Returns (bbl_text,\n        log_dict_or_None). Asserts exit code.\"\"\"\n        bib_file = tmp_path / \"refs.bib\"\n        bst_file = tmp_path / \"style.bst\"\n        output_file = tmp_path / \"out.bbl\"\n        log_file = tmp_path / \"out.log\" if with_log else None\n        bib_file.write_text(bib_text, encoding=\"utf-8\")\n        bst_file.write_text(style_text, encoding=\"utf-8\")\n    \n        args: list[str] = [\n            *command,\n            \"--bib\",\n            str(bib_file),\n            \"--style\",\n            str(bst_file),\n            \"--output\",\n            str(output_file),\n        ]\n        if aux_text is not None:\n            aux_file = tmp_path / \"paper.aux\"\n            aux_file.write_text(aux_text, encoding=\"utf-8\")\n            args += [\"--aux\", str(aux_file)]\n        if cites or aux_text is None:\n            cites_file = tmp_path / \"cites.txt\"\n            cites_text = cites if isinstance(cites, str) else \"\\n\".join(cites) + \"\\n\"\n            cites_file.write_text(cites_text, encoding=\"utf-8\")\n            args += [\"--cites\", str(cites_file)]\n        if log_file is not None:\n            args += [\"--log\", str(log_file)]\n    \n        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)\n>       assert result.returncode == expect_exit, (\n            f\"bibtex exited with {result.returncode} (expected {expect_exit})\\n\"\n            f\"stdout: {result.stdout}\\nstderr: {result.stderr}\"\n        )\nE       AssertionError: bibtex exited with 1 (expected 0)\nE         stdout: \nE         stderr: \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--bib', '/tmp/pytest-of-root/pytest-0/test_...-cites', '/tmp/pytest-of-root/pytest-0/test_entry_integer_resets_betw0/cites.txt'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/conftest.py:221: AssertionError"
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_entry_string_resets_between_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.026586994998069713,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_function_callable_from_both_execute_and_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.027209915999264922,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_cite_matches_current_entry_in_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.026789040999574354,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_entry_field_values_are_per_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.030602597998949932,
+      "message": null
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_disambiguation_counter_distinguishes_homonym_entries",
+      "outcome": "failed",
+      "duration_seconds": 0.03196134400059236,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_disambiguation_counter_di0')\n\n    def test_disambiguation_counter_distinguishes_homonym_entries(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Two entries sharing the same first-author last name produce sort keys\n        that differ by an appended counter letter \u2014 the mechanism alpha.bst uses\n        to emit 'Smith2024a' vs 'Smith2024b'.\n    \n        We simulate this by keeping a global integer that increments per entry\n        whose author starts with 'Smith'.\"\"\"\n        bib = (\n            '@article{a, author = \"John Smith\", year = 2024}\\n'\n            '@article{b, author = \"Mary Smith\", year = 2024}\\n'\n            '@article{c, author = \"Alice Jones\", year = 2024}\\n'\n        )\n        style = \"\"\"\\\n    ENTRY { author year } { } { sort.key$ }\n    INTEGERS { smithct }\n    FUNCTION {init} { #0 'smithct := }\n    FUNCTION {assign.key}\n    { author text.prefix$ #5 substring$\n      duplicate$ \"Smith\" =\n        { pop$ smithct #1 + 'smithct := smithct int.to.chr$ #96 + int.to.chr$ swap$ pop$ }\n        { pop$ \"Z\" }\n      if$\n      cite$ swap$ * 'sort.key$ :=\n    }\n    FUNCTION {emit} { sort.key$ write$ newline$ }\n    READ\n    EXECUTE {init}\n    ITERATE {assign.key}\n    SORT\n    ITERATE {emit}\n    \"\"\"\n        # The above is deliberately simplified \u2014 we want to observe that the\n        # counter increments across entries, producing different keys for the\n        # two Smith entries.\n>       bbl, _ = run_bibtex(submission_command, bib, style, [\"a\", \"b\", \"c\"], tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_cross_entry_state.py:222: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\ncommand = ('/usr/bin/node', '/tmp/submission/output/main.js')\nbib_text = '@article{a, author = \"John Smith\", year = 2024}\\n@article{b, author = \"Mary Smith\", year = 2024}\\n@article{c, author = \"Alice Jones\", year = 2024}\\n'\nstyle_text = \"ENTRY { author year } { } { sort.key$ }\\nINTEGERS { smithct }\\nFUNCTION {init} { #0 'smithct := }\\nFUNCTION {assign.k...\\n}\\nFUNCTION {emit} { sort.key$ write$ newline$ }\\nREAD\\nEXECUTE {init}\\nITERATE {assign.key}\\nSORT\\nITERATE {emit}\\n\"\ncites = ['a', 'b', 'c']\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_disambiguation_counter_di0')\n\n    def run_bibtex(\n        command: tuple[str, ...],\n        bib_text: str,\n        style_text: str,\n        cites: list[str] | str,\n        tmp_path: Path,\n        *,\n        timeout: int = 30,\n        expect_exit: int = 0,\n        with_log: bool = False,\n        aux_text: str | None = None,\n    ) -> tuple[str, dict[str, Any] | None]:\n        \"\"\"Run bibtex with a bib, a style, and cites (or aux). Returns (bbl_text,\n        log_dict_or_None). Asserts exit code.\"\"\"\n        bib_file = tmp_path / \"refs.bib\"\n        bst_file = tmp_path / \"style.bst\"\n        output_file = tmp_path / \"out.bbl\"\n        log_file = tmp_path / \"out.log\" if with_log else None\n        bib_file.write_text(bib_text, encoding=\"utf-8\")\n        bst_file.write_text(style_text, encoding=\"utf-8\")\n    \n        args: list[str] = [\n            *command,\n            \"--bib\",\n            str(bib_file),\n            \"--style\",\n            str(bst_file),\n            \"--output\",\n            str(output_file),\n        ]\n        if aux_text is not None:\n            aux_file = tmp_path / \"paper.aux\"\n            aux_file.write_text(aux_text, encoding=\"utf-8\")\n            args += [\"--aux\", str(aux_file)]\n        if cites or aux_text is None:\n            cites_file = tmp_path / \"cites.txt\"\n            cites_text = cites if isinstance(cites, str) else \"\\n\".join(cites) + \"\\n\"\n            cites_file.write_text(cites_text, encoding=\"utf-8\")\n            args += [\"--cites\", str(cites_file)]\n        if log_file is not None:\n            args += [\"--log\", str(log_file)]\n    \n        result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)\n>       assert result.returncode == expect_exit, (\n            f\"bibtex exited with {result.returncode} (expected {expect_exit})\\n\"\n            f\"stdout: {result.stdout}\\nstderr: {result.stderr}\"\n        )\nE       AssertionError: bibtex exited with 1 (expected 0)\nE         stdout: \nE         stderr: \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--bib', '/tmp/pytest-of-root/pytest-0/test_...-cites', '/tmp/pytest-of-root/pytest-0/test_disambiguation_counter_di0/cites.txt'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/conftest.py:221: AssertionError"
+    },
+    {
+      "node_id": "test_cross_entry_state.py::test_execute_can_reset_global_state",
+      "outcome": "passed",
+      "duration_seconds": 0.027773913998316857,
+      "message": null
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_child_inherits_missing_fields",
+      "outcome": "failed",
+      "duration_seconds": 0.03026997600136383,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_child_inherits_missing_fi0')\n\n    def test_child_inherits_missing_fields(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        \"\"\"Child missing ``year`` and ``publisher`` inherits them from parent.\"\"\"\n        bib = \"\"\"\n    @proceedings{parent, title = \"Proc Vol\", year = \"2020\", publisher = \"ACM\"}\n    @inproceedings{child, author = \"Jones\", title = \"Paper X\", crossref = \"parent\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, [\"child\"], tmp_path)\n        rec = _parse_single_dump(bbl)\n>       assert rec[\"year\"] == \"2020\"\nE       AssertionError: assert '' == '2020'\nE         \nE         - 2020\n\n/tmp/tests/test_crossref_corners.py:83: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_child_own_field_overrides_inherited",
+      "outcome": "failed",
+      "duration_seconds": 0.02771248999852105,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_child_own_field_overrides0')\n\n    def test_child_own_field_overrides_inherited(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Child's own field wins when both child and parent define it.\"\"\"\n        bib = \"\"\"\n    @proceedings{parent, title = \"Parent Title\", year = \"2020\"}\n    @inproceedings{child, title = \"Child Title\", crossref = \"parent\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, [\"child\"], tmp_path)\n        rec = _parse_single_dump(bbl)\n        assert rec[\"title\"] == \"Child Title\"\n        # But still inherited fields the child did not define.\n>       assert rec[\"year\"] == \"2020\"\nE       AssertionError: assert '' == '2020'\nE         \nE         - 2020\n\n/tmp/tests/test_crossref_corners.py:99: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_child_without_inheritable_parent_field_is_missing",
+      "outcome": "passed",
+      "duration_seconds": 0.031849831002546125,
+      "message": null
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_crossref_lookup_is_case_insensitive",
+      "outcome": "failed",
+      "duration_seconds": 0.030428252001001965,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_crossref_lookup_is_case_i0')\n\n    def test_crossref_lookup_is_case_insensitive(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"``crossref = \"PARENT\"`` matches ``@article{parent, ...}`` (summary \u00a71.6).\"\"\"\n        bib = \"\"\"\n    @article{parent, year = \"1999\"}\n    @article{child, crossref = \"PARENT\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, [\"child\"], tmp_path)\n        rec = _parse_single_dump(bbl)\n>       assert rec[\"year\"] == \"1999\"\nE       AssertionError: assert '' == '1999'\nE         \nE         - 1999\n\n/tmp/tests/test_crossref_corners.py:131: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_crossref_lookup_case_insensitive_other_direction",
+      "outcome": "failed",
+      "duration_seconds": 0.03486413199971139,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_crossref_lookup_case_inse0')\n\n    def test_crossref_lookup_case_insensitive_other_direction(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"``crossref = \"parent\"`` also matches ``@article{PARENT, ...}``.\"\"\"\n        bib = \"\"\"\n    @article{PARENT, year = \"1999\"}\n    @article{child, crossref = \"parent\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, [\"child\"], tmp_path)\n        rec = _parse_single_dump(bbl)\n>       assert rec[\"year\"] == \"1999\"\nE       AssertionError: assert '' == '1999'\nE         \nE         - 1999\n\n/tmp/tests/test_crossref_corners.py:144: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_crossref_mixed_case_parent_key",
+      "outcome": "failed",
+      "duration_seconds": 0.035554239999328274,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_crossref_mixed_case_paren0')\n\n    def test_crossref_mixed_case_parent_key(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Lookup is case-insensitive with MixedCase keys too.\"\"\"\n        bib = \"\"\"\n    @proceedings{MixedParent, year = \"2020\"}\n    @inproceedings{child, crossref = \"MIXEDPARENT\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, [\"child\"], tmp_path)\n        rec = _parse_single_dump(bbl)\n>       assert rec[\"year\"] == \"2020\"\nE       AssertionError: assert '' == '2020'\nE         \nE         - 2020\n\n/tmp/tests/test_crossref_corners.py:157: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_unresolved_crossref_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.03039750800053298,
+      "message": null
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_unresolved_crossref_does_not_lose_child_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.03384063600060472,
+      "message": null
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_two_entry_cycle_emits_cycle_warning",
+      "outcome": "failed",
+      "duration_seconds": 0.0289615630008484,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_two_entry_cycle_emits_cyc0')\n\n    def test_two_entry_cycle_emits_cycle_warning(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"A \u2194 B cycle must emit ``crossref_cycle`` and must NOT hang (spec \u00a75.3).\"\"\"\n        bib = \"\"\"\n    @article{a, title = \"A\", crossref = \"b\"}\n    @article{b, title = \"B\", crossref = \"a\"}\n    \"\"\"\n        # 10s timeout: real hangs become test failures via subprocess timeout.\n        _, log = run_bibtex(\n            submission_command,\n            bib,\n            PROBE_SINGLE_ENTRY,\n            [\"a\"],\n            tmp_path,\n            with_log=True,\n            timeout=10,\n        )\n        cycles = _find_warning(log, \"crossref_cycle\")\n>       assert len(cycles) >= 1\nE       assert 0 >= 1\nE        +  where 0 = len([])\n\n/tmp/tests/test_crossref_corners.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_cycle_does_not_prevent_output",
+      "outcome": "passed",
+      "duration_seconds": 0.03276881300007517,
+      "message": null
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_chain_does_not_inherit_from_grandparent",
+      "outcome": "failed",
+      "duration_seconds": 0.030387728000278003,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_chain_does_not_inherit_fr0')\n\n    def test_chain_does_not_inherit_from_grandparent(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"A \u2192 B \u2192 C: A inherits ONLY B's fields, not C's (spec \u00a71.6, btxdoc).\"\"\"\n        bib = \"\"\"\n    @misc{a, title = \"A\", crossref = \"b\"}\n    @misc{b, year = \"2020\", crossref = \"c\"}\n    @misc{c, publisher = \"GRANDPA\"}\n    \"\"\"\n        bbl, _ = run_bibtex(\n            submission_command,\n            bib,\n            PROBE_SINGLE_ENTRY,\n            [\"a\"],\n            tmp_path,\n        )\n        rec = _parse_single_dump(bbl)\n        # B's `year` IS inherited (one level up).\n>       assert rec[\"year\"] == \"2020\"\nE       AssertionError: assert '' == '2020'\nE         \nE         - 2020\n\n/tmp/tests/test_crossref_corners.py:261: AssertionError"
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_chain_child_own_fields_still_present",
+      "outcome": "passed",
+      "duration_seconds": 0.033089230999394204,
+      "message": null
+    },
+    {
+      "node_id": "test_crossref_corners.py::test_inherited_macro_field_is_expanded",
+      "outcome": "failed",
+      "duration_seconds": 0.03057393200106162,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inherited_macro_field_is_0')\n\n    def test_inherited_macro_field_is_expanded(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"An inherited field whose value is a macro-reference must still be\n        expanded via @string resolution (spec \u00a71.5 + \u00a71.6 interaction).\"\"\"\n        bib = \"\"\"\n    @string{pub = \"IEEE\"}\n    @proceedings{parent, publisher = pub}\n    @inproceedings{child, crossref = \"parent\"}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, [\"child\"], tmp_path)\n        rec = _parse_single_dump(bbl)\n>       assert rec[\"publisher\"] == \"IEEE\"\nE       AssertionError: assert '' == 'IEEE'\nE         \nE         - IEEE\n\n/tmp/tests/test_crossref_corners.py:297: AssertionError"
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_empty_of_missing_field_is_1",
+      "outcome": "passed",
+      "duration_seconds": 0.036415741000382695,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_empty_of_present_field_is_0",
+      "outcome": "passed",
+      "duration_seconds": 0.029684559001907473,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_empty_of_whitespace_string_is_1",
+      "outcome": "passed",
+      "duration_seconds": 0.031173579998721834,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_missing_distinguishes_from_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.03278623900041566,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_short_line_not_wrapped",
+      "outcome": "passed",
+      "duration_seconds": 0.030491677000100026,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_long_line_wraps_at_whitespace",
+      "outcome": "passed",
+      "duration_seconds": 0.036308734999693115,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_log_entries_read_count",
+      "outcome": "passed",
+      "duration_seconds": 0.036533310001686914,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_log_macros_include_user_and_months",
+      "outcome": "passed",
+      "duration_seconds": 0.04033201099809958,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_aux_input_single_citation",
+      "outcome": "passed",
+      "duration_seconds": 0.039387965998685104,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_aux_input_multi_key_citation",
+      "outcome": "passed",
+      "duration_seconds": 0.03422596999917005,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_aux_input_multiple_citation_commands",
+      "outcome": "passed",
+      "duration_seconds": 0.026613047999489936,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_call_type_dispatches_to_type_function",
+      "outcome": "passed",
+      "duration_seconds": 0.02796570299869927,
+      "message": null
+    },
+    {
+      "node_id": "test_direct_bbl.py::test_call_type_falls_back_to_default_type",
+      "outcome": "passed",
+      "duration_seconds": 0.02756425999905332,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_reports_line_column_for_unclosed_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.023322642999119125,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_reports_source_bib_for_bib_errors",
+      "outcome": "passed",
+      "duration_seconds": 0.02521650999733538,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_line_column_are_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.026706816997830174,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_reports_line_column_for_malformed_bst",
+      "outcome": "passed",
+      "duration_seconds": 0.027431528998931753,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_missing_required_flag_exits_one",
+      "outcome": "passed",
+      "duration_seconds": 0.02252917000078014,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_nonexistent_bib_file_exits_one",
+      "outcome": "passed",
+      "duration_seconds": 0.023353459999270854,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_nonexistent_aux_file_exits_one",
+      "outcome": "passed",
+      "duration_seconds": 0.02226035000057891,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_json_is_valid_object",
+      "outcome": "passed",
+      "duration_seconds": 0.023185872996691614,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_malformed_bib_exits_1",
+      "outcome": "passed",
+      "duration_seconds": 0.02416805800203292,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_malformed_bst_exits_1",
+      "outcome": "passed",
+      "duration_seconds": 0.024545174001104897,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_bst_unknown_command_exits_1",
+      "outcome": "passed",
+      "duration_seconds": 0.023676542998146033,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_error_object_has_line_column",
+      "outcome": "passed",
+      "duration_seconds": 0.02383152800030075,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_unknown_cli_flag_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.02467665800031682,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_name_with_brace_protected_von_is_treated_as_uppercase",
+      "outcome": "failed",
+      "duration_seconds": 0.02519733000190172,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_name_with_brace_protected0')\n\n    def test_name_with_brace_protected_von_is_treated_as_uppercase(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        # \"{von} der Pol\" \u2014 the brace-protected \"{von}\" is UPPERCASE-ish per \u00a72.1,\n        # so \"der\" becomes the (single) von, \"Pol\" is Last, \"{von}\" is First.\n        # bibtexparser, pybtex, and BiBTeXML have historically disagreed on this.\n        bib = '@article{a, author = \"{von} der Pol\"}\\n'\n        style = \"\"\"\\\n    ENTRY { author } { } { }\n    FUNCTION {f}\n    { author #1 \"{ff}\" format.name$ write$ \"/\" write$\n      author #1 \"{vv}\" format.name$ write$ \"/\" write$\n      author #1 \"{ll}\" format.name$ write$ }\n    READ\n    ITERATE {f}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, style, [\"a\"], tmp_path)\n>       assert bbl.strip() == \"{von}/der/Pol\"\nE       AssertionError: assert 'von/der/Pol' == '{von}/der/Pol'\nE         \nE         - {von}/der/Pol\nE         ? -   -\nE         + von/der/Pol\n\n/tmp/tests/test_library_divergence.py:67: AssertionError"
+    },
+    {
+      "node_id": "test_library_divergence.py::test_name_tied_tokens_preserved_as_separate",
+      "outcome": "passed",
+      "duration_seconds": 0.025886181998430402,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_num_names_treats_brace_group_and_as_literal",
+      "outcome": "passed",
+      "duration_seconds": 0.025228479000361403,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_string_macro_redefinition_last_wins",
+      "outcome": "passed",
+      "duration_seconds": 0.024322348999703536,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_string_macro_forward_reference_fails",
+      "outcome": "passed",
+      "duration_seconds": 0.02595374700104003,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_crossref_preserves_parent_key_case_in_child_crossref_value",
+      "outcome": "failed",
+      "duration_seconds": 0.03869010000016715,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_crossref_preserves_parent0')\n\n    def test_crossref_preserves_parent_key_case_in_child_crossref_value(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        # The child's resolved crossref in the log should reflect the parent's\n        # declared casing (MixedCase), even though lookup was case-insensitive.\n        bib = \"\"\"\n    @proceedings{MixedCase, year = 2020}\n    @inproceedings{child, crossref = \"mixedcase\"}\n    \"\"\"\n        style = \"\"\"\\\n    ENTRY { year } { } { }\n    FUNCTION {f} { year write$ }\n    READ\n    ITERATE {f}\n    \"\"\"\n        bbl, _ = run_bibtex(submission_command, bib, style, [\"child\"], tmp_path)\n>       assert bbl.strip() == \"2020\"\nE       AssertionError: assert '' == '2020'\nE         \nE         - 2020\n\n/tmp/tests/test_library_divergence.py:166: AssertionError"
+    },
+    {
+      "node_id": "test_library_divergence.py::test_format_name_with_literal_glue",
+      "outcome": "passed",
+      "duration_seconds": 0.025930742998752976,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_purify_strips_punctuation",
+      "outcome": "failed",
+      "duration_seconds": 0.021102234000863973,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_purify_strips_punctuation1')\n\n    def test_purify_strips_punctuation(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        bbl = _exec(\n            submission_command,\n            tmp_path,\n            '@article{a, title = \"x\"}\\n',\n            '\"Hello, World! (2024)\" purify$ write$',\n        )\n>       assert bbl.strip() == \"Hello World 2024\"\nE       AssertionError: assert 'HelloWorld2024' == 'Hello World 2024'\nE         \nE         - Hello World 2024\nE         ?      -     -\nE         + HelloWorld2024\n\n/tmp/tests/test_library_divergence.py:203: AssertionError"
+    },
+    {
+      "node_id": "test_library_divergence.py::test_change_case_brace_protected_acronym",
+      "outcome": "passed",
+      "duration_seconds": 0.02129366100052721,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_change_case_title_mode",
+      "outcome": "passed",
+      "duration_seconds": 0.022941982999327593,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_equal_returns_0_for_cross_type_compare",
+      "outcome": "passed",
+      "duration_seconds": 0.024127450997184496,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_text_length_of_string_with_brace_group_content",
+      "outcome": "passed",
+      "duration_seconds": 0.02710368199950608,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_text_length_of_control_sequence_is_one",
+      "outcome": "passed",
+      "duration_seconds": 0.029183276998082874,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_single_token_is_last",
+      "outcome": "passed",
+      "duration_seconds": 0.025832150000496767,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_first_last_no_von",
+      "outcome": "passed",
+      "duration_seconds": 0.027543896998395212,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_von_between",
+      "outcome": "passed",
+      "duration_seconds": 0.026703943998654722,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_von_without_first",
+      "outcome": "passed",
+      "duration_seconds": 0.02385488299842109,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_all_lowercase_absorbs_into_last",
+      "outcome": "passed",
+      "duration_seconds": 0.02717069499885838,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_all_uppercase_last_is_final_token",
+      "outcome": "passed",
+      "duration_seconds": 0.02771636899888108,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_tied_tokens_separate_grammatically",
+      "outcome": "passed",
+      "duration_seconds": 0.02648839999892516,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_brace_protected_is_uppercase",
+      "outcome": "failed",
+      "duration_seconds": 0.02524373100095545,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_form1_brace_protected_is_0')\n\n    def test_form1_brace_protected_is_uppercase(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"Brace-opened token is opaque-uppercase (btxhak \u00a72.1).\"\"\"\n        n = _parts(submission_command, tmp_path, \"{van der} Pol\")\n>       assert n[\"first\"] == \"{van der}\"\nE       AssertionError: assert 'van der' == '{van der}'\nE         \nE         - {van der}\nE         ? -       -\nE         + van der\n\n/tmp/tests/test_name_grammar_exhaustive.py:180: AssertionError"
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form1_brace_protected_von_region",
+      "outcome": "failed",
+      "duration_seconds": 0.02680716500071867,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_form1_brace_protected_von0')\n\n    def test_form1_brace_protected_von_region(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"A brace token between two lowercase tokens does NOT end the von run.\"\"\"\n        # \"de {la} vega Smith\": tokens=[de,{la},vega,Smith].\n        # Lowercase token positions: 0 (de), 2 (vega). Brace token {la} is uppercase.\n        # Per btxhak \u00a72.2: von spans from the FIRST lowercase through the LAST\n        # lowercase token, inclusive \u2014 so von = \"de {la} vega\", Last = \"Smith\".\n        # Inter-token separator inside von may be tie or space per \u00a72.6.\n        n = _parts(submission_command, tmp_path, \"de {la} vega Smith\")\n>       assert _normalize_separator(n[\"von\"]) == \"de {la} vega\"\nE       AssertionError: assert 'de la vega' == 'de {la} vega'\nE         \nE         - de {la} vega\nE         ?    -  -\nE         + de la vega\n\n/tmp/tests/test_name_grammar_exhaustive.py:195: AssertionError"
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form2_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.027263419000519207,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form2_von_plus_last_head",
+      "outcome": "passed",
+      "duration_seconds": 0.03251058699970599,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form2_leading_caps_prepend_to_last",
+      "outcome": "passed",
+      "duration_seconds": 0.02510448999964865,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form2_head_without_lowercase_is_all_last",
+      "outcome": "passed",
+      "duration_seconds": 0.023423123000611668,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form2_empty_first_after_comma",
+      "outcome": "passed",
+      "duration_seconds": 0.025364716002513887,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form3_jr_literal",
+      "outcome": "passed",
+      "duration_seconds": 0.025895185999615933,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form3_jr_roman_iii",
+      "outcome": "passed",
+      "duration_seconds": 0.02230020000024524,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form3_jr_multiword_senior",
+      "outcome": "passed",
+      "duration_seconds": 0.024243742000180646,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_form3_extra_commas_fold_into_first",
+      "outcome": "passed",
+      "duration_seconds": 0.021399314002337633,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_and_separates_multiple_authors",
+      "outcome": "passed",
+      "duration_seconds": 0.026583802997265593,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_and_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.04434416500043881,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_and_inside_braces_is_literal",
+      "outcome": "passed",
+      "duration_seconds": 0.023470480999094434,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_and_must_be_word_bounded",
+      "outcome": "passed",
+      "duration_seconds": 0.02407388599749538,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_multi_author_parts_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.09369347999927413,
+      "message": null
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_brace_protected_von_is_uppercase_not_von",
+      "outcome": "failed",
+      "duration_seconds": 0.02942377199906332,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_brace_protected_von_is_up0')\n\n    def test_brace_protected_von_is_uppercase_not_von(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"``{von}`` (brace-protected) is uppercase per btxhak \u00a72.1, NOT a von token.\"\"\"\n        # Tokens: [{von}, der, Pol]. Only \"der\" is lowercase \u2192 von = \"der\",\n        # Last = \"Pol\", First = \"{von}\".\n        n = _parts(submission_command, tmp_path, \"{von} der Pol\")\n>       assert n[\"first\"] == \"{von}\"\nE       AssertionError: assert 'von' == '{von}'\nE         \nE         - {von}\nE         ? -   -\nE         + von\n\n/tmp/tests/test_name_grammar_exhaustive.py:353: AssertionError"
+    },
+    {
+      "node_id": "test_name_grammar_exhaustive.py::test_latex_accent_opening_token_is_uppercase",
+      "outcome": "failed",
+      "duration_seconds": 0.025876326999423327,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_latex_accent_opening_toke0')\n\n    def test_latex_accent_opening_token_is_uppercase(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        r\"\"\"Token opening with ``{\\...}`` is treated as uppercase (spec \u00a72.1).\n        Inter-token separator inside the multi-token von may be tie or\n        space per \u00a72.6.\"\"\"\n        # \"{\\'E}tienne de la Valle\\'e Poussin\" \u2014 {\\'E}tienne starts with a brace\n        # group, and therefore this token is uppercase. The name has one lowercase\n        # run: \"de la\". ``Valle'e`` begins with uppercase V. ``Poussin`` begins\n        # with uppercase P.\n        n = _parts(submission_command, tmp_path, r\"{\\'E}tienne de la Vall\\'ee Poussin\")\n>       assert n[\"first\"] == r\"{\\'E}tienne\"\nE       assert \"\\\\'Etienne\" == \"{\\\\'E}tienne\"\nE         \nE         - {\\'E}tienne\nE         ? -   -\nE         + \\'Etienne\n\n/tmp/tests/test_name_grammar_exhaustive.py:369: AssertionError"
+    },
+    {
+      "node_id": "test_names.py::test_form1_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.02623712900094688,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form1_with_von",
+      "outcome": "passed",
+      "duration_seconds": 0.04178054000112752,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form1_von_without_first",
+      "outcome": "passed",
+      "duration_seconds": 0.03165972100032377,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form1_all_lowercase",
+      "outcome": "passed",
+      "duration_seconds": 0.02399618500021461,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form1_single_token",
+      "outcome": "passed",
+      "duration_seconds": 0.024146014999132603,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form1_brace_protected_is_uppercase",
+      "outcome": "failed",
+      "duration_seconds": 0.025020127999596298,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_form1_brace_protected_is_1')\n\n    def test_form1_brace_protected_is_uppercase(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        n = _one_name(submission_command, tmp_path, \"{van der} Pol\")\n        # {van der} is a single uppercase-like token before the last token.\n>       assert n[\"first\"] == \"{van der}\"\nE       AssertionError: assert 'van der' == '{van der}'\nE         \nE         - {van der}\nE         ? -       -\nE         + van der\n\n/tmp/tests/test_names.py:70: AssertionError"
+    },
+    {
+      "node_id": "test_names.py::test_form2_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.026010188999862294,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form2_with_von",
+      "outcome": "passed",
+      "duration_seconds": 0.02244573899952229,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form2_leading_caps_prepend_to_last",
+      "outcome": "passed",
+      "duration_seconds": 0.022129857001345954,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form3_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.022360531000231276,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_form3_with_von",
+      "outcome": "passed",
+      "duration_seconds": 0.024759918000199832,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_multiple_authors",
+      "outcome": "passed",
+      "duration_seconds": 0.023733838001135155,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_and_inside_braces_is_literal",
+      "outcome": "passed",
+      "duration_seconds": 0.024071327001365717,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_and_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.023296963998291176,
+      "message": null
+    },
+    {
+      "node_id": "test_names.py::test_three_authors_mixed_forms",
+      "outcome": "passed",
+      "duration_seconds": 0.025532058998578577,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_short_line_not_wrapped",
+      "outcome": "passed",
+      "duration_seconds": 0.024026242999752867,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_line_exactly_79_not_wrapped",
+      "outcome": "passed",
+      "duration_seconds": 0.02315773100053775,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_line_exactly_80_wraps",
+      "outcome": "passed",
+      "duration_seconds": 0.024989708999783034,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_wrap_at_last_whitespace_before_79",
+      "outcome": "passed",
+      "duration_seconds": 0.022601775999646634,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_continuation_has_two_space_indent",
+      "outcome": "passed",
+      "duration_seconds": 0.023496170999351307,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_multiple_wraps_when_very_long",
+      "outcome": "passed",
+      "duration_seconds": 0.02321105400005763,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_unbreakable_single_token_emits_at_column_1",
+      "outcome": "passed",
+      "duration_seconds": 0.01939653700173949,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_single_long_token_then_short_on_new_line",
+      "outcome": "passed",
+      "duration_seconds": 0.020849935001024278,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_multiple_small_writes_wrap_when_combined",
+      "outcome": "passed",
+      "duration_seconds": 0.021097230002851575,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_newline_flushes_without_wrap",
+      "outcome": "passed",
+      "duration_seconds": 0.02167256500069925,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_empty_write_then_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.02999087899843289,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_newline_then_content_no_indent",
+      "outcome": "passed",
+      "duration_seconds": 0.030134730999634485,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_string_with_embedded_newline_flushes",
+      "outcome": "passed",
+      "duration_seconds": 0.023645017001399538,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_trailing_whitespace_preserved_on_short_line",
+      "outcome": "passed",
+      "duration_seconds": 0.025873888000205625,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_trailing_whitespace_before_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.025174964001053013,
+      "message": null
+    },
+    {
+      "node_id": "test_output_buffer.py::test_bare_write_flushes_at_end_of_run",
+      "outcome": "passed",
+      "duration_seconds": 0.026666591998946387,
+      "message": null
+    },
+    {
+      "node_id": "test_output_wrap_forward.py::test_forward_scan_wraps_at_first_whitespace_past_79",
+      "outcome": "passed",
+      "duration_seconds": 0.021543466000366607,
+      "message": null
+    },
+    {
+      "node_id": "test_output_wrap_forward.py::test_forward_scan_preserves_content_order",
+      "outcome": "passed",
+      "duration_seconds": 0.020971300999008236,
+      "message": null
+    },
+    {
+      "node_id": "test_output_wrap_forward.py::test_forward_scan_multiple_spaces_picks_first",
+      "outcome": "passed",
+      "duration_seconds": 0.023399049998261034,
+      "message": null
+    },
+    {
+      "node_id": "test_output_wrap_forward.py::test_backward_scan_still_wraps_at_70",
+      "outcome": "passed",
+      "duration_seconds": 0.02922110699910263,
+      "message": null
+    },
+    {
+      "node_id": "test_output_wrap_forward.py::test_no_whitespace_anywhere_emits_verbatim",
+      "outcome": "passed",
+      "duration_seconds": 0.025240132001272286,
+      "message": null
+    },
+    {
+      "node_id": "test_output_wrap_forward.py::test_whitespace_exactly_at_79_breaks_there",
+      "outcome": "passed",
+      "duration_seconds": 0.02510676100064302,
+      "message": null
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-plain]",
+      "outcome": "failed",
+      "duration_seconds": 0.001589516999956686,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit0')\nstyle = 'plain', corpus = 'refs'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/plain.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/plain.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-alpha]",
+      "outcome": "failed",
+      "duration_seconds": 0.0013041619986324804,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit1')\nstyle = 'alpha', corpus = 'refs'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/alpha.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/alpha.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-unsrt]",
+      "outcome": "failed",
+      "duration_seconds": 0.0018769759990391321,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit2')\nstyle = 'unsrt', corpus = 'refs'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/unsrt.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/unsrt.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-abbrv]",
+      "outcome": "failed",
+      "duration_seconds": 0.002015928999753669,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit3')\nstyle = 'abbrv', corpus = 'refs'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/abbrv.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/abbrv.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-edge-plain]",
+      "outcome": "failed",
+      "duration_seconds": 0.0012036779990012292,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit4')\nstyle = 'plain', corpus = 'refs-edge'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/plain.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/plain.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-edge-alpha]",
+      "outcome": "failed",
+      "duration_seconds": 0.0011461860012786929,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit5')\nstyle = 'alpha', corpus = 'refs-edge'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/alpha.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/alpha.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-edge-unsrt]",
+      "outcome": "failed",
+      "duration_seconds": 0.0011007849989255192,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit6')\nstyle = 'unsrt', corpus = 'refs-edge'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/unsrt.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/unsrt.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_reference_styles.py::test_reference_style_bbl_parity[refs-edge-abbrv]",
+      "outcome": "failed",
+      "duration_seconds": 0.001161453999884543,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_style_bbl_parit7')\nstyle = 'abbrv', corpus = 'refs-edge'\n\n    @pytest.mark.parametrize(\"style\", REFERENCE_STYLES)\n    @pytest.mark.parametrize(\"corpus\", REFERENCE_CORPORA)\n    def test_reference_style_bbl_parity(\n        submission_command: tuple[str, ...], tmp_path: Path, style: str, corpus: str\n    ) -> None:\n        \"\"\"Byte-exact `.bbl` parity for one of the four canonical styles against\n        one of the two reference corpora.\n    \n        Runs the submission against `fixtures/<corpus>.bib` +\n        `fixtures/<corpus>.cites` with `authoritative/<style>.bst` and compares\n        the produced `.bbl` against `fixtures/<style>.<corpus>.expected.bbl`\n        byte-by-byte.\n        \"\"\"\n        bib_file = FIXTURES / f\"{corpus}.bib\"\n        cites_file = FIXTURES / f\"{corpus}.cites\"\n        style_file = STYLES_DIR / f\"{style}.bst\"\n        expected_file = FIXTURES / f\"{style}.{corpus}.expected.bbl\"\n    \n        for required in (bib_file, cites_file, style_file, expected_file):\n>           assert required.exists(), f\"fixture missing: {required}\"\nE           AssertionError: fixture missing: /tmp/prompt/docs/authoritative/abbrv.bst\nE           assert False\nE            +  where False = exists()\nE            +    where exists = PosixPath('/tmp/prompt/docs/authoritative/abbrv.bst').exists\n\n/tmp/tests/test_reference_styles.py:62: AssertionError"
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_is_stable_on_ties",
+      "outcome": "passed",
+      "duration_seconds": 0.023880735998318414,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_is_stable_on_partial_ties",
+      "outcome": "passed",
+      "duration_seconds": 0.024199592000513803,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_empty_key_orders_with_others_lexicographically",
+      "outcome": "passed",
+      "duration_seconds": 0.022242578001169022,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_is_lexicographic_not_numeric",
+      "outcome": "passed",
+      "duration_seconds": 0.021783762000268325,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_case_sensitivity",
+      "outcome": "passed",
+      "duration_seconds": 0.0271975490013574,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_last_sort_key_wins",
+      "outcome": "passed",
+      "duration_seconds": 0.025233499998648767,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_execute_between_sort_and_iterate_preserves_order",
+      "outcome": "passed",
+      "duration_seconds": 0.026640403002602397,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_reverse_after_sort",
+      "outcome": "passed",
+      "duration_seconds": 0.02236134000122547,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_reverse_without_sort",
+      "outcome": "passed",
+      "duration_seconds": 0.025968588000978343,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_iterate_empty_cited_list_is_noop",
+      "outcome": "passed",
+      "duration_seconds": 0.02202524499989522,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_of_single_entry_is_noop",
+      "outcome": "passed",
+      "duration_seconds": 0.02079281800070021,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_key_persists_into_post_sort_iterate",
+      "outcome": "passed",
+      "duration_seconds": 0.02381406100175809,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_two_iterates_are_independent",
+      "outcome": "passed",
+      "duration_seconds": 0.023795316996256588,
+      "message": null
+    },
+    {
+      "node_id": "test_sort_iterate.py::test_sort_idempotent_on_sorted_input",
+      "outcome": "passed",
+      "duration_seconds": 0.02408437300073274,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_utf8_title_roundtrips_through_write",
+      "outcome": "passed",
+      "duration_seconds": 0.0260340909990191,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_utf8_note_field_preserved_via_write",
+      "outcome": "passed",
+      "duration_seconds": 0.02870783900107199,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_chr_to_int_range_check",
+      "outcome": "passed",
+      "duration_seconds": 0.027956886999163544,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_int_to_chr_ascii_produces_single_char",
+      "outcome": "passed",
+      "duration_seconds": 0.0236219100006565,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_latex_diacritic_preserved_in_field",
+      "outcome": "passed",
+      "duration_seconds": 0.02462671200009936,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_purify_preserves_ascii_bytes",
+      "outcome": "passed",
+      "duration_seconds": 0.023945515997183975,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_substring_is_byte_oriented",
+      "outcome": "passed",
+      "duration_seconds": 0.024184965001040837,
+      "message": null
+    },
+    {
+      "node_id": "test_unicode.py::test_text_length_on_ascii_is_char_count",
+      "outcome": "passed",
+      "duration_seconds": 0.025615612001274712,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 332,
+    "failed": 43,
+    "skipped": 0,
+    "error": 0,
+    "total": 375
+  },
+  "scores": {
+    "correctness": 0.8853333333333333,
+    "self_test_coverage": null,
+    "code_quality": null,
+    "task_score": 0.8853333333333333,
+    "extension_scores": {
+      "subscore.bib_parsing.passed": 14.0,
+      "subscore.bib_parsing.total": 16.0,
+      "subscore.bst_language.passed": 41.0,
+      "subscore.bst_language.total": 44.0,
+      "subscore.bst_parser_edges.passed": 14.0,
+      "subscore.bst_parser_edges.total": 16.0,
+      "subscore.builtins_deep.passed": 33.0,
+      "subscore.builtins_deep.total": 40.0,
+      "subscore.builtins_exhaustive.passed": 91.0,
+      "subscore.builtins_exhaustive.total": 94.0,
+      "subscore.concat_and_macros.passed": 11.0,
+      "subscore.concat_and_macros.total": 11.0,
+      "subscore.cross_entry_state.passed": 7.0,
+      "subscore.cross_entry_state.total": 9.0,
+      "subscore.crossref_corners.passed": 5.0,
+      "subscore.crossref_corners.total": 13.0,
+      "subscore.direct_bbl.passed": 13.0,
+      "subscore.direct_bbl.total": 13.0,
+      "subscore.error_precision.passed": 8.0,
+      "subscore.error_precision.total": 8.0,
+      "subscore.errors.passed": 5.0,
+      "subscore.errors.total": 5.0,
+      "subscore.library_divergence.passed": 10.0,
+      "subscore.library_divergence.total": 13.0,
+      "subscore.name_grammar_exhaustive.passed": 21.0,
+      "subscore.name_grammar_exhaustive.total": 25.0,
+      "subscore.names.passed": 14.0,
+      "subscore.names.total": 15.0,
+      "subscore.output_buffer.passed": 16.0,
+      "subscore.output_buffer.total": 16.0,
+      "subscore.output_wrap_forward.passed": 6.0,
+      "subscore.output_wrap_forward.total": 6.0,
+      "subscore.reference_styles.passed": 0.0,
+      "subscore.reference_styles.total": 8.0,
+      "subscore.sort_iterate.passed": 14.0,
+      "subscore.sort_iterate.total": 14.0,
+      "subscore.unicode.passed": 8.0,
+      "subscore.unicode.total": 8.0
+    }
+  },
+  "source_stats": {
+    "file_count": 1,
+    "lines_of_code": 2298
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims a complete JavaScript implementation with structured logging and end-to-end checks; hidden tests passed 332/375.",
+    "commentary": null
+  }
+}
