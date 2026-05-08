@@ -12,6 +12,7 @@ from clispecbench.agents.claude_code import ClaudeCodeAdapter
 from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
 from clispecbench.agents.gemini_cli import GeminiCLIAdapter
+from clispecbench.agents.opencode import OpenCodeAdapter
 from clispecbench.agents.registry import (
     AgentSpec,
     get_agent_spec,
@@ -38,6 +39,7 @@ class TestAgentRegistry:
     def test_benchmark_cost_preference_is_registered(self) -> None:
         assert get_agent_spec("claude-code").benchmark_cost_preference == "estimated"
         assert get_agent_spec("codex-cli").benchmark_cost_preference == "reported"
+        assert get_agent_spec("opencode").benchmark_cost_preference == "reported"
 
 
 class TestClaudeCodeCredentialMounts:
@@ -132,6 +134,43 @@ class TestCopilotCLICredentialMounts:
         assert mounts[key]["mode"] == "ro"
 
 
+class TestOpenCodeEnvironment:
+    def test_configures_openrouter_from_env_key(self) -> None:
+        adapter = OpenCodeAdapter(model="openrouter/moonshotai/kimi-k2.6")
+
+        env = adapter.environment({"OPENROUTER_API_KEY": "test-key"})
+        config = json.loads(env["OPENCODE_CONFIG_CONTENT"])
+
+        assert env["OPENROUTER_API_KEY"] == "test-key"
+        assert env["OPENCODE_DISABLE_DEFAULT_PLUGINS"] == "1"
+        assert env["OPENCODE_DISABLE_CLAUDE_CODE"] == "1"
+        assert config["share"] == "disabled"
+        assert config["enabled_providers"] == ["openrouter"]
+        assert config["model"] == "openrouter/moonshotai/kimi-k2.6"
+        assert config["provider"]["openrouter"]["options"]["apiKey"] == "{env:OPENROUTER_API_KEY}"
+        assert "moonshotai/kimi-k2.6" in config["provider"]["openrouter"]["models"]
+
+    def test_invoke_command_attaches_prompt_file(self) -> None:
+        adapter = OpenCodeAdapter(model="openrouter/moonshotai/kimi-k2.6", effort="high")
+
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+
+        bash_script = cmd[2]
+        assert "opencode run" in bash_script
+        assert "--pure" in bash_script
+        assert "--format json" in bash_script
+        assert "--dangerously-skip-permissions" in bash_script
+        assert "--model openrouter/moonshotai/kimi-k2.6" in bash_script
+        assert "--variant high" in bash_script
+        assert "--file /workspace/prompt.md" in bash_script
+        assert "tee /tmp/opencode-events.jsonl" in bash_script
+        assert "PIPESTATUS[0]" in bash_script
+        assert '"type":"error"' in bash_script
+
+
 class TestAgentVersions:
     @pytest.mark.parametrize(
         "spec",
@@ -186,6 +225,16 @@ class TestModelAndEffort:
         assert "--yolo" in bash_script
         assert "--skip-trust" in bash_script
 
+    def test_opencode_model_in_command(self) -> None:
+        adapter = OpenCodeAdapter(model="openrouter/deepseek/deepseek-v4-pro", effort="max")
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        bash_script = cmd[2]
+        assert "--model openrouter/deepseek/deepseek-v4-pro" in bash_script
+        assert "--variant max" in bash_script
+
     def test_copilot_model_in_command(self) -> None:
         adapter = CopilotCLIAdapter(model="gpt-5.2", effort="high")
         cmd = adapter.invoke_command(
@@ -235,6 +284,10 @@ class TestTelemetryPaths:
     def test_copilot_has_otel_path(self) -> None:
         adapter = CopilotCLIAdapter()
         assert any("copilot-otel" in p for p in adapter.telemetry_paths)
+
+    def test_opencode_has_event_log_path(self) -> None:
+        adapter = OpenCodeAdapter()
+        assert any("opencode-events" in p for p in adapter.telemetry_paths)
 
 
 class TestClaudeCodeTokenUsage:
@@ -599,3 +652,130 @@ class TestCodexCLITokenUsage:
         usage = adapter.parse_token_usage(tmp_path, logs)
 
         assert usage is None
+
+
+class TestOpenCodeTokenUsage:
+    def test_parse_token_usage_from_step_finish_events(self, tmp_path: Path) -> None:
+        adapter = OpenCodeAdapter()
+        logs = "\n".join(
+            [
+                json.dumps(
+                    {
+                        "type": "tool_use",
+                        "part": {
+                            "type": "tool",
+                            "callID": "tool-1",
+                            "tool": "bash",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "text",
+                        "part": {
+                            "type": "text",
+                            "text": "Done.",
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "type": "step_finish",
+                        "part": {
+                            "type": "step-finish",
+                            "cost": 0.00123456,
+                            "tokens": {
+                                "input": 100,
+                                "output": 20,
+                                "reasoning": 5,
+                                "cache": {
+                                    "read": 10,
+                                    "write": 2,
+                                },
+                            },
+                        },
+                    }
+                ),
+            ]
+        )
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is not None
+        assert usage.input_tokens == 112
+        assert usage.output_tokens == 25
+        assert usage.cache_read_input_tokens == 10
+        assert usage.cache_creation_input_tokens == 2
+        assert usage.tool_calls == 1
+        assert usage.reported_cost_usd == pytest.approx(0.001235)
+        assert usage.source == "opencode_step_finish"
+        assert usage.is_partial is False
+
+    def test_parse_token_usage_reads_event_log(self, tmp_path: Path) -> None:
+        adapter = OpenCodeAdapter()
+        (tmp_path / "opencode-events.jsonl").write_text(
+            json.dumps(
+                {
+                    "type": "step_finish",
+                    "part": {
+                        "type": "step-finish",
+                        "tokens": {
+                            "input": 200,
+                            "output": 40,
+                        },
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        usage = adapter.parse_token_usage(tmp_path)
+
+        assert usage is not None
+        assert usage.input_tokens == 200
+        assert usage.output_tokens == 40
+
+    def test_parse_token_usage_prefers_event_log_over_duplicate_logs(self, tmp_path: Path) -> None:
+        adapter = OpenCodeAdapter()
+        event = (
+            json.dumps(
+                {
+                    "type": "step_finish",
+                    "part": {
+                        "type": "step-finish",
+                        "tokens": {
+                            "input": 200,
+                            "output": 40,
+                        },
+                    },
+                }
+            )
+            + "\n"
+        )
+        (tmp_path / "opencode-events.jsonl").write_text(event, encoding="utf-8")
+
+        usage = adapter.parse_token_usage(tmp_path, event)
+
+        assert usage is not None
+        assert usage.input_tokens == 200
+        assert usage.output_tokens == 40
+
+    def test_parse_token_usage_returns_none_without_step_finish(self, tmp_path: Path) -> None:
+        adapter = OpenCodeAdapter()
+        logs = json.dumps({"type": "error", "error": {"name": "APIError"}})
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is None
+
+    def test_extract_last_agent_message_concatenates_text_events(self) -> None:
+        adapter = OpenCodeAdapter()
+        logs = "\n".join(
+            [
+                json.dumps({"type": "text", "part": {"text": "All "}}),
+                json.dumps({"type": "text", "part": {"text": "done."}}),
+            ]
+        )
+
+        assert adapter.extract_last_agent_message(logs) == "All done."

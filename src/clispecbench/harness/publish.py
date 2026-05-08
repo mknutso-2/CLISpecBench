@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
-from clispecbench.harness.results import load_result
+from clispecbench.harness.results import RunResult, load_result, model_effort_slug
 
 log = logging.getLogger(__name__)
 
@@ -42,8 +43,8 @@ def published_runs_dir(
 ) -> Path:
     """Return ``<published_root>/<task>/<agent>/<model-effort>/``."""
     base = published_root / task / agent
-    if model:
-        slug = f"{model}_{effort}" if effort else model
+    slug = model_effort_slug(model, effort)
+    if slug:
         base = base / slug
     return base
 
@@ -136,7 +137,7 @@ def _classify_unpublishable_stop_message(message: str) -> str | None:
     return None
 
 
-def _iter_jsonl_dicts(path: Path):
+def _iter_jsonl_dicts(path: Path) -> Iterator[dict[str, Any]]:
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
@@ -149,7 +150,7 @@ def _iter_jsonl_dicts(path: Path):
         except json.JSONDecodeError:
             continue
         if isinstance(event, dict):
-            yield event
+            yield cast(dict[str, Any], event)
 
 
 def _final_codex_turn_failure_message(source: Path) -> str | None:
@@ -165,14 +166,20 @@ def _final_codex_turn_failure_message(source: Path) -> str | None:
     if not final_turn or final_turn.get("type") != "turn.failed":
         return None
 
-    error = final_turn.get("error")
-    if isinstance(error, dict):
+    raw_error: Any = final_turn.get("error")
+    if isinstance(raw_error, dict):
+        error = cast(dict[str, Any], raw_error)
         message = error.get("message")
         return message if isinstance(message, str) else None
-    return error if isinstance(error, str) else None
+    return raw_error if isinstance(raw_error, str) else None
 
 
-def _unpublishable_stop_reason(source: Path, result, status: str, last_message: str) -> str | None:
+def _unpublishable_stop_reason(
+    source: Path,
+    result: RunResult,
+    status: str,
+    last_message: str,
+) -> str | None:
     if result.metadata.agent == "codex-cli":
         reason = _classify_unpublishable_stop_message(
             _final_codex_turn_failure_message(source) or ""

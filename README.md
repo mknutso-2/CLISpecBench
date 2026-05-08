@@ -307,7 +307,7 @@ MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 Then run the smoke tests:
 
 ```bash
-# All four agents in one go
+# All registered auth-smoke agents in one go
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-docker-auth.sh
 
 # Or individually, for debugging
@@ -315,7 +315,13 @@ MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-copilot.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
+OPENROUTER_API_KEY=... MSYS_NO_PATHCONV=1 bash scripts/smoke-test-opencode.sh
 ```
+
+OpenCode uses OpenRouter by default in this harness. Set
+`OPENROUTER_API_KEY` in the shell that launches the run or pass it through
+with `--api-key-env OPENROUTER_API_KEY=...`; use full OpenCode model IDs such
+as `openrouter/moonshotai/kimi-k2.6`.
 
 These are standalone diagnostics -- not part of `pytest` and not run by
 CI. They are the right place to look for the per-agent credential

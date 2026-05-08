@@ -14,6 +14,7 @@ from clispecbench.harness.results import (
     TestSummary,
     TokenUsage,
     load_result,
+    model_effort_slug,
 )
 
 
@@ -183,3 +184,14 @@ class TestBenchmarkCostPolicy:
         loaded = load_result(path)
 
         assert loaded.metadata.exit_class == "completed"
+
+
+class TestModelEffortSlug:
+    def test_preserves_existing_safe_model_names(self) -> None:
+        assert model_effort_slug("gpt-5.4", "xhigh") == "gpt-5.4_xhigh"
+
+    def test_sanitizes_openrouter_model_names_for_paths(self) -> None:
+        assert (
+            model_effort_slug("openrouter/moonshotai/kimi-k2.6:free", "high")
+            == "openrouter_moonshotai_kimi-k2.6_free_high"
+        )

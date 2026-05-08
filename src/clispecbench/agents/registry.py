@@ -11,6 +11,7 @@ from clispecbench.agents.claude_code import ClaudeCodeAdapter
 from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
 from clispecbench.agents.gemini_cli import GeminiCLIAdapter
+from clispecbench.agents.opencode import OpenCodeAdapter
 
 AgentFactory = Callable[[str | None, str | None], AgentAdapter]
 BenchmarkCostPreference = Literal["reported", "estimated"]
@@ -66,6 +67,13 @@ _AGENT_SPECS: dict[str, AgentSpec] = {
         docker_image="clispecbench-gemini-cli",
         version_command="gemini --version",
         auth_smoke_script="scripts/smoke-test-gemini.sh",
+    ),
+    "opencode": AgentSpec(
+        agent_id="opencode",
+        factory=lambda model, effort: OpenCodeAdapter(model=model, effort=effort),
+        docker_image="clispecbench-opencode",
+        version_command="opencode --version",
+        auth_smoke_script="scripts/smoke-test-opencode.sh",
     ),
 }
 

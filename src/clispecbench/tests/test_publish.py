@@ -85,6 +85,17 @@ def test_published_runs_dir_omits_effort_when_none(tmp_path: Path) -> None:
     assert d == tmp_path / "rs274-cpp" / "claude-code" / "claude-opus-4-7"
 
 
+def test_published_runs_dir_sanitizes_openrouter_model_path(tmp_path: Path) -> None:
+    d = published_runs_dir(
+        tmp_path,
+        "bibtex-py",
+        "opencode",
+        "openrouter/moonshotai/kimi-k2.6:free",
+        "high",
+    )
+    assert d == tmp_path / "bibtex-py" / "opencode" / "openrouter_moonshotai_kimi-k2.6_free_high"
+
+
 def test_next_published_run_number_empty_dir(tmp_path: Path) -> None:
     assert next_published_run_number(tmp_path / "missing") == 1
     (tmp_path / "empty").mkdir()

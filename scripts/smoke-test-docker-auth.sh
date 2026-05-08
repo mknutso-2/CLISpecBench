@@ -6,6 +6,7 @@
 # Prerequisites:
 #   - Docker Engine running in WSL2 (see install-docker-wsl.sh)
 #   - Logged in to each CLI on the Windows host
+#   - OPENROUTER_API_KEY exported for the OpenCode/OpenRouter smoke test
 #   - uv installed (used to read the agent registry)
 #
 # Run from Git Bash:
@@ -19,8 +20,9 @@
 #   bash scripts/smoke-test-codex.sh
 #   bash scripts/smoke-test-copilot.sh
 #   bash scripts/smoke-test-gemini.sh
+#   OPENROUTER_API_KEY=... bash scripts/smoke-test-opencode.sh
 #
-# Note: Running all three sequentially takes 3-5 minutes (each agent pulls
+# Note: Running all registered scripts sequentially takes several minutes (each agent pulls
 # npm packages and makes an API call). Run individual scripts to debug.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import uuid
 from dataclasses import asdict, dataclass, field
@@ -15,6 +16,7 @@ log = logging.getLogger(__name__)
 
 SCHEMA_VERSION = "2.0"
 _VALID_BENCHMARK_COST_PREFERENCES = frozenset({"reported", "estimated"})
+_UNSAFE_MODEL_SLUG_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
 
 
 def _benchmark_cost_preference(agent: str, stored_preference: str | None) -> str:
@@ -303,13 +305,17 @@ def make_run_label(task: str, agent: str, run_number: int, model: str | None = N
     return f"{task}_{agent}{model_part}_{ts}_run-{run_number}"
 
 
-def _model_effort_slug(model: str | None, effort: str | None) -> str | None:
+def model_effort_slug(model: str | None, effort: str | None) -> str | None:
     """Build a folder name like 'opus_max' or 'gpt-5.4' from model + effort."""
     if not model:
         return None
-    if effort:
-        return f"{model}_{effort}"
-    return model
+    raw = f"{model}_{effort}" if effort else model
+    return _UNSAFE_MODEL_SLUG_CHARS.sub("_", raw)
+
+
+def _model_effort_slug(model: str | None, effort: str | None) -> str | None:
+    """Backward-compatible private alias for the public slug helper."""
+    return model_effort_slug(model, effort)
 
 
 def _model_base_dir(
