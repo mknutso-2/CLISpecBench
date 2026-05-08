@@ -12,6 +12,7 @@ from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
 from clispecbench.agents.gemini_cli import GeminiCLIAdapter
 from clispecbench.agents.opencode import OpenCodeAdapter
+from clispecbench.agents.openhands_cli import OpenHandsCLIAdapter
 
 AgentFactory = Callable[[str | None, str | None], AgentAdapter]
 BenchmarkCostPreference = Literal["reported", "estimated"]
@@ -74,6 +75,13 @@ _AGENT_SPECS: dict[str, AgentSpec] = {
         docker_image="clispecbench-opencode",
         version_command="opencode --version",
         auth_smoke_script="scripts/smoke-test-opencode.sh",
+    ),
+    "openhands": AgentSpec(
+        agent_id="openhands",
+        factory=lambda model, effort: OpenHandsCLIAdapter(model=model, effort=effort),
+        docker_image="clispecbench-openhands",
+        version_command="openhands --version",
+        auth_smoke_script="scripts/smoke-test-openhands.sh",
     ),
 }
 

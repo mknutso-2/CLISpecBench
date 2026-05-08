@@ -13,6 +13,7 @@ from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
 from clispecbench.agents.gemini_cli import GeminiCLIAdapter
 from clispecbench.agents.opencode import OpenCodeAdapter
+from clispecbench.agents.openhands_cli import OpenHandsCLIAdapter
 from clispecbench.agents.registry import (
     AgentSpec,
     get_agent_spec,
@@ -40,6 +41,7 @@ class TestAgentRegistry:
         assert get_agent_spec("claude-code").benchmark_cost_preference == "estimated"
         assert get_agent_spec("codex-cli").benchmark_cost_preference == "reported"
         assert get_agent_spec("opencode").benchmark_cost_preference == "reported"
+        assert get_agent_spec("openhands").benchmark_cost_preference == "reported"
 
 
 class TestClaudeCodeCredentialMounts:
@@ -171,6 +173,36 @@ class TestOpenCodeEnvironment:
         assert '"type":"error"' in bash_script
 
 
+class TestOpenHandsEnvironment:
+    def test_configures_openrouter_as_llm_api_key(self) -> None:
+        adapter = OpenHandsCLIAdapter(model="openrouter/deepseek/deepseek-v4-pro")
+
+        env = adapter.environment({"OPENROUTER_API_KEY": "test-key"})
+
+        assert env["OPENROUTER_API_KEY"] == "test-key"
+        assert env["LLM_API_KEY"] == "test-key"
+        assert env["LLM_MODEL"] == "openrouter/deepseek/deepseek-v4-pro"
+        assert env["PYTHONIOENCODING"] == "utf-8"
+        assert env["PYTHONUTF8"] == "1"
+        assert env["OPENHANDS_SUPPRESS_BANNER"] == "1"
+
+    def test_invoke_command_uses_headless_json_file_mode(self) -> None:
+        adapter = OpenHandsCLIAdapter(model="openrouter/deepseek/deepseek-v4-pro")
+
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+
+        bash_script = cmd[2]
+        assert "openhands --headless --json --always-approve --override-with-envs" in bash_script
+        assert "--file /workspace/prompt.md" in bash_script
+        assert "OPENHANDS_PERSISTENCE_DIR=/tmp/openhands" in bash_script
+        assert "tee /tmp/openhands-events.jsonl" in bash_script
+        assert "openhands-base-state.json" in bash_script
+        assert "ConversationErrorEvent" in bash_script
+
+
 class TestAgentVersions:
     @pytest.mark.parametrize(
         "spec",
@@ -235,6 +267,20 @@ class TestModelAndEffort:
         assert "--model openrouter/deepseek/deepseek-v4-pro" in bash_script
         assert "--variant max" in bash_script
 
+    def test_openhands_model_is_env_configured(self) -> None:
+        adapter = OpenHandsCLIAdapter(model="openrouter/deepseek/deepseek-v4-pro", effort="high")
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        bash_script = cmd[2]
+        env = adapter.environment({"OPENROUTER_API_KEY": "test-key"})
+
+        assert "--file /workspace/prompt.md" in bash_script
+        assert "--model" not in bash_script
+        assert env["LLM_MODEL"] == "openrouter/deepseek/deepseek-v4-pro"
+        assert adapter.effort == "high"
+
     def test_copilot_model_in_command(self) -> None:
         adapter = CopilotCLIAdapter(model="gpt-5.2", effort="high")
         cmd = adapter.invoke_command(
@@ -288,6 +334,11 @@ class TestTelemetryPaths:
     def test_opencode_has_event_log_path(self) -> None:
         adapter = OpenCodeAdapter()
         assert any("opencode-events" in p for p in adapter.telemetry_paths)
+
+    def test_openhands_has_event_and_state_paths(self) -> None:
+        adapter = OpenHandsCLIAdapter()
+        assert any("openhands-events" in p for p in adapter.telemetry_paths)
+        assert any("openhands-base-state" in p for p in adapter.telemetry_paths)
 
 
 class TestClaudeCodeTokenUsage:
@@ -775,6 +826,108 @@ class TestOpenCodeTokenUsage:
             [
                 json.dumps({"type": "text", "part": {"text": "All "}}),
                 json.dumps({"type": "text", "part": {"text": "done."}}),
+            ]
+        )
+
+        assert adapter.extract_last_agent_message(logs) == "All done."
+
+
+class TestOpenHandsTokenUsage:
+    def test_parse_token_usage_from_base_state(self, tmp_path: Path) -> None:
+        adapter = OpenHandsCLIAdapter(model="openrouter/xiaomi/mimo-v2.5-pro")
+        (tmp_path / "openhands-base-state.json").write_text(
+            json.dumps(
+                {
+                    "stats": {
+                        "usage_to_metrics": {
+                            "agent": {
+                                "accumulated_cost": 0.0042,
+                                "accumulated_token_usage": {
+                                    "model": "openrouter/xiaomi/mimo-v2.5-pro",
+                                    "prompt_tokens": 1000,
+                                    "completion_tokens": 200,
+                                    "cache_read_tokens": 300,
+                                    "cache_write_tokens": 50,
+                                },
+                            },
+                            "condenser": {
+                                "accumulated_cost": 0.0003,
+                                "accumulated_token_usage": {
+                                    "model": "openrouter/xiaomi/mimo-v2.5-pro",
+                                    "prompt_tokens": 100,
+                                    "completion_tokens": 20,
+                                },
+                            },
+                        }
+                    }
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        logs = "\n".join(
+            [
+                json.dumps(
+                    {
+                        "id": "action-1",
+                        "source": "agent",
+                        "kind": "ActionEvent",
+                        "tool_name": "terminal",
+                    }
+                ),
+                json.dumps(
+                    {
+                        "source": "agent",
+                        "kind": "ActionEvent",
+                        "tool_name": "finish",
+                        "action": {"message": "Done."},
+                    }
+                ),
+            ]
+        )
+
+        usage = adapter.parse_token_usage(tmp_path, logs)
+
+        assert usage is not None
+        assert usage.input_tokens == 1100
+        assert usage.output_tokens == 220
+        assert usage.cache_read_input_tokens == 300
+        assert usage.cache_creation_input_tokens == 50
+        assert usage.tool_calls == 2
+        assert usage.reported_cost_usd == pytest.approx(0.0045)
+        assert usage.source == "openhands_base_state"
+        assert usage.is_partial is False
+        assert adapter.estimate_cost(usage) == pytest.approx(0.00176)
+
+    def test_parse_token_usage_returns_none_without_base_state(self, tmp_path: Path) -> None:
+        adapter = OpenHandsCLIAdapter()
+
+        usage = adapter.parse_token_usage(tmp_path, "")
+
+        assert usage is None
+
+    def test_extract_last_agent_message_prefers_finish_action(self) -> None:
+        adapter = OpenHandsCLIAdapter()
+        logs = "\n".join(
+            [
+                json.dumps(
+                    {
+                        "source": "agent",
+                        "kind": "MessageEvent",
+                        "llm_message": {
+                            "role": "assistant",
+                            "content": [{"type": "text", "text": "Planning."}],
+                        },
+                    }
+                ),
+                json.dumps(
+                    {
+                        "source": "agent",
+                        "kind": "ActionEvent",
+                        "tool_name": "finish",
+                        "action": {"message": "All done."},
+                    }
+                ),
             ]
         )
 

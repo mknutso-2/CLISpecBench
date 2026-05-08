@@ -67,6 +67,7 @@ class ModelPricing:
 # Anthropic rows last verified 2026-04-19
 # OpenAI rows last verified 2026-04-26
 # Google rows last verified 2026-04-02
+# OpenRouter rows last verified 2026-05-08
 # ---------------------------------------------------------------------------
 
 # Anthropic Claude
@@ -128,11 +129,30 @@ GOOGLE_PRICING: dict[str, ModelPricing] = {
     ),  # noqa: E501
 }
 
+# OpenRouter
+# https://openrouter.ai/deepseek/deepseek-v4-pro/pricing
+# https://openrouter.ai/xiaomi/mimo-v2.5-pro/pricing
+OPENROUTER_PRICING: dict[str, ModelPricing] = {
+    "openrouter/deepseek/deepseek-v4-pro": ModelPricing(
+        input=0.435, output=0.87, cached_input=0.435, cache_write=0.435
+    ),
+    "deepseek/deepseek-v4-pro": ModelPricing(
+        input=0.435, output=0.87, cached_input=0.435, cache_write=0.435
+    ),
+    "openrouter/xiaomi/mimo-v2.5-pro": ModelPricing(
+        input=1.00, output=3.00, cached_input=1.00, cache_write=1.00
+    ),
+    "xiaomi/mimo-v2.5-pro": ModelPricing(
+        input=1.00, output=3.00, cached_input=1.00, cache_write=1.00
+    ),
+}
+
 # Combined lookup
 ALL_PRICING: dict[str, ModelPricing] = {
     **ANTHROPIC_PRICING,
     **OPENAI_PRICING,
     **GOOGLE_PRICING,
+    **OPENROUTER_PRICING,
 }
 
 
