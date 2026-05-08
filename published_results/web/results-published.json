@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "generated_at": "2026-05-08T11:03:31.452805-05:00",
+  "generated_at": "2026-05-08T11:33:39.183787-05:00",
   "source": "CLISpecBench curated published run JSON files from published_results/**/run*.json",
   "rows_are_official_completed_runs": true,
   "omits_user_environment_stops": true,
@@ -1587,12 +1587,12 @@
       "eval_instance": "run2",
       "eval_version": "1.2.1",
       "exit_reason": "completed",
-      "status": "Complete",
+      "status": "Complete*",
       "agent_stop_reason": "finished",
       "agent_stop_label": "Finished",
       "agent_stop_message": "",
       "agent_stop_source": "result-json",
-      "notes": "",
+      "notes": "ROOT CAUSE: agent built output/ as a Python package (created __init__.py, used relative imports like 'from .name_formatter import ...' in submodules) but the harness invokes main.py as a SCRIPT (python /path/to/main.py), so Python rejects the relative imports with 'attempted relative import with no known parent package' before any application logic runs. Verified by executing the agent's main.py directly against a one-line @article{} bib input \u2014 produces this exact error in the output JSON envelope. \nEFFECT: the binary builds successfully but errors on every input. The 11 passing tests are precisely the ones where 'exit 1 with a well-formed JSON error envelope' is the correct answer: test_payload_builds_successfully (1), test_error_precision.* (4), test_errors.* (3), and three test_bst_parser_edges.* error-path tests. Every happy-path test fails because no parser code ever runs. \nWHY OTHER RUNS DIDN'T HIT THIS: run1 (347/375) and run3 (347/375) used top-level absolute imports (from bib_parser import ...) with no __init__.py, which works under both script and module invocation. \nTAKEAWAY: this is intra-task variance from a packaging-pattern choice the agent didn't validate against the harness's exact invocation pattern. The model did real engineering work (6 files, 2425 LOC, build success) and self-tested the implementation, but presumably tested via 'cd output && python -m main' or similar, which masks the bug.",
       "score_count": 11,
       "score_total": 375,
       "score_pct": 2.933,
@@ -1606,7 +1606,7 @@
       "loc": 2425,
       "result_link": "../bibtex-py/claude-code/claude-sonnet-4-6_max/run2.json",
       "transcript_link": "",
-      "last_message": "Claims complete; only 11/375 tests passed (2.9%) \u2014 agent declared 'implementation is done' but most subsystems are broken (0/16 bib_parsing, 0/44 bst_language, 0/40 builtins_deep, 3/16 bst_parser_edges). Strong false completion claim \u2014 same model+prompt scored 347/375 on run1, so this is intra-task variance, not a hard task."
+      "last_message": "Build succeeded but binary errors on every input \u2014 root cause: agent made output/ a Python package (added __init__.py, used 'from .name_formatter import ...' relative imports in submodules), and the harness invokes main.py as a script (python /path/to/main.py), which Python rejects with 'attempted relative import with no known parent package' before any application logic runs. Result: 11/375 (2.9%) \u2014 and all 11 passing are error-path tests where 'exit 1 with a structured JSON envelope' happens to be the correct answer. Same model + same prompt scored 347/375 on the other two runs (which used absolute imports), so this is a packaging-choice variance, not task difficulty. Strong false completion claim: agent declared 'implementation is done' without verifying the harness's exact invocation pattern."
     },
     {
       "task": "bibtex-py",
