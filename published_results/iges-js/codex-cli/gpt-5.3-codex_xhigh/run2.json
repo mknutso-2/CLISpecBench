@@ -1,0 +1,1700 @@
+{
+  "schema_version": "2.0",
+  "metadata": {
+    "run_uid": "4a2426f1-03a9-455b-940f-be82f5e3d20e",
+    "task": "iges-js",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 2,
+    "timestamp": "2026-05-08T06:41:55.779483+00:00",
+    "test_suite_version": "395249b",
+    "eval_version": "1.0.15",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 1449.1089999999967,
+    "exit_reason": "completed",
+    "model": "gpt-5.3-codex",
+    "effort": "xhigh",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "8199a554c2bd0a3c3bc1e4f7a6d0be1350233c54a5f0d34dd913dd18e337b05f",
+    "test_suite_sha": "4f0c8a06404ed32eae660cdb53acae9b861b0794b0122160994c9871653cf872",
+    "agent_last_message": "Implemented.\n\n### What I added\n- Main CLI program: [output/main.js](/workspace/output/main.js)\n- Binary wrapper named `iges`: [output/iges](/workspace/output/iges)\n\n### Supported CLI\n- `iges parse --input <file.iges> --output <out.json>`\n- `iges write --input <file.json> --output <out.iges>`\n- `iges query --input <file.iges> --de <n> --output <entity.json>`\n- `iges eval --input <file.iges> --de <n> --t <f> [--s <f>] --output <point.json>`\n- `iges roundtrip --input <file.iges> --output <out.iges>`\n\n### Implemented features\n- Fixed-format IGES section parsing/writing (`S/G/D/P/T`) with 80-column output.\n- Global section parsing with dynamic delimiters, Hollerith handling, defaults, required-field checks, and `spec_version` clamping.\n- Directory/Parameter parsing into canonical JSON envelope (`start_lines`, `global`, `entities`).\n- Per-entity PD parsing/writing across the 87-type catalog listed in your spec.\n- `query` by DE index (with odd/positive/presence validation).\n- `eval` for required curve/surface families, including transform-matrix application order.\n- Error diagnostics envelope format with `ok/error/spec_ref/line/section/diagnostics`.\n- Required invalid-input checks you listed (including global positive-required fields, cross-ref checks, degenerate line entity, unsupported type, negative type, malformed section structure, etc.).\n- Deterministic writer behavior with a single terminate line and canonical fixed formatting.\n- `write`/`roundtrip` failure behavior: diagnostic JSON to `stderr`, output IGES not written.\n\n### Verification run\nI ran end-to-end smoke tests for:\n- `write -> parse`\n- `parse -> write -> parse` semantic stability\n- `query`\n- `eval`\n- `roundtrip` fixed-point on produced files\n- failure-path JSON diagnostics and exit code `1`\n\n",
+    "exit_class": null
+  },
+  "token_usage": {
+    "input_tokens": 3693188,
+    "output_tokens": 67683,
+    "cache_read_input_tokens": 3451776,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 28,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 1.974094,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 3760871
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.025854444997094106,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_annotation_entities.py::test_angular_dimension_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05393592499603983,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_curve_dimension_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.044103751992224716,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_diameter_dimension_allows_single_leader",
+      "outcome": "passed",
+      "duration_seconds": 0.04708683300123084,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_flag_note_zero_leaders_roundtrip",
+      "outcome": "failed",
+      "duration_seconds": 0.04447244299808517,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_flag_note_zero_leaders_ro0')\n\n    def test_flag_note_zero_leaders_roundtrip(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n>       data = _roundtrip_single(\n            submission_command,\n            tmp_path,\n            entity_type=208,\n            data={\n                \"xt\": 0.0,\n                \"yt\": 0.0,\n                \"zt\": 0.0,\n                \"angle\": 3.14159265358979,\n                \"denote\": 5,\n                \"n\": 0,\n                \"leaders\": [],\n            },\n        )\n\n/tmp/tests/test_annotation_entities.py:128: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_annotation_entities.py:41: in _roundtrip_single\n    reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:310: in semantic_roundtrip_json\n    return parse_iges_to_json(submission_command, iges_path, tmp_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_flag_note_zero_leaders_ro0/out.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_flag_note_zero_leaders_ro0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_flag_note_zero_leaders_ro0/out.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_flag_note_zero_leaders_ro0/out.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_flag_note_zero_leaders_ro0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_general_label_zero_leaders_roundtrip",
+      "outcome": "failed",
+      "duration_seconds": 0.050793603993952274,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_general_label_zero_leader0')\n\n    def test_general_label_zero_leaders_roundtrip(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n>       data = _roundtrip_single(\n            submission_command,\n            tmp_path,\n            entity_type=210,\n            data={\"denote\": 1, \"n\": 0, \"leaders\": []},\n        )\n\n/tmp/tests/test_annotation_entities.py:151: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_annotation_entities.py:41: in _roundtrip_single\n    reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:310: in semantic_roundtrip_json\n    return parse_iges_to_json(submission_command, iges_path, tmp_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_general_label_zero_leader0/out.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_general_label_zero_leader0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_general_label_zero_leader0/out.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_general_label_zero_leader0/out.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_general_label_zero_leader0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_general_note_multiple_strings_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.044833463987743016,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_new_general_note_multiple_strings_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05487530199752655,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_leader_arrow_multiple_segments_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04287362899776781,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_linear_dimension_allows_null_witness_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.04730513600225095,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_ordinate_dimension_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04698690700024599,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_ordinate_dimension_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.044304820003162604,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_point_dimension_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04065404300490627,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_radius_dimension_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.044421267994039226,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_general_symbol_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04495022499759216,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_sectioned_area_multiple_islands_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0531133510012296,
+      "message": null
+    },
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.025854444997094106,
+      "message": null
+    },
+    {
+      "node_id": "test_core_entities.py::test_circular_arc_eval_full_circle_lands_in_zt_plane",
+      "outcome": "passed",
+      "duration_seconds": 0.0553407760016853,
+      "message": null
+    },
+    {
+      "node_id": "test_core_entities.py::test_direction_roundtrips_non_unit_ratios_without_normalizing",
+      "outcome": "passed",
+      "duration_seconds": 0.0529490349945263,
+      "message": null
+    },
+    {
+      "node_id": "test_core_entities.py::test_transformation_matrix_roundtrips_rotation_and_translation",
+      "outcome": "passed",
+      "duration_seconds": 0.047319693003373686,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_integer_real_and_timestamp_fields_accept_spec_forms",
+      "outcome": "failed",
+      "duration_seconds": 0.024580855999374762,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_integer_real_and_timestam0')\n\n    def test_integer_real_and_timestamp_fields_accept_spec_forms(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        fields = [\n            hollerith(\"product\"),\n            hollerith(\"test.igs\"),\n            hollerith(\"TestSystem\"),\n            hollerith(\"v1.0\"),\n            \"+32\",\n            \" 38\",\n            \"6\",\n            \"308\",\n            \"15\",\n            \"\",\n            \".125\",\n            \"2\",\n            hollerith(\"MM\"),\n            \"1\",\n            \"1.E-2\",\n            hollerith(\"900411.120000\"),\n            \"0.1E-3\",\n            \"145.98763D4\",\n            hollerith(\"John\"),\n            hollerith(\"Company\"),\n            \"11\",\n            \"0\",\n            \"\",\n            \"\",\n        ]\n>       parsed = _parse_raw_document(\n            submission_command,\n            tmp_path,\n            make_empty_iges(build_global_payload(fields)),\n            name=\"numeric-forms\",\n        )\n\n/tmp/tests/test_data_types.py:68: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_data_types.py:36: in _parse_raw_document\n    return parse_iges_to_json(submission_command, iges_path, tmp_path, name=name)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_integer_real_and_timestam0/numeric-forms.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_integer_real_and_timestam0/numeric-forms.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_integer_real_and_timestam0/numeric-forms.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_integer_real_and_timestam0/numeric-forms.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_integer_real_and_timestam0/numeric-forms.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_data_types.py::test_hollerith_strings_preserve_delimiters_spaces_and_empty_defaults",
+      "outcome": "passed",
+      "duration_seconds": 0.026160477005760185,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_control_character_in_start_section_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.023763364006299525,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_control_character_in_hollerith_string_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.024868716995115392,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_spec_version_below_range_is_clamped_to_default",
+      "outcome": "passed",
+      "duration_seconds": 0.025090989001910202,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_spec_version_above_range_is_clamped_to_v5_3",
+      "outcome": "passed",
+      "duration_seconds": 0.022352398016664665,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_pointer_and_logical_values_roundtrip_through_entity_json",
+      "outcome": "passed",
+      "duration_seconds": 0.05590299099276308,
+      "message": null
+    },
+    {
+      "node_id": "test_defaulted_fields.py::test_connect_point_with_defaulted_cid_and_cfn_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.05890181400172878,
+      "message": null
+    },
+    {
+      "node_id": "test_defaulted_fields.py::test_network_subfigure_definition_with_defaulted_prd_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.05595150600129273,
+      "message": null
+    },
+    {
+      "node_id": "test_defaulted_fields.py::test_rectangular_array_with_defaulted_ddf_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.040171870998165105,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_status_sub_fields_non_default_values_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04920607500389451,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_line_font_pattern_as_integer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04581416000291938,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_line_font_pattern_as_negated_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.03941946100530913,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_level_as_integer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.051879588994779624,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_structure_as_negated_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04910284300422063,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_view_and_xform_and_label_display_pointers_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.046962902997620404,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_entity_label_and_subscript_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.051998882001498714,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_entity_label_8_char_max_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04914686599659035,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_null_entity_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04077054200024577,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_circular_arc_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04985466999642085,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_composite_curve_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.048452252995048184,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_plane_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04725104299723171,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_point_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04718803999276133,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_direction_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.046998755999084096,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_transformation_matrix_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04963933699764311,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_transformation_matrix_non_identity",
+      "outcome": "passed",
+      "duration_seconds": 0.04765137499634875,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_conic_arc_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04520585300633684,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_copious_data_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.048005051008658484,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_ruled_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.049674942005367484,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_surface_of_revolution_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04722806599602336,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_tabulated_cylinder_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.046133565992931835,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_flash_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.048460796002473217,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_offset_curve_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0526869289969909,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_offset_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04599542200594442,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_plane_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05191395000292687,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_plane_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.048338344000512734,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_cylindrical_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04904801600787323,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_cylindrical_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.044655412013526075,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_conical_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04085934100294253,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_conical_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04498927899840055,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_spherical_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04631358999904478,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_spherical_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04671913200581912,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_toroidal_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04240690700680716,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_toroidal_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04867286799708381,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_subfigure_definition_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05005495699879248,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_subfigure_instance_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.048782316989672836,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_circular_array_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04786502399656456,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_property_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04721228699054336,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_property_bool_values_serialize_as_logical",
+      "outcome": "passed",
+      "duration_seconds": 0.023651953997614328,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_drawing_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04351916099403752,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_view_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.041757609993510414,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_vertex_list_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.043850553993252106,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_edge_list_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04484989599586697,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_loop_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04428680199634982,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_face_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05756577300053323,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_shell_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04953247900266433,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_msbo_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.046239520990638994,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_line_form1_semi_bounded_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.042147608000959735,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_line_form2_unbounded_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05522702800226398,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_copious_data_form11_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04463465700246161,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_attribute_table_definition_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05290711099951295,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_attribute_table_definition_form_one_roundtrip",
+      "outcome": "failed",
+      "duration_seconds": 0.0415135770017514,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio1')\n\n    def test_attribute_table_definition_form_one_roundtrip(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n>       data = _roundtrip_single(\n            submission_command,\n            tmp_path,\n            entity_type=322,\n            form=1,\n            data={\n                \"name\": \"F1TBL\",\n                \"alt\": 1,\n                \"na\": 1,\n                \"attributes\": [\n                    {\n                        \"at\": 3,\n                        \"avdt\": 2,\n                        \"avc\": 2,\n                        \"values\": [\n                            {\"kind\": \"real\", \"value\": 1.5},\n                            {\"kind\": \"real\", \"value\": -0.25},\n                        ],\n                        \"display_ptrs\": [],\n                    }\n                ],\n            },\n        )\n\n/tmp/tests/test_entity_roundtrips.py:953: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_entity_roundtrips.py:60: in _roundtrip_single\n    reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:310: in semantic_roundtrip_json\n    return parse_iges_to_json(submission_command, iges_path, tmp_path)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio1/out.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio1/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio1/out.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio1/out.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio1/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_error_envelope.py::test_parse_error_envelope_has_all_required_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.021412431000499055,
+      "message": null
+    },
+    {
+      "node_id": "test_error_envelope.py::test_query_error_envelope_has_all_required_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.057597497005190235,
+      "message": null
+    },
+    {
+      "node_id": "test_error_envelope.py::test_eval_error_envelope_has_all_required_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.04677854799956549,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_custom_parameter_delimiter_is_honored_in_written_and_parsed_files",
+      "outcome": "failed",
+      "duration_seconds": 0.045008716006122995,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_custom_parameter_delimite0')\n\n    def test_custom_parameter_delimiter_is_honored_in_written_and_parsed_files(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        doc = single_line_document((0.0, 0.0, 0.0), (1.0, 1.0, 1.0))\n        doc[\"global\"][\"param_delimiter\"] = \"|\"\n        iges_path = write_iges_from_json(submission_command, doc, tmp_path, name=\"pipe\")\n    \n        grouped = physical_lines_by_section(iges_path)\n        assert any(\"1H|\" in line[:72] for line in grouped[\"G\"])\n        assert any(\"|\" in line[:64] for line in grouped[\"P\"])\n    \n>       parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name=\"pipe\")\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_free_format.py:50: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_custom_parameter_delimite0/pipe.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_custom_parameter_delimite0/pipe.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_custom_parameter_delimite0/pipe.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_custom_parameter_delimite0/pipe.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_custom_parameter_delimite0/pipe.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_free_format.py::test_custom_record_delimiter_is_honored_in_written_and_parsed_files",
+      "outcome": "passed",
+      "duration_seconds": 0.04406379299325636,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_consecutive_delimiters_default_global_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.026431333004438784,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_custom_delimiters_do_not_split_hollerith_text",
+      "outcome": "failed",
+      "duration_seconds": 0.030216094994102605,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_custom_delimiters_do_not_0')\n\n    def test_custom_delimiters_do_not_split_hollerith_text(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        fields = [\n            hollerith(\"a|b#c\"),\n            hollerith(\"file|#\"),\n            hollerith(\"native\"),\n            hollerith(\"v1.0\"),\n            \"32\",\n            \"38\",\n            \"6\",\n            \"308\",\n            \"15\",\n            \"\",\n            \"1.0\",\n            \"2\",\n            hollerith(\"MM\"),\n            \"1\",\n            \"0.01\",\n            hollerith(\"20260416.120000\"),\n            \"1.0E-6\",\n            \"1000.0\",\n            hollerith(\"Author\"),\n            hollerith(\"Org\"),\n            \"11\",\n            \"0\",\n            \"\",\n            \"\",\n        ]\n>       parsed = _parse_raw_document(\n            submission_command,\n            tmp_path,\n            make_empty_iges(build_global_payload(fields, param_delimiter=\"|\", record_delimiter=\"#\")),\n            name=\"custom-hollerith\",\n        )\n\n/tmp/tests/test_free_format.py:146: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_free_format.py:36: in _parse_raw_document\n    return parse_iges_to_json(submission_command, iges_path, tmp_path, name=name)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_custom_delimiters_do_not_0/custom-hollerith.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_custom_delimiters_do_not_0/custom-hollerith.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_custom_delimiters_do_not_0/custom-hollerith.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_custom_delimiters_do_not_0/custom-hollerith.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_custom_delimiters_do_not_0/custom-hollerith.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_free_format.py::test_prohibited_parameter_delimiter_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.02273808999598259,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_comment_after_parameter_record_delimiter_is_ignored",
+      "outcome": "passed",
+      "duration_seconds": 0.04696699500345858,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_start_angle_gives_start_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0442728679990978,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_end_angle_gives_end_point",
+      "outcome": "passed",
+      "duration_seconds": 0.043684856995241717,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_midangle_is_on_arc",
+      "outcome": "passed",
+      "duration_seconds": 0.040205469995271415,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_nonzero_start_angle_returns_start_point",
+      "outcome": "passed",
+      "duration_seconds": 0.05102212000201689,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_nonzero_end_angle_returns_end_point",
+      "outcome": "passed",
+      "duration_seconds": 0.045364443998550996,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_offcenter_arc_midangle_on_circle",
+      "outcome": "passed",
+      "duration_seconds": 0.04044568900280865,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_respects_z_plane",
+      "outcome": "passed",
+      "duration_seconds": 0.050832279994210694,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_parabolic_conic_eval_reaches_vertex_at_midparameter",
+      "outcome": "passed",
+      "duration_seconds": 0.04408085699833464,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_elliptic_conic_eval_midangle_matches_semiaxes",
+      "outcome": "passed",
+      "duration_seconds": 0.05811751599685522,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_hyperbolic_conic_eval_branch_midparameter_matches_vertex",
+      "outcome": "passed",
+      "duration_seconds": 0.04718093100382248,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_transformed_elliptic_conic_applies_entity_matrix_after_eval",
+      "outcome": "passed",
+      "duration_seconds": 0.04372258499643067,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form11_at_vertex_returns_point",
+      "outcome": "passed",
+      "duration_seconds": 0.04568349999317434,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form11_midpoint_interpolates",
+      "outcome": "passed",
+      "duration_seconds": 0.051942022997536696,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form12_3d_path_at_fractional_t",
+      "outcome": "passed",
+      "duration_seconds": 0.048597031003737357,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form63_midpoint_interpolates",
+      "outcome": "passed",
+      "duration_seconds": 0.04345484100485919,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_at_start_returns_first_constituent_start",
+      "outcome": "passed",
+      "duration_seconds": 0.0475392699954682,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_inside_first_constituent",
+      "outcome": "passed",
+      "duration_seconds": 0.046273246000055224,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint",
+      "outcome": "passed",
+      "duration_seconds": 0.04709729500609683,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_inside_second_constituent",
+      "outcome": "passed",
+      "duration_seconds": 0.045522180014813785,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_at_terminus_returns_second_constituent_end",
+      "outcome": "passed",
+      "duration_seconds": 0.0556252299938933,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_curve_eval_at_start_is_displaced_base_start",
+      "outcome": "passed",
+      "duration_seconds": 0.046378115999687,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_curve_eval_at_midparam_follows_base",
+      "outcome": "passed",
+      "duration_seconds": 0.041299497010186315,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_curve_eval_nonzero_offset_follows_base",
+      "outcome": "passed",
+      "duration_seconds": 0.04572541500965599,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_interior_point",
+      "outcome": "passed",
+      "duration_seconds": 0.041022650999366306,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_on_first_curve_returns_curve1_point",
+      "outcome": "passed",
+      "duration_seconds": 0.051490550984453876,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_on_second_curve_returns_curve2_point",
+      "outcome": "passed",
+      "duration_seconds": 0.05060310500266496,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_dirflg_reverses_second_curve",
+      "outcome": "passed",
+      "duration_seconds": 0.04618266000034055,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_of_revolution_eval_at_start_angle",
+      "outcome": "passed",
+      "duration_seconds": 0.04880377200606745,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_of_revolution_eval_quarter_rotation",
+      "outcome": "passed",
+      "duration_seconds": 0.06171691700001247,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_of_revolution_eval_half_rotation",
+      "outcome": "passed",
+      "duration_seconds": 0.055300455998803955,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_tabulated_cylinder_over_line_interpolates_along_generatrix",
+      "outcome": "passed",
+      "duration_seconds": 0.05927711899130372,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_tabulated_cylinder_over_arc_keeps_generatrix_parallel",
+      "outcome": "passed",
+      "duration_seconds": 0.052455022996582557,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_over_plane_offsets_along_plane_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.051211299003625754,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_over_cylinder_expands_radius_on_indicator_side",
+      "outcome": "passed",
+      "duration_seconds": 0.052065727999433875,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_indicator_flips_global_normal_orientation",
+      "outcome": "passed",
+      "duration_seconds": 0.04788830399775179,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_over_cone_uses_conical_reference_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.04585591900104191,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_over_sphere_extends_radius_along_spherical_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.05054020600800868,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_over_torus_offsets_along_minor_circle_normal",
+      "outcome": "failed",
+      "duration_seconds": 0.04931242599559482,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_offset_surface_over_torus0')\n\n    def test_offset_surface_over_torus_offsets_along_minor_circle_normal(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        doc = _offset_surface_over_torus_doc([0.0, 0.0, 1.0], 0.5)\n        iges_path = write_iges_from_json(submission_command, doc, tmp_path)\n        _, payload = evaluate_entity(\n            submission_command,\n            iges_path,\n            9,\n            90.0,\n            tmp_path,\n            s=180.0,\n        )\n        assert payload.get(\"ok\") is True\n>       assert payload.get(\"point\") == pytest.approx([-5.0, 0.0, 1.5], abs=1e-9)\nE       assert [2.1431318985...987210297e-16] == approx([-5.0 ....5 \u00b1 1.0e-09])\nE         \nE         comparison failed. Mismatched elements: 3 / 3:\nE         Max absolute difference: 5.0\nE         Max relative difference: 2.3330341933136244e+16\nE         Index | Obtained               | Expected      \nE         0     | 2.143131898507868e-16  | -5.0 \u00b1 1.0e-09\nE         1     | 3.5                    | 0.0 \u00b1 1.0e-09 \nE         2     | 1.8369701987210297e-16 | 1.5 \u00b1 1.0e-09\n\n/tmp/tests/test_geometric_eval.py:1143: AssertionError"
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_plane_surface_eval_uses_reference_direction_basis",
+      "outcome": "passed",
+      "duration_seconds": 0.050858257003710605,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_cylindrical_surface_eval_matches_spec_angles_and_axis",
+      "outcome": "passed",
+      "duration_seconds": 0.050410181007464416,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_conical_surface_eval_expands_radius_by_v_tan_angle",
+      "outcome": "passed",
+      "duration_seconds": 0.04778371599968523,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_spherical_surface_eval_uses_latitude_and_longitude_degrees",
+      "outcome": "passed",
+      "duration_seconds": 0.04805249799392186,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_toroidal_surface_eval_matches_major_and_minor_radii",
+      "outcome": "failed",
+      "duration_seconds": 0.049224892994971015,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_toroidal_surface_eval_mat0')\n\n    def test_toroidal_surface_eval_matches_major_and_minor_radii(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        doc = wrap_entities(\n            _analytic_surface_frame()\n            + [\n                make_entity(\n                    de_index=7,\n                    entity_type=198,\n                    form=1,\n                    data={\"deloc\": 1, \"deaxis\": 3, \"majrad\": 5.0, \"minrad\": 1.0, \"derefd\": 5},\n                ),\n            ]\n        )\n        iges_path = write_iges_from_json(submission_command, doc, tmp_path)\n        _, payload = evaluate_entity(\n            submission_command,\n            iges_path,\n            7,\n            90.0,\n            tmp_path,\n            s=180.0,\n        )\n        assert payload.get(\"ok\") is True\n>       assert payload.get(\"point\") == pytest.approx([-5.0, 0.0, 1.0], abs=1e-9)\nE       assert [2.4492935982...991473532e-16] == approx([-5.0 ....0 \u00b1 1.0e-09])\nE         \nE         comparison failed. Mismatched elements: 3 / 3:\nE         Max absolute difference: 5.0\nE         Max relative difference: 2.0414049191494212e+16\nE         Index | Obtained               | Expected      \nE         0     | 2.4492935982947064e-16 | -5.0 \u00b1 1.0e-09\nE         1     | 4                      | 0.0 \u00b1 1.0e-09 \nE         2     | 1.2246467991473532e-16 | 1.0 \u00b1 1.0e-09\n\n/tmp/tests/test_geometric_eval.py:1293: AssertionError"
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_transformed_plane_surface_applies_entity_matrix_after_eval",
+      "outcome": "passed",
+      "duration_seconds": 0.0429347199969925,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_eval_on_non_parametric_entity_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.046747608997975476,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_curve_eval_with_s_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.042814471999008674,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_eval_without_s_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.05119239800842479,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_curve_eval_success_has_null_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.046418204001383856,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_eval_success_has_null_tangent",
+      "outcome": "passed",
+      "duration_seconds": 0.04564323300292017,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_line_form1_eval_beyond_terminate",
+      "outcome": "passed",
+      "duration_seconds": 0.04544692399940686,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_line_form2_eval_before_start",
+      "outcome": "passed",
+      "duration_seconds": 0.0422325199979241,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_parse_line_from_pd",
+      "outcome": "passed",
+      "duration_seconds": 0.044618546999117825,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_line_starting_at_origin",
+      "outcome": "passed",
+      "duration_seconds": 0.05502271599834785,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_line_with_negative_coordinates",
+      "outcome": "passed",
+      "duration_seconds": 0.05198593399836682,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_evaluate_at_t_zero_yields_start_point",
+      "outcome": "passed",
+      "duration_seconds": 0.04243042800226249,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_evaluate_at_t_one_yields_terminate_point",
+      "outcome": "passed",
+      "duration_seconds": 0.04952489100105595,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_evaluate_at_midpoint",
+      "outcome": "passed",
+      "duration_seconds": 0.043140158013557084,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_query_returns_single_line_entity",
+      "outcome": "passed",
+      "duration_seconds": 0.05169580199435586,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_roundtrip_preserves_line_entity",
+      "outcome": "passed",
+      "duration_seconds": 0.04249410600459669,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_roundtrip_subcommand_reparses_cleanly",
+      "outcome": "passed",
+      "duration_seconds": 0.07318118200782919,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_file_without_start_section_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.02408413899684092,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_empty_file_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.02205249299731804,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_truncated_file_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.02562680500705028,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_minimal_valid_file_parses",
+      "outcome": "passed",
+      "duration_seconds": 0.024422996000794228,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_query_with_nonexistent_de_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.025749875007022638,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_query_with_even_de_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.04487241399328923,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_random_bytes_are_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.025011929996253457,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_associativity_definition_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04230819099757355,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_line_font_definition_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05120216000796063,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_line_font_definition_form_two_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0403052040055627,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_text_font_definition_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04396568798983935,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_text_display_template_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04924146099801874,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_color_definition_optional_name_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.047873771996819414,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_units_data_multiple_units_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05069493499468081,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_attribute_table_definition_form_two_roundtrip",
+      "outcome": "failed",
+      "duration_seconds": 0.04749603200616548,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_attribute_table_definitio2')\n\n    def test_attribute_table_definition_form_two_roundtrip(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        data = _roundtrip_single(\n            submission_command,\n            tmp_path,\n            entity_type=322,\n            form=2,\n            data={\n                \"name\": \"RT2\",\n                \"alt\": 1,\n                \"na\": 1,\n                \"attributes\": [\n                    {\n                        \"at\": 1,\n                        \"avdt\": 1,\n                        \"avc\": 2,\n                        \"values\": [\n                            {\"kind\": \"int\", \"value\": 10},\n                            {\"kind\": \"int\", \"value\": 20},\n                        ],\n                        \"display_ptrs\": [101, 201],\n                    }\n                ],\n            },\n        )\n        assert data[\"name\"] == \"RT2\"\n>       assert data[\"attributes\"][0][\"values\"][0] == {\"kind\": \"int\", \"value\": 10}\nE       AssertionError: assert {'kind': 'real', 'value': 10} == {'kind': 'int', 'value': 10}\nE         \nE         Omitting 1 identical items, use -vv to show\nE         Differing items:\nE         {'kind': 'real'} != {'kind': 'int'}\nE         Use -v to get more diff\n\n/tmp/tests/test_metadata_entities.py:237: AssertionError"
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_solid_instance_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.049243910994846374,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_parse_success_envelope_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.049790338991442695,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_parse_global_section_has_required_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.05113724200055003,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_parse_error_envelope_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.02495651799836196,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_eval_success_envelope_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.0510979300015606,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_query_success_envelope_has_entity_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.04674746399541618,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_plane_unbounded_pointer_field_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04932880300475517,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_node_ndcsp_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04125814299186459,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_nodal_displacement_node_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04929383398848586,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_nodal_results_gnote_and_np_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.049890281006810255,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_element_results_gnote_and_ep_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04445257900079014,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_network_subfigure_definition_display_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0529454670031555,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_nodal_load_constraint_node_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.054981453002255876,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_network_subfigure_instance_definition_and_display_pointers_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04988755099475384,
+      "message": null
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_ex1_parses_with_expected_global_and_start_lines",
+      "outcome": "failed",
+      "duration_seconds": 0.024040737000177614,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_ex1_parses_with_expected_0')\n\n    def test_ex1_parses_with_expected_global_and_start_lines(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n>       parsed = parse_iges_to_json(submission_command, FIXTURES / \"ex1.iges\", tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_reference_fixtures.py:47: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex1_parses_with_expected_0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex1.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex1_parses_with_expected_0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_ex1_entity_type_mix",
+      "outcome": "failed",
+      "duration_seconds": 0.022143327005323954,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_ex1_entity_type_mix0')\n\n    def test_ex1_entity_type_mix(submission_command: Sequence[str], tmp_path: Path) -> None:\n>       parsed = parse_iges_to_json(submission_command, FIXTURES / \"ex1.iges\", tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_reference_fixtures.py:62: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex1_entity_type_mix0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex1.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex1_entity_type_mix0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_ex2_parses_with_expected_global",
+      "outcome": "failed",
+      "duration_seconds": 0.02051751499675447,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_ex2_parses_with_expected_0')\n\n    def test_ex2_parses_with_expected_global(submission_command: Sequence[str], tmp_path: Path) -> None:\n>       parsed = parse_iges_to_json(submission_command, FIXTURES / \"ex2.iges\", tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_reference_fixtures.py:80: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex2_parses_with_expected_0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex2.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex2_parses_with_expected_0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_ex2_contains_geometry_and_annotation",
+      "outcome": "failed",
+      "duration_seconds": 0.020481422005104832,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_ex2_contains_geometry_and0')\n\n    def test_ex2_contains_geometry_and_annotation(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n>       parsed = parse_iges_to_json(submission_command, FIXTURES / \"ex2.iges\", tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_reference_fixtures.py:90: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex2_contains_geometry_and0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex2.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex2_contains_geometry_and0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_ex3_parses_with_expected_global",
+      "outcome": "failed",
+      "duration_seconds": 0.030813068995485082,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_ex3_parses_with_expected_0')\n\n    def test_ex3_parses_with_expected_global(submission_command: Sequence[str], tmp_path: Path) -> None:\n>       parsed = parse_iges_to_json(submission_command, FIXTURES / \"ex3.iges\", tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_reference_fixtures.py:105: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex3_parses_with_expected_0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex3.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex3_parses_with_expected_0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_ex3_contains_view_drawing_and_xform",
+      "outcome": "failed",
+      "duration_seconds": 0.023160987002484035,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_ex3_contains_view_drawing0')\n\n    def test_ex3_contains_view_drawing_and_xform(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n>       parsed = parse_iges_to_json(submission_command, FIXTURES / \"ex3.iges\", tmp_path)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_reference_fixtures.py:115: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex3_contains_view_drawing0/parsed.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex3.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_ex3_contains_view_drawing0/parsed.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_fixture_preserves_entity_count[ex1.iges-21]",
+      "outcome": "failed",
+      "duration_seconds": 0.022390947997337207,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv0')\nname = 'ex1.iges', expected_count = 21\n\n    @pytest.mark.parametrize(\n        (\"name\", \"expected_count\"),\n        [\n            (\"ex1.iges\", 21),\n            (\"ex2.iges\", 90),\n            (\"ex3.iges\", 109),\n        ],\n    )\n    def test_roundtrip_fixture_preserves_entity_count(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n        expected_count: int,\n    ) -> None:\n        src = FIXTURES / name\n>       rt_path = roundtrip_iges(submission_command, src, tmp_path, name=name)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:44: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv0/ex1.iges.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv0/ex1.iges.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231212\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 3,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231212\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 3,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_fixture_preserves_entity_count[ex2.iges-90]",
+      "outcome": "failed",
+      "duration_seconds": 0.02140722900367109,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv1')\nname = 'ex2.iges', expected_count = 90\n\n    @pytest.mark.parametrize(\n        (\"name\", \"expected_count\"),\n        [\n            (\"ex1.iges\", 21),\n            (\"ex2.iges\", 90),\n            (\"ex3.iges\", 109),\n        ],\n    )\n    def test_roundtrip_fixture_preserves_entity_count(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n        expected_count: int,\n    ) -> None:\n        src = FIXTURES / name\n>       rt_path = roundtrip_iges(submission_command, src, tmp_path, name=name)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:44: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv1/ex2.iges.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv1/ex2.iges.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231652\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 8,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231652\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 8,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_fixture_preserves_entity_count[ex3.iges-109]",
+      "outcome": "failed",
+      "duration_seconds": 0.03368573300394928,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv2')\nname = 'ex3.iges', expected_count = 109\n\n    @pytest.mark.parametrize(\n        (\"name\", \"expected_count\"),\n        [\n            (\"ex1.iges\", 21),\n            (\"ex2.iges\", 90),\n            (\"ex3.iges\", 109),\n        ],\n    )\n    def test_roundtrip_fixture_preserves_entity_count(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n        expected_count: int,\n    ) -> None:\n        src = FIXTURES / name\n>       rt_path = roundtrip_iges(submission_command, src, tmp_path, name=name)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:44: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv2/ex3.iges.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv2/ex3.iges.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231904\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 14,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231904\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 14,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_fixture_preserves_entity_data[ex1.iges]",
+      "outcome": "failed",
+      "duration_seconds": 0.02476975999888964,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv3')\nname = 'ex1.iges'\n\n    @pytest.mark.parametrize(\n        \"name\",\n        [\"ex1.iges\", \"ex2.iges\", \"ex3.iges\"],\n    )\n    def test_roundtrip_fixture_preserves_entity_data(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n    ) -> None:\n        \"\"\"Semantic equivalence: every entity.data block matches after a\n        full parse \u2192 write \u2192 parse cycle.\"\"\"\n        src = FIXTURES / name\n>       rt_path = roundtrip_iges(submission_command, src, tmp_path, name=name)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:65: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv3/ex1.iges.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv3/ex1.iges.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231212\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 3,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231212\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 3,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_fixture_preserves_entity_data[ex2.iges]",
+      "outcome": "failed",
+      "duration_seconds": 0.03308271099376725,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv4')\nname = 'ex2.iges'\n\n    @pytest.mark.parametrize(\n        \"name\",\n        [\"ex1.iges\", \"ex2.iges\", \"ex3.iges\"],\n    )\n    def test_roundtrip_fixture_preserves_entity_data(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n    ) -> None:\n        \"\"\"Semantic equivalence: every entity.data block matches after a\n        full parse \u2192 write \u2192 parse cycle.\"\"\"\n        src = FIXTURES / name\n>       rt_path = roundtrip_iges(submission_command, src, tmp_path, name=name)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:65: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv4/ex2.iges.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv4/ex2.iges.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231652\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 8,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231652\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 8,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_fixture_preserves_entity_data[ex3.iges]",
+      "outcome": "failed",
+      "duration_seconds": 0.027000064008461777,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv5')\nname = 'ex3.iges'\n\n    @pytest.mark.parametrize(\n        \"name\",\n        [\"ex1.iges\", \"ex2.iges\", \"ex3.iges\"],\n    )\n    def test_roundtrip_fixture_preserves_entity_data(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n    ) -> None:\n        \"\"\"Semantic equivalence: every entity.data block matches after a\n        full parse \u2192 write \u2192 parse cycle.\"\"\"\n        src = FIXTURES / name\n>       rt_path = roundtrip_iges(submission_command, src, tmp_path, name=name)\n                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:65: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv5/ex3.iges.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_fixture_preserv5/ex3.iges.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231904\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 14,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231904\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 14,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_is_idempotent[ex1.iges]",
+      "outcome": "failed",
+      "duration_seconds": 0.022784967004554346,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e0')\nname = 'ex1.iges'\n\n    @pytest.mark.parametrize(\"name\", [\"ex1.iges\", \"ex2.iges\", \"ex3.iges\"])\n    def test_roundtrip_is_idempotent(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n    ) -> None:\n        \"\"\"Writer output is stable under repeated round-trip: once the file\n        has been normalized, running ``iges roundtrip`` again must produce\n        byte-identical output. (The first pass may normalize defaulted\n        Global delimiters; subsequent passes should be fixed points.)\"\"\"\n        src = FIXTURES / name\n>       first = roundtrip_iges(submission_command, src, tmp_path, name=f\"{name}-1\")\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:87: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e0/ex1.iges-1.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex1.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e0/ex1.iges-1.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231212\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 3,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231212\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 3,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_is_idempotent[ex2.iges]",
+      "outcome": "failed",
+      "duration_seconds": 0.027077637998445425,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e1')\nname = 'ex2.iges'\n\n    @pytest.mark.parametrize(\"name\", [\"ex1.iges\", \"ex2.iges\", \"ex3.iges\"])\n    def test_roundtrip_is_idempotent(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n    ) -> None:\n        \"\"\"Writer output is stable under repeated round-trip: once the file\n        has been normalized, running ``iges roundtrip`` again must produce\n        byte-identical output. (The first pass may normalize defaulted\n        Global delimiters; subsequent passes should be fixed points.)\"\"\"\n        src = FIXTURES / name\n>       first = roundtrip_iges(submission_command, src, tmp_path, name=f\"{name}-1\")\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:87: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e1/ex2.iges-1.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex2.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e1/ex2.iges-1.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231652\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 8,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231652\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 8,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_roundtrip_cli.py::test_roundtrip_is_idempotent[ex3.iges]",
+      "outcome": "failed",
+      "duration_seconds": 0.02444656001171097,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e2')\nname = 'ex3.iges'\n\n    @pytest.mark.parametrize(\"name\", [\"ex1.iges\", \"ex2.iges\", \"ex3.iges\"])\n    def test_roundtrip_is_idempotent(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        name: str,\n    ) -> None:\n        \"\"\"Writer output is stable under repeated round-trip: once the file\n        has been normalized, running ``iges roundtrip`` again must produce\n        byte-identical output. (The first pass may normalize defaulted\n        Global delimiters; subsequent passes should be fixed points.)\"\"\"\n        src = FIXTURES / name\n>       first = roundtrip_iges(submission_command, src, tmp_path, name=f\"{name}-1\")\n                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_roundtrip_cli.py:87: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:288: in roundtrip_iges\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e2/ex3.iges-1.iges')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'roundtrip', '--input', '/tmp/tests/data/ex3.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_roundtrip_is_idempotent_e2/ex3.iges-1.iges']\nE             stdout: \nE             stderr: {\nE             \"ok\": false,\nE             \"error\": \"Invalid timestamp format for file_timestamp: 900729.231904\",\nE             \"spec_ref\": \"\u00a72.2.4.3.18\",\nE             \"line\": 14,\nE             \"section\": \"global\",\nE             \"diagnostics\": [\nE               {\nE                 \"severity\": \"error\",\nE                 \"message\": \"Invalid timestamp format for file_timestamp: 900729.231904\",\nE                 \"spec_ref\": \"\u00a72.2.4.3.18\",\nE                 \"line\": 14,\nE                 \"section\": \"global\"\nE               }\nE             ]\nE           }\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_sections.py::test_start_section_preserves_multiple_comment_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.025825945995165966,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_directory_section_uses_two_lines_per_entity_and_odd_de_indices",
+      "outcome": "passed",
+      "duration_seconds": 0.06932846499694278,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_parameter_line_uses_column_65_space_and_de_back_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.027653021999867633,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_terminate_section_counts_match_actual_physical_sections",
+      "outcome": "passed",
+      "duration_seconds": 0.02286114801245276,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_parameter_data_spanning_multiple_physical_lines_is_concatenated",
+      "outcome": "passed",
+      "duration_seconds": 0.04641415299556684,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_block_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04613871900073718,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_wedge_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05273378800484352,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_right_circular_cylinder_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04603817200404592,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_cone_frustum_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.05075607400794979,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_sphere_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.06725433099200018,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_torus_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04691009000816848,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_solid_of_revolution_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04714542199508287,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_solid_of_linear_extrusion_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04671548199985409,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_ellipsoid_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04821984800946666,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_boolean_tree_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.04667977700592019,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_selected_component_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.044063130000722595,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_solid_assembly_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0406816350077861,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_parametric_spline_curve_roundtrips_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.08029930400516605,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_parametric_spline_surface_roundtrips_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.08513722600764595,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.09539774499717169,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field",
+      "outcome": "passed",
+      "duration_seconds": 0.04787692399258958,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_rational_bspline_surface_roundtrips_ranges_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.1056249990069773,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_connect_point_roundtrips_full_metadata_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.04348246000154177,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_finite_element_roundtrips_connectivity_and_zero_node_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.04932134899718221,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_subfigure_definition_roundtrips_empty_member_list",
+      "outcome": "passed",
+      "duration_seconds": 0.041937078996852506,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_drawing_form_one_roundtrips_angles_and_annotations",
+      "outcome": "passed",
+      "duration_seconds": 0.045154451006965246,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_view_form_one_roundtrips_perspective_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.04495541199867148,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_rectangular_array_roundtrips_do_dont_list",
+      "outcome": "passed",
+      "duration_seconds": 0.045324117003474385,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_boundary_with_parameter_space_curve_collections_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.049734166990674566,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_curve_on_parametric_surface_roundtrips_creation_and_preference",
+      "outcome": "passed",
+      "duration_seconds": 0.04352086599828908,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_bounded_surface_with_multiple_boundaries_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0527892190075363,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_trimmed_surface_with_default_outer_boundary_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04238230100600049,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_trimmed_surface_with_inner_boundaries_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.045721585003775544,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_associativity_instance_group_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.04888945200218586,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_associativity_instance_empty_group_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.05230581000796519,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_external_reference_form_zero_roundtrips_filename_and_entity_name",
+      "outcome": "passed",
+      "duration_seconds": 0.04726360901258886,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_external_reference_form_one_roundtrips_filename_only",
+      "outcome": "passed",
+      "duration_seconds": 0.049380427997675724,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_external_reference_form_two_roundtrips_logical_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.04059247599798255,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_accepts_valid_file_with_no_validation_diagnostics",
+      "outcome": "passed",
+      "duration_seconds": 0.0527679909937433,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_invalid_xform_matrix_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.04400257799716201,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_invalid_view_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.04251215499971295,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_invalid_label_display_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.0441346719962894,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_negative_entity_type",
+      "outcome": "passed",
+      "duration_seconds": 0.043766695001977496,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_zero_param_line_count_for_non_null_entity",
+      "outcome": "passed",
+      "duration_seconds": 0.0472469189990079,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_model_space_scale",
+      "outcome": "passed",
+      "duration_seconds": 0.021413387992652133,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_integer_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.020729022995510604,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[8-sp_magnitude]",
+      "outcome": "passed",
+      "duration_seconds": 0.025782853001146577,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[9-sp_significance]",
+      "outcome": "passed",
+      "duration_seconds": 0.022760845997254364,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[10-dp_magnitude]",
+      "outcome": "passed",
+      "duration_seconds": 0.03124688000389142,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[11-dp_significance]",
+      "outcome": "passed",
+      "duration_seconds": 0.032398817005741876,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[16-max_line_weight_grads]",
+      "outcome": "passed",
+      "duration_seconds": 0.02862723699217895,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[19-min_resolution]",
+      "outcome": "passed",
+      "duration_seconds": 0.02548831900639925,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_non_positive_global_field",
+      "outcome": "passed",
+      "duration_seconds": 0.029410122995614074,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_invalid_xform_matrix_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.02910636800515931,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_invalid_view_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.03009540800121613,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_invalid_label_display_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.030513878009514883,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_zero_length_line",
+      "outcome": "passed",
+      "duration_seconds": 0.02851404699322302,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_zero_length_line",
+      "outcome": "passed",
+      "duration_seconds": 0.04685831099777715,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_accepts_valid_empty_file_with_no_entities",
+      "outcome": "passed",
+      "duration_seconds": 0.021913297001447063,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_file.py::test_written_file_has_all_five_sections_and_80_column_records",
+      "outcome": "passed",
+      "duration_seconds": 0.021182466989557724,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_file.py::test_empty_start_lines_produce_one_or_more_blank_start_records",
+      "outcome": "passed",
+      "duration_seconds": 0.04824873100005789,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_global_strings_use_hollerith_encoding_in_g_section",
+      "outcome": "passed",
+      "duration_seconds": 0.022290343993518036,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_real_values_in_parameter_records_are_spec_legal",
+      "outcome": "passed",
+      "duration_seconds": 0.025565418996848166,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_string_values_in_parameter_records_use_hollerith_encoding",
+      "outcome": "passed",
+      "duration_seconds": 0.0242796139937127,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_logical_values_in_parameter_records_use_zero_and_one",
+      "outcome": "passed",
+      "duration_seconds": 0.022681754002405796,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_global.py::test_write_and_parse_preserve_all_26_global_fields",
+      "outcome": "failed",
+      "duration_seconds": 0.043403055002272595,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_write_and_parse_preserve_0')\n\n    def test_write_and_parse_preserve_all_26_global_fields(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        doc = wrap_entities([])\n        global_section = doc[\"global\"]\n        global_section.update(\n            {\n                \"param_delimiter\": \"|\",\n                \"record_delimiter\": \"#\",\n                \"product_id_sender\": \"WriterProduct\",\n                \"file_name\": \"writer-full.igs\",\n                \"native_system_id\": \"WRITER-SDK\",\n                \"preprocessor_version\": \"v9.9\",\n                \"integer_bits\": 64,\n                \"sp_magnitude\": 37,\n                \"sp_significance\": 6,\n                \"dp_magnitude\": 307,\n                \"dp_significance\": 15,\n                \"product_id_receiver\": \"Receiver\",\n                \"model_space_scale\": 0.125,\n                \"units\": \"millimeters\",\n                \"units_name\": \"MM\",\n                \"max_line_weight_grads\": 4,\n                \"max_line_weight_width\": 0.02,\n                \"file_timestamp\": {\n                    \"year\": 2026,\n                    \"month\": 4,\n                    \"day\": 16,\n                    \"hour\": 13,\n                    \"minute\": 45,\n                    \"second\": 30,\n                },\n                \"min_resolution\": 1.0e-6,\n                \"max_coordinate\": 2500.0,\n                \"author\": \"Jane Doe\",\n                \"organization\": \"ACME CAD\",\n                \"spec_version\": \"v5_3\",\n                \"drafting_std\": \"ansi\",\n                \"model_timestamp\": {\n                    \"year\": 2026,\n                    \"month\": 4,\n                    \"day\": 15,\n                    \"hour\": 8,\n                    \"minute\": 0,\n                    \"second\": 5,\n                },\n                \"app_protocol\": \"AP242\",\n            }\n        )\n    \n        iges_path = write_iges_from_json(submission_command, doc, tmp_path, name=\"global-full\")\n>       parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name=\"global-full\")\n                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_writer_global.py:65: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/iges_support.py:217: in parse_iges_to_json\n    _run_cli(\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ncheck = True, timeout = 30\nargs = ('parse', '--input', '/tmp/pytest-of-root/pytest-0/test_write_and_parse_preserve_0/global-full.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_write_and_parse_preserve_0/global-full.json')\ncmd = ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_write_and_parse_preserve_0/global-full.iges', '--output', ...]\n\n    def _run_cli(\n        submission_command: Sequence[str],\n        *args: str,\n        check: bool = True,\n        timeout: int = 30,\n    ) -> subprocess.CompletedProcess[str]:\n        cmd = [*submission_command, *args]\n        completed = subprocess.run(\n            cmd,\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=timeout,\n        )\n        if check and completed.returncode != 0:\n>           raise AssertionError(\n                f\"iges CLI failed (exit {completed.returncode}):\\n\"\n                f\"  cmd: {cmd}\\n\"\n                f\"  stdout: {completed.stdout}\\n\"\n                f\"  stderr: {completed.stderr}\\n\"\n            )\nE           AssertionError: iges CLI failed (exit 1):\nE             cmd: ['/usr/bin/node', '/tmp/submission/output/main.js', 'parse', '--input', '/tmp/pytest-of-root/pytest-0/test_write_and_parse_preserve_0/global-full.iges', '--output', '/tmp/pytest-of-root/pytest-0/test_write_and_parse_preserve_0/global-full.json']\nE             stdout: \nE             stderr:\n\n/tmp/tests/iges_support.py:177: AssertionError"
+    },
+    {
+      "node_id": "test_writer_global.py::test_write_empty_document_roundtrips_default_global_values",
+      "outcome": "passed",
+      "duration_seconds": 0.04419315899576759,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_param.py::test_line_parameter_record_has_entity_type_prefix_and_expected_field_count",
+      "outcome": "passed",
+      "duration_seconds": 0.02344319599797018,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_param.py::test_parameter_records_use_selected_custom_delimiters",
+      "outcome": "passed",
+      "duration_seconds": 0.02219584800332086,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 238,
+    "failed": 25,
+    "skipped": 0,
+    "error": 0,
+    "total": 263
+  },
+  "scores": {
+    "correctness": 0.9049429657794676,
+    "self_test_coverage": null,
+    "code_quality": null,
+    "task_score": 0.9049429657794676,
+    "extension_scores": {
+      "subscore.annotation_entities.passed": 13.0,
+      "subscore.annotation_entities.total": 15.0,
+      "subscore.core_entities.passed": 3.0,
+      "subscore.core_entities.total": 3.0,
+      "subscore.data_types.passed": 6.0,
+      "subscore.data_types.total": 7.0,
+      "subscore.defaulted_fields.passed": 3.0,
+      "subscore.defaulted_fields.total": 3.0,
+      "subscore.directory_entry.passed": 8.0,
+      "subscore.directory_entry.total": 8.0,
+      "subscore.entity_roundtrips.passed": 43.0,
+      "subscore.entity_roundtrips.total": 44.0,
+      "subscore.error_envelope.passed": 3.0,
+      "subscore.error_envelope.total": 3.0,
+      "subscore.free_format.passed": 4.0,
+      "subscore.free_format.total": 6.0,
+      "subscore.geometric_eval.passed": 49.0,
+      "subscore.geometric_eval.total": 51.0,
+      "subscore.line_entity.passed": 9.0,
+      "subscore.line_entity.total": 9.0,
+      "subscore.malformed.passed": 7.0,
+      "subscore.malformed.total": 7.0,
+      "subscore.metadata_entities.passed": 8.0,
+      "subscore.metadata_entities.total": 9.0,
+      "subscore.output_schema.passed": 5.0,
+      "subscore.output_schema.total": 5.0,
+      "subscore.pointer_backed_fields.passed": 8.0,
+      "subscore.pointer_backed_fields.total": 8.0,
+      "subscore.reference_fixtures.passed": 0.0,
+      "subscore.reference_fixtures.total": 6.0,
+      "subscore.roundtrip_cli.passed": 0.0,
+      "subscore.roundtrip_cli.total": 9.0,
+      "subscore.sections.passed": 5.0,
+      "subscore.sections.total": 5.0,
+      "subscore.solid_entities.passed": 12.0,
+      "subscore.solid_entities.total": 12.0,
+      "subscore.spline_and_fea_entities.passed": 7.0,
+      "subscore.spline_and_fea_entities.total": 7.0,
+      "subscore.structure_and_view_entities.passed": 4.0,
+      "subscore.structure_and_view_entities.total": 4.0,
+      "subscore.surface_boundary_entities.passed": 10.0,
+      "subscore.surface_boundary_entities.total": 10.0,
+      "subscore.validation.passed": 21.0,
+      "subscore.validation.total": 21.0,
+      "subscore.writer_file.passed": 2.0,
+      "subscore.writer_file.total": 2.0,
+      "subscore.writer_format.passed": 4.0,
+      "subscore.writer_format.total": 4.0,
+      "subscore.writer_global.passed": 1.0,
+      "subscore.writer_global.total": 2.0,
+      "subscore.writer_param.passed": 2.0,
+      "subscore.writer_param.total": 2.0
+    }
+  },
+  "source_stats": {
+    "file_count": 1,
+    "lines_of_code": 3506
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims complete with hidden-test pass rate (238/263); reports implementing the required IGES CLI subcommands and fixed-format I/O.",
+    "commentary": null
+  }
+}
