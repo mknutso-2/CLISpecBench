@@ -14,10 +14,7 @@ DEFAULT_OUTPUT_FILE = Path(__file__).with_name("test-results-published.json")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description=(
-            "Build the ignored local per-test JSON aggregate from published "
-            "run results."
-        ),
+        description=("Build the ignored local per-test JSON aggregate from published run results."),
     )
     parser.add_argument(
         "--runs-file",

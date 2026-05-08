@@ -152,7 +152,9 @@ def classify_agent_stop_message(message: str) -> tuple[str, str] | None:
     return None
 
 
-def transient_event_log_for(path: Path, published_root: Path, metadata: dict[str, Any]) -> Path | None:
+def transient_event_log_for(
+    path: Path, published_root: Path, metadata: dict[str, Any]
+) -> Path | None:
     repo_root = published_root.parent
     task = metadata.get("task") or path.parts[-4]
     agent = metadata.get("agent") or ""
@@ -186,7 +188,9 @@ def transient_event_log_for(path: Path, published_root: Path, metadata: dict[str
     return candidates[-1]
 
 
-def codex_agent_stop(path: Path, published_root: Path, metadata: dict[str, Any]) -> dict[str, str] | None:
+def codex_agent_stop(
+    path: Path, published_root: Path, metadata: dict[str, Any]
+) -> dict[str, str] | None:
     event_log = transient_event_log_for(path, published_root, metadata)
     if event_log is None:
         return None
@@ -269,7 +273,9 @@ def agent_stop_info(path: Path, web_dir: Path, payload: dict[str, Any]) -> dict[
     return {
         "agent_stop_reason": exit_reason or "error",
         "agent_stop_label": status,
-        "agent_stop_message": metadata.get("agent_last_message") or editorial.get("last_message") or "",
+        "agent_stop_message": metadata.get("agent_last_message")
+        or editorial.get("last_message")
+        or "",
         "agent_stop_source": "result-json",
     }
 

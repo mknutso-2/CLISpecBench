@@ -91,9 +91,7 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
     # timestamped ID and the bare alias (the alias gets the bulk of the
     # tokens). Without this entry _estimate_model_usage_cost short-circuits
     # to None and estimated_cost_usd is left blank on every Haiku 4.5 run.
-    "claude-haiku-4-5": ModelPricing(
-        input=1.00, output=5.00, cached_input=0.10, cache_write=2.00
-    ),  # noqa: E501
+    "claude-haiku-4-5": ModelPricing(input=1.00, output=5.00, cached_input=0.10, cache_write=2.00),  # noqa: E501
 }
 
 # OpenAI GPT / Codex
