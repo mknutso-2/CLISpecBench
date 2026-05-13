@@ -16,7 +16,7 @@
     "exit_reason": "completed",
     "model": "claude-opus-4-6",
     "effort": "max",
-    "notes": null,
+    "notes": "ROOT CAUSE: the JS parser dropped the {type, form, data} envelope that spec Evals/IGES/prompt/technical-requirements-prompt.md \u00a72.5 requires for every Entity. parser.js:868 builds `entity: pdResults[e].parsed`, where `parsed` is whatever a per-type entity parser returned directly (e.g., entities.js:240 returns `{start, terminate}` for Type 110 Line, not `{type: 110, form: 0, data: {start, terminate}}`). Tests that touch any entity behavior do a write\u2192parse roundtrip and immediately fail with `KeyError: 'type'` because the envelope is missing. The bug is symmetric on the writer side: writer.js:483 reads `ent.entity` and passes it straight to serializeEntityPD, which expects flat fields like `d.start[0]` \u2014 so when tests feed canonical `{type, form, data}` to the writer, the serializer dereferences `d.start` on the wrapper and gets undefined, producing garbage IGES output. \nEFFECT: 224/263 tests fail. The 39 that pass are exactly the categories that don't dereference entity.{type, form, data}: error_envelope (3/3), malformed (7/7), validation (14/21), writer_file (2/2), plus a few infrastructure-level checks. Every entity-roundtrip test fails (0/44); every line_entity (0/9); every metadata_entities (0/9); every directory_entry (0/8); all the surface, solid, spline, and annotation entity categories score 0/N. \nWHY THE OTHER LANGUAGES DIDN'T HIT THIS: same model + same prompt + same spec gave Opus 4.6 94.3% on iges-py, 90.5% on iges-cpp, 71.1% on iges-rs. iges-py parser.py:506 correctly builds `'entity': {'type': entity_type, 'form': de['form'], 'data': entity_data}`. JS was the unlucky stochastic spec-comprehension miss on a single critical schema detail. \nWHY THE AGENT'S SELF-TEST PASSED: the implementation is internally consistent with its own wrong shape \u2014 round-tripping a wrong-shape entity through write\u2192parse produces the same wrong-shape entity, so the agent's \"26/26 integration tests pass\" claim measured internal consistency, not spec compliance. \nTAKEAWAY: classic \"normalize away the redundancy\" failure. Spec \u00a72.5 explicitly notes that `entity.type` and `entity.form` must match `directory_entry.entity_type` and `directory_entry.form`, which makes the envelope feel redundant. The JS implementation \"fixed\" the perceived redundancy by dropping the envelope; the sentence that calls out the redundancy presupposes the envelope's existence, but the agent didn't anchor on that wording.",
     "benchmark_cost_preference": "estimated",
     "prompt_content_sha": "8199a554c2bd0a3c3bc1e4f7a6d0be1350233c54a5f0d34dd913dd18e337b05f",
     "test_suite_sha": "4f0c8a06404ed32eae660cdb53acae9b861b0794b0122160994c9871653cf872",
@@ -1694,7 +1694,7 @@
   },
   "editorial": {
     "status": "Complete",
-    "last_message": "Claims complete; 39/263 tests passed (14.8%) - agent did not acknowledge the 224 failing tests.",
+    "last_message": "Schema bug: parser dropped the {type, form, data} envelope required by spec \u00a72.5; writer is symmetrically broken. 224 tests fail with KeyError on entity['type'] or downstream data deref. 39 passing tests are infra/error-envelope/validation categories that don't touch entity contents. Same model+prompt scored 94.3% on iges-py, 90.5% on iges-cpp, 71.1% on iges-rs. See metadata.notes for full root-cause writeup.",
     "commentary": null
   }
 }
