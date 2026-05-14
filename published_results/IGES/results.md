@@ -2,7 +2,7 @@
 
 First run of the IGES eval. All 12 runs so far are gemini-cli / gemini-3-flash-preview (gemini-cli v0.36.0), 3 runs × 4 language variants.
 
-**Task registration.** `iges-py` and `iges-rs` were added to `_KNOWN_TASKS` at the start of this sweep. The task registration does not require a reference implementation — only `prompt/`, `prompt/docs/`, `tests/`, and the shared `Evals/_shared/language-requirements-<lang>.md` file. A Python reference exists; no Rust reference exists yet.
+**Task registration.** `iges-py` and `iges-rs` are generated from the `iges` entry in `_KNOWN_EVALS` plus the shared language prompt files. Task registration does not require a reference implementation — only `prompt/`, `prompt/docs/`, `tests/`, and the shared `Evals/_shared/language-requirements-<lang>.md` file. A Python reference exists; no Rust reference exists yet.
 
 **Inclusion rule.** Same as CNCSim: a run is included in the per-run detail table and in Best/Mean when it either completed normally or failed on its own accord. Self-inflicted zero-score runs (`context_exhausted`, `agent_error`, `build_failure`, `no_code_written`) count as 0 and are annotated. A run is excluded only on a harness- or environment-level failure. All 12 runs in this sweep have `exit_reason: completed` and are included.
 

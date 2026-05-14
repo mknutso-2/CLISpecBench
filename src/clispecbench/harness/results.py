@@ -165,8 +165,8 @@ def compute_source_stats(source_dir: Path, language: str | None = None) -> Sourc
 class RunArtifacts:
     """Paths to preserved artifacts from the run, relative to the result file."""
 
-    transcript: str | None = None  # e.g. "run-1-transcript.jsonl"
-    source_dir: str | None = None  # e.g. "run-1-source/"
+    transcript: str | None = None  # e.g. "transcript.jsonl"
+    source_dir: str | None = None  # e.g. "source/"
 
 
 @dataclass

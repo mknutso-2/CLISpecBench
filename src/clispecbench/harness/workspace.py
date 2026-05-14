@@ -56,7 +56,7 @@ def prepare_workspace(
     The caller is responsible for cleaning up the returned directory
     (e.g. via :func:`shutil.rmtree`).
     """
-    workspace = Path(tempfile.mkdtemp(prefix="swe-bb-", dir=parent_dir))
+    workspace = Path(tempfile.mkdtemp(prefix="clispecbench-", dir=parent_dir))
 
     # Write assembled prompt
     prompt_text = assemble_prompt(task, variant)

@@ -20,7 +20,7 @@ DOCKERFILE = (
     / "claude-code.Dockerfile"
 )
 
-# OpenTelemetry collector config path inside the container
+# OpenTelemetry export directory inside the container
 OTEL_COLLECTOR_DIR = "/tmp/otel"
 
 

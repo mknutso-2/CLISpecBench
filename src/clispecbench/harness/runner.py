@@ -257,7 +257,7 @@ def run_evaluation(
             log.debug("Could not retrieve container logs", exc_info=True)
 
         # --- 4. Extract agent output ---
-        extract_dir = Path(tempfile.mkdtemp(prefix="swe-bb-extract-"))
+        extract_dir = Path(tempfile.mkdtemp(prefix="clispecbench-extract-"))
         try:
             sandbox.copy_out(CONTAINER_OUTPUT, extract_dir)
         except Exception:
