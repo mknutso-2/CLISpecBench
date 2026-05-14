@@ -1,9 +1,12 @@
 # CLISpecBench
 
 A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from well-defined specifications.
-Agents receive a specification and domain docs, then are asked to produce a working CLI application that satisfies the spec. The documentation for these tasks is substantial, ranging from around 130k to over 2.8M tokens - requiring agents to make efficient use of search, context and compaction. The submitted
-code is built and run again a test suite (hidden from the agent) to measure adherence to the specification.
-Asking the agent to produce a CLI application allows us to evaluate its output when the submitted code is written in virtually any language (though the harness currently supports C++, Rust, Python and JavaScript).
+Agents receive a specification and domain docs, then are asked to produce a working CLI application that satisfies the spec.
+The documentation for these tasks is substantial, ranging from around 130k to over 2.8M tokens.
+Completing any of these tasks without the assistance of AI would take a typical developer a significant amount of time, roughly 40 to 160 hours depending on the task.
+This combination of substantial documentation and implementation complexity requires agents to make effective use of search, context, compaction, and planning.
+The submitted code is built and run against a test suite hidden from the agent to measure adherence to the specification.
+Asking the agent to produce a CLI application allows CLISpecBench to evaluate output written in virtually any language; the harness currently supports C++, Rust, Python, and JavaScript.
 
 ## Table of Contents
 
@@ -32,9 +35,9 @@ The repo is organized around a few core concepts:
 
 | Concept | Meaning | Main locations |
 |---|---|---|
-| **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, or `gemini-cli`. | Wrapped by files under `src/clispecbench/agents/` and containerized from `docker/agents/` |
+| **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, `gemini-cli`, `opencode`, or `openhands`. | Wrapped by files under `src/clispecbench/agents/` and containerized from `docker/agents/` |
 | **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
-| **Task** | A eval-language pair. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
+| **Task** | An eval-language pair. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
 | **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/clispecbench/harness/`, `src/clispecbench/build/`, `src/clispecbench/cli.py` |
 | **Repo tests** | Tests for the harness, build backends, and agent adapters themselves. These are distinct from an eval's hidden tests. | `src/clispecbench/tests/` |
 
@@ -65,7 +68,7 @@ scripts/                 # Setup and utility scripts
 
 RS274 serves as the flagship eval of the benchmark. The documentation corpus and hidden test suite were curated by a domain expert
 to create a comprehensive, challenging task for coding agents. The tests were written with the aid of coding agents but manually
-reviewed by that domain expert.
+reviewed.
 
 The other evals were chosen, designed, implemented, and critiqued primarily by coding agents without domain-expert review. The
 signal from these evals is likely weaker than RS274's and should be interpreted accordingly.
@@ -334,8 +337,7 @@ mounting strategy that the harness uses.
 Each eval task follows a standard pipeline:
 
 1. **Prompt assembly** -- The harness concatenates a base prompt (written in the voice of a domain expert with no coding knowledge)
- with the technical requirements prompt (which define the command line interface required by the test suite), implementation-language specific instructions,
- e.g. using C++20. The base prompt may also reference a `docs/` folder which can contain any relevant documentation that the agent may consult during implementation.
+   with the technical requirements prompt, implementation-language-specific instructions such as C++20, and any referenced `docs/` corpus that the agent may consult during implementation.
 
 2. **Agent invocation** -- The agent runs inside a Docker container with the
    prompt, docs, and the host auth credentials for the coding agents mounted.
