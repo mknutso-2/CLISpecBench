@@ -22,7 +22,7 @@ uv run pytest Evals/RS274/tests --language=cpp --implementation-root C:\path\to\
 Or point to a target with an environment variable:
 
 ```powershell
-$env:SWEBUILDBENCH_IMPLEMENTATION_ROOT = "C:\path\to\agent-output"
+$env:CLISPECBENCH_RS274_ROOT = "C:\path\to\agent-output"
 uv run pytest Evals/RS274/tests --language=cpp
 ```
 

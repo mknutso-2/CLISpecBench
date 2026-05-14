@@ -32,7 +32,7 @@ EVAL_CONFIG = EvalConfig(
     reference_impl_subdirs={
         "cpp": "Evals/BibTeX/reference-implementation-cpp",
     },
-    env_var="SWEBUILDBENCH_BIBTEX_ROOT",
+    env_var="CLISPECBENCH_BIBTEX_ROOT",
     preferred_executable_name="bibtex",
 )
 

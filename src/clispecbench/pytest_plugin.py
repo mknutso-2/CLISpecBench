@@ -21,7 +21,7 @@ Usage inside an eval's ``conftest.py``::
             "cpp": "Evals/WordCount/reference-implementation-cpp",
             "py": "Evals/WordCount/reference-implementation-py",
         },
-        env_var="SWEBUILDBENCH_WORDCOUNT_ROOT",
+        env_var="CLISPECBENCH_WORDCOUNT_ROOT",
         preferred_executable_name="wordcount",
     )
 

@@ -32,7 +32,7 @@ EVAL_CONFIG = EvalConfig(
     reference_impl_subdirs={
         "cpp": "Evals/ICal/reference-implementation-cpp",
     },
-    env_var="SWEBUILDBENCH_ICAL_ROOT",
+    env_var="CLISPECBENCH_ICAL_ROOT",
     preferred_executable_name="ical",
 )
 

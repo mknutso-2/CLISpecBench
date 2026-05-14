@@ -30,6 +30,6 @@ EVAL_CONFIG = EvalConfig(
         "py": "Evals/IGES/reference-implementation-py",
         "js": "Evals/IGES/reference-implementation-js",
     },
-    env_var="SWEBUILDBENCH_IGES_ROOT",
+    env_var="CLISPECBENCH_IGES_ROOT",
     preferred_executable_name="iges",
 )

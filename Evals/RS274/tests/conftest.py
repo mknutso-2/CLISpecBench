@@ -38,6 +38,6 @@ EVAL_CONFIG = EvalConfig(
         "js": "Evals/RS274/reference-implementation-js",
         "rs": "Evals/RS274/reference-implementation-rs",
     },
-    env_var="SWEBUILDBENCH_IMPLEMENTATION_ROOT",
+    env_var="CLISPECBENCH_RS274_ROOT",
     preferred_executable_name="rs274",
 )

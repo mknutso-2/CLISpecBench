@@ -37,7 +37,7 @@ EVAL_CONFIG = EvalConfig(
         "js": "Evals/WordCount/reference-implementation-js",
         "rs": "Evals/WordCount/reference-implementation-rs",
     },
-    env_var="SWEBUILDBENCH_WORDCOUNT_ROOT",
+    env_var="CLISPECBENCH_WORDCOUNT_ROOT",
     preferred_executable_name="wordcount",
 )
 
