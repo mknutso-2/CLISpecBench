@@ -37,7 +37,22 @@ run_target() {
       run_eval "LAS (py)" Evals/LAS/tests --language=py
       ;;
     marc21-py)
-      run_eval "MARC21 (py)" Evals/MARC21/tests --language=py
+      run_target marc21-official-validation-py
+      run_target marc21-official-examples-py
+      run_target marc21-core-py
+      ;;
+    marc21-official-validation-py)
+      run_eval "MARC21 official validation (py)" \
+        Evals/MARC21/tests/test_official_validation.py --language=py
+      ;;
+    marc21-official-examples-py)
+      run_eval "MARC21 official examples (py)" \
+        Evals/MARC21/tests/test_official_examples.py --language=py
+      ;;
+    marc21-core-py)
+      run_eval "MARC21 core (py)" Evals/MARC21/tests --language=py \
+        --ignore=Evals/MARC21/tests/test_official_validation.py \
+        --ignore=Evals/MARC21/tests/test_official_examples.py
       ;;
     wordcount-cpp)
       run_eval "WordCount (cpp)" Evals/WordCount/tests --language=cpp
@@ -58,14 +73,16 @@ run_target() {
       run_target ical-cpp
       run_target iges-cpp
       run_target las-py
-      run_target marc21-py
+      run_target marc21-official-validation-py
+      run_target marc21-official-examples-py
+      run_target marc21-core-py
       run_target wordcount-cpp
       run_target rs274-cpp
       run_target rs274-py
       ;;
     *)
       echo "Unknown eval target: ${target}" >&2
-      echo "Expected one of: all, bibtex-cpp, gedcom-py, ical-cpp, iges-cpp, las-py, marc21-py, wordcount-cpp, rs274-cpp, rs274-py" >&2
+      echo "Expected one of: all, bibtex-cpp, gedcom-py, ical-cpp, iges-cpp, las-py, marc21-py, marc21-official-validation-py, marc21-official-examples-py, marc21-core-py, wordcount-cpp, rs274-cpp, rs274-py" >&2
       exit 2
       ;;
   esac
