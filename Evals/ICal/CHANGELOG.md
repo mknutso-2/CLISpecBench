@@ -71,7 +71,7 @@ tightens four test contracts to localize failures.
 
 ## v1.2.0 — 2026-04-24
 
-Completes PLAN.md — all remaining priorities landed. Adds 68 new
+Completes the v1.x expansion plan — all remaining priorities landed. Adds 68 new
 tests (342 → 410) and three new authoritative RFCs.
 
 New authoritative RFCs under `prompt/docs/authoritative/`:
@@ -149,12 +149,12 @@ Test contract changes:
     Implementations MAY emit additional keys for RFC extensions
     (e.g. `availabilities`).
 
-PLAN.md complete: 14 / 14 priorities landed. Full ICal suite is
+Expansion plan complete: 14 / 14 priorities landed. Full ICal suite is
 **410 tests**, all passing. Ruff + pyright strict-mode clean.
 
 ## v1.1.0 — 2026-04-24
 
-Test-surface expansion per `PLAN.md` Parts B1-B10 (B7-B9 and B11-B14
+Test-surface expansion from the v1.x expansion plan Parts B1-B10 (B7-B9 and B11-B14
 deferred). Adds 97 new tests (245 -> 342) across six areas that close
 the specific findings from the Codex v1.0 adversarial review.
 
@@ -233,7 +233,7 @@ Reference implementation changes:
   - rrule.cpp: to_comparable emits fold/gap warnings; occurrence
     sort adds UID tie-break.
 
-Deferred to a future v1.2 (per PLAN.md):
+Deferred to a future v1.2:
   - A2+B7: RFC 7953 VAVAILABILITY.
   - A3+B8: RFC 9073 Event Publishing Extensions.
   - A4+B9: RFC 9253 TZIDALIASOF.

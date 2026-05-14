@@ -99,7 +99,7 @@ review across Opus 4.7 max and gpt-5.5 xhigh runs.
 
 ## v1.1.0 — 2026-04-23
 
-Test-surface expansion per `PLAN.md`, adding 111 new tests
+Test-surface expansion from the v1.1 planning pass, adding 111 new tests
 (258 → 369) and one reference-implementation fix (bibtex.web §15
 forward-scan output wrap).
 

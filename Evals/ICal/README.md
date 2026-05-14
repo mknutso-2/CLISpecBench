@@ -1,6 +1,7 @@
 # ICal
 
-Full iCalendar (RFC 5545 + 5546 + 6868 + 7529 + 7986) eval for
+Full iCalendar (RFC 5545 + 5546 + 6868 + 7529 + 7953 + 7986 +
+9073 + 9074 + 9253) eval for
 CLISpecBench. Agents receive the IETF RFCs themselves verbatim and
 must produce a CLI that parses calendar files, surfaces every
 RFC-defined property and component, expands recurrence rules to
@@ -8,9 +9,10 @@ concrete occurrences over a date window, resolves zoned date-times
 through in-file VTIMEZONE definitions, and honors the iTIP
 scheduling layer.
 
-> **Status.** v2.0.0 — `PLAN.md` complete plus an eval-authoring
-> review arc that reconciled two contradictions in the override
-> contract. Ships **9 authoritative RFCs** verbatim: RFC 5545 (core) +
+> **Status.** v3.0.0 — eval-authoring review cleanup over the completed
+> v1.x/v2.x expansion work, tightening the iTIP warning contract and
+> documenting DST fold resolution. Ships **9 authoritative RFCs** verbatim:
+> RFC 5545 (core) +
 > RFC 5546 (iTIP) + RFC 6868 (param escaping) + RFC 7529 (RSCALE) +
 > RFC 7953 (Calendar Availability) + RFC 7986 (calendar props) +
 > RFC 9073 (event publishing) + RFC 9074 (VALARM extensions) +
@@ -19,9 +21,10 @@ scheduling layer.
 > resolution depth, DST fold/gap warnings, iTIP per-method matrices,
 > VAVAILABILITY, event-publishing extensions, 75-octet folding edges,
 > stress scenarios, and real-world (Gmail / Outlook / iTIP) corpora.
-> The v2.0.0 major bump reflects the new `STATUS:CANCELLED` override
-> contract: cancelled instances now remain in the `occurrences`
-> array with `cancelled: true` rather than being silently dropped.
+> The v2.0.0 major bump introduced the `STATUS:CANCELLED` override
+> contract: cancelled instances remain in the `occurrences` array with
+> `cancelled: true` rather than being silently dropped. The v3.0.0 bump
+> tightened structured iTIP warning metadata.
 
 ## Directory structure
 
@@ -46,6 +49,7 @@ tests/
   conftest.py                       # EVAL_CONFIG + helpers
   test_build.py                     # smoke: binary builds
   test_schema.py                    # top-level JSON shape gate
+  test_schema_depth.py              # deeper schema invariants
   test_parse.py                     # line unfolding, escapes, value types
   test_rrule_parse.py               # RRULE struct decoding
   test_rrule_expand.py              # common-case expansion (DAILY...YEARLY)
@@ -62,13 +66,28 @@ tests/
   test_rscale.py                    # RFC 7529 RSCALE
   test_calendar_properties.py       # RFC 7986 NAME/REFRESH-INTERVAL/etc.
   test_line_folding_octets.py       # 75-octet folding with multi-byte UTF-8
+  test_folding_edges.py             # line_too_long and invalid fold cases
   test_itip_methods.py              # RFC 5546 method-specific requirements
+  test_itip_methods_deep.py         # deeper iTIP method matrices
+  test_itip_per_component.py        # component-specific iTIP requirements
   test_recurrence_id_range.py       # RANGE=THISANDFUTURE semantics
+  test_dst_warnings.py              # fold/gap warning behavior
+  test_event_fields.py              # common VEVENT/VTODO/VJOURNAL fields
+  test_vtimezone_fields.py          # VTIMEZONE LAST-MODIFIED/TZURL/etc.
+  test_vtimezone_resolution.py      # observance UNTIL/RDATE/BYMONTHDAY
+  test_valarm_rfc9074.py            # RFC 9074 VALARM extensions
+  test_vfreebusy.py                 # VFREEBUSY typed fields
+  test_vavailability.py             # RFC 7953 VAVAILABILITY
+  test_rfc9073_event_publishing.py  # RFC 9073 rich-event extensions
+  test_rfc9253_relationships.py     # RFC 9253 LINK/RELATED-TO extensions
+  test_real_world_corpora.py        # Gmail/Outlook/iTIP fixtures
+  test_stress.py                    # scale and regression cases
+  test_error_precision.py           # error line/column fields
   test_errors.py                    # exit-1 cases
 reference-implementation-cpp/
   CMakeLists.txt
   src/                              # see below
-VERSION                             # 2.0.0
+VERSION                             # 3.0.0
 CHANGELOG.md
 ```
 
@@ -113,7 +132,10 @@ repository root.
 
 ## Task IDs
 
-- `ical-cpp` — C++20 target
+- `ical-cpp` — C++20 target; reference implementation available
+- `ical-js` — JavaScript target
+- `ical-py` — Python target
+- `ical-rs` — Rust target
 
 ## Why this task
 

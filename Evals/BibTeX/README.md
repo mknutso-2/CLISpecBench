@@ -110,7 +110,10 @@ repository root.
 
 ## Task IDs
 
-- `bibtex-cpp` — C++20 target
+- `bibtex-cpp` — C++20 target; reference implementation available
+- `bibtex-js` — JavaScript target
+- `bibtex-py` — Python target
+- `bibtex-rs` — Rust target
 
 ## Why this task
 
