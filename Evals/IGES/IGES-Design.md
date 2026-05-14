@@ -159,4 +159,6 @@ serves three roles:
   the hidden test suite to avoid coupling test assertions to
   implementation details.
 
-Py / JS / Rust ref-impls are planned as follow-ups (PLAN.md §8).
+C++/Python/JavaScript reference implementations are available. Rust remains a
+language target for submitted implementations, but this eval does not currently
+ship a Rust reference implementation.

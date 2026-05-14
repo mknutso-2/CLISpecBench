@@ -1,8 +1,8 @@
 """Regression tests for three entity parsers whose optional fields were
 previously read with strict tokenizers and rejected when defaulted.
 
-Fixed 2026-04-14 (Evals/IGES/PLAN.md → Known Issues). ex1.iges is the
-original repro; these targeted tests lock in the fix per entity so a
+Fixed during the 2026-04-14 port work. ex1.iges is the original repro;
+these targeted tests lock in the fix per entity so a
 future rewrite that re-introduces strict reads fails loudly.
 
 Each test builds a minimal document containing the entity with its

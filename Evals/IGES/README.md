@@ -5,12 +5,11 @@ specification and must produce a working tool that can parse, query, evaluate,
 and write conforming IGES files — the 80-column fixed-format CAD interchange
 format used across mechanical CAD systems since 1980.
 
-> **Status.** Port-in-progress. The eval is being adapted from a standalone
-> [IGES-SDK](../IGES-SDK) C++ library with a Catch2 test suite. See
-> [`PLAN.md`](PLAN.md) for the checklist and current progress. The harness now
-> registers explicit language task IDs (`iges-cpp`, `iges-py`, `iges-js`,
-> `iges-rs`) in `_KNOWN_TASKS`; readiness still depends on the current state of
-> each language's prompt/tests/reference implementation.
+> **Status.** Active eval. The benchmark ships the IGES prompt, pytest suite,
+> and C++/Python/JavaScript reference implementations. The harness
+> exposes explicit language task IDs such as `iges-cpp`, `iges-py`, `iges-js`,
+> and `iges-rs`; reference implementations are available for the languages
+> listed in `tests/conftest.py`.
 
 ## Why this eval
 
@@ -31,7 +30,7 @@ spec-comprehension challenge along the same axis:
 Unlike RS274, there is no "lite" variant. Agents are asked for full
 87-entity coverage.
 
-## Directory Structure (target)
+## Directory Structure
 
 ```
 prompt/
@@ -43,19 +42,20 @@ prompt/
 tests/
   conftest.py                       # Build fixtures (re-exports from pytest_plugin)
   iges_support.py                   # Test helpers (run CLI, build test files)
-  test_*.py                         # Hidden Python test suite
+  test_*.py                         # Python pytest suite
   data/
     ex1.iges / ex2.iges / ex3.iges  # Real-world reference fixtures
 reference-implementation-cpp/
   CMakeLists.txt                    # CMake project producing `iges` executable
   src/                              # C++23 reference solution (adapted from IGES-SDK)
+reference-implementation-js/        # JavaScript reference implementation
+reference-implementation-py/        # Python reference implementation
 IGES-Design.md                      # Eval design rationale
-PLAN.md                             # Port checklist (this eval's TODO)
 CHANGELOG.md                        # Per-eval change log
 VERSION                             # Semver for this eval
 ```
 
-## CLI Contract (draft)
+## CLI Contract
 
 The agent's submission is a single binary (default name `iges`) supporting
 five subcommands. All emit JSON, all write both on success and error, all
@@ -70,13 +70,12 @@ error).
 | `iges eval --input <file.iges> --de <n> --t <f> --output <point.json>` | Evaluate a parametric entity at a curve/surface parameter |
 | `iges roundtrip --input <file.iges> --output <out.iges>` | Read then write; idempotence check |
 
-See `prompt/technical-requirements-prompt.md` (once written) for the full
-contract, including the canonical IGES-JSON schema across all 87 entity
-types.
+See `prompt/technical-requirements-prompt.md` for the full contract, including
+the canonical IGES-JSON schema across all 87 entity types.
 
 ## What IGES Evaluates
 
-The hidden test suite scores along several independent surfaces:
+The pytest suite scores along several independent surfaces:
 
 1. **File-format correctness** — Start/Global/Terminate section formatting,
    Directory Entry layout, Parameter Data line splitting at 64 columns,

@@ -3,7 +3,7 @@
 Asserts that ``iges roundtrip`` on each reference fixture produces a
 file that re-parses successfully and yields the same parsed entity count.
 The first pass may normalize defaulted Global delimiters and expand
-two-digit year timestamps (see PLAN.md → Known Issues 2026-04-14), but
+two-digit year timestamps (see the 2026-04-14 port history), but
 once a file has been normalized, a second ``iges roundtrip`` pass must
 be byte-identical to the first.
 
