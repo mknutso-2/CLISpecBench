@@ -37,16 +37,50 @@ jobs:
       - run: bash scripts/ci-container.sh
 
   eval-tests:
+    name: eval-tests (${{ matrix.name }})
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: BibTeX cpp
+            target: bibtex-cpp
+            needs_cpp: true
+          - name: GEDCOM py
+            target: gedcom-py
+            needs_cpp: false
+          - name: ICal cpp
+            target: ical-cpp
+            needs_cpp: true
+          - name: IGES cpp
+            target: iges-cpp
+            needs_cpp: true
+          - name: LAS py
+            target: las-py
+            needs_cpp: false
+          - name: MARC21 py
+            target: marc21-py
+            needs_cpp: false
+          - name: WordCount cpp
+            target: wordcount-cpp
+            needs_cpp: true
+          - name: RS274 cpp
+            target: rs274-cpp
+            needs_cpp: true
+          - name: RS274 py
+            target: rs274-py
+            needs_cpp: false
     steps:
       - uses: actions/checkout@v6
       - uses: astral-sh/setup-uv@v8.0.0
 
       - name: Install C++ toolchain
+        if: ${{ matrix.needs_cpp }}
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends g++-14 cmake
         env:
           DEBIAN_FRONTEND: noninteractive
 
-      - run: bash scripts/ci-eval.sh
+      - run: bash scripts/ci-eval.sh ${{ matrix.target }}
