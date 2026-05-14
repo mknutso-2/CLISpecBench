@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from marc21_support import encode_iso2709, sample_marcxml, sample_record, sample_record_control_only
-
 from conftest import b64, run_marc21
+from marc21_support import encode_iso2709, sample_marcxml, sample_record, sample_record_control_only
 
 
 def test_inspect_rejects_missing_record_terminator(

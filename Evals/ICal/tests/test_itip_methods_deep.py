@@ -35,10 +35,8 @@ TAIL = "END:VCALENDAR\n"
 
 
 def _warn_kinds(out: dict[str, Any]) -> list[str]:
-    raw = out.get("warnings") or []
-    if not isinstance(raw, list):
-        return []
-    return [w.get("kind", "") for w in cast(list[dict[str, Any]], raw)]
+    raw = cast(list[dict[str, Any]], out.get("warnings") or [])
+    return [str(w.get("kind", "")) for w in raw]
 
 
 def _wrap(method: str, event_body: str) -> str:

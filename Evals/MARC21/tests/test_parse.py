@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from conftest import b64, run_marc21, unb64
 from marc21_support import (
     decode_iso2709_record,
     decode_marcxml_record,
@@ -13,8 +14,6 @@ from marc21_support import (
     sample_record_cjk,
     sample_record_control_only,
 )
-
-from conftest import b64, run_marc21, unb64
 
 
 def test_inspect_parses_basic_iso2709_record(

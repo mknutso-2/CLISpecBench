@@ -3,9 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-from marc21_support import sample_record
-
 from conftest import run_marc21, unb64
+from marc21_support import sample_record
 
 NS = "http://www.loc.gov/MARC21/slim"
 

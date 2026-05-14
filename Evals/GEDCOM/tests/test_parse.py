@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
+from conftest import run_gedcom
 from gedcom_support import (
     extended_sample_dataset,
     extended_sample_gedcom_text,
@@ -11,8 +13,6 @@ from gedcom_support import (
     sample_gedcom_text,
     wrap_record_fragment,
 )
-
-from conftest import run_gedcom
 
 
 def test_parses_sample_dataset_to_generic_tree(

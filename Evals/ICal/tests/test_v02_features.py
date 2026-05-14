@@ -4,6 +4,7 @@ EXRULE, VTODO/VJOURNAL/VFREEBUSY, METHOD on VCALENDAR."""
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 from conftest import run_expand, run_parse, starts_for, wrap_event
 
@@ -167,7 +168,7 @@ def test_recurrence_id_cancel_marks_occurrence_cancelled(
     out = run_expand(
         submission_command, ics, "2026-03-01T00:00:00Z", "2026-03-15T00:00:00Z", tmp_path
     )
-    occs = out.get("occurrences") or []
+    occs = cast(list[dict[str, Any]], out.get("occurrences") or [])
     cancelled_occs = [
         o for o in occs if o.get("uid") == "e1" and o.get("dtstart") == "2026-03-07T10:00:00Z"
     ]

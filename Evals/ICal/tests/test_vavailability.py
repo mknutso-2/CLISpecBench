@@ -155,6 +155,7 @@ def test_available_with_rrule(submission_command: tuple[str, ...], tmp_path: Pat
     assert len(av_list) == 1
     rrule = av_list[0].get("rrule")
     assert isinstance(rrule, dict)
+    rrule = cast(dict[str, Any], rrule)
     assert rrule.get("freq") == "WEEKLY"
 
 
@@ -310,6 +311,7 @@ def test_available_with_recurrence_id(submission_command: tuple[str, ...], tmp_p
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
     rid = av.get("recurrence_id")
     assert isinstance(rid, dict), f"expected object, got {rid!r}"
+    rid = cast(dict[str, Any], rid)
     # Pin the exact ISO-8601 value, not a date-fragment substring. A
     # substring match could hide a broken time component or lost
     # `Z` suffix.
@@ -345,6 +347,7 @@ def test_available_recurrence_id_with_tzid_and_range(
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
     rid = av.get("recurrence_id")
     assert isinstance(rid, dict)
+    rid = cast(dict[str, Any], rid)
     # Pin value along with the params so a silent loss of the time-
     # component can't pass.
     assert rid.get("value") == "2026-06-01T09:00:00"

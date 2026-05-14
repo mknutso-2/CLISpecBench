@@ -58,8 +58,7 @@ def test_link_with_linkrel_parameter(submission_command: tuple[str, ...], tmp_pa
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
     link = next((p for p in raw if str(p.get("name", "")).upper() == "LINK"), None)
     assert link is not None
-    params = link.get("params", {})
-    assert isinstance(params, dict)
+    params = cast(dict[str, Any], link.get("params", {}))
     assert params.get("LINKREL") == "CHILD"
 
 
@@ -76,8 +75,7 @@ def test_related_to_gap_parameter(submission_command: tuple[str, ...], tmp_path:
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
     rel = next((p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None)
     assert rel is not None
-    params = rel.get("params", {})
-    assert isinstance(params, dict)
+    params = cast(dict[str, Any], rel.get("params", {}))
     assert params.get("GAP") == "PT30M"
     assert params.get("RELTYPE") == "FINISHTOSTART"
 
@@ -94,7 +92,8 @@ def test_reltype_finishtofinish(submission_command: tuple[str, ...], tmp_path: P
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
     rel = next((p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None)
     assert rel is not None
-    assert rel["params"].get("RELTYPE") == "FINISHTOFINISH"
+    params = cast(dict[str, Any], rel["params"])
+    assert params.get("RELTYPE") == "FINISHTOFINISH"
 
 
 def test_reltype_dependson(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -104,7 +103,8 @@ def test_reltype_dependson(submission_command: tuple[str, ...], tmp_path: Path) 
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
     rel = next((p for p in raw if str(p.get("name", "")).upper() == "RELATED-TO"), None)
     assert rel is not None
-    assert rel["params"].get("RELTYPE") == "DEPENDS-ON"
+    params = cast(dict[str, Any], rel["params"])
+    assert params.get("RELTYPE") == "DEPENDS-ON"
 
 
 # ---------------------------------------------------------------------------

@@ -28,7 +28,7 @@ def test_parse_500_events_in_reasonable_time(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """A calendar with 500 events parses and surfaces all of them."""
-    events = []
+    events: list[str] = []
     for i in range(500):
         events.append(
             f"BEGIN:VEVENT\nUID:e{i:04d}\nDTSTAMP:20260101T120000Z\n"
@@ -94,7 +94,7 @@ def test_deep_override_chain(submission_command: tuple[str, ...], tmp_path: Path
         "RRULE:FREQ=DAILY;COUNT=30\n"
         "END:VEVENT\n"
     )
-    overrides = []
+    overrides: list[str] = []
     for i in range(20):
         day = i + 2  # override days 3/2 through 3/21
         overrides.append(
@@ -149,7 +149,7 @@ def test_malformed_midfile_preserves_later_valid_events(
 
 def test_many_alarms_on_one_event(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """An event with 50 VALARMs parses and all alarms surface."""
-    alarms = []
+    alarms: list[str] = []
     for i in range(50):
         alarms.append(
             "BEGIN:VALARM\n"

@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+
+from conftest import b64, run_marc21, unb64
 from marc21_spec_support import (
     data_field_example_records,
     representative_example_records,
@@ -13,8 +15,6 @@ from marc21_support import (
     encode_iso2709_record,
     sample_marcxml,
 )
-
-from conftest import b64, run_marc21, unb64
 
 _REPRESENTATIVE_CASES = representative_example_records()
 _REPRESENTATIVE_IDS = [tag for tag, _ in _REPRESENTATIVE_CASES]

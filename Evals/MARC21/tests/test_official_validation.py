@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import pytest
+
+from conftest import b64, run_marc21
 from marc21_spec_support import (
     duplicate_nonrepeatable_field_record,
     fields_with_indicator_constraints,
@@ -19,8 +21,6 @@ from marc21_spec_support import (
     rule_compatible_example_text,
 )
 from marc21_support import encode_iso2709_record, sample_marcxml
-
-from conftest import b64, run_marc21
 
 _INDICATOR_CASES = fields_with_indicator_constraints()
 _INDICATOR_IDS = [tag for tag, _ in _INDICATOR_CASES]

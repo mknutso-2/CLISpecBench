@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import subprocess
 from pathlib import Path
+from typing import Any, cast
 
 
 def _run_for_error(
@@ -21,7 +22,7 @@ def _run_for_error(
     style: str,
     *,
     cites: str | None = None,
-) -> dict[str, object]:
+) -> dict[str, Any]:
     """Run bibtex expecting exit=1 and return the error JSON."""
     bib_file = tmp_path / "refs.bib"
     bst_file = tmp_path / "style.bst"
@@ -53,7 +54,13 @@ def _run_for_error(
     content = out_file.read_text(encoding="utf-8")
     data = json.loads(content)
     assert isinstance(data, dict), f"error body is not a JSON object: {content}"
-    return data  # type: ignore[return-value]
+    return cast(dict[str, Any], data)
+
+
+def _error_object(err: dict[str, Any]) -> dict[str, Any]:
+    error = err.get("error")
+    assert isinstance(error, dict), f"error JSON missing 'error' object: {err}"
+    return cast(dict[str, Any], error)
 
 
 MIN_STYLE = """\
@@ -76,8 +83,7 @@ def test_error_reports_line_column_for_unclosed_entry(
     the file (where EOF was hit unexpectedly)."""
     bib = '@article{a, title = "T"\n'  # no closing brace
     err = _run_for_error(submission_command, tmp_path, bib, MIN_STYLE)
-    error = err.get("error")
-    assert isinstance(error, dict), f"error JSON missing 'error' object: {err}"
+    error = _error_object(err)
     line = error.get("line")
     col = error.get("column")
     assert isinstance(line, int) and line >= 1, f"line not positive int: {line}"
@@ -90,8 +96,7 @@ def test_error_reports_source_bib_for_bib_errors(
     """When the error originates in the .bib, source='bib'."""
     bib = "@article{a, title = !@#$}\n"
     err = _run_for_error(submission_command, tmp_path, bib, MIN_STYLE)
-    error = err.get("error")
-    assert isinstance(error, dict)
+    error = _error_object(err)
     if "source" in error:
         assert error["source"] == "bib", f"expected source=bib, got {error['source']}"
 
@@ -100,8 +105,7 @@ def test_error_line_column_are_nonzero(submission_command: tuple[str, ...], tmp_
     """Line and column should be 1-indexed positive integers, not 0."""
     bib = '@article{a, title = "unterminated\n'  # unterminated string
     err = _run_for_error(submission_command, tmp_path, bib, MIN_STYLE)
-    error = err.get("error")
-    assert isinstance(error, dict)
+    error = _error_object(err)
     line = error.get("line")
     col = error.get("column")
     assert isinstance(line, int) and line >= 1
@@ -126,8 +130,7 @@ READ
 EXECUTE {f}
 """
     err = _run_for_error(submission_command, tmp_path, bib, style)
-    error = err.get("error")
-    assert isinstance(error, dict)
+    error = _error_object(err)
     line = error.get("line")
     col = error.get("column")
     # Line should point somewhere in the .bst (specifically line 2 where !!! is).

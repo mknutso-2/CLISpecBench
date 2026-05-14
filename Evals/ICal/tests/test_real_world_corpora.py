@@ -35,7 +35,7 @@ def test_gmail_export_parses_successfully(
     """A realistic Gmail export parses without error."""
     ics = _load("gmail-export.ics")
     out = run_parse(submission_command, ics, tmp_path)
-    cal = out.get("calendar") or {}
+    cal = cast(dict[str, Any], out.get("calendar") or {})
     assert cal.get("prodid", "").startswith("-//Google")
     assert cal.get("method") == "PUBLISH"
 
@@ -108,7 +108,7 @@ def test_outlook_export_parses_successfully(
 ) -> None:
     ics = _load("outlook-export.ics")
     out = run_parse(submission_command, ics, tmp_path)
-    cal = out.get("calendar") or {}
+    cal = cast(dict[str, Any], out.get("calendar") or {})
     assert "Microsoft" in cal.get("prodid", "")
 
 
@@ -127,8 +127,8 @@ def test_outlook_quoted_tzid_parameter(submission_command: tuple[str, ...], tmp_
     raw = cast(list[dict[str, Any]], ev.get("raw_properties") or [])
     dtstart_raws = [p for p in raw if str(p.get("name", "")).upper() == "DTSTART"]
     assert len(dtstart_raws) >= 1
-    params = dtstart_raws[0].get("params", {})
-    tzid = params.get("TZID") if isinstance(params, dict) else None
+    params = cast(dict[str, Any], dtstart_raws[0].get("params", {}))
+    tzid = params.get("TZID")
     assert tzid in ("Eastern Standard Time", '"Eastern Standard Time"'), (
         f"unexpected TZID param: {tzid!r} (expected stripped or literal-quoted form)"
     )
@@ -154,7 +154,7 @@ def test_itip_request_has_organizer_and_three_attendees(
 ) -> None:
     ics = _load("itip-request.ics")
     out = run_parse(submission_command, ics, tmp_path)
-    cal = out.get("calendar") or {}
+    cal = cast(dict[str, Any], out.get("calendar") or {})
     assert cal.get("method") == "REQUEST"
     ev = find_event(out, "itip-request-12345@example.com")
     assert ev.get("organizer") is not None
@@ -171,5 +171,5 @@ def test_itip_request_no_missing_property_warning(
     """A well-formed REQUEST should NOT produce itip_missing_property."""
     ics = _load("itip-request.ics")
     out = run_parse(submission_command, ics, tmp_path)
-    kinds = [w.get("kind") for w in cast(list[dict[str, Any]], out.get("warnings") or [])]
+    kinds = [str(w.get("kind", "")) for w in cast(list[dict[str, Any]], out.get("warnings") or [])]
     assert "itip_missing_property" not in kinds

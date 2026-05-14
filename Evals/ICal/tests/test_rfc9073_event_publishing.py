@@ -68,8 +68,7 @@ def test_structured_data_inline_text(submission_command: tuple[str, ...], tmp_pa
     ev = find_event(out, "e1")
     prop = _raw_prop(ev, "STRUCTURED-DATA")
     assert prop is not None
-    params = prop.get("params", {})
-    assert isinstance(params, dict)
+    params = cast(dict[str, Any], prop.get("params", {}))
     assert params.get("FMTTYPE") == "application/json"
 
 
@@ -95,8 +94,7 @@ def test_styled_description_html(submission_command: tuple[str, ...], tmp_path: 
     ev = find_event(out, "e1")
     prop = _raw_prop(ev, "STYLED-DESCRIPTION")
     assert prop is not None
-    params = prop.get("params", {})
-    assert isinstance(params, dict)
+    params = cast(dict[str, Any], prop.get("params", {}))
     assert params.get("FMTTYPE") == "text/html"
 
 
@@ -108,7 +106,8 @@ def test_styled_description_markdown(submission_command: tuple[str, ...], tmp_pa
     ev = find_event(out, "e1")
     prop = _raw_prop(ev, "STYLED-DESCRIPTION")
     assert prop is not None
-    assert prop["params"].get("FMTTYPE") == "text/markdown"
+    params = cast(dict[str, Any], prop["params"])
+    assert params.get("FMTTYPE") == "text/markdown"
 
 
 def test_styled_description_with_language(
@@ -121,7 +120,8 @@ def test_styled_description_with_language(
     ev = find_event(out, "e1")
     prop = _raw_prop(ev, "STYLED-DESCRIPTION")
     assert prop is not None
-    assert prop["params"].get("LANGUAGE") == "es"
+    params = cast(dict[str, Any], prop["params"])
+    assert params.get("LANGUAGE") == "es"
 
 
 def test_multiple_styled_descriptions_for_multilingual(

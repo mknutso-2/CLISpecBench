@@ -20,6 +20,7 @@ ambiguity.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 from conftest import run_expand
 
@@ -52,8 +53,9 @@ def _wrap(event_body: str) -> str:
     return HEAD + US_EASTERN_TZ + "BEGIN:VEVENT\n" + event_body + "END:VEVENT\n" + TAIL
 
 
-def _kinds(out: dict) -> list[str]:
-    return [w.get("kind") for w in out.get("warnings", []) or []]
+def _kinds(out: dict[str, Any]) -> list[str]:
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    return [str(w.get("kind", "")) for w in warnings]
 
 
 # ---------------------------------------------------------------------------
@@ -357,7 +359,7 @@ def test_recurring_event_crossing_dst_boundary(
         tmp_path,
     )
     # Three occurrences produced; offsets shift at DST.
-    occs = out.get("occurrences") or []
+    occs = cast(list[dict[str, Any]], out.get("occurrences") or [])
     assert len(occs) == 3
 
 

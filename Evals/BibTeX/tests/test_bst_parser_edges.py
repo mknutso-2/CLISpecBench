@@ -17,6 +17,7 @@ bibtex.web §3000+ (`.bst` lexer / parser).
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 from conftest import run_bibtex
 
@@ -380,10 +381,11 @@ EXECUTE {f}
     assert log_file.exists()
     import json
 
-    log = json.loads(log_file.read_text(encoding="utf-8"))
-    warnings = log.get("warnings", []) if isinstance(log, dict) else []
-    msgs = [w.get("message", "") for w in warnings]
-    kinds = [w.get("kind", "") for w in warnings]
+    log_data = json.loads(log_file.read_text(encoding="utf-8"))
+    log = cast(dict[str, Any], log_data) if isinstance(log_data, dict) else {}
+    warnings = cast(list[dict[str, Any]], log.get("warnings", []))
+    msgs = [str(w.get("message", "")) for w in warnings]
+    kinds = [str(w.get("kind", "")) for w in warnings]
     assert any(
         "does.not.exist" in m or "unknown" in k.lower() or "undefined" in k.lower()
         for m, k in zip(msgs, kinds, strict=False)

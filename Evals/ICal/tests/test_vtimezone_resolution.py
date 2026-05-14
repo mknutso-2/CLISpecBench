@@ -18,6 +18,7 @@ observance RDATEs. This file pins:
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, cast
 
 from conftest import run_expand, starts_for, wrap_event
 
@@ -309,5 +310,6 @@ def test_unknown_tzid_emits_warning(submission_command: tuple[str, ...], tmp_pat
         "2027-01-01T00:00:00Z",
         tmp_path,
     )
-    kinds = [w.get("kind") for w in out.get("warnings", []) or []]
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    kinds = [str(w.get("kind", "")) for w in warnings]
     assert "unresolved_tzid" in kinds

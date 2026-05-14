@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from marc21_support import encode_iso2709_record, sample_marcxml, sample_record
-
 from conftest import b64, run_marc21
+from marc21_support import encode_iso2709_record, sample_marcxml, sample_record
 
 
 def test_inspect_success_schema(submission_command: tuple[str, ...], tmp_path: Path) -> None:

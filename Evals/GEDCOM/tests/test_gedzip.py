@@ -6,6 +6,7 @@ import zipfile
 from pathlib import Path
 from typing import cast
 
+from conftest import run_gedcom
 from gedcom_support import (
     gedzip_b64,
     multimedia_record_block,
@@ -14,8 +15,6 @@ from gedcom_support import (
     sample_dataset,
     sample_gedcom_text,
 )
-
-from conftest import run_gedcom
 
 
 def _has_error_code(payload: dict[str, object] | None, code: str) -> bool:

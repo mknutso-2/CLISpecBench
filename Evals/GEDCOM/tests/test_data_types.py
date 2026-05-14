@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+
+from conftest import run_gedcom
 from gedcom_support import (
     document_text,
     individual_record_block,
@@ -12,8 +14,6 @@ from gedcom_support import (
     sample_dataset,
     submitter_record_block,
 )
-
-from conftest import run_gedcom
 
 
 def _has_error_code(payload: dict[str, object] | None, code: str) -> bool:

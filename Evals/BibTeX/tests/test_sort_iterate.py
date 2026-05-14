@@ -41,7 +41,7 @@ def _sort_bbl(
         presort_body = "cite$ 'sort.key$ :="
     else:
         # Branch on cite$ for each known key.
-        branches = []
+        branches: list[str] = []
         for k, v in keys.items():
             branches.append(f'cite$ "{k}" = {{ "{v}" \'sort.key$ := }} {{ skip$ }} if$')
         presort_body = " ".join(branches)

@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import cast
 
 import pytest
+
+from conftest import run_gedcom
 from gedcom_spec_support import record_root_specs, y_or_null_event_cases
 from gedcom_support import (
     clone_dataset,
@@ -17,8 +19,6 @@ from gedcom_support import (
     shared_note_record_block,
     submitter_record_block,
 )
-
-from conftest import run_gedcom
 
 _RECORD_ROOT_SPECS = record_root_specs()
 _XREF_REQUIRED_RECORD_TAGS = sorted(
