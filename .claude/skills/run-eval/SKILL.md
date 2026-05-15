@@ -38,7 +38,7 @@ DOCKER_HOST=tcp://localhost:2375 uv run clispecbench run --task rs274-cpp --agen
 - Tested detached launcher pattern on this host:
 
 ```powershell
-Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\CLISpecBench && DOCKER_HOST=tcp://localhost:2375 && uv run clispecbench run --task <task> --agent <agent> --model <model> [optional flags] 1>"<out.log>" 2>"<err.log>"'
+Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\CLISpecBench && set DOCKER_HOST=tcp://localhost:2375 && uv run clispecbench run --task <task> --agent <agent> --model <model> [optional flags] 1>"<out.log>" 2>"<err.log>"'
 ```
 
 - Do not rely on raw `docker` from PowerShell on this host; the harness uses the Python Docker SDK.
