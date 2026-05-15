@@ -20,15 +20,12 @@ class TestTaskDefinitionLanguage:
         assert isinstance(task, TaskDefinition)
         assert task.language == "cpp"
 
-    def test_rs274_task_resolves_without_historical_alias(self) -> None:
+    def test_rs274_task_resolves(self) -> None:
         repo_root = _repo_root()
         canonical = resolve_task(repo_root, "rs274-cpp")
 
         assert canonical.root == repo_root / "Evals" / "RS274"
         assert canonical.language == "cpp"
-        assert "cncsim-cpp" not in list_tasks()
-        with pytest.raises(ValueError, match="Unknown eval"):
-            resolve_task(repo_root, "cncsim-cpp")
 
 
 class TestPythonTaskRegistration:

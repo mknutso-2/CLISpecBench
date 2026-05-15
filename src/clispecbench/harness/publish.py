@@ -218,7 +218,7 @@ def publish_result(
 
     if not meta.run_uid:
         raise PublishError(
-            f"{source}: result has no run_uid (pre-2.0 file). "
+            f"{source}: result has no run_uid. "
             "Re-run the evaluation to produce a publishable result."
         )
 

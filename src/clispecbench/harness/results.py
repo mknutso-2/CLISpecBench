@@ -311,11 +311,6 @@ def model_effort_slug(model: str | None, effort: str | None) -> str | None:
     return _UNSAFE_MODEL_SLUG_CHARS.sub("_", raw)
 
 
-def _model_effort_slug(model: str | None, effort: str | None) -> str | None:
-    """Backward-compatible private alias for the public slug helper."""
-    return model_effort_slug(model, effort)
-
-
 def _model_base_dir(
     output_dir: Path,
     task: str,
@@ -325,7 +320,7 @@ def _model_base_dir(
 ) -> Path:
     """Return the base directory for a task/agent/model combination."""
     base = output_dir / task / agent
-    slug = _model_effort_slug(model, effort)
+    slug = model_effort_slug(model, effort)
     if slug:
         base = base / slug
     return base
@@ -468,33 +463,14 @@ def save_source_dir(result_json_path: Path, source_dir: Path) -> str:
 
 
 def load_result(path: Path) -> RunResult:
-    """Load a RunResult from a JSON file.
-
-    Tolerant of pre-2.0 files: the legacy ``run_id`` composite string is
-    dropped (its fields are already present structurally), and a missing
-    ``run_uid`` is filled with an empty string so existing transient results
-    remain readable. Legacy files thus won't be publishable until re-run.
-    """
+    """Load a RunResult from a JSON file."""
     data = json.loads(path.read_text(encoding="utf-8"))
-    meta = data["metadata"]
-    meta.pop("run_id", None)
-    meta.setdefault("run_uid", "")
-    meta.setdefault("eval_version", "unknown")
-    meta.setdefault("harness_version", "unknown")
-    meta.setdefault("benchmark_cost_preference", None)
-    meta.setdefault("prompt_content_sha", "unknown")
-    meta.setdefault("test_suite_sha", "unknown")
-    meta.setdefault("agent_last_message", None)
-    metadata = RunMetadata(**meta)
+    metadata = RunMetadata(**data["metadata"])
     token_usage = (
         TokenUsage(
             input_tokens=data["token_usage"]["input_tokens"],
             output_tokens=data["token_usage"]["output_tokens"],
-            # Support old field name "cached_input_tokens" for backward compat
-            cache_read_input_tokens=(
-                data["token_usage"].get("cache_read_input_tokens")
-                or data["token_usage"].get("cached_input_tokens")
-            ),
+            cache_read_input_tokens=data["token_usage"].get("cache_read_input_tokens"),
             cache_creation_input_tokens=data["token_usage"].get("cache_creation_input_tokens"),
             tool_calls=data["token_usage"].get("tool_calls"),
             reported_cost_usd=data["token_usage"].get("reported_cost_usd"),

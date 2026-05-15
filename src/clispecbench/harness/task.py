@@ -174,7 +174,7 @@ def resolve_task(repo_root: Path, task_id: str, *, language: str | None = None) 
 
     Two calling forms are accepted:
 
-    - ``resolve_task(root, "bibtex-cpp")`` — legacy/canonical form, language
+    - ``resolve_task(root, "bibtex-cpp")`` — task id form, language
       embedded in the id.
     - ``resolve_task(root, "bibtex", language="cpp")`` — preferred form, eval
       name and language as orthogonal arguments.

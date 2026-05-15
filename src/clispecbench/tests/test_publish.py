@@ -147,7 +147,7 @@ def test_publish_auto_increments_across_calls(tmp_path: Path) -> None:
 
 def test_publish_rejects_result_without_run_uid(tmp_path: Path) -> None:
     source = tmp_path / "transient" / "result.json"
-    _make_result_file(source, run_uid="")  # legacy / pre-2.0
+    _make_result_file(source, run_uid="")
     published_root = tmp_path / "published"
 
     with pytest.raises(PublishError, match="no run_uid"):
@@ -424,57 +424,3 @@ def test_publish_with_matching_commentary_does_not_warn(
 
     messages = [r.getMessage() for r in caplog.records]
     assert not any("commentary slug" in m for m in messages)
-
-
-def test_load_result_migrates_legacy_run_id(tmp_path: Path) -> None:
-    """Pre-2.0 payloads with ``metadata.run_id`` must still load.
-
-    The legacy run_id is dropped (fields it encoded are already structured in
-    metadata) and run_uid defaults to empty — which makes the file
-    unpublishable until the run is redone, by design.
-    """
-    from clispecbench.harness.results import load_result
-
-    legacy_payload: dict[str, object] = {
-        "schema_version": "1.1",
-        "metadata": {
-            "run_id": "rs274-cpp_claude-code_claude-opus-4-7_2026-04-02_run-1",
-            "task": "rs274-cpp",
-            "agent": "claude-code",
-            "agent_version": "1.0.0",
-            "prompt_variant": "base",
-            "run_number": 1,
-            "timestamp": "2026-04-02T00:00:00+00:00",
-            "test_suite_version": "abc1234",
-            "eval_version": "2.1.1",
-            "harness_version": "0.1.0",
-            "docker_image_sha": "sha256:test",
-            "wall_clock_seconds": 1.0,
-            "exit_reason": "completed",
-            "model": "claude-opus-4-7",
-            "effort": "max",
-        },
-        "token_usage": None,
-        "build": {"success": True, "duration_seconds": 0.0, "diagnostics": ""},
-        "tests": [],
-        "test_summary": {"passed": 0, "failed": 0, "skipped": 0, "error": 0},
-        "scores": {},
-    }
-    source = tmp_path / "legacy" / "result.json"
-    source.parent.mkdir(parents=True)
-    source.write_text(json.dumps(legacy_payload), encoding="utf-8")
-
-    result = load_result(source)
-    assert result.metadata.run_uid == ""
-    assert not hasattr(result.metadata, "run_id")
-    assert result.metadata.task == "rs274-cpp"
-    assert result.metadata.model == "claude-opus-4-7"
-
-    # And confirm publish refuses — the migrated file has no uid to carry.
-    with pytest.raises(PublishError, match="no run_uid"):
-        publish_result(
-            source,
-            tmp_path / "published",
-            status="Complete",
-            last_message="should reject",
-        )

@@ -263,9 +263,6 @@
   eval directory, docs, tests, reference implementations, and the preferred
   executable name. The canonical harness task IDs are now
   `rs274-{cpp,py,js,rs}`.
-- **Compatibility aliases**: the historical `cncsim-{cpp,py,js,rs}` task IDs
-  were temporarily accepted during the rename window. They were removed during
-  the May 2026 repository cleanup; use `rs274-{cpp,py,js,rs}` only.
 - **Behavior unchanged**: this is a taxonomy/documentation rename only. The
   prompt materials, hidden tests, and reference-implementation behavior are
   unchanged from v2.1.2.
@@ -392,7 +389,7 @@ evolution during program execution, enabling GUI replay and per-line scoring.
 
 - The `--output` end-of-program snapshot contract from 1.x is unchanged. A
   submission that implements only the end-snapshot still passes every 1.x
-  test. The git tag `cncsim-pre-trace` marks the last 1.x baseline commit.
+  test.
 
 ## v1.0.1 — 2026-04-03
 
