@@ -1,4 +1,4 @@
-"""Scoring pipeline: correctness, self-test coverage, code quality."""
+"""Scoring pipeline: pytest execution, correctness, and capability breakdowns."""
 
 from __future__ import annotations
 
@@ -406,89 +406,10 @@ def compute_correctness(summary: TestSummary) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Self-test coverage — run agent's own tests with coverage instrumentation
-# ---------------------------------------------------------------------------
-
-
-def compute_self_test_coverage(
-    submission_dir: Path,
-) -> float | None:
-    """Compute line coverage of the agent's own tests against its code.
-
-    Returns the coverage fraction, or ``None`` if the agent didn't write tests
-    or coverage tooling is unavailable.
-    """
-    # Look for agent-written tests
-    test_dirs = [
-        submission_dir / "tests",
-        submission_dir / "test",
-    ]
-    agent_test_dir = next((d for d in test_dirs if d.is_dir()), None)
-    if agent_test_dir is None:
-        log.info("No agent test directory found in submission")
-        return None
-
-    # For C++ projects, coverage requires rebuilding with --coverage.
-    # This is a placeholder — the real implementation needs to:
-    # 1. Rebuild with -fprofile-arcs -ftest-coverage
-    # 2. Run agent tests
-    # 3. Run gcov / lcov
-    # 4. Parse coverage percentage
-    log.info("Self-test coverage measurement not yet implemented")
-    return None
-
-
-# ---------------------------------------------------------------------------
-# Code quality — LLM judge
-# ---------------------------------------------------------------------------
-
-
-def compute_code_quality(submission_dir: Path) -> float | None:
-    """Evaluate code quality using an LLM judge.
-
-    Returns the quality score, or ``None`` if evaluation is unavailable.
-    """
-    # Placeholder — the real implementation needs to:
-    # 1. Discover source files in submission
-    # 2. Load the quality rubric for the task language
-    # 3. Send each file + guideline to an LLM judge
-    # 4. Aggregate pass/fail/not-applicable results
-    log.info("Code quality evaluation not yet implemented")
-    return None
-
-
-# ---------------------------------------------------------------------------
 # Aggregate scoring
 # ---------------------------------------------------------------------------
 
 
-def compute_task_score(
-    correctness: float,
-    self_test_coverage: float | None,
-    code_quality: float | None,
-    correctness_weight: float = 0.6,
-    coverage_weight: float = 0.2,
-    quality_weight: float = 0.2,
-) -> Scores:
-    """Compute all scoring dimensions and the weighted task score."""
-    # If a dimension is unavailable, redistribute its weight to correctness
-    effective_correctness_weight = correctness_weight
-    if self_test_coverage is None:
-        effective_correctness_weight += coverage_weight
-        coverage_weight = 0.0
-    if code_quality is None:
-        effective_correctness_weight += quality_weight
-        quality_weight = 0.0
-
-    task_score = effective_correctness_weight * correctness
-    if self_test_coverage is not None:
-        task_score += coverage_weight * self_test_coverage
-    if code_quality is not None:
-        task_score += quality_weight * code_quality
-
-    return Scores(
-        correctness=correctness,
-        self_test_coverage=self_test_coverage,
-        code_quality=code_quality,
-        task_score=task_score,
-    )
+def compute_task_score(correctness: float) -> Scores:
+    """Compute the task score from the current scored dimension."""
+    return Scores(correctness=correctness, task_score=correctness)

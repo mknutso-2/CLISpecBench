@@ -112,7 +112,10 @@ receive the prompt/docs corpus, not the test implementation.
 
 ## 4. Scoring Model
 
-Each task produces three component scores, each in [0, 1]. The task score is a weighted sum. The CLISpecBench meta-score is the geometric mean across all tasks a model has been evaluated on.
+Each task produces a correctness score in [0, 1], plus diagnostic capability
+breakdowns derived from the hidden test suite. The task score currently equals
+correctness. The CLISpecBench meta-score is the geometric mean across all tasks
+a model has been evaluated on.
 
 ### 4.1 Correctness Score
 
@@ -130,46 +133,26 @@ Performance tests are optional per task. Not every domain has a realistic large-
 
 *Note: the current benchmark uses timeout-as-threshold (pass/fail) as described above. A future version may introduce continuous performance measurement — recording actual wall-clock time and reporting throughput (e.g., MB/s) as a graded metric alongside correctness. This requires pinning to a specific hardware class, running multiple trials to account for OS noise, and enforcing consistent compiler optimization flags in the harness. See Current Status and Future Work (Section 11).*
 
-### 4.2 Self-Test Coverage Score
+### 4.2 Capability Breakdowns
 
-The model is asked to produce both an implementation and a test suite. The harness runs the model's tests against the model's implementation and measures line coverage using the language-appropriate tool (gcov/lcov for C++, coverage.py for Python, etc.).
+The harness groups hidden test outcomes by test-file name and records a
+passed/total pair for each capability bucket. For example,
+`test_canned_cycles.py` contributes `subscore.canned_cycles.passed` and
+`subscore.canned_cycles.total` in the result JSON. These values are diagnostic:
+they explain where a score came from without introducing a second hand-maintained
+tagging system.
 
-```
-self_coverage = covered_lines / total_lines
-```
+Capability breakdowns are not folded into `task_score`; they are a structured
+view of the same test outcomes that produce correctness.
 
-This dimension is not primarily a reward for high numbers — it is a signal of whether the model *understands what it built*. A model with 80% self-coverage that fails half the hidden tests has written tests that don't probe the right behavior. That gap is a meaningful finding.
-
-### 4.3 Code Quality Score
-
-An LLM judge evaluates the submitted source files against a predefined, language-specific quality rubric. For C++ tasks, the rubric is drawn from the C++ Core Guidelines. Each guideline is evaluated per file and reported as pass/fail. The quality score is the fraction of guideline checks that pass across all files.
-
-Quality rubrics live in `quality-evals/<language>/` and are reused across all tasks in that language. A new language requires a one-time rubric definition effort; subsequent tasks in that language inherit it.
-
-The LLM judge prompt for each guideline check follows a fixed template:
-
-```
-You are evaluating a C++ source file against a single C++ Core Guideline.
-
-Guideline: <ID and description>
-Rationale: <Why this guideline matters>
-
-File contents:
-<source>
-
-Does this file adhere to the guideline? Answer YES, NO, or NOT_APPLICABLE.
-If NO, quote the specific line(s) that violate it.
-```
-
-Each check uses a small, cost-efficient model (not the model under evaluation).
-
-### 4.4 Extension Task Score (Optional)
+### 4.3 Extension Task Score (Optional Future Work)
 
 An extension task is a hidden follow-up prompt that asks the agent to modify or extend the implementation it just produced. The agent does not know extension tasks exist when it writes its initial implementation — that surprise is the point. An implementation built with clean abstractions and separation of concerns will absorb a new feature more easily than spaghetti code that happens to pass the base test suite. Extension tasks measure maintainability and extensibility behaviorally, by actually attempting the extension, rather than cosmetically.
 
-**Why this exists alongside the LLM judge (Section 4.3).** The code quality score measures static quality: does the code follow idioms, naming conventions, and structural guidelines? The extension task score measures dynamic quality: can the code absorb a change? These are complementary signals. A codebase can follow every C++ Core Guideline and still be a nightmare to extend if its abstractions are wrong. Conversely, well-structured code with inconsistent naming will extend cleanly. Reporting both dimensions gives a richer picture than either alone.
-
-**Extension tasks are optional per task.** Not every task has a natural extension point, and designing good extension tasks requires domain expertise. Tasks without extensions still have a quality signal through the LLM judge. Tasks with extensions report an additional extensibility score. This keeps the contribution bar achievable: a contributor can submit a valid task with the three required scoring dimensions and add extensions later (or not at all).
+**Extension tasks are optional per task.** Not every task has a natural extension
+point, and designing good extension tasks requires domain expertise. Tasks with
+extensions would report an additional extensibility score, separate from the
+base task score.
 
 **Harness flow.** After the base task is scored, the harness injects the extension prompt into the same agent session so the agent retains full context of the code it just wrote. The agent modifies its own code, and the harness scores the result against a separate hidden test suite specific to the extension. If a task defines multiple extensions, they are run sequentially in the same session — each one builds on the state left by the previous extension.
 
@@ -183,19 +166,13 @@ where each `ext_pass_rate_i` is the fraction of hidden tests passed for extensio
 
 **The extension score is reported separately from the base task score.** It is not folded into the weighted sum that produces the task score. This ensures that the base task score remains comparable across all tasks regardless of whether they include extensions, and that a model's base correctness and extensibility are visible as distinct signals.
 
-### 4.5 Task Score
+### 4.4 Task Score
 
 ```
-task_score = (correctness_weight * correctness)
-           + (coverage_weight   * self_coverage)
-           + (quality_weight    * code_quality)
+task_score = correctness
 ```
 
-Default weights: correctness 0.6, self-test coverage 0.2, code quality 0.2.
-When self-test coverage or code-quality scoring is unavailable, the current
-harness redistributes that weight to correctness so runs remain comparable.
-
-### 4.6 CLISpecBench Meta-Score
+### 4.5 CLISpecBench Meta-Score
 
 ```
 clispecbench_score = geometric_mean(task_score_1, task_score_2, ..., task_score_n)
@@ -401,8 +378,6 @@ Each language requires a one-time setup cost:
 - A Docker image with pinned compiler/runtime versions
 - A build backend in `clispecbench.build` (e.g. `CMakeBackend`, `PythonBackend`)
 - A shared `Evals/_shared/language-requirements-<lang>.md` prompt
-- A quality eval rubric in `quality-evals/<language>/`
-- A coverage measurement script in `coverage/<language>/`
 
 Once a language has these components, any new task in that language inherits them at no additional cost. The currently supported languages are C++20, Python 3.11+, JavaScript (Node.js 22+), and stable Rust (the shared prompt currently targets 2021 edition or later).
 

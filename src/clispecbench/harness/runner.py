@@ -41,9 +41,7 @@ from clispecbench.harness.results import (
     save_transcript,
 )
 from clispecbench.harness.scoring import (
-    compute_code_quality,
     compute_correctness,
-    compute_self_test_coverage,
     compute_subscores,
     compute_task_score,
     run_hidden_tests,
@@ -321,9 +319,7 @@ def run_evaluation(
 
         # --- 8. Score ---
         correctness = compute_correctness(test_summary)
-        coverage = compute_self_test_coverage(submission_dir)
-        quality = compute_code_quality(submission_dir)
-        scores = compute_task_score(correctness, coverage, quality)
+        scores = compute_task_score(correctness)
         # Per-capability breakdown — passed/total per test file, stored in
         # extension_scores so it rides along without changing the Scores
         # schema. Surface with `clispecbench results --breakdown`.

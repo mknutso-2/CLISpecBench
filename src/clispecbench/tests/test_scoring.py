@@ -342,11 +342,6 @@ class TestComputeCorrectness:
 
 class TestComputeTaskScore:
     def test_correctness_only(self) -> None:
-        scores = compute_task_score(0.8, None, None)
+        scores = compute_task_score(0.8)
         assert scores.correctness == pytest.approx(0.8)
         assert scores.task_score == pytest.approx(0.8)
-
-    def test_all_dimensions(self) -> None:
-        scores = compute_task_score(1.0, 0.5, 0.5)
-        expected = 0.6 * 1.0 + 0.2 * 0.5 + 0.2 * 0.5
-        assert scores.task_score == pytest.approx(expected)

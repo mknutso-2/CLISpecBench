@@ -14,7 +14,7 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "2.0"
+SCHEMA_VERSION = "2.1"
 _VALID_BENCHMARK_COST_PREFERENCES = frozenset({"reported", "estimated"})
 _UNSAFE_MODEL_SLUG_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
 
@@ -116,8 +116,6 @@ class Scores:
     """All scoring dimensions for a run."""
 
     correctness: float | None = None
-    self_test_coverage: float | None = None
-    code_quality: float | None = None
     task_score: float | None = None
     extension_scores: dict[str, float] = field(default_factory=dict[str, float])
 
@@ -516,7 +514,13 @@ def load_result(path: Path) -> RunResult:
         skipped=data["test_summary"]["skipped"],
         error=data["test_summary"]["error"],
     )
-    scores = Scores(**data["scores"])
+    scores_data = dict(data["scores"])
+    # Historical 2.0 results emitted these fields as null placeholders, but
+    # the harness never implemented either dimension. Drop them on load so
+    # published results remain readable after the schema cleanup.
+    scores_data.pop("self_test_coverage", None)
+    scores_data.pop("code_quality", None)
+    scores = Scores(**scores_data)
     artifacts_data = data.get("artifacts", {})
     artifacts = RunArtifacts(
         transcript=artifacts_data.get("transcript"),

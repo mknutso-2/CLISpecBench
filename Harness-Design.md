@@ -552,8 +552,6 @@ inspection and programmatic aggregation.
 
   "scores": {
     "correctness": 0.87,
-    "self_test_coverage": null,
-    "code_quality": null,
     "task_score": 0.87,
     "extension_scores": {
       "subscore.parser.passed": 91.0,

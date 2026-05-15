@@ -126,9 +126,6 @@ def load_task(
 
 _KNOWN_EVALS: dict[str, str] = {
     "rs274": "Evals/RS274",
-    # Historical alias for RS274 — kept for backwards compatibility with
-    # earlier results and scripts.
-    "cncsim": "Evals/RS274",
     "wordcount": "Evals/WordCount",
     "iges": "Evals/IGES",
     "bibtex": "Evals/BibTeX",

@@ -264,9 +264,8 @@
   executable name. The canonical harness task IDs are now
   `rs274-{cpp,py,js,rs}`.
 - **Compatibility aliases**: the historical `cncsim-{cpp,py,js,rs}` task IDs
-  remain registered as compatibility aliases resolving to the renamed RS274
-  eval so existing scripts and published-result tooling do not break
-  immediately.
+  were temporarily accepted during the rename window. They were removed during
+  the May 2026 repository cleanup; use `rs274-{cpp,py,js,rs}` only.
 - **Behavior unchanged**: this is a taxonomy/documentation rename only. The
   prompt materials, hidden tests, and reference-implementation behavior are
   unchanged from v2.1.2.

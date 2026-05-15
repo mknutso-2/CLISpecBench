@@ -185,6 +185,20 @@ class TestBenchmarkCostPolicy:
 
         assert loaded.metadata.exit_class == "completed"
 
+    def test_load_result_ignores_historical_score_placeholders(self, tmp_path: Path) -> None:
+        path = tmp_path / "result.json"
+        result = _make_run_result("codex-cli", None)
+        result.write(path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["scores"]["self_test_coverage"] = None
+        data["scores"]["code_quality"] = None
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+        loaded = load_result(path)
+
+        assert loaded.scores.correctness is None
+        assert loaded.scores.task_score is None
+
 
 class TestModelEffortSlug:
     def test_preserves_existing_safe_model_names(self) -> None:

@@ -9,9 +9,7 @@ and outputs machine state.
 > That split has been deferred. As of version 2.0.0, RS274 is a single eval
 > that covers both: the `--output` end-of-program snapshot from the 1.x line
 > *and* a new optional `--trace-output` motion trace that reports inter-line
-> state evolution. The 1.x contract is preserved via the git tag
-> `cncsim-pre-trace`; if a future fork is warranted, that tag marks the last
-> commit of the 1.x baseline and can be copied into a new eval directory.
+> state evolution.
 
 ## Directory Structure
 
