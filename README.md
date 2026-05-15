@@ -342,7 +342,7 @@ mounting strategy that the harness uses.
 
 ## Running an Eval
 
-For agent-assisted runs, use the `eval-runs` SKILL (available for both Codex and Claude). It covers launching evals, detaching and
+For agent-assisted runs, use the `run-eval` skill (available for both Codex and Claude). It covers launching evals, detaching and
 monitoring background runs, inspecting transcripts and result JSON, classifying anomalies, and publishing official results.
 
 The rest of this section explains how to run an eval manually.
@@ -466,7 +466,7 @@ Adding a new coding agent is currently spread across a few touchpoints.
 
 ### Adding a New Eval
 
-For agent-assisted eval work, use the `eval-authoring` SKILL (available for both Codex and Claude). It covers prompts, docs, tests,
+For agent-assisted eval work, use the `author-eval` skill (available for both Codex and Claude). It covers prompts, docs, tests,
 reference implementations, task registration, `VERSION`, and `CHANGELOG.md` changes.
 
 The rest of this section explains how to add a new eval manually.

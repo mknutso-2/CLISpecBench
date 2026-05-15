@@ -1,11 +1,11 @@
 ---
-name: eval-authoring
+name: author-eval
 description: Add or modify CLISpecBench evals. Use when changing eval prompts, docs, tests, reference implementations, task registration, or per-eval version and changelog state, or when creating a new eval directory.
 ---
 
 Meta: This file is a breathing document. If you read it and find that any of the following guidance is out of date or you find a way to do any of the following in a strictly better or more efficient way, please update it.
 
-# Eval authoring
+# Author eval
 
 - Use this skill for any change under `Evals/` or `src/clispecbench/harness/task.py` that affects eval behavior or registration.
 

@@ -79,7 +79,7 @@ def unb64(text: str) -> bytes:
 # dependency) causes ``returncode != 0`` on every subsequent CLI invocation.
 # Because the suite has ~2,840 CLI-invoking tests, one such bug cascades
 # into ~2,840 near-identical failures — the rule-3 antipattern from
-# `skills/eval-authoring/SKILL.md`.
+# `author-eval` skill.
 #
 # This module overrides the shared `submission_command` fixture to run a
 # minimal `inspect` request once per session before any CLI test. If the

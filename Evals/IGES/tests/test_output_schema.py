@@ -1,6 +1,6 @@
 """Schema gate: assert the top-level shape of each subcommand's JSON output.
 
-This file is the ``skills/eval-authoring/SKILL.md`` "single schema
+This file is the ``author-eval`` skill's "single schema
 gate" for the IGES eval. A missing or misnamed top-level field is a
 schema failure that belongs here, not in every behavioral test. By
 centralizing the schema shape in a handful of assertions, downstream

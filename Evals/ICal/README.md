@@ -9,7 +9,7 @@ concrete occurrences over a date window, resolves zoned date-times
 through in-file VTIMEZONE definitions, and honors the iTIP
 scheduling layer.
 
-> **Status.** v3.0.0 — eval-authoring review cleanup over the completed
+> **Status.** v3.0.0 — author-eval review cleanup over the completed
 > v1.x/v2.x expansion work, tightening the iTIP warning contract and
 > documenting DST fold resolution. Ships **9 authoritative RFCs** verbatim:
 > RFC 5545 (core) +

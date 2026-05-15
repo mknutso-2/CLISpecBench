@@ -114,7 +114,7 @@ no report.json — every run scored 0/0 regardless of agent output.
 - Moved the ISO 2709 UTF-8 validation behavior (reject records whose field
   payload bytes are not valid UTF-8) from `technical-requirements-prompt.md`
   into `base-prompt.md`, keeping only error-code scoping in the harness
-  contract. Aligns with the eval-authoring rule that behavioral requirements
+  contract. Aligns with the author-eval rule that behavioral requirements
   belong in the base prompt or docs.
 - Relaxed the 007 variable-length category rules: categories `c` (electronic
   resource) and `m` (motion picture) now only require at least positions

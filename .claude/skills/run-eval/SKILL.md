@@ -1,11 +1,11 @@
 ---
-name: eval-runs
-description: Run and analyze evals like WordCount, RS274, and IGES. Use when launching evals, detaching background runs, monitoring progress, inspecting transcripts and result JSON, classifying failures, or preparing official results tables and Last Message summaries.
+name: run-eval
+description: Run and analyze CLISpecBench evals like WordCount, RS274, and IGES. Use when launching evals, detaching background runs, monitoring progress, inspecting transcripts and result JSON, classifying failures, or preparing official results tables and Last Message summaries.
 ---
 
 Meta: This file is a breathing document. If you read it and find that any of the following documentation or guidance is out of date or you find a way to do any of the following in a strictly better or more efficient way, please update it.
 
-# Eval runs
+# Run eval
 
 ## Docker prerequisites
 

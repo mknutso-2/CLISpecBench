@@ -2,7 +2,7 @@
 
 ## v1.2.1 — 2026-04-24
 
-Documentation and prompt-contract cleanup from eval-authoring review.
+Documentation and prompt-contract cleanup from author-eval review.
 
 - **Post-run scoring note — empty-entry fixture cascade**: A review
   of low-scoring v1.2.1 runs

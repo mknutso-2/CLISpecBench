@@ -42,7 +42,7 @@ EVAL_CONFIG = EvalConfig(
 # in one dimension doesn't cascade into tests for another.
 #
 # The v0.2.1 review flagged the original single-probe design as a test-
-# independence violation (eval-authoring golden rule 3). v0.3 splits probes
+# independence violation (author-eval golden rule 3). v0.3 splits probes
 # into narrow single-purpose styles and adds direct-output tests that bypass
 # the probe layer entirely.
 # ---------------------------------------------------------------------------

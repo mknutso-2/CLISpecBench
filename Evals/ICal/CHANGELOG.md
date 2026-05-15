@@ -2,7 +2,7 @@
 
 ## v3.0.0 — 2026-04-25
 
-Fixes eval-authoring review findings around documentation and warning
+Fixes author-eval review findings around documentation and warning
 contracts.
 
 **Breaking**: `itip_missing_property` warnings now carry structured

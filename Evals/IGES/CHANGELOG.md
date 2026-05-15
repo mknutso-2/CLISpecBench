@@ -75,7 +75,7 @@
   but the canonical shape written by `parse` and read by `write` is
   the tagged form — making that the declared contract.
 - **`tests/test_output_schema.py`**: new schema-gate test following
-  `skills/eval-authoring/SKILL.md`'s "single schema gate + tolerant
+  `author-eval` skill's "single schema gate + tolerant
   behavioral assertions" pattern. Asserts the required top-level
   envelope keys on `iges parse` (success and error), `iges eval`, and
   `iges query`. Downstream behavioral tests now use `.get()` for the

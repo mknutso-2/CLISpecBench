@@ -63,8 +63,8 @@ but each maintains its own taxonomy and runs at a different layer.
    They're related but not identical: a `model_capped` run with a
    real scorable submission might be publish-allowed but flagged
    in-table as `0.747†` rather than treated as a clean run.
-4. **Two parallel SKILL.md files have drifted.** `.claude/skills/eval-runs/SKILL.md`
-   and `.codex/skills/eval-runs/SKILL.md` describe different rules
+4. **Two parallel SKILL.md files have drifted.** `.claude/skills/run-eval/SKILL.md`
+   and `.codex/skills/run-eval/SKILL.md` describe different rules
    for what counts. The `.codex` version was updated 2026-05-01 to
    exclude account-usage-cap runs as environment failures; the
    `.claude` version still describes account-usage-cap runs as
@@ -89,8 +89,8 @@ These are observations, not commitments — sized roughly small to large.
   module** (e.g. `harness/agent_stop.py`) so `publish.py` and the
   dashboard call the same function. Single source of truth for
   pattern matching. Today there are two parallel implementations.
-- **Sync `.claude/skills/eval-runs/SKILL.md` with
-  `.codex/skills/eval-runs/SKILL.md`.** Pick one rule for what
+- **Sync `.claude/skills/run-eval/SKILL.md` with
+  `.codex/skills/run-eval/SKILL.md`.** Pick one rule for what
   counts toward Best/Mean (most likely the `.codex` version's
   "exclude account/usage-cap as environment") and update both.
 - **Optionally persist the dashboard's bucket on `result.json`** so
@@ -100,5 +100,5 @@ These are observations, not commitments — sized roughly small to large.
 - **Distinguish account-usage-cap from per-message-output-token cap
   in the `usage_limit` bucket** — the latter is closer to model
   behavior ("the model emitted too much in one turn") and is
-  arguably publishable per `.codex/skills/eval-runs/SKILL.md`,
+  arguably publishable per `.codex/skills/run-eval/SKILL.md`,
   while the former is environment.
