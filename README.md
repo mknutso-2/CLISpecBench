@@ -54,6 +54,7 @@ Evals/                   # Evaluation tasks (one directory per task)
   MARC21/                #   MARC21 bibliographic record parser/writer eval
   RS274/                 #   CNC G-code interpreter eval
   WordCount/             #   Word frequency counter (toy eval for harness testing)
+docs/                    # Design docs, operational notes, and exploratory notes
 src/clispecbench/        # Python package
   agents/                #   One adapter module per coding agent
   build/                 #   Multi-language submission build backends
@@ -61,7 +62,11 @@ src/clispecbench/        # Python package
   tests/                 #   Harness/adapter/build tests
 docker/                  # Dockerfiles (base image + per-agent images)
   agents/                #   One Dockerfile per CLI coding agent
+published_results/
+  web/                   #   Local results dashboard and generated aggregates
 scripts/                 # Setup and utility scripts
+.codex/skills/           # Repo-specific Codex workflow skills
+.claude/skills/          # Parallel Claude workflow skills
 ```
 
 ## Eval List
@@ -134,6 +139,11 @@ uv run ruff check          # lint
 uv run ruff format         # format
 uv run pyright             # type-check
 ```
+
+For agent-assisted maintenance, use the parallel build/lint skills:
+`.codex/skills/build-and-lint/SKILL.md` and
+`.claude/skills/build-and-lint/SKILL.md`. Both capture the expected Ruff,
+Pyright, pytest, and Docker validation workflow.
 
 ### Environment Setup
 
@@ -332,6 +342,11 @@ mounting strategy that the harness uses.
 
 ## Running an Eval
 
+For agent-assisted runs, use the `eval-runs` SKILL (available for both Codex and Claude). It covers launching evals, detaching and
+monitoring background runs, inspecting transcripts and result JSON, classifying anomalies, and publishing official results.
+
+The rest of this section explains how to run an eval manually.
+
 ### How the Harness Runs an Eval
 
 Each eval task follows a standard pipeline:
@@ -401,8 +416,13 @@ stage it.
 
 ### Viewing Published Results
 
-Use the bundled launcher, which picks a free port, starts (or reuses) a local
-HTTP server, and opens the run-level explorer in your browser:
+Published results include a browser-based viewer under `published_results/web/`.
+The run-level dashboard summarizes models, agents, tasks, languages, pass counts,
+tokens, pricing, and links into per-run details. The per-test dashboard lets you
+filter and compare individual pytest outcomes across published runs.
+
+Use the bundled launcher, which picks a free port, starts or reuses a local HTTP
+server, and opens the run-level explorer in your browser:
 
 ```bash
 python published_results/start-dashboard.py
@@ -445,6 +465,11 @@ Adding a new coding agent is currently spread across a few touchpoints.
   series.
 
 ### Adding a New Eval
+
+For agent-assisted eval work, use the `eval-authoring` SKILL (available for both Codex and Claude). It covers prompts, docs, tests,
+reference implementations, task registration, `VERSION`, and `CHANGELOG.md` changes.
+
+The rest of this section explains how to add a new eval manually.
 
 1. **Create the eval directory** under `Evals/<Task>/`.
 2. **Add the prompt/docs/tests/reference implementation** under that directory.

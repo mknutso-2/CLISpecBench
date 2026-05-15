@@ -14,7 +14,7 @@ CLISpecBench is a benchmark for evaluating AI coding agents on doc-driven implem
 
 ## Repo-wide rules
 
-- **`skills/eval-authoring/SKILL.md` is authoritative** for prompt/docs/test/versioning rules, including `technical-requirements-prompt.md`, RS274 spec edits, reference-implementation bug fixes, and `VERSION`/`CHANGELOG.md` bumps.
+- **The parallel eval-authoring skills are authoritative** for prompt/docs/test/versioning rules, including `technical-requirements-prompt.md`, RS274 spec edits, reference-implementation bug fixes, and `VERSION`/`CHANGELOG.md` bumps. Use `.codex/skills/eval-authoring/SKILL.md` in Codex and `.claude/skills/eval-authoring/SKILL.md` in Claude.
 - **Keep `__init__.py` minimal.** Do not re-export from package roots unless it is an intentional public API. Import from the defining module instead.
 
 ## Key docs
