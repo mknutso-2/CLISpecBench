@@ -166,7 +166,6 @@ def run_evaluation(
     timeout_seconds: float = DEFAULT_TIMEOUT,
     output_dir: Path = Path("transient_results"),
     api_key_env: dict[str, str] | None = None,
-    skip_extensions: bool = False,
 ) -> RunResult:
     """Execute one complete evaluation run.
 

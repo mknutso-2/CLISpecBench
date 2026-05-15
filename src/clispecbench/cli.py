@@ -110,7 +110,6 @@ def _cmd_run(args: argparse.Namespace) -> None:
                 prompt_variant=args.prompt_variant,
                 output_dir=Path(args.output_dir),
                 api_key_env=api_key_env,
-                skip_extensions=args.skip_extensions,
             )
 
             print(f"\nResult: {result.metadata.exit_reason}")
@@ -731,7 +730,6 @@ def main(argv: list[str] | None = None) -> None:
         help="Effort / reasoning level (e.g. low, medium, high, max)",
     )
     run_parser.add_argument("--api-key-env", action="append", help="VAR=value pairs for API keys")
-    run_parser.add_argument("--skip-extensions", action="store_true")
 
     # --- results ---
     results_parser = subparsers.add_parser("results", help="View evaluation results")

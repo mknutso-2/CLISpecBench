@@ -102,7 +102,7 @@ src/clispecbench/
     docker.py                   # Container lifecycle management
     task.py                     # Task registry: loads prompts, tests
     workspace.py                # Prepares the clean working directory for the agent
-    scoring.py                  # Correctness, coverage, quality scoring
+    scoring.py                  # Pytest execution, correctness, capability breakdowns
     results.py                  # Result schema, serialization, aggregation
     publish.py                  # Publish transient runs to published_results/
     pricing.py                  # Cost estimation from normalized token counts
@@ -488,7 +488,7 @@ inspection and programmatic aggregation.
 
 ```json
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1",
 
   "metadata": {
     "run_uid": "e81e6027-5353-479b-babd-cff232765773",
@@ -634,7 +634,6 @@ clispecbench run
     --agent <agent-name>               # Required: claude-code, codex-cli, copilot-cli, gemini-cli, opencode, openhands
     --runs <N>                         # Default: 3
     --prompt-variant <name>            # Default: base
-    --skip-extensions                  # Skip extension tasks
     --output-dir <path>                # Default: transient_results/
     --model <model-id>                 # Override the default model for the chosen agent (e.g. claude-opus-4-6)
     --effort <level>                   # Optional model effort/reasoning level
@@ -677,32 +676,12 @@ clispecbench results --task rs274-cpp --compare
 
 ---
 
-## 10. Extension Task Flow
-
-When a task defines extension tasks and `--skip-extensions` is not passed,
-the runner continues after base scoring:
-
-```
-for each extension in task.extensions:
-    1. Append extension prompt to the running agent session inside the container
-    2. Wait for agent to finish modifying code (same timeout rules)
-    3. Rebuild submission
-    4. Run extension-specific hidden tests
-    5. Record extension score in result JSON
-```
-
-Extensions are sequential — each builds on the state left by the previous
-one. This tests whether the agent can make incremental modifications to its
-own code without breaking prior functionality.
-
----
-
-## 11. Token Usage Collection
+## 10. Token Usage Collection
 
 Token usage is a first-class result dimension, not an afterthought. It enables
 analysis of token efficiency (correctness per token) and cost estimation.
 
-### 11.1 Collection Strategy Per Agent
+### 10.1 Collection Strategy Per Agent
 
 | Agent | Collection method | Granularity |
 |-------|-------------------|-------------|
@@ -713,7 +692,7 @@ analysis of token efficiency (correctness per token) and cost estimation.
 | OpenCode | Parse OpenCode JSON `step_finish` events and preserved data directory | Step/session aggregate |
 | OpenHands | Parse persisted `base_state.json` stats from the OpenHands conversation state | Conversation aggregate |
 
-### 11.2 Normalized Schema
+### 10.2 Normalized Schema
 
 All adapters normalize to:
 
@@ -737,7 +716,7 @@ result. `source` records the telemetry path that produced the measurement, and
 `is_partial` is set when the adapter can only prove usage through an intermediate
 completed response.
 
-### 11.3 Limitations
+### 10.3 Limitations
 
 - Token counts are best-effort. If an agent crashes or is force-killed,
   partial usage may be lost. The result records `token_usage: null` in this
@@ -756,7 +735,7 @@ completed response.
 
 ---
 
-## 12. Reproducibility
+## 11. Reproducibility
 
 Every result file contains enough metadata to reproduce the run:
 
@@ -779,26 +758,15 @@ traceable even if a tag is moved.
 
 ---
 
-## 13. Open Design Questions
+## 12. Open Design Questions
 
 - **Telemetry source consistency.** Adapters currently use the most reliable
   source each CLI exposes: stream JSON, OTel file export, persisted session
   state, or a combination. That is practical, but cross-agent token comparisons
   should continue to surface the source and `is_partial` flag prominently.
 
-- **Agent session persistence for extensions.** Extension prompts should be
-  injected into the *same* session so the agent retains context about its own
-  code. Whether all agent CLIs support appending to a running session (vs.
-  starting a new one with the prior source files as context) needs
-  investigation per agent.
-
 - **Parallel runs.** Running repetitions sequentially is slow. Parallel runs
   are feasible if Docker resources allow, but concurrent API calls to the same
   model endpoint may introduce rate-limit variance. The runner should support
   `--parallel` eventually, while keeping explicit local queue scripts for
   operational sweeps until that path is mature.
-
-- **Self-test detection.** The harness needs to identify which files are the
-  agent's self-written tests (for coverage scoring). Heuristics: files in a
-  `tests/` or `test/` directory, files matching `test_*.py` or `*_test.cpp`.
-  This may need to be configurable per task if agents use non-standard layouts.

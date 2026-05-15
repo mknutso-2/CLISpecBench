@@ -7,16 +7,6 @@ from pathlib import Path
 
 
 @dataclass
-class ExtensionTask:
-    """An extension task within a parent task."""
-
-    extension_id: str
-    prompt_path: Path
-    test_dir: Path | None = None
-    docs_dir: Path | None = None
-
-
-@dataclass
 class TaskDefinition:
     """A loaded CLISpecBench task ready for evaluation."""
 
@@ -32,7 +22,6 @@ class TaskDefinition:
     build_script: Path | None = None
     sample_test_dir: Path | None = None
     prompt_variants: dict[str, Path] = field(default_factory=dict[str, Path])
-    extensions: list[ExtensionTask] = field(default_factory=list[ExtensionTask])
 
 
 def _discover_prompt_variants(prompts_dir: Path) -> dict[str, Path]:

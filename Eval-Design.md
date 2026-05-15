@@ -145,34 +145,13 @@ tagging system.
 Capability breakdowns are not folded into `task_score`; they are a structured
 view of the same test outcomes that produce correctness.
 
-### 4.3 Extension Task Score (Optional Future Work)
-
-An extension task is a hidden follow-up prompt that asks the agent to modify or extend the implementation it just produced. The agent does not know extension tasks exist when it writes its initial implementation — that surprise is the point. An implementation built with clean abstractions and separation of concerns will absorb a new feature more easily than spaghetti code that happens to pass the base test suite. Extension tasks measure maintainability and extensibility behaviorally, by actually attempting the extension, rather than cosmetically.
-
-**Extension tasks are optional per task.** Not every task has a natural extension
-point, and designing good extension tasks requires domain expertise. Tasks with
-extensions would report an additional extensibility score, separate from the
-base task score.
-
-**Harness flow.** After the base task is scored, the harness injects the extension prompt into the same agent session so the agent retains full context of the code it just wrote. The agent modifies its own code, and the harness scores the result against a separate hidden test suite specific to the extension. If a task defines multiple extensions, they are run sequentially in the same session — each one builds on the state left by the previous extension.
-
-```
-extension_score = sum(ext_weight_i * ext_pass_rate_i) / sum(ext_weight_i)
-```
-
-where each `ext_pass_rate_i` is the fraction of hidden tests passed for extension `i`.
-
-**Interpretation caveat.** The extension score reflects the joint capability of code maintainability and the agent's modification skill. A capable agent may successfully extend poorly-structured code through brute-force refactoring, so a high extension score doesn't cleanly isolate structure from modification ability. Persistently low extension scores across capable agents, however, are a reasonable signal of structural rigidity in the underlying implementation.
-
-**The extension score is reported separately from the base task score.** It is not folded into the weighted sum that produces the task score. This ensures that the base task score remains comparable across all tasks regardless of whether they include extensions, and that a model's base correctness and extensibility are visible as distinct signals.
-
-### 4.4 Task Score
+### 4.3 Task Score
 
 ```
 task_score = correctness
 ```
 
-### 4.5 CLISpecBench Meta-Score
+### 4.4 CLISpecBench Meta-Score
 
 ```
 clispecbench_score = geometric_mean(task_score_1, task_score_2, ..., task_score_n)
@@ -258,13 +237,7 @@ clispecbench run --task rs274-cpp --agent claude-code
 # Evaluate with a named variant (scores reported separately)
 clispecbench run --task rs274-cpp --agent claude-code --prompt-variant with-tests
 clispecbench run --task rs274-cpp --agent claude-code --prompt-variant with-guidelines
-
-# Evaluate with extension tasks (if the task defines them)
-# Extensions run automatically after base scoring unless --skip-extensions is passed
-clispecbench run --task rs274-cpp --agent claude-code --skip-extensions
 ```
-
-**Extension task execution flow.** When a task defines extension tasks and `--skip-extensions` is not passed, the harness proceeds as follows after base scoring: (1) the extension prompt is injected into the active agent session so the agent retains context of the code it just wrote; (2) the agent modifies its code; (3) the harness rebuilds and scores against the extension's hidden test suite; (4) if multiple extensions are defined, each builds on the state left by the previous one. Extension scores are reported alongside (but separate from) the base task score.
 
 ### 5.4 Harness Invocation Summary
 
