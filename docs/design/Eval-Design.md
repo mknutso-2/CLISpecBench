@@ -172,7 +172,7 @@ The harness invokes a coding agent CLI — Claude Code, Codex CLI, Gemini CLI, o
 The harness provides:
 - A clean working directory containing the documentation corpus and the prompt file
 - A Docker container with the task's required compiler and toolchain, under the
-  current network-access policy documented in `Agent-Run-Notes.md`
+  current network-access policy documented in `../operations/Agent-Run-Notes.md`
 - A time limit and token budget (see Section 5.2)
 
 The agent produces:
@@ -247,7 +247,7 @@ clispecbench run --task rs274-cpp --agent claude-code --prompt-variant with-guid
 | Input | Assembled prompt + documentation corpus in a clean working directory |
 | Iteration | Agent iterates freely until it signals completion or the safety backstop fires |
 | Output | Directory of source files, build config, and tests produced by the agent |
-| Scaffolding | Docker sandbox with compiler toolchain; network-access condition documented in `Agent-Run-Notes.md` |
+| Scaffolding | Docker sandbox with compiler toolchain; network-access condition documented in `../operations/Agent-Run-Notes.md` |
 | Runs per result | 3 (mean ± stddev reported) |
 
 ---

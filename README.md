@@ -342,7 +342,7 @@ Each eval task follows a standard pipeline:
 2. **Agent invocation** -- The agent runs inside a Docker container with the
    prompt, docs, and the host auth credentials for the coding agents mounted.
    Network access follows the study condition documented in
-   `Agent-Run-Notes.md`. The original API-only intent was not enforced for
+   `docs/operations/Agent-Run-Notes.md`. The original API-only intent was not enforced for
    already-published runs, so the current study preserves the same effective
    access level for comparability.
 

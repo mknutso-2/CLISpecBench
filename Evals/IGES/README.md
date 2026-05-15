@@ -133,4 +133,4 @@ Per `AGENTS.md` and this repo's `CLAUDE.md`:
 - [RS274](../RS274) — the sibling eval whose harness conventions this
   eval mirrors (`conftest.py` pattern, multi-language ref-impl layout,
   versioning rules).
-- [Eval-Design.md](../../Eval-Design.md) — benchmark-level design.
+- [Eval-Design.md](../../docs/design/Eval-Design.md) — benchmark-level design.

@@ -112,7 +112,7 @@
   `payload.get(...)`. Impact: a submission that emits the wrong top-
   level shape now cleanly fails `test_output_schema.py` once rather
   than producing a `KeyError` cascade across behavioral tests. See
-  `Eval-Design.md` §7.4 for the worked example this pattern protects
+  `docs/design/Eval-Design.md` §7.4 for the worked example this pattern protects
   against.
 - **Container `python` symlink**: added `python-is-python3` to
   `docker/base.Dockerfile` so the bare `python` command resolves to

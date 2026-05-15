@@ -36,7 +36,7 @@ implementation: how those concepts become running code.
 3. **Sandbox agent execution** so that agents cannot affect the host and the
    network condition for a run series is explicit and reproducible. The current
    published study preserves the historical effective access level documented
-   in `Agent-Run-Notes.md`; future API-only/offline runs must be labeled as a
+   in `../operations/Agent-Run-Notes.md`; future API-only/offline runs must be labeled as a
    separate condition.
 
 4. **Be agent-agnostic.** Adding a new agent CLI should require only a small
@@ -399,7 +399,7 @@ zero reported web-search/web-fetch requests.
 access level, changing egress or disabling web-search tools mid-study would
 create a new experimental condition. Continue using the same effective access
 level for the current study, and treat any future API-only/offline runs as a
-separate, clearly labeled run series. See `Agent-Run-Notes.md` before
+separate, clearly labeled run series. See `../operations/Agent-Run-Notes.md` before
 publishing or comparing agent results across network-access conditions.
 
 ### 6.4 Resource Limits

@@ -11,7 +11,7 @@ reproducible, and relatively contamination-resistant.
   alone. If success depends on unstated domain lore, evaluator intuition, or
   reverse-engineering the reference implementation, it is a bad fit.
 - **Non-developer describable.** The base prompt must be plausibly writable by
-  a domain expert with no software background (see `Eval-Design.md` §5.3). If
+  a domain expert with no software background (see `../design/Eval-Design.md` §5.3). If
   the task only works when the base prompt smuggles in developer-level guidance
   ("write tests," "use pattern X," "handle errors like Y"), it violates the
   benchmark's core design principle and measures instruction-following rather
@@ -41,7 +41,7 @@ reproducible, and relatively contamination-resistant.
   system, not a toy script or algorithm exercise. As a rule of thumb, expect at
   least roughly 1000 LOC for a competent reference implementation.
 - **Test-suite scalability.** The domain must plausibly support at least 50
-  independent-behavior hidden tests of meaningful depth (`Eval-Design.md` §9.1
+  independent-behavior hidden tests of meaningful depth (`../design/Eval-Design.md` §9.1
   floor). If the behavior surface is so narrow that 50 genuinely distinct tests
   cannot be authored, the score signal is too coarse for a benchmark track.
 - **Contamination resistance.** Avoid domains with abundant polished
