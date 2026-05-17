@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
@@ -125,9 +126,12 @@ def _classify_unpublishable_stop_message(message: str) -> str | None:
         or "connection reset" in text
     ):
         return "stream_disconnect"
+    # Substring "401"/"403" matches dates like "20240122" inside agent prose
+    # (e.g. an RRULE example). Require word boundaries so the match means an
+    # HTTP status code, not arbitrary digit runs.
     if (
-        "401" in text
-        or "403" in text
+        re.search(r"\b401\b", text)
+        or re.search(r"\b403\b", text)
         or "unauthorized" in text
         or "invalid api key" in text
         or "expired credential" in text
