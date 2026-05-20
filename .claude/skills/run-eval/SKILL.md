@@ -27,6 +27,7 @@ Meta: This file is a breathing document. If you read it and find that any of the
 - Use `clispecbench run ...` if the console script is available; otherwise use `uv run clispecbench run ...`.
 - Use `clispecbench results` or `uv run clispecbench results` to inspect aggregate run output after completion.
 - On Windows + WSL2 Docker, authenticate `claude`, `codex`, and `gemini` on Windows, not inside WSL. Credential paths under `C:\Users\<you>\.claude`, `.codex`, and `.gemini` are translated to `/mnt/c/...` for the WSL daemon; `scripts/smoke-test-*.sh` is the source of truth for the mount strategy.
+- Claude Desktop sign-in does not guarantee headless `claude --print` eval auth. Refresh Claude Code CLI credentials on Windows with `/login` or `claude auth login`, then run `scripts/smoke-test-claude.sh`. For long unattended queues, `claude setup-token` can generate a one-year `CLAUDE_CODE_OAUTH_TOKEN`; use it only if the launcher can keep the token out of logs/history.
 
 Example:
 
@@ -50,17 +51,17 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
 - For every run, classify the **failure-mode bucket** for `metadata.exit_class`. The bucket determines whether the run counts toward Best/Mean (see Reporting rules). Two top-level groups:
   - **`completed`** — the agent ran to its own self-terminated end. Score reflects what the agent built. Always included.
   - **Model-side failures (prefix `model_*`)** — the run produced a real, scorable submission but the agent CLI exited via something other than its own completion path. Score still reflects model behavior. **Included** in Best/Mean unless the submission was empty/stub. Sub-buckets:
-    - `model_capped`: agent hit a usage cap, daily quota, or per-message output-token cap (e.g. "you've hit your limit", "Claude's response exceeded the 32000 output token maximum"). Distinguish from infra rate-limits by checking that the agent already did real work — wall time > a couple of minutes AND source files exist.
     - `model_timeout`: agent was actively working when killed by the 24h backstop or a local timeout. Note whether source files exist and whether they build.
     - `model_context_exhausted`: agent hit context-window limits; note how far it got.
     - `model_no_code`: agent completed voluntarily but never wrote source files. Check whether it only planned or analyzed; flag as a false-completion if it claimed it shipped code.
     - `model_build_failure`: agent wrote source but it does not compile.
     - `model_agent_error`: agent crashed or threw an unhandled exception.
-  - **Infrastructure-side failures (prefix `infra_*`)** — the agent never got to do meaningful work because of an environment or API issue. Score does not measure model capability. **Excluded** from Best/Mean and flagged for rerun. Sub-buckets:
-    - `infra_auth`: 401/403 errors or expired credentials; agent never started real work. Distinguish from `model_capped` by checking that the agent fast-failed (wall time under a minute, no source files written).
-    - `infra_rate_limit`: 429s or quota exhaustion encountered before any work happened. Same fast-fail signature as `infra_auth`.
+  - **User/environment failures (prefix `infra_*`)** — the run was cut off by something outside the model's control. Score does not measure model capability. **Always excluded** from Best/Mean and flagged for rerun, with **no exceptions for high scores or long wall-times** — the agent didn't get a fair chance to finish, so the result is not a model-capability data point. Sub-buckets:
+    - `infra_usage_cap`: agent hit an Anthropic/operator-side usage cap, daily quota, or session limit. Diagnostic signal: `agent_last_message` contains "you've hit your limit" / "resets at X" / similar cap-reset text, OR the agent CLI exited 1 mid-session after long wall-time with no completion claim. **This bucket replaces the old `model_capped`. Even if the agent ran for 30 min, produced a working build, and scored 0.85, this is still scrapped** — the cap belongs to the operator's billing tier, not the model, and recording it would inflate the model's failure rate with non-model signal.
+    - `infra_auth`: 401/403 errors or expired credentials; agent never started real work. Fast-fail signature (wall under a minute, no source files written).
+    - `infra_rate_limit`: 429s or platform-side quota exhaustion encountered before any work happened. Same fast-fail signature as `infra_auth`.
     - `infra_other`: server errors, capacity errors, container startup crashes, or any other host/network issue not attributable to the model.
-- The line between `model_capped` and `infra_rate_limit` is wall-time + artifact presence. A "you've hit your limit" message at 5 seconds with no source files is `infra_rate_limit`. The same message at 50 minutes with 4,000 LOC of working code is `model_capped`.
+- **How to distinguish a usage cap from anything else**: the agent CLI's "you've hit your limit" string is definitive — read `metadata.agent_last_message`. It is `infra_usage_cap` regardless of wall-time. A 5-second fast-fail with that text is also `infra_usage_cap`, not `infra_rate_limit` (the wall-time only affects whether real work was lost, not the classification).
 - Record the bucket in `metadata.exit_class` and a brief prose explanation in `metadata.notes` (or report explicitly if the file is already finalized).
 - For every run that scores above zero, confirm from the transcript whether the agent acknowledged it was done, voluntarily exited, was still working when killed, asked for input but got none, or hit an error/rate limit partway through.
 
@@ -85,14 +86,13 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
 
 - Pass the bucket through to `clispecbench publish` so the dashboard surfaces it. Use these editorial `--status` labels:
   - `completed` → `--status "Complete"` (or `"Incomplete"` if the agent acknowledged gaps)
-  - `model_capped` → `--status "Capped (model)"`
   - `model_timeout` → `--status "Timeout"`
   - `model_context_exhausted` → `--status "Context exhausted"`
   - `model_no_code` → `--status "No code written"`
   - `model_build_failure` → `--status "Build failure"`
   - `model_agent_error` → `--status "Agent error"`
-- Do **not** publish `infra_*` runs. They contain no model-capability signal; rerun them instead.
-- When publishing a `model_capped` or `model_timeout` run, include a Last Message summary that explicitly notes the cap/timeout and the wall-time at which it tripped, so the dashboard reader knows the agent was cut short and didn't choose to stop.
+- Do **not** publish `infra_*` runs — including `infra_usage_cap`. They contain no model-capability signal; delete the transient artifacts and rerun. This applies even when the agent did substantial work before the cap tripped: a capped run is the operator's billing tier showing up in the data, not the model, and publishing it would mislabel an operator failure as a model failure. The cap-hit transient (`result.json`, `transcript.jsonl`, `source/`) should be removed before relaunch so the harness doesn't accumulate stale eval directories.
+- When publishing a `model_timeout` run, include a Last Message summary that explicitly notes the timeout and the wall-time at which it tripped, so the dashboard reader knows the agent was cut short and didn't choose to stop.
 - The dashboard reads `published_results/web/results-published.json` and `published_results/web/test-results-published.json`, which are *not* updated by `clispecbench publish` itself. After publishing, regenerate them or the dashboard will silently drift behind the published files. Two ways:
   - One-shot publish: pass `--rebuild-dashboard` to `clispecbench publish` and the rebuild runs immediately.
   - Batch publish (multiple results in a row): omit the flag on each publish and run `clispecbench rebuild-dashboard` once after the whole batch — the rebuild walks every published file, so doing it per-publish is wasteful.
