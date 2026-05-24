@@ -208,7 +208,7 @@ const STATE = {
   xAxis: 'cost',
   yAxis: 'percent',
   colorMode: 'pair',
-  labelMode: 'pareto',
+  labelMode: 'all',
   reportType: 'mean',
   errorBarMode: 'std',
   tableMode: 'summary',
@@ -252,6 +252,7 @@ const statusEl = document.getElementById('status');
 const errorBanner = document.getElementById('error-banner');
 const chartSvg = document.getElementById('scatter-svg');
 const chartEmpty = document.getElementById('chart-empty');
+const graphTitleEl = document.getElementById('graph-title');
 const graphPanel = document.getElementById('graph-panel');
 const tablePanel = document.getElementById('table-panel');
 const tableEl = document.getElementById('results-table');
@@ -283,6 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !tableSortBySelect ||
     !tableSortDirectionSelect ||
     !tableShowExcludedInput ||
+    !graphTitleEl ||
     !graphPanel ||
     !tablePanel ||
     !tableEl ||
@@ -407,7 +409,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.xAxis = 'cost';
     STATE.yAxis = 'percent';
     STATE.colorMode = 'agent';
-    STATE.labelMode = 'pareto';
+    STATE.labelMode = 'all';
     STATE.reportType = 'mean';
     STATE.errorBarMode = getDefaultErrorBarMode();
     STATE.tableMode = 'summary';
@@ -812,7 +814,7 @@ function normalizeLabelMode(mode) {
   const normalized = String(mode || '').trim().toLowerCase();
   return LABEL_MODE_OPTIONS.some((option) => option.id === normalized)
     ? normalized
-    : 'pareto';
+    : 'all';
 }
 
 function renderReportTypeSelector() {
@@ -926,6 +928,7 @@ function syncErrorBarModeWithDefaults() {
 function render() {
   clearError();
   syncViewModeControls();
+  syncGraphTitle();
   renderTableControls();
   const validation = validateSelection();
   if (!validation.ok) {
@@ -969,6 +972,34 @@ function render() {
   renderPlot(visiblePoints);
   chartEmpty.classList.add('hidden');
   validationEl.textContent = '';
+}
+
+function syncGraphTitle() {
+  if (!graphTitleEl) return;
+  const title = buildGraphTitle();
+  graphTitleEl.textContent = title;
+  graphTitleEl.title = title;
+}
+
+function buildGraphTitle() {
+  const selectedEvals = getEvals().filter((evalName) => STATE.selectedEvals.has(evalName));
+  const selectedLanguages = getLanguages().filter((language) => STATE.selectedLanguages.has(language));
+  if (!selectedEvals.length || !selectedLanguages.length) return 'XY Scatter Plot';
+
+  const languages = getLanguages();
+  const allLanguagesSelected =
+    languages.length > 0 &&
+    languages.every((language) => STATE.selectedLanguages.has(language));
+
+  if (allLanguagesSelected) {
+    return selectedEvals.join(', ');
+  }
+
+  return selectedEvals
+    .flatMap((evalName) =>
+      selectedLanguages.map((language) => formatEvalLanguageLabel(evalName, language)),
+    )
+    .join(', ');
 }
 
 function getColorMap() {
