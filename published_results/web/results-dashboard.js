@@ -19,6 +19,12 @@ const COLOR_MODE_OPTIONS = [
   { id: 'agent', label: 'Agent' },
 ];
 
+const LABEL_MODE_OPTIONS = [
+  { id: 'all', label: 'All' },
+  { id: 'none', label: 'None' },
+  { id: 'pareto', label: 'Pareto' },
+];
+
 const REPORT_TYPE_OPTIONS = [
   { id: 'worst', label: 'Worst' },
   { id: 'best', label: 'Best' },
@@ -170,6 +176,12 @@ const CATEGORY_AXIS_X_PADDING = 24;
 const AXIS_TICK_SEGMENTS = 5;
 const AXIS_DOMAIN_PADDING_FRACTION = 0.06;
 const AXIS_DOMAIN_MIN_PADDING = 0.5;
+const POINT_LABEL_WRAP_LENGTH = 34;
+const LABEL_LINE_CLEARANCE = 7;
+const LEADER_ERROR_BAR_PENALTY = 240;
+const LABEL_LEADER_PENALTY = 700;
+const LEADER_LABEL_PENALTY = 900;
+const LEADER_CROSSING_PENALTY = 180;
 
 const PALETTE = [
   '#4c6ef5',
@@ -196,6 +208,7 @@ const STATE = {
   xAxis: 'cost',
   yAxis: 'percent',
   colorMode: 'pair',
+  labelMode: 'pareto',
   reportType: 'mean',
   errorBarMode: 'std',
   tableMode: 'summary',
@@ -223,6 +236,7 @@ const yAxisSelect = document.getElementById('y-axis');
 const reportTypeSelect = document.getElementById('report-type');
 const errorBarsSelect = document.getElementById('error-bars');
 const colorModeSelect = document.getElementById('color-mode');
+const labelModeSelect = document.getElementById('label-mode');
 const tableModeSelect = document.getElementById('table-mode');
 const tableGroupBySelect = document.getElementById('table-group-by');
 const tableSortBySelect = document.getElementById('table-sort-by');
@@ -263,6 +277,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !reportTypeSelect ||
     !errorBarsSelect ||
     !colorModeSelect ||
+    !labelModeSelect ||
     !tableModeSelect ||
     !tableGroupBySelect ||
     !tableSortBySelect ||
@@ -331,6 +346,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         xAxis: STATE.xAxis,
         yAxis: STATE.yAxis,
         colorMode: STATE.colorMode,
+        labelMode: STATE.labelMode,
         reportType: STATE.reportType,
         errorBarMode: STATE.errorBarMode,
         selectedEvals: new Set(STATE.selectedEvals),
@@ -376,6 +392,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.xAxis = previousView.xAxis;
     STATE.yAxis = previousView.yAxis;
     STATE.colorMode = previousView.colorMode;
+    STATE.labelMode = previousView.labelMode;
     STATE.reportType = previousView.reportType;
     STATE.errorBarMode = previousView.errorBarMode;
     STATE.viewMode = previousView.viewMode;
@@ -390,6 +407,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.xAxis = 'cost';
     STATE.yAxis = 'percent';
     STATE.colorMode = 'agent';
+    STATE.labelMode = 'pareto';
     STATE.reportType = 'mean';
     STATE.errorBarMode = getDefaultErrorBarMode();
     STATE.tableMode = 'summary';
@@ -406,6 +424,7 @@ function buildControls() {
   renderLanguageList();
   renderEvalList();
   renderColorModeSelector();
+  renderLabelModeSelector();
   renderReportTypeSelector();
   renderErrorBarSelector();
   renderTableControls();
@@ -556,6 +575,11 @@ function attachEvents() {
   colorModeSelect.addEventListener('change', () => {
     STATE.colorMode = colorModeSelect.value;
     STATE.hiddenColorKeys.clear();
+    render();
+  });
+
+  labelModeSelect.addEventListener('change', () => {
+    STATE.labelMode = normalizeLabelMode(labelModeSelect.value);
     render();
   });
 
@@ -769,6 +793,26 @@ function renderColorModeSelector() {
     STATE.colorMode = 'pair';
   }
   colorModeSelect.value = STATE.colorMode;
+}
+
+function renderLabelModeSelector() {
+  labelModeSelect.replaceChildren();
+  LABEL_MODE_OPTIONS.forEach((mode) => {
+    const option = document.createElement('option');
+    option.value = mode.id;
+    option.textContent = mode.label;
+    labelModeSelect.appendChild(option);
+  });
+
+  STATE.labelMode = normalizeLabelMode(STATE.labelMode);
+  labelModeSelect.value = STATE.labelMode;
+}
+
+function normalizeLabelMode(mode) {
+  const normalized = String(mode || '').trim().toLowerCase();
+  return LABEL_MODE_OPTIONS.some((option) => option.id === normalized)
+    ? normalized
+    : 'pareto';
 }
 
 function renderReportTypeSelector() {
@@ -2123,6 +2167,8 @@ function renderPlot(points) {
   const labelsLayer = createSvgElement('g');
   labelsLayer.setAttribute('class', 'labels-layer');
   const markerLabels = [];
+  const errorBarLines = [];
+  const labelMode = normalizeLabelMode(STATE.labelMode);
 
   const frontierSet = computeParetoFrontier(points, STATE.xAxis, STATE.yAxis);
   drawFrontierConnector(points, frontierSet, xScale, yScale, dataLayer);
@@ -2139,15 +2185,6 @@ function renderPlot(points) {
 
     const g = createSvgElement('g');
     g.setAttribute('transform', `translate(${x}, ${y})`);
-    const pointClearance = 4;
-    const obstacleRects = [];
-    const markerRadius = baseRadius + pointClearance;
-    obstacleRects.push({
-      x: x - markerRadius,
-      y: y - markerRadius,
-      width: markerRadius * 2,
-      height: markerRadius * 2,
-    });
 
     const canShowErrorBars =
       !isCategoricalXAxis(STATE.xAxis) && STATE.errorBarMode !== 'none';
@@ -2168,12 +2205,7 @@ function renderPlot(points) {
       rangeLine.setAttribute('y1', '0');
       rangeLine.setAttribute('y2', '0');
       g.appendChild(rangeLine);
-      obstacleRects.push({
-        x: Math.min(left, right),
-        y: y - 8,
-        width: Math.abs(right - left),
-        height: 16,
-      });
+      errorBarLines.push({ x1: left, y1: y, x2: right, y2: y });
     }
 
     if (yBarRange) {
@@ -2186,12 +2218,7 @@ function renderPlot(points) {
       rangeLine.setAttribute('y1', String(top - y));
       rangeLine.setAttribute('y2', String(bottom - y));
       g.appendChild(rangeLine);
-      obstacleRects.push({
-        x: x - 2,
-        y: Math.min(top, bottom),
-        width: 4,
-        height: Math.abs(bottom - top),
-      });
+      errorBarLines.push({ x1: x, y1: top, x2: x, y2: bottom });
     }
 
     if (point.xSummary.stacked || point.ySummary.stacked) {
@@ -2212,13 +2239,17 @@ function renderPlot(points) {
     g.appendChild(pointCircle);
 
     const label = createSvgElement('text');
-    const labelClass = isOnFrontier
-      ? 'point-label point-label-frontier'
+    const shouldPlaceLabel =
+      labelMode === 'all' || (labelMode === 'pareto' && isOnFrontier);
+    const fullLabel = point.pairLabel || rowPairId(point.pairId);
+    const labelText = labelMode === 'all' ? formatAgentModelShort(fullLabel) : fullLabel;
+    const labelClass = shouldPlaceLabel
+      ? `point-label point-label-persistent${isOnFrontier ? ' point-label-frontier' : ''}`
       : 'point-label point-label-hover';
     label.setAttribute('class', labelClass);
     label.setAttribute('pointer-events', 'none');
-    label.textContent = point.pairLabel || rowPairId(point.pairId);
-    if (!isOnFrontier) {
+    setPointLabelText(label, labelText);
+    if (!shouldPlaceLabel) {
       label.setAttribute('visibility', 'hidden');
     }
     const leader = createSvgElement('line');
@@ -2247,10 +2278,8 @@ function renderPlot(points) {
     const showMarker = () => {
       pointCircle.classList.add('active');
       pointCircle.setAttribute('r', String(hoverRadius));
-      if (!isOnFrontier) {
-        label.setAttribute('x', String(x + baseRadius + 6));
-        label.setAttribute('y', String(y - baseRadius - 4));
-        label.setAttribute('text-anchor', 'start');
+      if (!shouldPlaceLabel) {
+        setLabelPosition(label, x + baseRadius + 6, y - baseRadius - 4, 'start', 'middle');
         label.setAttribute('visibility', 'visible');
       }
     };
@@ -2258,7 +2287,7 @@ function renderPlot(points) {
       tooltip.style.display = 'none';
       pointCircle.classList.remove('active');
       pointCircle.setAttribute('r', pointCircle.getAttribute('data-base-radius') || String(baseRadius));
-      if (!isOnFrontier) {
+      if (!shouldPlaceLabel) {
         label.setAttribute('visibility', 'hidden');
       }
     };
@@ -2282,15 +2311,16 @@ function renderPlot(points) {
 
     dataLayer.appendChild(g);
 
-    if (isOnFrontier) {
+    if (shouldPlaceLabel) {
       markerLabels.push({
         point,
         x,
         y,
         circle: pointCircle,
         label,
+        labelText,
         leader,
-        obstacleRects,
+        isOnFrontier,
       });
     }
   });
@@ -2299,10 +2329,10 @@ function renderPlot(points) {
   chartSvg.appendChild(labelsLayer);
 
   placePointLabels(markerLabels, {
+    errorBarLines,
     width,
     height,
     margin,
-    chartSvg,
   });
 
   const xLabel = createSvgElement('text');
@@ -2356,142 +2386,314 @@ function renderPlot(points) {
   }
 }
 
-function placePointLabels(markers, { width, height, margin }) {
+function placePointLabels(markers, { errorBarLines = [], width, height, margin }) {
   if (!markers.length) return;
 
   const panelBounds = {
     minX: margin.left + 6,
     maxX: width - margin.right - 6,
     minY: margin.top + 6,
-    maxY: height - margin.bottom - 8,
+    maxY: height - 42,
   };
   const padding = 4;
   const pointClearance = 4;
   const placedBoxes = [];
-  const candidates = [
-    { dx: 20, dy: -12, anchor: 'start', baseline: 'text-before-edge' },
-    { dx: 20, dy: 12, anchor: 'start', baseline: 'text-after-edge' },
-    { dx: -20, dy: -12, anchor: 'end', baseline: 'text-before-edge' },
-    { dx: -20, dy: 12, anchor: 'end', baseline: 'text-after-edge' },
-    { dx: 26, dy: 0, anchor: 'start', baseline: 'middle' },
-    { dx: -26, dy: 0, anchor: 'end', baseline: 'middle' },
-    { dx: 30, dy: -14, anchor: 'start', baseline: 'text-before-edge' },
-    { dx: -30, dy: -14, anchor: 'end', baseline: 'text-before-edge' },
-    { dx: 30, dy: 14, anchor: 'start', baseline: 'text-after-edge' },
-    { dx: -30, dy: 14, anchor: 'end', baseline: 'text-after-edge' },
-  ];
-  const labelFallbacks = [
-    { dx: 20, dy: -18, anchor: 'start', baseline: 'text-before-edge' },
-    { dx: -20, dy: -18, anchor: 'end', baseline: 'text-before-edge' },
-    { dx: 20, dy: 18, anchor: 'start', baseline: 'text-before-edge' },
-    { dx: -20, dy: 18, anchor: 'end', baseline: 'text-before-edge' },
-  ];
-
-  markers.forEach((marker) => {
+  const placedLeaderLines = [];
+  const candidates = buildLabelCandidates();
+  const preparedMarkers = markers.map((marker, index) => {
     const { point, x, y, label, leader } = marker;
-    const obstacleRects = marker.obstacleRects || [];
     const baseRadius = Number.parseFloat(marker.circle.getAttribute('data-base-radius')) || 7;
-    const text = point.pairLabel || rowPairId(point.pairId);
-    label.textContent = text;
+    const text = marker.labelText || point.pairLabel || rowPairId(point.pairId);
+    setPointLabelText(label, text);
     label.setAttribute('visibility', 'hidden');
-    label.setAttribute('x', '0');
-    label.setAttribute('y', '0');
-    label.setAttribute('text-anchor', 'start');
-    label.setAttribute('dominant-baseline', 'middle');
+    setLabelPosition(label, 0, 0, 'start', 'middle');
     leader.setAttribute('visibility', 'hidden');
     leader.setAttribute('x1', '0');
     leader.setAttribute('y1', '0');
     leader.setAttribute('x2', '0');
     leader.setAttribute('y2', '0');
 
-    let placed = null;
-    for (const candidate of candidates) {
-      label.setAttribute('x', String(x + candidate.dx));
-      label.setAttribute('y', String(y + candidate.dy));
-      label.setAttribute('text-anchor', candidate.anchor);
-      label.setAttribute('dominant-baseline', candidate.baseline);
+    const layouts = candidates
+      .map((candidate) => measureLabelCandidate(marker, candidate, {
+        baseRadius,
+        errorBarLines,
+        padding,
+        panelBounds,
+        pointClearance,
+      }))
+      .filter(Boolean)
+      .sort((a, b) => a.score - b.score);
 
-      const bbox = label.getBBox();
-      if (bbox.width === 0 || bbox.height === 0) continue;
-      if (bbox.x < panelBounds.minX || bbox.y < panelBounds.minY || bbox.x + bbox.width > panelBounds.maxX || bbox.y + bbox.height > panelBounds.maxY) {
-        continue;
+    return {
+      edgePressure: computeLabelEdgePressure(x, y, panelBounds),
+      index,
+      layouts,
+      marker,
+    };
+  });
+
+  const remaining = [...preparedMarkers];
+  while (remaining.length) {
+    let nextIndex = -1;
+    let nextLayout = null;
+    let nextAvailableLayouts = null;
+
+    remaining.forEach((item, index) => {
+      const availableLayouts = getAvailableLabelLayouts(item, placedBoxes, placedLeaderLines);
+      if (!availableLayouts.length) return;
+
+      if (
+        nextLayout === null ||
+        compareDynamicLabelChoice(
+          item,
+          availableLayouts,
+          remaining[nextIndex],
+          nextAvailableLayouts,
+        ) < 0
+      ) {
+        nextIndex = index;
+        nextAvailableLayouts = availableLayouts;
+        nextLayout = availableLayouts[0];
       }
+    });
 
-      const inflated = inflateRect(bbox, padding);
-      const overlaps = intersectsAnyRect(inflated, placedBoxes);
-      if (overlaps) continue;
-      if (intersectsAnyRect(inflated, obstacleRects)) continue;
-      if (rectIntersectsPoint(inflated, x, y, Math.max(baseRadius + pointClearance, pointClearance))) {
-        continue;
-      }
+    if (nextIndex === -1 || nextLayout === null) break;
 
-      placed = {
-        x,
-        y,
-        radius: baseRadius,
-        bbox: inflated,
-        anchor: candidate.anchor,
-        baseline: candidate.baseline,
-      };
-      break;
-    }
+    const [{ marker }] = remaining.splice(nextIndex, 1);
+    const layout = nextLayout;
+    if (!layout) return;
 
-    if (!placed) {
-      for (const candidate of labelFallbacks) {
-        label.setAttribute('x', String(x + candidate.dx));
-        label.setAttribute('y', String(y + candidate.dy));
-        label.setAttribute('text-anchor', candidate.anchor);
-        label.setAttribute('dominant-baseline', candidate.baseline);
-
-        const bbox = label.getBBox();
-        if (bbox.width === 0 || bbox.height === 0) continue;
-
-        const anchorOffsetX = getAnchorOffsetX(candidate.anchor, bbox.width);
-        const anchorOffsetY = getAnchorOffsetY(candidate.baseline, bbox.height);
-
-        const left = bbox.x;
-        const top = bbox.y;
-        const clampedLeft = Math.max(panelBounds.minX, Math.min(panelBounds.maxX - bbox.width, left));
-        const clampedTop = Math.max(panelBounds.minY, Math.min(panelBounds.maxY - bbox.height, top));
-        const finalX = clampedLeft + anchorOffsetX;
-        const finalY = clampedTop + anchorOffsetY;
-
-        label.setAttribute('x', String(finalX));
-        label.setAttribute('y', String(finalY));
-
-        const clampedBbox = label.getBBox();
-        if (clampedBbox.width === 0 || clampedBbox.height === 0) continue;
-
-        const inflated = inflateRect(clampedBbox, padding);
-        if (intersectsAnyRect(inflated, placedBoxes)) continue;
-        if (intersectsAnyRect(inflated, obstacleRects)) continue;
-        if (rectIntersectsPoint(inflated, x, y, baseRadius + pointClearance)) continue;
-
-        placed = {
-          x,
-          y,
-          radius: baseRadius,
-          bbox: inflateRect(clampedBbox, padding),
-          anchor: candidate.anchor,
-          baseline: candidate.baseline,
-        };
-        break;
-      }
-    }
-
-    if (!placed) {
-      return;
-    }
-
-    const chosen = placed.bbox;
+    const { label, leader, x, y } = marker;
+    setLabelPosition(label, layout.x, layout.y, layout.anchor, layout.baseline);
     label.setAttribute('visibility', 'visible');
-    const endpoint = closestPointOnRect({ x, y }, chosen);
+
+    const endpoint = closestPointOnRect({ x, y }, layout.textBox);
     leader.setAttribute('x1', String(x));
     leader.setAttribute('y1', String(y));
     leader.setAttribute('x2', String(endpoint.x));
     leader.setAttribute('y2', String(endpoint.y));
     leader.setAttribute('visibility', 'visible');
-    placedBoxes.push(placed.bbox);
+
+    placedBoxes.push(layout.bbox);
+    placedLeaderLines.push(layout.leaderLine);
+  }
+}
+
+function getAvailableLabelLayouts(item, placedBoxes, placedLeaderLines) {
+  return item.layouts
+    .filter((layout) => !intersectsAnyRect(layout.bbox, placedBoxes))
+    .map((layout) => ({
+      ...layout,
+      score: layout.score + scoreLayoutAgainstPlaced(layout, placedBoxes, placedLeaderLines),
+    }))
+    .sort((a, b) => a.score - b.score);
+}
+
+function scoreLayoutAgainstPlaced(layout, placedBoxes, placedLeaderLines) {
+  return (
+    scoreRectLineIntersections(layout.bbox, placedLeaderLines, LABEL_LEADER_PENALTY) +
+    scoreSegmentRectIntersections(layout.leaderLine, placedBoxes, LEADER_LABEL_PENALTY) +
+    scoreSegmentLineIntersections(layout.leaderLine, placedLeaderLines, LEADER_CROSSING_PENALTY)
+  );
+}
+
+function buildLabelCandidates() {
+  const directions = [
+    { x: 1, y: 0, anchor: 'start', baseline: 'middle' },
+    { x: -1, y: 0, anchor: 'end', baseline: 'middle' },
+    { x: 0, y: -1, anchor: 'middle', baseline: 'text-after-edge' },
+    { x: 0, y: 1, anchor: 'middle', baseline: 'text-before-edge' },
+    { x: 0.82, y: -0.82, anchor: 'start', baseline: 'text-after-edge' },
+    { x: -0.82, y: -0.82, anchor: 'end', baseline: 'text-after-edge' },
+    { x: 0.82, y: 0.82, anchor: 'start', baseline: 'text-before-edge' },
+    { x: -0.82, y: 0.82, anchor: 'end', baseline: 'text-before-edge' },
+  ];
+  const distances = [22, 34, 48, 64, 84, 110, 142, 180];
+  const candidates = [];
+  distances.forEach((distance, distanceIndex) => {
+    directions.forEach((direction, directionIndex) => {
+      candidates.push({
+        dx: direction.x * distance,
+        dy: direction.y * distance,
+        anchor: direction.anchor,
+        baseline: direction.baseline,
+        score: distanceIndex * 100 + directionIndex * 8 + distance * 0.25,
+      });
+    });
+  });
+  return candidates;
+}
+
+function compareDynamicLabelChoice(a, aAvailableLayouts, b, bAvailableLayouts) {
+  if (!b || !bAvailableLayouts) return -1;
+
+  const availability = aAvailableLayouts.length - bAvailableLayouts.length;
+  if (availability !== 0) return availability;
+
+  const edgePressure = b.edgePressure - a.edgePressure;
+  if (edgePressure !== 0) return edgePressure;
+
+  const frontierPriority =
+    Number(Boolean(b.marker.isOnFrontier)) - Number(Boolean(a.marker.isOnFrontier));
+  if (frontierPriority !== 0) return frontierPriority;
+
+  const scoreDelta = aAvailableLayouts[0].score - bAvailableLayouts[0].score;
+  if (scoreDelta !== 0) return scoreDelta;
+
+  return a.index - b.index;
+}
+
+function computeLabelEdgePressure(x, y, bounds) {
+  const left = Math.max(1, x - bounds.minX);
+  const right = Math.max(1, bounds.maxX - x);
+  const top = Math.max(1, y - bounds.minY);
+  const bottom = Math.max(1, bounds.maxY - y);
+  return 1 / Math.min(left, right) + 1 / Math.min(top, bottom);
+}
+
+function measureLabelCandidate(marker, candidate, {
+  baseRadius,
+  errorBarLines,
+  padding,
+  panelBounds,
+  pointClearance,
+}) {
+  const { label, x, y } = marker;
+  setLabelPosition(label, x + candidate.dx, y + candidate.dy, candidate.anchor, candidate.baseline);
+
+  let bbox = label.getBBox();
+  if (bbox.width === 0 || bbox.height === 0) return null;
+
+  const maxLeft = panelBounds.maxX - bbox.width;
+  const maxTop = panelBounds.maxY - bbox.height;
+  if (maxLeft < panelBounds.minX || maxTop < panelBounds.minY) return null;
+
+  const anchorOffsetX = getAnchorOffsetX(candidate.anchor, bbox.width);
+  const anchorOffsetY = getAnchorOffsetY(candidate.baseline, bbox.height);
+  const clampedLeft = Math.max(panelBounds.minX, Math.min(maxLeft, bbox.x));
+  const clampedTop = Math.max(panelBounds.minY, Math.min(maxTop, bbox.y));
+  const shift = Math.abs(clampedLeft - bbox.x) + Math.abs(clampedTop - bbox.y);
+  const finalX = clampedLeft + anchorOffsetX;
+  const finalY = clampedTop + anchorOffsetY;
+
+  if (shift > 0) {
+    setLabelPosition(label, finalX, finalY, candidate.anchor, candidate.baseline);
+    bbox = label.getBBox();
+    if (bbox.width === 0 || bbox.height === 0) return null;
+  }
+
+  if (!rectWithinBounds(bbox, panelBounds)) return null;
+
+  const inflated = inflateRect(bbox, padding);
+  const textBox = {
+    x: bbox.x,
+    y: bbox.y,
+    width: bbox.width,
+    height: bbox.height,
+  };
+  const endpoint = closestPointOnRect({ x, y }, textBox);
+  const leaderLine = { x1: x, y1: y, x2: endpoint.x, y2: endpoint.y };
+  if (scoreRectLineIntersections(inflateRect(textBox, LABEL_LINE_CLEARANCE), errorBarLines, 1) > 0) {
+    return null;
+  }
+  const markerOverlapPenalty = rectIntersectsPoint(inflated, x, y, baseRadius + pointClearance)
+    ? 600
+    : 0;
+  const errorBarPenalty =
+    scoreSegmentLineIntersections(leaderLine, errorBarLines, LEADER_ERROR_BAR_PENALTY);
+
+  return {
+    x: finalX,
+    y: finalY,
+    anchor: candidate.anchor,
+    baseline: candidate.baseline,
+    leaderLine,
+    textBox,
+    bbox: inflated,
+    score: candidate.score + shift * 4 + markerOverlapPenalty + errorBarPenalty,
+  };
+}
+
+function rectWithinBounds(rect, bounds) {
+  return (
+    rect.x >= bounds.minX &&
+    rect.y >= bounds.minY &&
+    rect.x + rect.width <= bounds.maxX &&
+    rect.y + rect.height <= bounds.maxY
+  );
+}
+
+function setPointLabelText(label, text) {
+  const lines = getPointLabelLines(text);
+  label.replaceChildren();
+  if (lines.length <= 1) {
+    label.textContent = lines[0] || '';
+    return;
+  }
+
+  const x = label.getAttribute('x') || '0';
+  lines.forEach((line, index) => {
+    const tspan = createSvgElement('tspan');
+    tspan.textContent = line;
+    tspan.setAttribute('x', x);
+    if (index > 0) {
+      tspan.setAttribute('dy', '1.08em');
+    }
+    label.appendChild(tspan);
+  });
+}
+
+function getPointLabelLines(text) {
+  const normalized = String(text || '');
+  if (normalized.length <= POINT_LABEL_WRAP_LENGTH) return [normalized];
+
+  const pairParts = normalized.split(' / ');
+  if (pairParts.length >= 2) {
+    const agent = pairParts.shift();
+    const model = pairParts.join(' / ');
+    return [agent, ...wrapLabelSegment(model)];
+  }
+  return wrapLabelSegment(normalized);
+}
+
+function wrapLabelSegment(segment) {
+  if (segment.length <= POINT_LABEL_WRAP_LENGTH) return [segment];
+
+  const lines = [];
+  let current = '';
+  segment.split('/').forEach((part) => {
+    const next = current ? `${current}/${part}` : part;
+    if (next.length <= POINT_LABEL_WRAP_LENGTH) {
+      current = next;
+      return;
+    }
+    if (current) lines.push(current);
+    if (part.length <= POINT_LABEL_WRAP_LENGTH) {
+      current = part;
+    } else {
+      lines.push(...splitLongLabelToken(part));
+      current = '';
+    }
+  });
+  if (current) lines.push(current);
+  return lines.length ? lines : [segment];
+}
+
+function splitLongLabelToken(token) {
+  const chunks = [];
+  for (let i = 0; i < token.length; i += POINT_LABEL_WRAP_LENGTH) {
+    chunks.push(token.slice(i, i + POINT_LABEL_WRAP_LENGTH));
+  }
+  return chunks;
+}
+
+function setLabelPosition(label, x, y, anchor, baseline) {
+  label.setAttribute('x', String(x));
+  label.setAttribute('y', String(y));
+  label.setAttribute('text-anchor', anchor);
+  label.setAttribute('dominant-baseline', baseline);
+  label.querySelectorAll('tspan').forEach((tspan) => {
+    tspan.setAttribute('x', String(x));
   });
 }
 
@@ -2520,12 +2722,91 @@ function intersectsAnyRect(candidate, existing) {
   return existing.some((existingRect) => rectsOverlap(candidate, existingRect));
 }
 
+function scoreRectLineIntersections(rect, lines, penalty) {
+  return lines.reduce(
+    (score, line) => score + (lineIntersectsRect(line, rect) ? penalty : 0),
+    0,
+  );
+}
+
+function scoreSegmentRectIntersections(line, rects, penalty) {
+  return rects.reduce(
+    (score, rect) => score + (lineIntersectsRect(line, rect) ? penalty : 0),
+    0,
+  );
+}
+
+function scoreSegmentLineIntersections(line, lines, penalty) {
+  return lines.reduce(
+    (score, other) => score + (segmentsIntersect(line, other) ? penalty : 0),
+    0,
+  );
+}
+
 function rectsOverlap(a, b) {
   return !(
     a.x + a.width < b.x ||
     a.x > b.x + b.width ||
     a.y + a.height < b.y ||
     a.y > b.y + b.height
+  );
+}
+
+function lineIntersectsRect(line, rect) {
+  if (
+    pointInRect(line.x1, line.y1, rect) ||
+    pointInRect(line.x2, line.y2, rect)
+  ) {
+    return true;
+  }
+
+  const left = rect.x;
+  const right = rect.x + rect.width;
+  const top = rect.y;
+  const bottom = rect.y + rect.height;
+  return (
+    segmentsIntersect(line, { x1: left, y1: top, x2: right, y2: top }) ||
+    segmentsIntersect(line, { x1: right, y1: top, x2: right, y2: bottom }) ||
+    segmentsIntersect(line, { x1: right, y1: bottom, x2: left, y2: bottom }) ||
+    segmentsIntersect(line, { x1: left, y1: bottom, x2: left, y2: top })
+  );
+}
+
+function pointInRect(x, y, rect) {
+  return (
+    x >= rect.x &&
+    x <= rect.x + rect.width &&
+    y >= rect.y &&
+    y <= rect.y + rect.height
+  );
+}
+
+function segmentsIntersect(a, b) {
+  const o1 = segmentOrientation(a.x1, a.y1, a.x2, a.y2, b.x1, b.y1);
+  const o2 = segmentOrientation(a.x1, a.y1, a.x2, a.y2, b.x2, b.y2);
+  const o3 = segmentOrientation(b.x1, b.y1, b.x2, b.y2, a.x1, a.y1);
+  const o4 = segmentOrientation(b.x1, b.y1, b.x2, b.y2, a.x2, a.y2);
+
+  if (o1 !== o2 && o3 !== o4) return true;
+  if (o1 === 0 && pointOnSegment(b.x1, b.y1, a)) return true;
+  if (o2 === 0 && pointOnSegment(b.x2, b.y2, a)) return true;
+  if (o3 === 0 && pointOnSegment(a.x1, a.y1, b)) return true;
+  if (o4 === 0 && pointOnSegment(a.x2, a.y2, b)) return true;
+  return false;
+}
+
+function segmentOrientation(ax, ay, bx, by, cx, cy) {
+  const value = (by - ay) * (cx - bx) - (bx - ax) * (cy - by);
+  if (Math.abs(value) < 0.0001) return 0;
+  return value > 0 ? 1 : 2;
+}
+
+function pointOnSegment(x, y, line) {
+  return (
+    x <= Math.max(line.x1, line.x2) + 0.0001 &&
+    x >= Math.min(line.x1, line.x2) - 0.0001 &&
+    y <= Math.max(line.y1, line.y2) + 0.0001 &&
+    y >= Math.min(line.y1, line.y2) - 0.0001
   );
 }
 
