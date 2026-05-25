@@ -1,6 +1,7 @@
 # CLISpecBench
 
-A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from large, well-defined specifications (130k to 2.8M tokens). The repo includes 8 evals across domains, a Docker-based harness that runs evals against coding agents in a consistent environment, and a browser-based results explorer.
+A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from large, well-defined specifications (130k to 2.8M tokens). AI agents write CLI applications based on these specifications, and their submissions are graded against substantial hidden test suites. Scores are reported as the percentage of hidden tests each submission passes. The repo includes 8 evals across domains, a Docker-based harness that runs evals against coding agents in a consistent environment, and a browser-based results explorer.
+
 What makes CLISpecBench unique:
 - **40-160 Hour Tasks**: Each eval asks agents to complete implementation work that would take a typical developer significant time without AI assistance.
 - **Multi-language Evaluation**: Asking the agent to produce a CLI application allows CLISpecBench to evaluate output written in virtually any language; the harness currently supports C++, Rust, Python, and JavaScript.
