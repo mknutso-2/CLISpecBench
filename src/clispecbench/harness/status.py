@@ -21,6 +21,34 @@ Per SKILL.md:
   * ``infra_*`` runs (auth failure, rolling usage cap, host/network) are
     Never Published. There is no editorial label for them, since the
     publish CLI refuses them at the gate.
+
+Mid-session ``infra_*`` failures
+================================
+Note: an ``infra_*`` failure is non-publishable *regardless of wall-time,
+tool-call count, or partial test score*. The defining property is that the
+agent was cut off by something outside the model's control — operator
+credentials, an Anthropic usage cap, or an API connection drop. Even if the
+agent ran for 17 minutes, made 14 tool calls, and the harness found a
+scorable submission at /workspace/output, the score reflects when the
+operator's token happened to expire (or when the rolling cap window
+saturated, or when the network blipped), NOT what the model could do.
+Recording such runs inflates the model's failure rate with operator/env
+signal and biases comparisons across models that ran at different
+times-of-day or on different links.
+
+Concrete examples seen and confirmed non-publishable:
+
+  * ``Failed to authenticate. API Error: 401 ...`` after substantial wall
+    time — ``infra_auth`` (operator's OAuth token expired mid-run).
+    Caught by ``publish._classify_unpublishable_stop_message`` (``401``
+    / ``unauthorized`` / ``invalid api key`` / ``expired credential``).
+  * ``You've hit your limit · resets at <time>`` — ``infra_usage_cap``
+    (operator's Anthropic rolling cap window saturated). Caught by
+    ``"you've hit your limit"`` substring match.
+  * ``API Error: Unable to connect to API (ConnectionRefused)`` — should
+    be classified as ``infra_other`` (network) but is not currently in
+    the publish-gate stoplist. Add similar host/network signatures here
+    as they're observed.
 """
 
 from __future__ import annotations

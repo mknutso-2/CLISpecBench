@@ -129,6 +129,9 @@ def _classify_unpublishable_stop_message(message: str) -> str | None:
         or "idle timeout" in text
         or "websocket" in text
         or "connection reset" in text
+        or "connectionrefused" in text.replace(" ", "")
+        or "unable to connect to api" in text
+        or "network is unreachable" in text
     ):
         return "stream_disconnect"
     # Substring "401"/"403" matches dates like "20240122" inside agent prose
