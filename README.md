@@ -5,7 +5,7 @@ A benchmark suite for evaluating AI coding agents on their ability to develop CL
 What makes CLISpecBench unique:
 - **40-160 Hour Tasks**: Each eval asks agents to complete implementation work that would take a typical developer significant time without AI assistance.
 - **Multi-language Evaluation**: Asking the agent to produce a CLI application allows CLISpecBench to evaluate output written in virtually any language; the harness currently supports C++, Rust, Python, and JavaScript.
-- **Repeated-Run Scoring**: Results are generated multiple times (3x per language across all 4 languages, for a total of 12 runs per agent-model/eval pair) to get a sense of variability and consistency.
+- **Repeated-Run Scoring**: Results are generated multiple times at each model's highest supported reasoning effort (3x per language across all 4 languages, for a total of 12 runs per agent-model/eval pair) to capture variability and consistency.
 - **CLI Subscription Authentication**: The harness supports subscription-based CLI authentication so that results can be generated with the user's subscriptions to Gemini, Claude, and ChatGPT, saving on evaluation costs.
 
 Below are CLISpecBench results for the flagship RS274 eval. See [Viewing Published Results](#viewing-published-results) for instructions on how to view the full results dashboard locally.
@@ -368,6 +368,12 @@ For agent-assisted runs, use the `run-eval` skill (available for both Codex and 
 monitoring background runs, inspecting transcripts and result JSON, classifying anomalies, and publishing official results.
 
 The rest of this section explains how to run an eval manually.
+
+Official CLISpecBench results are currently generated at the highest reasoning
+effort supported by each model when the agent or provider exposes that setting.
+This keeps published headline results focused on best-effort capability rather
+than reasoning-level sensitivity, though comparing reasoning levels directly may
+be useful in a future study.
 
 ### How the Harness Runs an Eval
 
