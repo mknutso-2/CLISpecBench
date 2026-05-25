@@ -55,7 +55,6 @@ from __future__ import annotations
 
 from typing import Final
 
-
 # Status -> exit_class. The first two ("Complete", "Incomplete") describe an
 # agent that self-terminated and map to ``completed``. The rest are model-side
 # failures (Included in Best/Mean) and map to ``model_*`` buckets.

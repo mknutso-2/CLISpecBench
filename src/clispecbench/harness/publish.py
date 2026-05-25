@@ -310,7 +310,11 @@ def publish_result(
     # status is for humans and the dashboard. Keeping them derived from the
     # same source means a typo in --status would have been rejected above
     # before reaching this point, so the two can't drift.
-    payload.setdefault("metadata", {})["exit_class"] = STATUS_TO_EXIT_CLASS[status]
+    metadata = payload.setdefault("metadata", {})
+    if not isinstance(metadata, dict):
+        metadata = {}
+        payload["metadata"] = metadata
+    metadata["exit_class"] = STATUS_TO_EXIT_CLASS[status]
     payload["editorial"] = {
         "status": status,
         "last_message": last_message,

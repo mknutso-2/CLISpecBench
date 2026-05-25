@@ -360,7 +360,10 @@ def main() -> None:
         if row.get("agent_stop_reason") in OMIT_AGENT_STOP_REASONS:
             omitted.append(row)
             continue
-        if row["exit_reason"] == "completed" or row.get("status") in INCLUDED_NON_COMPLETED_STATUSES:
+        if (
+            row["exit_reason"] == "completed"
+            or row.get("status") in INCLUDED_NON_COMPLETED_STATUSES
+        ):
             rows.append(row)
         else:
             excluded.append(row)

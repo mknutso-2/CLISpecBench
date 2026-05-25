@@ -237,7 +237,7 @@ def test_publish_rejects_agent_last_message_usage_limit(tmp_path: Path) -> None:
         publish_result(
             source,
             tmp_path / "published",
-            status="Capped (model)",
+            status="Agent error",
             last_message="hit usage cap",
         )
 
