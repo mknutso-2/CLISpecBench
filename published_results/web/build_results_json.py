@@ -348,6 +348,22 @@ def main() -> None:
     excluded = []
     omitted = []
 
+    # Editorial-status labels that count as Included even when exit_reason!=completed.
+    # Per .claude/skills/run-eval/SKILL.md, every `model_*` bucket (the agent did real
+    # work but exited via something other than its own completion path) is included
+    # in Best/Mean; only `infra_*` buckets are excluded. The previous filter only
+    # checked exit_reason, which silently demoted Output-cap / Build-failure /
+    # Timeout / etc. into the excluded bucket.
+    INCLUDED_NON_COMPLETED_STATUSES = {
+        "Incomplete",
+        "Timeout",
+        "Context exhausted",
+        "No code written",
+        "Build failure",
+        "Agent error",
+        "Output cap",
+    }
+
     for path in sorted(published_root.rglob("run*.json")):
         if "web" in path.relative_to(published_root).parts:
             continue
@@ -355,7 +371,7 @@ def main() -> None:
         if row.get("agent_stop_reason") in OMIT_AGENT_STOP_REASONS:
             omitted.append(row)
             continue
-        if row["exit_reason"] == "completed":
+        if row["exit_reason"] == "completed" or row.get("status") in INCLUDED_NON_COMPLETED_STATUSES:
             rows.append(row)
         else:
             excluded.append(row)
