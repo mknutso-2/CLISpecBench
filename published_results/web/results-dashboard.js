@@ -3666,7 +3666,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function updatePerTestExplorerAvailability() {
   const link = document.querySelector('[data-per-test-link]');
-  const status = document.querySelector('[data-per-test-status]');
   if (!link) return;
 
   const available = await isPerTestDataAvailable();
@@ -3676,7 +3675,6 @@ async function updatePerTestExplorerAvailability() {
     link.href = 'test-results-dashboard.html';
     link.textContent = 'Per-test explorer';
     link.title = 'Open the locally generated per-test explorer.';
-    if (status) status.textContent = '';
     return;
   }
 
@@ -3686,9 +3684,6 @@ async function updatePerTestExplorerAvailability() {
   link.textContent = 'Per-test explorer (local only)';
   link.title =
     'Generate published_results/web/test-results-published.json locally with clispecbench rebuild-dashboard to enable this explorer.';
-  if (status) {
-    status.textContent = 'Generate local per-test data to enable.';
-  }
 }
 
 async function isPerTestDataAvailable() {
