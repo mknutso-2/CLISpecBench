@@ -455,6 +455,10 @@ The run-level dashboard summarizes models, agents, tasks, languages, pass counts
 tokens, pricing, and links into per-run details. The per-test dashboard lets you
 filter and compare individual pytest outcomes across published runs.
 
+Coverage is not yet uniform across every agent/model and eval/language pair.
+Runs are generated under time and budget constraints, with RS274 receiving the
+most complete coverage as the benchmark's flagship eval.
+
 Use the bundled launcher, which picks a free port, starts or reuses a local HTTP
 server, and opens the run-level explorer in your browser:
 
