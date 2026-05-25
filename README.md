@@ -440,7 +440,9 @@ pass `--rebuild-dashboard` for one-shot publishes. The run-level
 `published_results/web/test-results-published.json` file is a generated local
 aggregate for the per-test explorer; it is intentionally ignored because it can
 grow past GitHub's file-size limits. Rebuild it locally when needed, but do not
-stage it.
+stage it. Public static deployments intentionally omit this file, so the
+run-level dashboard remains available remotely while the per-test explorer stays
+local-only unless you generate the aggregate yourself.
 
 ### Viewing Published Results
 
@@ -458,6 +460,10 @@ python published_results/start-dashboard.py
 
 VS Code users can run the **Serve: Published Results Dashboard** task
 (`Ctrl+Shift+P` → *Tasks: Run Task*) instead of invoking the script manually.
+
+The public viewer can be hosted as a static site from `published_results/`.
+The included GitHub Pages workflow deploys the tracked run-level dashboard data
+without generating or uploading the ignored local per-test aggregate.
 
 ## Adding to the Benchmark
 

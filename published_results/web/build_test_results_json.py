@@ -172,8 +172,11 @@ def build_payload(runs_file: Path) -> dict[str, Any]:
 def main() -> None:
     args = parse_args()
     payload = build_payload(args.runs_file)
+    # Keep the ignored local aggregate compact. The full per-test payload can be
+    # hundreds of MB; pretty-printing has pushed real datasets above browser
+    # string-size limits even though the underlying data is otherwise valid.
     args.output.write_text(
-        json.dumps(payload, indent=2, ensure_ascii=True) + "\n",
+        json.dumps(payload, ensure_ascii=True, separators=(",", ":")) + "\n",
         encoding="utf-8",
     )
     print(

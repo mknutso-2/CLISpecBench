@@ -205,6 +205,9 @@ async function loadData() {
     setStatus("Loading per-test results...");
     const response = await fetch(DATA_URL, { cache: "no-store" });
     if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(localPerTestDataHelp());
+      }
       throw new Error(`HTTP ${response.status} while loading ${DATA_URL}`);
     }
     const data = await response.json();
@@ -228,9 +231,33 @@ async function loadData() {
       )} published runs.`,
     );
   } catch (error) {
-    showError(error.message || String(error));
+    const message = error.message || String(error);
+    showError(shouldAppendLocalPerTestHelp(message) ? `${message}\n\n${localPerTestDataHelp()}` : message);
     setStatus("Unable to load per-test results.");
   }
+}
+
+function shouldAppendLocalPerTestHelp(message) {
+  const normalized = String(message || "").toLowerCase();
+  return (
+    !normalized.includes("clispecbench rebuild-dashboard") &&
+    (normalized.includes(DATA_URL.toLowerCase()) ||
+      normalized.includes("failed to fetch") ||
+      normalized.includes("load failed") ||
+      normalized.includes("networkerror"))
+  );
+}
+
+function localPerTestDataHelp() {
+  return [
+    "Per-test data is local-only and is not included in the raw checkout or public static site.",
+    "",
+    "To use this explorer locally, generate the aggregate and launch the dashboard:",
+    "  clispecbench rebuild-dashboard",
+    "  python published_results/start-dashboard.py",
+    "",
+    `Expected local file: published_results/web/${DATA_URL}`,
+  ].join("\n");
 }
 
 function renderFilters() {

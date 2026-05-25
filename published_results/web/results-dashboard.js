@@ -1,4 +1,5 @@
 const DATA_PATH = 'results-published.json';
+const PER_TEST_DATA_PATH = 'test-results-published.json';
 
 const AXIS_OPTIONS = [
   { id: 'percent', label: 'Pass rate' },
@@ -3672,6 +3673,49 @@ async function loadRows() {
   if (!response.ok) throw new Error(`Unable to load ${DATA_PATH}`);
   const text = await response.text();
   return parseDataSource(text, DATA_PATH);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  updatePerTestExplorerAvailability();
+});
+
+async function updatePerTestExplorerAvailability() {
+  const link = document.querySelector('[data-per-test-link]');
+  const status = document.querySelector('[data-per-test-status]');
+  if (!link) return;
+
+  const available = await isPerTestDataAvailable();
+  if (available) {
+    link.classList.remove('disabled');
+    link.removeAttribute('aria-disabled');
+    link.href = 'test-results-dashboard.html';
+    link.textContent = 'Per-test explorer';
+    link.title = 'Open the locally generated per-test explorer.';
+    if (status) status.textContent = '';
+    return;
+  }
+
+  link.classList.add('disabled');
+  link.setAttribute('aria-disabled', 'true');
+  link.removeAttribute('href');
+  link.textContent = 'Per-test explorer (local only)';
+  link.title =
+    'Generate published_results/web/test-results-published.json locally with clispecbench rebuild-dashboard to enable this explorer.';
+  if (status) {
+    status.textContent = 'Generate local per-test data to enable.';
+  }
+}
+
+async function isPerTestDataAvailable() {
+  try {
+    const response = await fetch(`${PER_TEST_DATA_PATH}?t=${Date.now()}`, {
+      cache: 'no-store',
+      method: 'HEAD',
+    });
+    return response.ok;
+  } catch (_error) {
+    return false;
+  }
 }
 
 function parseDataSource(text, sourceName = '') {
