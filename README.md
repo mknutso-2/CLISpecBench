@@ -1,12 +1,16 @@
 # CLISpecBench
 
-A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from well-defined specifications.
-Agents receive a specification and domain docs, then are asked to produce a working CLI application that satisfies the spec.
-The documentation for these tasks is substantial, ranging from around 130k to over 2.8M tokens.
-Completing any of these tasks without the assistance of AI would take a typical developer a significant amount of time, roughly 40 to 160 hours depending on the task.
-This combination of substantial documentation and implementation complexity requires agents to make effective use of search, context, compaction, and planning.
-The submitted code is built and run against a test suite hidden from the agent to measure adherence to the specification.
-Asking the agent to produce a CLI application allows CLISpecBench to evaluate output written in virtually any language; the harness currently supports C++, Rust, Python, and JavaScript.
+A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from large, well-defined specifications (130k to 2.8M tokens). The repo includes 8 evals across domains, a Docker-based harness that runs evals against coding agents in a consistent environment, and a browser-based results explorer.
+What makes CLISpecBench unique:
+- **40-160 Hour Tasks**: Each eval asks agents to complete implementation work that would take a typical developer significant time without AI assistance.
+- **Multi-language Evaluation**: Asking the agent to produce a CLI application allows CLISpecBench to evaluate output written in virtually any language; the harness currently supports C++, Rust, Python, and JavaScript.
+- **Repeated-Run Scoring**: Results are generated multiple times (3x per language across all 4 languages, for a total of 12 runs per agent-model/eval pair) to get a sense of variability and consistency.
+- **CLI Subscription Authentication**: The harness supports subscription-based CLI authentication so that results can be generated with the user's subscriptions to Gemini, Claude, and ChatGPT, saving on evaluation costs.
+
+Below are CLISpecBench results for the flagship RS274 eval. See [Viewing Published Results](#viewing-published-results) for instructions on how to view the full results dashboard locally.
+
+![RS274 Results Graph](assets/rs274-results-graph.png)
+![RS274 Results Table](assets/rs274-results-table.png)
 
 ## Table of Contents
 
