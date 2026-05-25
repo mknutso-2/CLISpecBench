@@ -26,6 +26,11 @@ const LABEL_MODE_OPTIONS = [
   { id: 'pareto', label: 'Pareto' },
 ];
 
+const NAME_MODE_OPTIONS = [
+  { id: 'short', label: 'Abbreviations' },
+  { id: 'full', label: 'Full names' },
+];
+
 const REPORT_TYPE_OPTIONS = [
   { id: 'worst', label: 'Worst' },
   { id: 'best', label: 'Best' },
@@ -210,6 +215,7 @@ const STATE = {
   yAxis: 'percent',
   colorMode: 'pair',
   labelMode: 'all',
+  nameMode: 'short',
   reportType: 'mean',
   errorBarMode: 'std',
   tableMode: 'summary',
@@ -238,6 +244,7 @@ const reportTypeSelect = document.getElementById('report-type');
 const errorBarsSelect = document.getElementById('error-bars');
 const colorModeSelect = document.getElementById('color-mode');
 const labelModeSelect = document.getElementById('label-mode');
+const nameModeSelect = document.getElementById('name-mode');
 const tableModeSelect = document.getElementById('table-mode');
 const tableGroupBySelect = document.getElementById('table-group-by');
 const tableSortBySelect = document.getElementById('table-sort-by');
@@ -255,6 +262,7 @@ const chartEmpty = document.getElementById('chart-empty');
 const graphTitleEl = document.getElementById('graph-title');
 const graphPanel = document.getElementById('graph-panel');
 const tablePanel = document.getElementById('table-panel');
+const tableTitleEl = document.getElementById('table-title');
 const tableEl = document.getElementById('results-table');
 const tableEmpty = document.getElementById('table-empty');
 const tableCountEl = document.getElementById('table-count');
@@ -279,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !errorBarsSelect ||
     !colorModeSelect ||
     !labelModeSelect ||
+    !nameModeSelect ||
     !tableModeSelect ||
     !tableGroupBySelect ||
     !tableSortBySelect ||
@@ -287,6 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
     !graphTitleEl ||
     !graphPanel ||
     !tablePanel ||
+    !tableTitleEl ||
     !tableEl ||
     !tableEmpty ||
     !tableCountEl
@@ -335,6 +345,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         yAxis: STATE.yAxis,
         colorMode: STATE.colorMode,
         labelMode: STATE.labelMode,
+        nameMode: STATE.nameMode,
         reportType: STATE.reportType,
         errorBarMode: STATE.errorBarMode,
         selectedEvals: new Set(STATE.selectedEvals),
@@ -381,6 +392,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.yAxis = previousView.yAxis;
     STATE.colorMode = previousView.colorMode;
     STATE.labelMode = previousView.labelMode;
+    STATE.nameMode = previousView.nameMode;
     STATE.reportType = previousView.reportType;
     STATE.errorBarMode = previousView.errorBarMode;
     STATE.viewMode = previousView.viewMode;
@@ -396,6 +408,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.yAxis = 'percent';
     STATE.colorMode = 'agent';
     STATE.labelMode = 'all';
+    STATE.nameMode = 'short';
     STATE.reportType = 'mean';
     STATE.errorBarMode = getDefaultErrorBarMode();
     STATE.tableMode = 'summary';
@@ -413,6 +426,7 @@ function buildControls() {
   renderEvalList();
   renderColorModeSelector();
   renderLabelModeSelector();
+  renderNameModeSelector();
   renderReportTypeSelector();
   renderErrorBarSelector();
   renderTableControls();
@@ -568,6 +582,11 @@ function attachEvents() {
 
   labelModeSelect.addEventListener('change', () => {
     STATE.labelMode = normalizeLabelMode(labelModeSelect.value);
+    render();
+  });
+
+  nameModeSelect.addEventListener('change', () => {
+    STATE.nameMode = normalizeNameMode(nameModeSelect.value);
     render();
   });
 
@@ -803,6 +822,26 @@ function normalizeLabelMode(mode) {
     : 'all';
 }
 
+function renderNameModeSelector() {
+  nameModeSelect.replaceChildren();
+  NAME_MODE_OPTIONS.forEach((mode) => {
+    const option = document.createElement('option');
+    option.value = mode.id;
+    option.textContent = mode.label;
+    nameModeSelect.appendChild(option);
+  });
+
+  STATE.nameMode = normalizeNameMode(STATE.nameMode);
+  nameModeSelect.value = STATE.nameMode;
+}
+
+function normalizeNameMode(mode) {
+  const normalized = String(mode || '').trim().toLowerCase();
+  return NAME_MODE_OPTIONS.some((option) => option.id === normalized)
+    ? normalized
+    : 'short';
+}
+
 function renderReportTypeSelector() {
   const normalizedReportType = normalizeReportType(STATE.reportType);
   STATE.reportType = normalizedReportType || 'mean';
@@ -868,7 +907,9 @@ function renderTableControls() {
 
 function getTableSortOptions(tableMode = STATE.tableMode) {
   return (TABLE_SORT_OPTIONS[tableMode] || []).filter(
-    (option) => !option.requiresExcluded || STATE.tableShowExcluded,
+    (option) =>
+      (!option.requiresExcluded || STATE.tableShowExcluded) &&
+      !(shouldHideEvalLanguageColumn() && option.id === 'eval_language'),
   );
 }
 
@@ -915,6 +956,7 @@ function render() {
   clearError();
   syncViewModeControls();
   syncGraphTitle();
+  syncTableTitle();
   renderTableControls();
   const validation = validateSelection();
   if (!validation.ok) {
@@ -967,17 +1009,19 @@ function syncGraphTitle() {
   graphTitleEl.title = title;
 }
 
+function syncTableTitle() {
+  if (!tableTitleEl) return;
+  const title = buildTableTitle();
+  tableTitleEl.textContent = title;
+  tableTitleEl.title = title;
+}
+
 function buildGraphTitle() {
-  const selectedEvals = getEvals().filter((evalName) => STATE.selectedEvals.has(evalName));
-  const selectedLanguages = getLanguages().filter((language) => STATE.selectedLanguages.has(language));
+  const selectedEvals = getSelectedEvalNames();
+  const selectedLanguages = getSelectedLanguageNames();
   if (!selectedEvals.length || !selectedLanguages.length) return 'XY Scatter Plot';
 
-  const languages = getLanguages();
-  const allLanguagesSelected =
-    languages.length > 0 &&
-    languages.every((language) => STATE.selectedLanguages.has(language));
-
-  if (allLanguagesSelected) {
+  if (areAllLanguagesSelected()) {
     return selectedEvals.join(', ');
   }
 
@@ -986,6 +1030,40 @@ function buildGraphTitle() {
       selectedLanguages.map((language) => formatEvalLanguageLabel(evalName, language)),
     )
     .join(', ');
+}
+
+function buildTableTitle() {
+  const selectedEvals = getSelectedEvalNames();
+  if (shouldHideEvalLanguageColumn() && selectedEvals.length === 1) {
+    return `${selectedEvals[0]} Results Table`;
+  }
+  return 'Results Table';
+}
+
+function shouldHideEvalLanguageColumn() {
+  return getSelectedEvalNames().length === 1 && areExactlyFourLanguagesSelected();
+}
+
+function getSelectedEvalNames() {
+  return getEvals().filter((evalName) => STATE.selectedEvals.has(evalName));
+}
+
+function getSelectedLanguageNames() {
+  return getLanguages().filter((language) => STATE.selectedLanguages.has(language));
+}
+
+function areAllLanguagesSelected() {
+  const languages = getLanguages();
+  return languages.length > 0 && languages.every((language) => STATE.selectedLanguages.has(language));
+}
+
+function areExactlyFourLanguagesSelected() {
+  const languages = getLanguages();
+  return (
+    languages.length === 4 &&
+    STATE.selectedLanguages.size === 4 &&
+    languages.every((language) => STATE.selectedLanguages.has(language))
+  );
 }
 
 function getColorMap() {
@@ -1258,7 +1336,7 @@ function getSummaryTableColumns() {
     {
       key: 'pair',
       label: 'Agent / Model',
-      render: (row) => formatAgentModelShort(row.pairId),
+      render: (row) => formatAgentModelDisplay(row.pairId),
       title: (row) => row.pairId,
     },
     {
@@ -1314,7 +1392,7 @@ function getSummaryTableColumns() {
       title: (row) => row.statusSummary,
     });
   }
-  return columns;
+  return filterVisibleTableColumns(columns);
 }
 
 function getRunTableColumns() {
@@ -1328,7 +1406,7 @@ function getRunTableColumns() {
     {
       key: 'pair',
       label: 'Agent / Model',
-      render: (row) => formatAgentModelShort(rowPairId(row)),
+      render: (row) => formatAgentModelDisplay(rowPairId(row)),
       title: (row) => rowPairId(row),
     },
     { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
@@ -1356,7 +1434,12 @@ function getRunTableColumns() {
       title: (row) => getLastMessageTooltip(row),
     },
   ];
-  return columns;
+  return filterVisibleTableColumns(columns);
+}
+
+function filterVisibleTableColumns(columns) {
+  if (!shouldHideEvalLanguageColumn()) return columns;
+  return columns.filter((column) => column.key !== 'eval_language');
 }
 
 function renderResultsTable(columns, rows) {
@@ -1538,6 +1621,20 @@ function formatEvalLanguageLabel(evalLabel, languageLabel) {
 function formatAgentModelShort(pairId) {
   const { agent, model } = splitPairId(pairId);
   return `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+}
+
+function formatAgentModelDisplay(pairId) {
+  const fullName = rowPairId(pairId);
+  return normalizeNameMode(STATE.nameMode) === 'full'
+    ? fullName
+    : formatAgentModelShort(fullName);
+}
+
+function formatAgentDisplay(agent) {
+  const fullName = String(agent || 'Unknown Agent');
+  return normalizeNameMode(STATE.nameMode) === 'full'
+    ? fullName
+    : abbreviateAgent(fullName);
 }
 
 function abbreviateAgent(agent) {
@@ -2078,11 +2175,9 @@ function renderLegend(points, colorMap) {
 }
 
 function getColorModeLabel(key) {
-  if (STATE.colorMode === 'agent') return key;
+  if (STATE.colorMode === 'agent') return formatAgentDisplay(key);
   if (STATE.colorMode === 'language') return key;
-  const { agent, model } = splitPairId(key);
-  if (!agent && !model) return key;
-  return `${agent} / ${model}`;
+  return formatAgentModelDisplay(key);
 }
 
 function drawFrontierConnector(points, frontierSet, xScale, yScale, layer) {
@@ -2261,7 +2356,7 @@ function renderPlot(points) {
     const shouldPlaceLabel =
       labelMode === 'all' || (labelMode === 'pareto' && isOnFrontier);
     const fullLabel = point.pairLabel || rowPairId(point.pairId);
-    const labelText = labelMode === 'all' ? formatAgentModelShort(fullLabel) : fullLabel;
+    const labelText = formatAgentModelDisplay(fullLabel);
     const labelClass = shouldPlaceLabel
       ? `point-label point-label-persistent${isOnFrontier ? ' point-label-frontier' : ''}`
       : 'point-label point-label-hover';
