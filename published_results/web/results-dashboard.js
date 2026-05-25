@@ -247,7 +247,6 @@ const graphControls = Array.from(document.querySelectorAll('.graph-control'));
 const tableControls = Array.from(document.querySelectorAll('.table-control'));
 const tableSummaryControls = Array.from(document.querySelectorAll('.table-summary-control'));
 const tableRunsControls = Array.from(document.querySelectorAll('.table-runs-control'));
-const fileInputEl = document.getElementById('data-file-input');
 const validationEl = document.getElementById('validation-message');
 const statusEl = document.getElementById('status');
 const errorBanner = document.getElementById('error-banner');
@@ -298,20 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   attachEvents();
 
-  if (fileInputEl) {
-    fileInputEl.addEventListener('change', async (event) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      try {
-        const text = await file.text();
-        const dataset = parseDataSource(text, file.name);
-        initializeDashboard(dataset, file.name, { preserveView: true });
-      } catch (error) {
-        setError(`Could not parse ${file.name}: ${error.message}`);
-      }
-    });
-  }
-
   (async () => {
     try {
       const dataset = await loadRows();
@@ -319,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (error) {
       const message =
         window.location.protocol === 'file:'
-          ? `Unable to load ${DATA_PATH} from file://. Use the data source picker below, or serve this page from a local server (for example: python -m http.server 8000 from published_results/web).`
+          ? `Unable to load ${DATA_PATH} from file://. Serve this page from a local server (for example: python -m http.server 8000 from published_results/web).`
           : `Unable to load ${DATA_PATH}: ${error.message}. Open this page through a local web server and refresh (for example: python -m http.server 8000 from published_results/web).`;
       setError(message);
       return;
@@ -3672,7 +3657,7 @@ async function loadRows() {
   const response = await fetch(`${DATA_PATH}?t=${Date.now()}`, { cache: 'no-store' });
   if (!response.ok) throw new Error(`Unable to load ${DATA_PATH}`);
   const text = await response.text();
-  return parseDataSource(text, DATA_PATH);
+  return JSON.parse(text);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -3718,15 +3703,6 @@ async function isPerTestDataAvailable() {
   }
 }
 
-function parseDataSource(text, sourceName = '') {
-  const trimmed = text.trim();
-  if (!trimmed) return { rows: [], excludedRows: [] };
-  if (sourceName.toLowerCase().endsWith('.json') || trimmed.startsWith('{') || trimmed.startsWith('[')) {
-    return parseJsonData(trimmed);
-  }
-  return parseCsv(trimmed);
-}
-
 function normalizeDataset(data) {
   if (Array.isArray(data)) {
     return { rows: data, excludedRows: [] };
@@ -3735,76 +3711,6 @@ function normalizeDataset(data) {
     rows: Array.isArray(data?.rows) ? data.rows : [],
     excludedRows: Array.isArray(data?.excludedRows) ? data.excludedRows : [],
   };
-}
-
-function parseJsonData(text) {
-  const data = JSON.parse(text);
-  const rows = Array.isArray(data)
-    ? data
-    : Array.isArray(data.rows)
-      ? data.rows
-      : Array.isArray(data.results)
-        ? data.results
-        : isHarnessResult(data)
-          ? [data]
-          : [];
-  const excludedRows = Array.isArray(data?.excluded_runs) ? data.excluded_runs : [];
-  return {
-    rows: rows.map((row) => coerceRow(isHarnessResult(row) ? rowFromHarnessResult(row) : row)),
-    excludedRows: excludedRows.map((row) => coerceRow({ ...row, excluded: true })),
-  };
-}
-
-function parseCsv(text) {
-  const lines = text.replace(/\r\n/g, '\n').trim().split('\n');
-  if (!lines.length) return [];
-  const header = parseCsvLine(lines[0]).map((value) =>
-    String(value || '').replace(/^\uFEFF/, '').trim(),
-  );
-  const rows = [];
-
-  for (let i = 1; i < lines.length; i += 1) {
-    const cells = parseCsvLine(lines[i]);
-    if (!cells.length || !cells[0].trim()) continue;
-    const row = {};
-    header.forEach((headerName, index) => {
-      row[headerName] = (cells[index] ?? '').trim();
-    });
-    rows.push(coerceRow(row));
-  }
-
-  return { rows, excludedRows: [] };
-}
-
-function parseCsvLine(line) {
-  const values = [];
-  let inQuotes = false;
-  let current = '';
-
-  for (let i = 0; i < line.length; i += 1) {
-    const ch = line[i];
-    const next = line[i + 1];
-
-    if (ch === '"') {
-      if (inQuotes && next === '"') {
-        current += '"';
-        i += 1;
-      } else {
-        inQuotes = !inQuotes;
-      }
-      continue;
-    }
-
-    if (ch === ',' && !inQuotes) {
-      values.push(current);
-      current = '';
-      continue;
-    }
-
-    current += ch;
-  }
-  values.push(current);
-  return values;
 }
 
 function coerceRow(raw) {
@@ -3853,48 +3759,6 @@ function coerceRow(raw) {
     transcript_link: transcriptLink,
     last_message: firstPresent(raw.last_message, raw.last_message_summary, raw.agent_last_message, ''),
     last_message_verbatim: firstPresent(raw.last_message_verbatim, raw.agent_last_message, ''),
-  };
-}
-
-function isHarnessResult(value) {
-  return Boolean(value && typeof value === 'object' && value.metadata && value.test_summary);
-}
-
-function rowFromHarnessResult(result) {
-  const metadata = result.metadata || {};
-  const summary = result.test_summary || {};
-  const usage = result.token_usage || {};
-  const stats = result.source_stats || {};
-  const task = metadata.task || '';
-  return {
-    task,
-    language: languageFromTask(task),
-    agent: metadata.agent || '',
-    model: metadata.model || 'default',
-    effort: metadata.effort || '',
-    run_id: metadata.run_number || '',
-    eval: evalLabelFromTask(task),
-    eval_version: metadata.eval_version || '',
-    exit_reason: metadata.exit_reason || '',
-    status: (result.editorial || {}).status || '',
-    agent_stop_reason: metadata.exit_reason === 'completed' ? 'finished' : metadata.exit_reason || '',
-    agent_stop_label: metadata.exit_reason === 'completed' ? 'Finished' : (result.editorial || {}).status || metadata.exit_reason || '',
-    agent_stop_message: metadata.agent_last_message || '',
-    agent_stop_source: 'loaded-result-json',
-    notes: metadata.notes || (result.editorial || {}).commentary || '',
-    score_count: summary.passed,
-    score_total: summary.total,
-    wall_min: metadata.wall_clock_seconds ? metadata.wall_clock_seconds / 60 : undefined,
-    input_tokens: usage.input_tokens,
-    output_tokens: usage.output_tokens,
-    cost_usd: usage.reported_cost_usd ?? usage.estimated_cost_usd,
-    tools: usage.tool_calls,
-    files: stats.file_count,
-    loc: stats.lines_of_code,
-    result_link: result.result_link || '',
-    transcript_link: result.transcript_link || '',
-    last_message: metadata.agent_last_message || '',
-    last_message_verbatim: metadata.agent_last_message || '',
   };
 }
 
