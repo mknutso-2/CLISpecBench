@@ -1,9 +1,5 @@
 # CLISpecBench
 
-<p align="center">
-  <img src="published_results/assets/clispecbench-logo.png" alt="CLISpecBench logo" width="160">
-</p>
-
 [![CI](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml/badge.svg)](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -15,7 +11,7 @@ What makes CLISpecBench unique:
 - **Repeated-Run Scoring**: Results are generated multiple times at each model's highest supported reasoning effort (3x per language across all 4 languages, for a total of 12 runs per agent-model/eval pair) to capture variability and consistency.
 - **CLI Subscription Authentication**: The harness supports subscription-based CLI authentication so that results can be generated with the user's subscriptions to Gemini, Claude, and ChatGPT, saving on evaluation costs.
 
-Below are CLISpecBench results for the flagship RS274 eval. See [Viewing Published Results](#viewing-published-results) for instructions on how to view the full results dashboard locally.
+Below are CLISpecBench results for the flagship RS274 eval. Full results are available in the [interactive results dashboard](https://mknutso-2.github.io/CLISpecBench/web/results-dashboard.html), which lets you slice results by eval, language, agent/model pair, metric, and more.
 
 ![RS274 Results Graph](assets/rs274-results-graph.png)
 ![RS274 Results Table](assets/rs274-results-table.png)
