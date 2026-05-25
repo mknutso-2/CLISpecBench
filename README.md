@@ -33,6 +33,7 @@ Below are CLISpecBench results for the flagship RS274 eval. See [Viewing Publish
   - [Adding a New Eval](#adding-a-new-eval)
   - [Adding a Reference Implementation to an Existing Eval](#adding-a-reference-implementation-to-an-existing-eval)
   - [Adding a New Shared Evaluation Language](#adding-a-new-shared-evaluation-language)
+- [License](#license)
 
 ## Core Concepts
 
@@ -677,3 +678,13 @@ After that repo-wide support exists, you can separately choose whether to:
 
 - add reference implementations for specific evals in that language
 - expose specific eval-language pairs as harness tasks in `task.py`
+
+## License
+
+Original CLISpecBench code, benchmark scaffolding, tests, prompts, and the
+published results viewer are licensed under the Apache License 2.0. See
+`LICENSE`.
+
+Some evaluation reference materials under `Evals/*/prompt/docs/` mirror or
+derive from third-party specifications and source documents. Those materials
+remain subject to their original terms. See `THIRD_PARTY_NOTICES.md`.
