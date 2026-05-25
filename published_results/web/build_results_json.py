@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from clispecbench.harness.pricing import estimate_cost
+from clispecbench.harness.status import INCLUDED_NON_COMPLETED_STATUSES
 
 DEFAULT_PUBLISHED_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_FILE = Path(__file__).with_name("results-published.json")
@@ -348,22 +349,10 @@ def main() -> None:
     excluded = []
     omitted = []
 
-    # Editorial-status labels that count as Included even when exit_reason!=completed.
-    # Per .claude/skills/run-eval/SKILL.md, every `model_*` bucket (the agent did real
-    # work but exited via something other than its own completion path) is included
-    # in Best/Mean; only `infra_*` buckets are excluded. The previous filter only
-    # checked exit_reason, which silently demoted Output-cap / Build-failure /
-    # Timeout / etc. into the excluded bucket.
-    INCLUDED_NON_COMPLETED_STATUSES = {
-        "Incomplete",
-        "Timeout",
-        "Context exhausted",
-        "No code written",
-        "Build failure",
-        "Agent error",
-        "Output cap",
-    }
-
+    # The set of non-"completed" editorial statuses that still count as
+    # Included is the canonical model_* taxonomy from
+    # clispecbench.harness.status — see imports. Anything else (Excluded
+    # statuses, freeform legacy labels) falls through to the excluded bucket.
     for path in sorted(published_root.rglob("run*.json")):
         if "web" in path.relative_to(published_root).parts:
             continue

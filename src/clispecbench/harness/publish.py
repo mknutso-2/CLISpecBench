@@ -20,6 +20,11 @@ from pathlib import Path
 from typing import Any, cast
 
 from clispecbench.harness.results import RunResult, load_result, model_effort_slug
+from clispecbench.harness.status import (
+    DEPRECATED_STATUS_REPLACEMENTS,
+    STATUS_TO_EXIT_CLASS,
+    VALID_STATUSES,
+)
 
 log = logging.getLogger(__name__)
 
@@ -226,6 +231,26 @@ def publish_result(
             "Re-run the evaluation to produce a publishable result."
         )
 
+    # Validate the editorial --status against the canonical taxonomy. Reject
+    # typos, deprecated labels, and freeform strings outright — the dashboard
+    # inclusion gate keys off this string and a typo silently demotes a real
+    # result into the Excluded bucket. See clispecbench.harness.status.
+    if status not in VALID_STATUSES:
+        if status in DEPRECATED_STATUS_REPLACEMENTS:
+            replacement = DEPRECATED_STATUS_REPLACEMENTS[status]
+            raise PublishError(
+                f"{source}: status {status!r} is deprecated. "
+                f"Re-classify the run and pass --status {replacement!r} instead "
+                f"(see clispecbench.harness.status.DEPRECATED_STATUS_REPLACEMENTS "
+                f"for the migration mapping)."
+            )
+        valid = ", ".join(sorted(VALID_STATUSES))
+        raise PublishError(
+            f"{source}: status {status!r} is not a recognized editorial label. "
+            f"Pass one of: {valid}. See .claude/skills/run-eval/SKILL.md for the "
+            "bucket definitions and clispecbench.harness.status for the canonical list."
+        )
+
     stop_reason = _unpublishable_stop_reason(source, result, status, last_message)
     if stop_reason:
         label = UNPUBLISHABLE_STOP_REASON_LABELS[stop_reason]
@@ -277,6 +302,12 @@ def publish_result(
     # Artifacts live alongside the transient result; the path is meaningless
     # once published. Cross-reference via metadata.run_uid.
     payload.pop("artifacts", None)
+    # Auto-populate metadata.exit_class from --status. This is the canonical
+    # field the rest of the harness reads to classify a run; the editorial
+    # status is for humans and the dashboard. Keeping them derived from the
+    # same source means a typo in --status would have been rejected above
+    # before reaching this point, so the two can't drift.
+    payload.setdefault("metadata", {})["exit_class"] = STATUS_TO_EXIT_CLASS[status]
     payload["editorial"] = {
         "status": status,
         "last_message": last_message,

@@ -85,7 +85,7 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
 
 ## Publishing rules
 
-- Pass the bucket through to `clispecbench publish` so the dashboard surfaces it. Use these editorial `--status` labels:
+- Pass the bucket through to `clispecbench publish` so the dashboard surfaces it. The canonical list of valid `--status` labels lives in `src/clispecbench/harness/status.py` (`VALID_STATUSES`); the publish CLI rejects anything not in that set and auto-populates `metadata.exit_class` from `STATUS_TO_EXIT_CLASS`. The current mapping is:
   - `completed` → `--status "Complete"` (or `"Incomplete"` if the agent acknowledged gaps)
   - `model_timeout` → `--status "Timeout"`
   - `model_context_exhausted` → `--status "Context exhausted"`
@@ -93,6 +93,7 @@ Start-Process cmd.exe -WindowStyle Hidden -ArgumentList '/d','/c','cd /d C:\Git\
   - `model_build_failure` → `--status "Build failure"`
   - `model_agent_error` → `--status "Agent error"`
   - `model_output_cap` → `--status "Output cap"`
+- Deprecated labels (e.g. `"Capped (model)"` from before the model_capped → infra_usage_cap + model_output_cap split) are rejected with a migration hint. See `DEPRECATED_STATUS_REPLACEMENTS` for the mapping.
 - Do **not** publish `infra_*` runs — including `infra_usage_cap`. They contain no model-capability signal; delete the transient artifacts and rerun. This applies even when the agent did substantial work before the cap tripped: a capped run is the operator's billing tier showing up in the data, not the model, and publishing it would mislabel an operator failure as a model failure. The cap-hit transient (`result.json`, `transcript.jsonl`, `source/`) should be removed before relaunch so the harness doesn't accumulate stale eval directories.
 - When publishing a `model_timeout` run, include a Last Message summary that explicitly notes the timeout and the wall-time at which it tripped, so the dashboard reader knows the agent was cut short and didn't choose to stop.
 - The dashboard reads `published_results/web/results-published.json` and `published_results/web/test-results-published.json`, which are *not* updated by `clispecbench publish` itself. After publishing, regenerate them or the dashboard will silently drift behind the published files. Two ways:
