@@ -1,5 +1,9 @@
 # CLISpecBench
 
+<p align="center">
+  <img src="published_results/assets/clispecbench-logo.png" alt="CLISpecBench logo" width="160">
+</p>
+
 [![CI](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml/badge.svg)](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
@@ -687,6 +691,9 @@ After that repo-wide support exists, you can separately choose whether to:
 Original CLISpecBench code, benchmark scaffolding, tests, prompts, and the
 published results viewer are licensed under the Apache License 2.0. See
 `LICENSE`.
+
+The CLISpecBench logo and branding assets are reserved and are not licensed
+under Apache-2.0. See `BRAND_ASSETS.md`.
 
 Some evaluation reference materials under `Evals/*/prompt/docs/` mirror or
 derive from third-party specifications and source documents. Those materials
