@@ -1576,10 +1576,12 @@ function abbreviateModel(model) {
     const suffix = gptMatch[2] === 'mini' ? '-m' : gptMatch[2] === 'codex' ? '-c' : '';
     return `${gptMatch[1]}${suffix}`;
   }
-  const geminiMatch = normalized.match(/^gemini-(\d+(?:\.\d+)?)(?:-[^-]+)*?(flash|pro)?/);
+  const geminiMatch = normalized.match(/^gemini-(\d+(?:\.\d+)?)(?:-(flash|pro))?/);
   if (geminiMatch) {
-    const tier = geminiMatch[2] ? `-${geminiMatch[2][0].toUpperCase()}` : '';
-    return `G-${geminiMatch[1]}${tier}`;
+    const version = geminiMatch[1].includes('.') ? geminiMatch[1] : `${geminiMatch[1]}.0`;
+    if (geminiMatch[2] === 'flash') return `${version}-f`;
+    if (geminiMatch[2] === 'pro') return `${version}-p`;
+    return version;
   }
   return model || 'n/a';
 }
