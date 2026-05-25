@@ -1,5 +1,8 @@
 # CLISpecBench
 
+[![CI](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml/badge.svg)](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from large, well-defined specifications (130k to 2.8M tokens). AI agents write CLI applications based on these specifications, and their submissions are graded against substantial hidden test suites. Scores are reported as the percentage of hidden tests each submission passes. The repo includes 8 evals across domains, a Docker-based harness that runs evals against coding agents in a consistent environment, and a browser-based results explorer.
 
 What makes CLISpecBench unique:
