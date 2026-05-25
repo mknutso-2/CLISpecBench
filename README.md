@@ -3,15 +3,31 @@
 [![CI](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml/badge.svg)](https://github.com/mknutso-2/CLISpecBench/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
 
-A benchmark suite for evaluating AI coding agents on their ability to develop CLI applications from large, well-defined specifications (130k to 2.8M tokens). AI agents write CLI applications based on these specifications, and their submissions are graded against substantial hidden test suites. Scores are reported as the percentage of hidden tests each submission passes. The repo includes 8 evals across domains, a Docker-based harness that runs evals against coding agents in a consistent environment, and a browser-based results explorer.
+A benchmark suite for evaluating AI coding agents on their ability to develop
+CLI applications from large, well-defined specifications (130k to 2.8M tokens).
+
+As AI agents become more capable, it becomes harder to write evals that are
+simultaneously well specified, large, and difficult enough to produce useful
+signal. CLISpecBench addresses that by turning existing high-quality specifications into
+coding-agent tasks: ISO standards, protocol specifications, file-format
+references, API contracts, and other documents that already define behavior in
+detail. Eval authors can focus on the executable boundary: converting source
+material into a machine-readable corpus when needed, defining a clean CLI
+interface, and writing hidden tests that score the resulting implementation.
+
+The CLI boundary gives every eval a consistent interface while still allowing
+agents to write submissions in virtually any programming language. The harness
+builds each submission in Docker and reports scores as the percentage of hidden
+tests passed. The repo currently includes 8 evals across domains, a Docker-based
+harness that runs evals against coding agents in a consistent environment, and a
+browser-based results explorer.
 
 What makes CLISpecBench unique:
 - **40-160 Hour Tasks**: Each eval asks agents to complete implementation work that would take a typical developer significant time without AI assistance.
 - **Multi-language Evaluation**: Asking the agent to produce a CLI application allows CLISpecBench to evaluate output written in virtually any language; the harness currently supports C++, Rust, Python, and JavaScript.
 - **Repeated-Run Scoring**: Results are generated multiple times at each model's highest supported reasoning effort (3x per language across all 4 languages, for a total of 12 runs per agent-model/eval pair) to capture variability and consistency.
-- **CLI Subscription Authentication**: The harness supports subscription-based CLI authentication so that results can be generated with the user's subscriptions to Gemini, Claude, and ChatGPT, saving on evaluation costs.
 
-Below are CLISpecBench results for the flagship RS274 eval. Full results are available in the [interactive results dashboard](https://mknutso-2.github.io/CLISpecBench/web/results-dashboard.html), which lets you slice results by eval, language, agent/model pair, metric, and more.
+Below are CLISpecBench results for the flagship RS274 eval. Full results are available in the [interactive results dashboard](https://mknutso-2.github.io/CLISpecBench/web/results-dashboard.html), which lets you slice results by eval, language, agent/model pair, and more.
 
 ![RS274 Results Graph](assets/rs274-results-graph.png)
 ![RS274 Results Table](assets/rs274-results-table.png)
