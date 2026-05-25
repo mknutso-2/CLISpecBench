@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
 
+from clispecbench.agents.antigravity_cli import AntigravityCLIAdapter
 from clispecbench.agents.base import AgentAdapter
 from clispecbench.agents.claude_code import ClaudeCodeAdapter
 from clispecbench.agents.codex_cli import CodexCLIAdapter
@@ -40,6 +41,13 @@ class AgentSpec:
 
 
 _AGENT_SPECS: dict[str, AgentSpec] = {
+    "antigravity-cli": AgentSpec(
+        agent_id="antigravity-cli",
+        factory=lambda model, effort: AntigravityCLIAdapter(model=model, effort=effort),
+        docker_image="clispecbench-antigravity-cli",
+        version_command="agy changelog",
+        auth_smoke_script="scripts/smoke-test-antigravity.sh",
+    ),
     "claude-code": AgentSpec(
         agent_id="claude-code",
         factory=lambda model, effort: ClaudeCodeAdapter(model=model, effort=effort),

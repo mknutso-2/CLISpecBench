@@ -233,6 +233,7 @@ def run_evaluation(
                 work_dir=PurePosixPath(CONTAINER_WORKSPACE),
             ),
             volumes=adapter.credential_mounts(host_home),
+            tty=adapter.requires_tty,
         )
         sandbox.create(config)
         sandbox.copy_in(workspace, CONTAINER_WORKSPACE)

@@ -41,7 +41,7 @@ set -u
 export DOCKER_HOST=tcp://localhost:2375
 
 # ---- Customize per copy ----------------------------------------------------
-AGENT="codex-cli"      # codex-cli | claude-code | gemini-cli | copilot-cli
+AGENT="codex-cli"      # antigravity-cli | codex-cli | claude-code | gemini-cli | copilot-cli
 MAX_CONCURRENT=2
 
 # Image filter for count_active. Default is the agent's own image so unrelated

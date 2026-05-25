@@ -147,6 +147,7 @@ Evals/
 docker/
   base.Dockerfile               # C++/Python/Node/Rust toolchains + pytest
   agents/
+    antigravity-cli.Dockerfile  # Extends base, installs Antigravity CLI
     claude-code.Dockerfile      # Extends base, installs Claude Code CLI
     codex-cli.Dockerfile        # Extends base, installs Codex CLI
     copilot-cli.Dockerfile      # Extends base, installs Copilot CLI
@@ -348,6 +349,7 @@ agent has different requirements (verified via smoke testing):
 
 | Agent | Host files | Mount strategy |
 |-------|-----------|----------------|
+| Antigravity CLI | `~/.gemini/antigravity-cli`, `~/.gemini/config` when present | Mount existing state dirs `:rw`; experimental only because Windows Credential Manager OAuth state does not carry into Linux Docker and 1.0.2 `--print` can drop captured stdout in non-TTY mode |
 | Claude Code | `~/.claude/.credentials.json` (read-only), `~/.claude/settings.json` (read-only) | Mount the two files individually `:ro` |
 | Codex CLI | `~/.codex/auth.json` (read/write, file only) | Mount single file `:rw`; rest of `.codex/` stays writable |
 | Gemini CLI | `~/.gemini/oauth_creds.json`, `google_accounts.json`, `settings.json` | Copy to writable dir at startup; seed `projects.json` |
@@ -369,6 +371,16 @@ Notes:
 - Codex requires `ca-certificates` and `git` installed in the container.
 - Gemini CLI needs a writable `~/.gemini/` directory (writes `projects.json`
   at startup), so auth files are copied in rather than mounted read-only.
+- Antigravity CLI 1.0.2 supports noninteractive `agy --print`, but does not
+  expose a model flag or prompt-file flag. The adapter records
+  `gemini-3.5-flash` as its default model metadata and sends a short prompt
+  telling `agy` to read `/workspace/prompt.md`. In Linux containers, `agy`
+  uses file-based token storage; Windows Credential Manager auth does not carry
+  into the container by mounting host app-data directories alone. Local and
+  public 1.0.2 smoke tests also show `agy --print` can complete a model call but
+  emit zero captured stdout from a non-TTY subprocess, so Antigravity remains
+  unsuitable for counted harness runs until upstream adds a reliable headless
+  output path.
 
 See `scripts/smoke-test-docker-auth.sh` and the per-agent smoke scripts for the
 tested mounting commands.
@@ -631,7 +643,7 @@ For a given agent, find `node_id`s where `outcome` varies across runs.
 clispecbench run
     --task <task-id-or-eval>           # Required: rs274-cpp, bibtex, ...
     --language <lang>                  # Required only when --task is a bare eval name
-    --agent <agent-name>               # Required: claude-code, codex-cli, copilot-cli, gemini-cli, opencode, openhands
+    --agent <agent-name>               # Required: antigravity-cli, claude-code, codex-cli, copilot-cli, gemini-cli, opencode, openhands
     --runs <N>                         # Default: 3
     --prompt-variant <name>            # Default: base
     --output-dir <path>                # Default: transient_results/

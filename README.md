@@ -40,7 +40,7 @@ The repo is organized around a few core concepts:
 
 | Concept | Meaning | Main locations |
 |---|---|---|
-| **Coding agent** | The external tool being benchmarked. Today this is usually one of `claude-code`, `codex-cli`, `copilot-cli`, `gemini-cli`, `opencode`, or `openhands`. | Wrapped by files under `src/clispecbench/agents/` and containerized from `docker/agents/` |
+| **Coding agent** | The external tool being benchmarked. Today this is usually one of `antigravity-cli`, `claude-code`, `codex-cli`, `copilot-cli`, `gemini-cli`, `opencode`, or `openhands`. | Wrapped by files under `src/clispecbench/agents/` and containerized from `docker/agents/` |
 | **Eval** | A benchmark task: prompt materials, hidden tests, and reference implementations for one problem domain. | `Evals/<Task>/` |
 | **Task** | An eval-language pair. Examples: `wordcount-cpp`, `wordcount-rs`, `rs274-js`. | Registered in `src/clispecbench/harness/task.py` |
 | **Eval harness** | The repo code that prepares prompts, runs agents, builds submissions, runs hidden tests, scores results, and records metadata. | `src/clispecbench/harness/`, `src/clispecbench/build/`, `src/clispecbench/cli.py` |
@@ -187,7 +187,9 @@ MSYS_NO_PATHCONV=1 bash scripts/build-docker-images.sh
 This creates `clispecbench-base:latest` (Ubuntu 24.04, CMake, g++-14, pytest)
 and CLI agent images (`clispecbench-claude-code`,
 `clispecbench-codex-cli`, `clispecbench-copilot-cli`,
-`clispecbench-gemini-cli`) that extend it.
+`clispecbench-gemini-cli`) that extend it. Additional Dockerfiles under
+`docker/agents/`, such as `antigravity-cli`, are auto-discovered by the
+build script.
 
 #### 4. Authenticate CLI agents
 
@@ -215,6 +217,20 @@ gemini                # Gemini CLI - Select "Sign in with Google"
 GitHub Copilot CLI can also consume `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or
 `GITHUB_TOKEN`, but `gh auth login` is the default host-auth path used by the
 harness and smoke tests.
+
+Antigravity CLI support is experimental and should not be used for counted
+CLISpecBench results yet. The current `agy` CLI runs noninteractively with
+`--print`, but version 1.0.2 does not expose a model flag, prompt-file flag, or
+machine-readable output mode. CLISpecBench records `gemini-3.5-flash` as the
+default model label and tells Antigravity to read the mounted
+`/workspace/prompt.md`. Public reports and local smoke tests show that 1.0.2 can
+authenticate and generate a model response while still exiting 0 with empty
+captured stdout in non-TTY/subprocess mode, so the adapter remains diagnostic.
+The CLI uses file-based token storage when it detects a container, and 1.0.2
+appears to improve some WSL auth-persistence cases, but Windows Credential
+Manager auth is still not portable into Linux Docker. The Docker auth smoke test
+may fail with an authentication timeout or empty output until upstream provides
+a reliable headless `--print` path such as stdout, JSON, or `--output`.
 
 To verify auth works end-to-end inside containers, see the **Auth smoke
 tests** sub-section under [Running Tests](#running-tests).
@@ -333,6 +349,7 @@ MSYS_NO_PATHCONV=1 bash scripts/smoke-test-claude.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-codex.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-copilot.sh
 MSYS_NO_PATHCONV=1 bash scripts/smoke-test-gemini.sh
+MSYS_NO_PATHCONV=1 bash scripts/smoke-test-antigravity.sh
 OPENROUTER_API_KEY=... MSYS_NO_PATHCONV=1 bash scripts/smoke-test-opencode.sh
 ```
 

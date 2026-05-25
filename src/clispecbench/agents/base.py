@@ -128,6 +128,11 @@ class AgentAdapter(ABC):
         return []
 
     @property
+    def requires_tty(self) -> bool:
+        """Whether this CLI needs a pseudo-TTY for correct noninteractive output."""
+        return False
+
+    @property
     def model(self) -> str | None:
         """Model identifier for this run (e.g. ``"opus"``).
 

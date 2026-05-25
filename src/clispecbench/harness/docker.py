@@ -153,6 +153,7 @@ class ContainerConfig:
     mem_limit: str = DEFAULT_MEM_LIMIT
     cpu_count: int = DEFAULT_CPU_COUNT
     network_mode: str = "bridge"
+    tty: bool = False
 
 
 @dataclass
@@ -214,6 +215,7 @@ class DockerSandbox:
             nano_cpus=config.cpu_count * 10**9,
             network_mode=config.network_mode,
             working_dir=str(CONTAINER_WORKSPACE),
+            tty=config.tty,
             detach=True,
         )
         self._container = container

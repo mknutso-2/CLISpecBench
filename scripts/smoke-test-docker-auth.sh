@@ -16,6 +16,7 @@
 #   wsl -d Ubuntu -- bash /mnt/c/Git/CLISpecBench/scripts/smoke-test-docker-auth.sh
 #
 # Run a single agent:
+#   bash scripts/smoke-test-antigravity.sh
 #   bash scripts/smoke-test-claude.sh
 #   bash scripts/smoke-test-codex.sh
 #   bash scripts/smoke-test-copilot.sh

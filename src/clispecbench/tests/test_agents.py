@@ -8,6 +8,7 @@ from pathlib import Path, PurePosixPath
 
 import pytest
 
+from clispecbench.agents.antigravity_cli import AntigravityCLIAdapter
 from clispecbench.agents.claude_code import ClaudeCodeAdapter
 from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
@@ -38,6 +39,7 @@ class TestAgentRegistry:
             assert (REPO_ROOT / script_path).is_file()
 
     def test_benchmark_cost_preference_is_registered(self) -> None:
+        assert get_agent_spec("antigravity-cli").benchmark_cost_preference == "reported"
         assert get_agent_spec("claude-code").benchmark_cost_preference == "estimated"
         assert get_agent_spec("codex-cli").benchmark_cost_preference == "reported"
         assert get_agent_spec("opencode").benchmark_cost_preference == "reported"
@@ -103,6 +105,59 @@ class TestGeminiCLICredentialMounts:
         assert "--yolo" in bash_script
         assert "--skip-trust" in bash_script
         assert "--output-format stream-json" in bash_script
+
+
+class TestAntigravityCLICredentialMounts:
+    def test_returns_empty_when_host_state_missing(self, tmp_path: Path) -> None:
+        adapter = AntigravityCLIAdapter()
+        mounts = adapter.credential_mounts(tmp_path)
+        assert mounts == {}
+
+    def test_mounts_existing_antigravity_state_dirs(self, tmp_path: Path) -> None:
+        gemini_dir = tmp_path / ".gemini"
+        (gemini_dir / "antigravity-cli").mkdir(parents=True)
+        (gemini_dir / "config").mkdir()
+
+        adapter = AntigravityCLIAdapter()
+        mounts = adapter.credential_mounts(tmp_path)
+
+        antigravity_key = (gemini_dir / "antigravity-cli").as_posix()
+        config_key = (gemini_dir / "config").as_posix()
+        assert mounts[antigravity_key]["bind"] == "/root/.gemini/antigravity-cli"
+        assert mounts[antigravity_key]["mode"] == "rw"
+        assert mounts[config_key]["bind"] == "/root/.gemini/config"
+        assert mounts[config_key]["mode"] == "rw"
+
+
+class TestAntigravityCLIEnvironment:
+    def test_configures_noninteractive_defaults(self) -> None:
+        adapter = AntigravityCLIAdapter()
+
+        env = adapter.environment({"GOOGLE_TOKEN": "test"})
+
+        assert env["GOOGLE_TOKEN"] == "test"
+        assert env["BROWSER"] == "/bin/true"
+        assert env["NO_COLOR"] == "1"
+        assert env["TERM"] == "dumb"
+
+    def test_invoke_command_points_at_prompt_file(self) -> None:
+        adapter = AntigravityCLIAdapter()
+
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+
+        bash_script = cmd[2]
+        assert "agy" in bash_script
+        assert "--dangerously-skip-permissions" in bash_script
+        assert "--print-timeout 24h" in bash_script
+        assert "--log-file /tmp/antigravity-cli.log" in bash_script
+        assert "--add-dir /workspace" in bash_script
+        assert "/workspace/prompt.md" in bash_script
+        assert "/workspace/output" in bash_script
+        assert "--model" not in bash_script
+        assert "$(cat" not in bash_script
 
 
 class TestCopilotCLICredentialMounts:
@@ -257,6 +312,22 @@ class TestModelAndEffort:
         assert "--yolo" in bash_script
         assert "--skip-trust" in bash_script
 
+    def test_antigravity_default_model_is_gemini_35_flash(self) -> None:
+        adapter = AntigravityCLIAdapter()
+        assert adapter.model == "gemini-3.5-flash"
+        assert adapter.effort is None
+
+    def test_antigravity_model_is_metadata_only_for_current_cli(self) -> None:
+        adapter = AntigravityCLIAdapter(model="gemini-3.5-flash", effort="high")
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+
+        assert adapter.model == "gemini-3.5-flash"
+        assert adapter.effort == "high"
+        assert "--model" not in cmd[2]
+
     def test_opencode_model_in_command(self) -> None:
         adapter = OpenCodeAdapter(model="openrouter/deepseek/deepseek-v4-pro", effort="max")
         cmd = adapter.invoke_command(
@@ -323,9 +394,16 @@ class TestTelemetryPaths:
         assert any("codex-events" in p for p in adapter.telemetry_paths)
         assert any("/root/.codex/sessions" == p for p in adapter.telemetry_paths)
 
+    def test_antigravity_has_log_paths(self) -> None:
+        adapter = AntigravityCLIAdapter()
+        assert "/tmp/antigravity-cli-events.log" in adapter.telemetry_paths
+        assert "/tmp/antigravity-cli.log" in adapter.telemetry_paths
+        assert adapter.requires_tty is True
+
     def test_gemini_has_no_telemetry_paths(self) -> None:
         adapter = GeminiCLIAdapter()
         assert adapter.telemetry_paths == []
+        assert adapter.requires_tty is False
 
     def test_copilot_has_otel_path(self) -> None:
         adapter = CopilotCLIAdapter()
@@ -826,6 +904,27 @@ class TestOpenCodeTokenUsage:
             [
                 json.dumps({"type": "text", "part": {"text": "All "}}),
                 json.dumps({"type": "text", "part": {"text": "done."}}),
+            ]
+        )
+
+        assert adapter.extract_last_agent_message(logs) == "All done."
+
+
+class TestAntigravityCLITokenUsage:
+    def test_parse_token_usage_returns_none(self, tmp_path: Path) -> None:
+        adapter = AntigravityCLIAdapter()
+        assert adapter.parse_token_usage(tmp_path, "hello") is None
+
+    def test_extract_last_agent_message_filters_auth_noise(self) -> None:
+        adapter = AntigravityCLIAdapter()
+        logs = "\n".join(
+            [
+                "Authentication required. Please visit the URL to log in:",
+                "https://accounts.google.com/o/oauth2/auth?state=test",
+                "Waiting for authentication (timeout 30s)...",
+                "Or, paste the authorization code here and press Enter:",
+                "Error: authentication interrupted.",
+                "All done.",
             ]
         )
 
