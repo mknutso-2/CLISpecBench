@@ -377,11 +377,17 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     );
   }
 
-  getDefaultSelectedPairs(pairs, getDefaultSelectedEvals(evals)).forEach((id) =>
+  const defaultSelectedEvals = getDefaultSelectedEvals(evals);
+  const defaultSelectedLanguages = languages;
+  getDefaultSelectedPairs(pairs, defaultSelectedEvals, defaultSelectedLanguages).forEach((id) =>
     STATE.selectedPairs.add(id),
   );
-  languages.forEach((lang) => STATE.selectedLanguages.add(lang));
-  getDefaultSelectedEvals(evals).forEach((evalName) => STATE.selectedEvals.add(evalName));
+  defaultSelectedLanguages.forEach((lang) => STATE.selectedLanguages.add(lang));
+  defaultSelectedEvals.forEach((evalName) => STATE.selectedEvals.add(evalName));
+  STATE.pairEligibilitySyncKey = getEvalLanguageSelectionKey(
+    defaultSelectedEvals,
+    defaultSelectedLanguages,
+  );
 
   if (previousView) {
     const preservedEvals = evals.filter((evalName) => previousView.selectedEvals.has(evalName));
@@ -428,18 +434,67 @@ function getDefaultSelectedEvals(evals) {
   return evals.includes('RS274') ? ['RS274'] : evals;
 }
 
-function getDefaultSelectedPairs(pairs, selectedEvals) {
-  if (!selectedEvals.includes('RS274')) return pairs;
+function getDefaultSelectedPairs(pairs, selectedEvals, selectedLanguages) {
+  return getEligiblePairsForEvalLanguages(pairs, selectedEvals, selectedLanguages);
+}
 
-  const rs274CountsByPair = new Map();
+function getEligiblePairsForEvalLanguages(pairs, selectedEvals, selectedLanguages) {
+  if (!selectedEvals.length || !selectedLanguages.length) return [];
+
+  const requiredCount = 3;
+  const selectedEvalSet = new Set(selectedEvals);
+  const selectedLanguageSet = new Set(selectedLanguages);
+  const countsByPairEvalLanguage = new Map();
   STATE.rows.forEach((row) => {
-    if (row.eval !== 'RS274') return;
+    if (!selectedEvalSet.has(row.eval) || !selectedLanguageSet.has(row.language)) return;
     const pairId = rowPairId(row);
-    rs274CountsByPair.set(pairId, (rs274CountsByPair.get(pairId) || 0) + 1);
+    const key = getPairEvalLanguageKey(pairId, row.eval, row.language);
+    countsByPairEvalLanguage.set(key, (countsByPairEvalLanguage.get(key) || 0) + 1);
   });
 
-  const eligiblePairs = pairs.filter((pairId) => (rs274CountsByPair.get(pairId) || 0) >= 12);
-  return eligiblePairs.length ? eligiblePairs : pairs;
+  return pairs.filter((pairId) =>
+    selectedEvals.every((evalName) =>
+      selectedLanguages.every(
+        (language) =>
+          (countsByPairEvalLanguage.get(getPairEvalLanguageKey(pairId, evalName, language)) || 0) >=
+          requiredCount,
+      ),
+    ),
+  );
+}
+
+function syncSelectedPairsForCurrentEvalLanguages() {
+  const selectedEvals = getSelectedEvalNames();
+  const selectedLanguages = getLanguages().filter((language) => STATE.selectedLanguages.has(language));
+  const nextKey = getEvalLanguageSelectionKey(selectedEvals, selectedLanguages);
+  if (STATE.pairEligibilitySyncKey === nextKey) return false;
+
+  const nextSelectedPairs = new Set(
+    getEligiblePairsForEvalLanguages(getPairs(), selectedEvals, selectedLanguages),
+  );
+  const changed = !setsHaveSameMembers(STATE.selectedPairs, nextSelectedPairs);
+  STATE.selectedPairs = nextSelectedPairs;
+  STATE.pairEligibilitySyncKey = nextKey;
+  return changed;
+}
+
+function getEvalLanguageSelectionKey(selectedEvals, selectedLanguages) {
+  return JSON.stringify({
+    evals: [...selectedEvals].sort(),
+    languages: [...selectedLanguages].sort(),
+  });
+}
+
+function getPairEvalLanguageKey(pairId, evalName, language) {
+  return JSON.stringify([pairId, evalName, language]);
+}
+
+function setsHaveSameMembers(left, right) {
+  if (left.size !== right.size) return false;
+  for (const item of left) {
+    if (!right.has(item)) return false;
+  }
+  return true;
 }
 
 function buildControls() {
@@ -975,6 +1030,10 @@ function syncErrorBarModeWithDefaults() {
 }
 
 function render() {
+  if (syncSelectedPairsForCurrentEvalLanguages()) {
+    renderPairList();
+  }
+
   clearError();
   syncViewModeControls();
   syncGraphTitle();
