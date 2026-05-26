@@ -377,7 +377,9 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     );
   }
 
-  pairs.forEach((id) => STATE.selectedPairs.add(id));
+  getDefaultSelectedPairs(pairs, getDefaultSelectedEvals(evals)).forEach((id) =>
+    STATE.selectedPairs.add(id),
+  );
   languages.forEach((lang) => STATE.selectedLanguages.add(lang));
   getDefaultSelectedEvals(evals).forEach((evalName) => STATE.selectedEvals.add(evalName));
 
@@ -424,6 +426,20 @@ function initSelectionDefaults({ preserveView = false } = {}) {
 
 function getDefaultSelectedEvals(evals) {
   return evals.includes('RS274') ? ['RS274'] : evals;
+}
+
+function getDefaultSelectedPairs(pairs, selectedEvals) {
+  if (!selectedEvals.includes('RS274')) return pairs;
+
+  const rs274CountsByPair = new Map();
+  STATE.rows.forEach((row) => {
+    if (row.eval !== 'RS274') return;
+    const pairId = rowPairId(row);
+    rs274CountsByPair.set(pairId, (rs274CountsByPair.get(pairId) || 0) + 1);
+  });
+
+  const eligiblePairs = pairs.filter((pairId) => (rs274CountsByPair.get(pairId) || 0) >= 12);
+  return eligiblePairs.length ? eligiblePairs : pairs;
 }
 
 function buildControls() {
