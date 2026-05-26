@@ -379,11 +379,13 @@ function initSelectionDefaults({ preserveView = false } = {}) {
 
   pairs.forEach((id) => STATE.selectedPairs.add(id));
   languages.forEach((lang) => STATE.selectedLanguages.add(lang));
-  evals.forEach((evalName) => STATE.selectedEvals.add(evalName));
+  getDefaultSelectedEvals(evals).forEach((evalName) => STATE.selectedEvals.add(evalName));
 
   if (previousView) {
     const preservedEvals = evals.filter((evalName) => previousView.selectedEvals.has(evalName));
-    STATE.selectedEvals = new Set(preservedEvals.length ? preservedEvals : evals);
+    STATE.selectedEvals = new Set(
+      preservedEvals.length ? preservedEvals : getDefaultSelectedEvals(evals),
+    );
     STATE.selectedEvalVersions = mergeVersionSelectionWithDefaults(previousView.selectedEvalVersions);
     STATE.expandedVersionEvals = new Set(
       Array.from(previousView.expandedVersionEvals).filter((evalName) => evals.includes(evalName)),
@@ -418,6 +420,10 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.tableShowExcluded = false;
     STATE.controlsCollapsed = false;
   }
+}
+
+function getDefaultSelectedEvals(evals) {
+  return evals.includes('RS274') ? ['RS274'] : evals;
 }
 
 function buildControls() {
