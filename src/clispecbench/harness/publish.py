@@ -199,11 +199,17 @@ def _unpublishable_stop_reason(
         if reason:
             return reason
 
+    # Classify on auto-populated fields only — the agent's own last message
+    # and the operator's freeform notes. Do NOT classify the human editorial
+    # (`status`, `last_message`): `status` is already validated against
+    # VALID_STATUSES so it cannot smuggle an infra signal in, and
+    # `last_message` is post-hoc description that often contains bare
+    # numbers like a failing-test count of 401 or 403 — which would match
+    # the HTTP auth-failure pattern as a false positive. The infra
+    # disqualification signal lives in what the agent actually said.
     candidates = [
         result.metadata.agent_last_message or "",
         result.metadata.notes or "",
-        status,
-        last_message,
     ]
     for candidate in candidates:
         reason = _classify_unpublishable_stop_message(candidate)
