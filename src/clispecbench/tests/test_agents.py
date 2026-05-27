@@ -108,18 +108,10 @@ class TestGeminiCLICredentialMounts:
 
 
 class TestAntigravityCLICredentialMounts:
-    def test_returns_empty_when_host_state_missing(self, tmp_path: Path) -> None:
+    def test_mounts_expected_antigravity_state_dirs_without_stat(self, tmp_path: Path) -> None:
         adapter = AntigravityCLIAdapter()
         mounts = adapter.credential_mounts(tmp_path)
-        assert mounts == {}
-
-    def test_mounts_existing_antigravity_state_dirs(self, tmp_path: Path) -> None:
         gemini_dir = tmp_path / ".gemini"
-        (gemini_dir / "antigravity-cli").mkdir(parents=True)
-        (gemini_dir / "config").mkdir()
-
-        adapter = AntigravityCLIAdapter()
-        mounts = adapter.credential_mounts(tmp_path)
 
         antigravity_key = (gemini_dir / "antigravity-cli").as_posix()
         config_key = (gemini_dir / "config").as_posix()
@@ -317,16 +309,17 @@ class TestModelAndEffort:
         assert adapter.model == "gemini-3.5-flash"
         assert adapter.effort is None
 
-    def test_antigravity_model_is_metadata_only_for_current_cli(self) -> None:
-        adapter = AntigravityCLIAdapter(model="gemini-3.5-flash", effort="high")
+    def test_antigravity_ignores_unsupported_model_and_effort_overrides(self) -> None:
+        adapter = AntigravityCLIAdapter(model="gemini-2.5-pro", effort="high")
         cmd = adapter.invoke_command(
             PurePosixPath("/workspace/prompt.md"),
             PurePosixPath("/workspace"),
         )
 
         assert adapter.model == "gemini-3.5-flash"
-        assert adapter.effort == "high"
+        assert adapter.effort is None
         assert "--model" not in cmd[2]
+        assert "--effort" not in cmd[2]
 
     def test_opencode_model_in_command(self) -> None:
         adapter = OpenCodeAdapter(model="openrouter/deepseek/deepseek-v4-pro", effort="max")

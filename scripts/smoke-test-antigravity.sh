@@ -3,10 +3,14 @@
 #
 # Prerequisites:
 #   - Docker images built (scripts/build-docker-images.sh antigravity-cli)
-#   - Antigravity CLI auth available to the container. Version 1.0.2 improves
-#     some WSL auth-persistence cases, but Windows Credential Manager auth is
-#     still not portable into Linux Docker and --print output remains unreliable
-#     when stdout is captured by a non-TTY subprocess.
+#   - Antigravity CLI auth available to the container. On Windows, host-side
+#     `agy` login stores OAuth in Credential Manager. Docker auth currently
+#     requires the equivalent JSON at
+#     ~/.gemini/antigravity-cli/antigravity-oauth-token, which contains a
+#     plaintext OAuth refresh token and must not be committed or logged.
+#   - Version 1.0.2 still cannot force model/effort by flag, does not expose
+#     token usage, and --print output remains unreliable when stdout is captured
+#     by a non-TTY subprocess.
 #
 # Run from Git Bash:
 #   bash scripts/smoke-test-antigravity.sh

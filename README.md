@@ -239,18 +239,36 @@ GitHub Copilot CLI can also consume `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, or
 harness and smoke tests.
 
 Antigravity CLI support is experimental and should not be used for counted
-CLISpecBench results yet. The current `agy` CLI runs noninteractively with
-`--print`, but version 1.0.2 does not expose a model flag, prompt-file flag, or
-machine-readable output mode. CLISpecBench records `gemini-3.5-flash` as the
-default model label and tells Antigravity to read the mounted
-`/workspace/prompt.md`. Public reports and local smoke tests show that 1.0.2 can
-authenticate and generate a model response while still exiting 0 with empty
-captured stdout in non-TTY/subprocess mode, so the adapter remains diagnostic.
+CLISpecBench results yet. With a TTY and the credential workaround below, `agy`
+1.0.2 can run CLISpecBench tasks end-to-end: it writes implementation files
+under `/workspace/output`, the harness builds them, runs hidden tests, and writes
+normal `result.json` correctness scores. The adapter records
+`gemini-3.5-flash` as the fixed default model label, but 1.0.2 does not expose
+model, effort/reasoning, prompt-file, JSON, or output-file flags. Post-run logs
+can verify labels such as `Gemini 3.5 Flash (Medium)`, but the harness cannot
+force a model or reasoning level per invocation.
+
+Antigravity's stdout remains unreliable outside a TTY. Public reports and local
+smoke tests show that `agy --print` can authenticate, complete the model call,
+and exit 0 while emitting zero captured stdout in non-TTY/subprocess mode. The
+harness therefore runs Antigravity with a TTY and grades the files written under
+`/workspace/output`; `transcript.jsonl` is only the captured TTY/stdout text. A
+richer Antigravity JSONL transcript is written under
+`~/.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/`, but
+the harness does not yet copy the matching conversation into the run directory
+or scrub account/auth metadata from logs. Antigravity also does not currently
+provide parseable token usage, so `token_usage` and estimated cost are `null`.
+
 The CLI uses file-based token storage when it detects a container, and 1.0.2
 appears to improve some WSL auth-persistence cases, but Windows Credential
-Manager auth is still not portable into Linux Docker. The Docker auth smoke test
-may fail with an authentication timeout or empty output until upstream provides
-a reliable headless `--print` path such as stdout, JSON, or `--output`.
+Manager auth is not portable into Linux Docker automatically. A local workaround
+is to seed `~/.gemini/antigravity-cli/antigravity-oauth-token` from the Windows
+Credential Manager `gemini:antigravity` entry before mounting
+`~/.gemini/antigravity-cli`; that file contains a plaintext OAuth refresh token
+and must not be committed or logged. The Docker auth smoke test may fail with an
+authentication timeout if that token file is absent, or with empty output until
+upstream provides a reliable headless `--print` path such as stdout, JSON, or
+`--output`.
 
 To verify auth works end-to-end inside containers, see the **Auth smoke
 tests** sub-section under [Running Tests](#running-tests).

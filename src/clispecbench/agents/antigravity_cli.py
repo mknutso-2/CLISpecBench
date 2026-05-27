@@ -38,12 +38,13 @@ _AUTH_NOISE_MARKERS = (
 class AntigravityCLIAdapter(AgentAdapter):
     """Adapter for Google Antigravity CLI (``agy``).
 
-    Antigravity CLI 1.0.2 does not expose a noninteractive model flag or prompt
-    file flag. The adapter records the requested model in run metadata, then
-    sends a short instruction that points the agent at CLISpecBench's mounted
-    ``prompt.md``. This avoids shell argument limits for large eval docs. The
-    adapter still requires a TTY because 1.0.2 can generate a response but emit
-    zero captured stdout when ``agy --print`` is run by a non-TTY subprocess.
+    Antigravity CLI 1.0.2 does not expose noninteractive model, effort, or
+    prompt-file flags. The adapter records the fixed default model label in run
+    metadata, ignores unsupported overrides, then sends a short instruction that
+    points the agent at CLISpecBench's mounted ``prompt.md``. This avoids shell
+    argument limits for large eval docs. The adapter still requires a TTY
+    because 1.0.2 can generate a response but emit zero captured stdout when
+    ``agy --print`` is run by a non-TTY subprocess.
     """
 
     def __init__(
@@ -51,8 +52,20 @@ class AntigravityCLIAdapter(AgentAdapter):
         model: str | None = None,
         effort: str | None = None,
     ) -> None:
-        self._model = model
-        self._effort = effort
+        if model and model != DEFAULT_MODEL:
+            log.warning(
+                "Antigravity CLI does not expose a model flag; ignoring unsupported "
+                "model override %r and recording %r",
+                model,
+                DEFAULT_MODEL,
+            )
+        if effort:
+            log.warning(
+                "Antigravity CLI does not expose an effort flag; ignoring unsupported "
+                "effort override %r",
+                effort,
+            )
+        self._model = DEFAULT_MODEL
 
     @property
     def name(self) -> str:
@@ -76,15 +89,20 @@ class AntigravityCLIAdapter(AgentAdapter):
         return env
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
+        # host_home may already be a WSL path on Windows, which Windows Python
+        # cannot reliably stat. Mount the expected state dirs consistently and
+        # let Docker surface missing-source problems if auth has not been set up.
         gemini_dir = host_home / ".gemini"
-        mounts: dict[str, dict[str, str]] = {}
-        for source, bind in (
-            (gemini_dir / "antigravity-cli", "/root/.gemini/antigravity-cli"),
-            (gemini_dir / "config", "/root/.gemini/config"),
-        ):
-            if source.exists():
-                mounts[source.as_posix()] = {"bind": bind, "mode": "rw"}
-        return mounts
+        return {
+            (gemini_dir / "antigravity-cli").as_posix(): {
+                "bind": "/root/.gemini/antigravity-cli",
+                "mode": "rw",
+            },
+            (gemini_dir / "config").as_posix(): {
+                "bind": "/root/.gemini/config",
+                "mode": "rw",
+            },
+        }
 
     @property
     def model(self) -> str | None:
@@ -92,7 +110,7 @@ class AntigravityCLIAdapter(AgentAdapter):
 
     @property
     def effort(self) -> str | None:
-        return self._effort
+        return None
 
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         flags = [

@@ -27,26 +27,52 @@ the runs.
 
 ## Antigravity CLI Status
 
-Antigravity CLI (`agy`) support is experimental as of 1.0.2. The upstream
-1.0.1 changelog says OAuth token persistence and authentication hangs were
-fixed, and public WSL reports indicate 1.0.2 improves some credential
-persistence cases. This does not yet make `agy` suitable for counted
-CLISpecBench runs.
+Antigravity CLI (`agy`) support is experimental as of 1.0.2. With a TTY and the
+credential workaround below, `agy` can run CLISpecBench tasks end-to-end: it
+writes implementation files under `/workspace/output`, the harness builds them,
+runs hidden tests, and writes normal `result.json` correctness scores. This is
+enough for diagnostic correctness-only experiments, but not yet enough for
+counted CLISpecBench results.
 
-The remaining blocker is headless output capture. Public issue reports and
+The remaining blockers are first-class run control and publication-quality
+artifacts. Version 1.0.2 does not expose model, effort/reasoning, prompt-file,
+JSON, or output-file flags. The adapter therefore records `gemini-3.5-flash` as
+the fixed default model label and ignores unsupported model/effort overrides;
+post-run logs can verify labels such as `Gemini 3.5 Flash (Medium)`, but the
+harness cannot force a model or reasoning level per invocation. Antigravity does
+not currently provide parseable token usage, so `token_usage` and estimated cost
+remain `null`.
+
+Headless output capture is also still unreliable. Public issue reports and
 local smoke tests show that `agy --print` can authenticate, complete the model
 call, and then exit 0 while emitting zero bytes to captured stdout when invoked
 from a non-TTY subprocess. Logs show the response is generated internally, so
-this is an output-path problem rather than only an auth problem. Treat empty
-Antigravity outputs as `infra_agent_cli` unless a future upstream release
-provides a reliable headless mode such as stdout capture, JSON, or `--output`.
+this is an output-path problem rather than only an auth problem. The harness
+uses a TTY to avoid this for correctness runs, but empty Antigravity outputs
+from non-TTY smoke tests should still be treated as `infra_agent_cli` unless a
+future upstream release provides a reliable headless mode such as stdout
+capture, JSON, or `--output`.
+
+Transcripts need separate handling before publication. The run directory's
+`transcript.jsonl` is only captured TTY/stdout text. Antigravity writes richer
+JSONL transcripts under
+`~/.gemini/antigravity-cli/brain/<conversation-id>/.system_generated/logs/`,
+including user input, tool calls, file views, command results, and `thinking`
+fields, but the harness does not yet copy the matching conversation into each
+run directory or scrub account/auth metadata from saved logs.
 
 Credential behavior is also not equivalent to Gemini CLI. In Linux containers,
 `agy` uses file-based token storage when it detects the container environment,
-but Windows Credential Manager state from a host-side `agy` login is not
-portable into Docker by mounting `~/.gemini/antigravity-cli` alone. The
-Antigravity smoke test remains diagnostic and may fail with an auth timeout or
-empty output on current releases.
+while a Windows host-side `agy` login stores OAuth state in Windows Credential
+Manager under the `gemini:antigravity` target. A local workaround is to seed the
+Credential Manager JSON into
+`~/.gemini/antigravity-cli/antigravity-oauth-token` before mounting
+`~/.gemini/antigravity-cli` into Docker; this passed the container smoke test
+locally on 1.0.2 and lets `agy` authenticate inside the harness container. That
+file contains a plaintext OAuth refresh token, so keep it out of the repo, logs,
+and shared artifacts. The Antigravity smoke test remains diagnostic and may
+still fail with an auth timeout if the token file is absent, or empty output on
+current releases when stdout is captured without a TTY.
 
 ## Network Access Audit and Study Consistency
 
