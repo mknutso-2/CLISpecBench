@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -346,13 +347,18 @@ def main() -> None:
     published_root = args.published_root.resolve()
     web_dir = args.output.resolve().parent
     rows = []
-    excluded = []
     omitted = []
+    invariant_violations: list[tuple[Path, str, str]] = []
 
-    # The set of non-"completed" editorial statuses that still count as
-    # Included is the canonical model_* taxonomy from
-    # clispecbench.harness.status — see imports. Anything else (Excluded
-    # statuses, freeform legacy labels) falls through to the excluded bucket.
+    # Every published row must be either exit_reason="completed" or carry an
+    # editorial status in the canonical model_* taxonomy from
+    # clispecbench.harness.status. The publish CLI enforces this at the gate,
+    # so a row that fails this check here means one of:
+    #   - a legacy file was published before the gate existed,
+    #   - someone bypassed the gate (hand-edit, manual file copy, etc.),
+    #   - the gate itself has a hole.
+    # Any of those is a real bug — fail loudly here so the dashboard can't
+    # silently drift behind a broken state.
     for path in sorted(published_root.rglob("run*.json")):
         if "web" in path.relative_to(published_root).parts:
             continue
@@ -366,10 +372,36 @@ def main() -> None:
         ):
             rows.append(row)
         else:
-            excluded.append(row)
+            invariant_violations.append(
+                (path, row.get("exit_reason") or "", row.get("status") or "")
+            )
+
+    if invariant_violations:
+        print(
+            "ERROR: published_results contains rows that are neither "
+            "exit_reason=completed nor a recognized model_* status.\n"
+            "These violate the policy that the publish CLI gate exists to "
+            "prevent. Resolve before regenerating the dashboard:\n",
+            file=sys.stderr,
+        )
+        for path, exit_reason, status in invariant_violations:
+            rel = path.relative_to(published_root)
+            print(
+                f"  {rel}: exit_reason={exit_reason!r}, editorial.status={status!r}",
+                file=sys.stderr,
+            )
+        print(
+            "\nValid model_* statuses: " + ", ".join(sorted(INCLUDED_NON_COMPLETED_STATUSES)),
+            file=sys.stderr,
+        )
+        print(
+            "See .claude/skills/run-eval/SKILL.md and "
+            "clispecbench.harness.status for the canonical taxonomy.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
     rows.sort(key=sort_key)
-    excluded.sort(key=sort_key)
     payload = {
         "schema_version": "1.0",
         "generated_at": datetime.now().astimezone().isoformat(),
@@ -379,18 +411,16 @@ def main() -> None:
         "rows_are_official_completed_runs": True,
         "omits_user_environment_stops": True,
         "completed_count": len(rows),
-        "excluded_count": len(excluded),
         "omitted_count": len(omitted),
         "rows": rows,
-        "excluded_runs": excluded,
     }
     args.output.write_text(
         json.dumps(payload, indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
     )
     print(
-        f"Wrote {len(rows)} completed rows, {len(excluded)} excluded rows, "
-        f"and omitted {len(omitted)} user/environment stops to {args.output}"
+        f"Wrote {len(rows)} completed rows and omitted "
+        f"{len(omitted)} user/environment stops to {args.output}"
     )
 
 

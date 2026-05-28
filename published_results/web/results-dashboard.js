@@ -15,7 +15,7 @@ const AXIS_OPTIONS = [
 ];
 
 const COLOR_MODE_OPTIONS = [
-  { id: 'pair', label: 'Agent / Model Pair' },
+  { id: 'pair', label: 'Agent / Model / Effort' },
   { id: 'language', label: 'Language' },
   { id: 'agent', label: 'Agent' },
 ];
@@ -47,7 +47,7 @@ const ERROR_BAR_OPTIONS = [
 const TABLE_SORT_OPTIONS = {
   summary: [
     { id: '', label: 'No ordering' },
-    { id: 'pair', label: 'Agent/model' },
+    { id: 'pair', label: 'Agent/model/effort' },
     { id: 'eval_language', label: 'Eval-Lang' },
     { id: 'runs', label: 'Runs' },
     { id: 'percent', label: 'Pass rate' },
@@ -56,12 +56,11 @@ const TABLE_SORT_OPTIONS = {
     { id: 'tokens', label: 'Tokens' },
     { id: 'tools', label: 'Tools' },
     { id: 'loc', label: 'LOC' },
-    { id: 'excluded', label: 'Excluded/error', requiresExcluded: true },
   ],
   runs: [
     { id: '', label: 'No ordering' },
     { id: 'eval_language', label: 'Eval-Lang' },
-    { id: 'pair', label: 'Agent/model' },
+    { id: 'pair', label: 'Agent/model/effort' },
     { id: 'run', label: 'Run' },
     { id: 'version', label: 'Version' },
     { id: 'status', label: 'Agent stop' },
@@ -204,7 +203,6 @@ const LAST_MESSAGE_CACHE = new Map();
 
 const STATE = {
   rows: [],
-  excludedRows: [],
   selectedPairs: new Set(),
   selectedLanguages: new Set(),
   selectedEvals: new Set(),
@@ -222,7 +220,6 @@ const STATE = {
   tableGroupBy: 'pair',
   tableSortBy: '',
   tableSortDirection: 'asc',
-  tableShowExcluded: false,
   controlsCollapsed: false,
   hiddenColorKeys: new Set(),
 };
@@ -249,7 +246,6 @@ const tableModeSelect = document.getElementById('table-mode');
 const tableGroupBySelect = document.getElementById('table-group-by');
 const tableSortBySelect = document.getElementById('table-sort-by');
 const tableSortDirectionSelect = document.getElementById('table-sort-direction');
-const tableShowExcludedInput = document.getElementById('table-show-excluded');
 const graphControls = Array.from(document.querySelectorAll('.graph-control'));
 const tableControls = Array.from(document.querySelectorAll('.table-control'));
 const tableSummaryControls = Array.from(document.querySelectorAll('.table-summary-control'));
@@ -292,7 +288,6 @@ document.addEventListener('DOMContentLoaded', () => {
     !tableGroupBySelect ||
     !tableSortBySelect ||
     !tableSortDirectionSelect ||
-    !tableShowExcludedInput ||
     !graphTitleEl ||
     !graphPanel ||
     !tablePanel ||
@@ -328,13 +323,11 @@ function initializeDashboard(data, sourceName, { preserveView = false } = {}) {
     throw new Error('No result rows were found in the data source.');
   }
   STATE.rows = dataset.rows;
-  STATE.excludedRows = dataset.excludedRows;
   LAST_MESSAGE_CACHE.clear();
   initSelectionDefaults({ preserveView });
   buildControls();
   render();
-  const excludedSuffix = STATE.excludedRows.length ? ` and ${STATE.excludedRows.length} excluded/error runs` : '';
-  statusEl.textContent = `Loaded ${STATE.rows.length} official runs${excludedSuffix} from ${sourceName || DATA_PATH}.`;
+  statusEl.textContent = `Loaded ${STATE.rows.length} official runs from ${sourceName || DATA_PATH}.`;
   clearError();
 }
 
@@ -356,7 +349,6 @@ function initSelectionDefaults({ preserveView = false } = {}) {
         tableGroupBy: STATE.tableGroupBy,
         tableSortBy: STATE.tableSortBy,
         tableSortDirection: STATE.tableSortDirection,
-        tableShowExcluded: STATE.tableShowExcluded,
         controlsCollapsed: STATE.controlsCollapsed,
       }
     : null;
@@ -410,7 +402,6 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.tableGroupBy = previousView.tableGroupBy;
     STATE.tableSortBy = previousView.tableSortBy;
     STATE.tableSortDirection = previousView.tableSortDirection;
-    STATE.tableShowExcluded = previousView.tableShowExcluded;
     STATE.controlsCollapsed = previousView.controlsCollapsed;
   } else {
     STATE.viewMode = 'graph';
@@ -425,7 +416,6 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.tableGroupBy = 'pair';
     STATE.tableSortBy = '';
     STATE.tableSortDirection = 'asc';
-    STATE.tableShowExcluded = false;
     STATE.controlsCollapsed = false;
   }
 }
@@ -695,12 +685,6 @@ function attachEvents() {
     render();
   });
 
-  tableShowExcludedInput.addEventListener('change', () => {
-    STATE.tableShowExcluded = tableShowExcludedInput.checked;
-    renderTableControls();
-    render();
-  });
-
   let resizeTimer = null;
   const requestRerender = () => {
     clearTimeout(resizeTimer);
@@ -958,8 +942,6 @@ function renderTableControls() {
   tableModeSelect.value = STATE.tableMode;
   tableGroupBySelect.value = STATE.tableGroupBy;
   tableSortDirectionSelect.value = STATE.tableSortDirection;
-  tableShowExcludedInput.checked = STATE.tableShowExcluded;
-
   tableSortBySelect.replaceChildren();
   const sortOptions = getTableSortOptions(STATE.tableMode);
   sortOptions.forEach((optionDef) => {
@@ -984,9 +966,7 @@ function renderTableControls() {
 
 function getTableSortOptions(tableMode = STATE.tableMode) {
   return (TABLE_SORT_OPTIONS[tableMode] || []).filter(
-    (option) =>
-      (!option.requiresExcluded || STATE.tableShowExcluded) &&
-      !(shouldHideEvalLanguageColumn() && option.id === 'eval_language'),
+    (option) => !(shouldHideEvalLanguageColumn() && option.id === 'eval_language'),
   );
 }
 
@@ -1250,20 +1230,10 @@ function buildSummaryTableRows() {
   getRowsForCurrentSelection(STATE.rows).forEach((row) => {
     const group = getSummaryGroup(row);
     if (!groups.has(group.key)) {
-      groups.set(group.key, { ...group, rows: [], excludedRows: [] });
+      groups.set(group.key, { ...group, rows: [] });
     }
     groups.get(group.key).rows.push(row);
   });
-
-  if (STATE.tableShowExcluded) {
-    getRowsForCurrentSelection(STATE.excludedRows).forEach((row) => {
-      const group = getSummaryGroup(row);
-      if (!groups.has(group.key)) {
-        groups.set(group.key, { ...group, rows: [], excludedRows: [] });
-      }
-      groups.get(group.key).excludedRows.push(row);
-    });
-  }
 
   return Array.from(groups.values()).map((group) => {
     const summaries = summarizePointDetails(group.rows);
@@ -1279,8 +1249,6 @@ function buildSummaryTableRows() {
       languageLabel,
       evalLanguageLabel,
       runs: group.rows.length,
-      excludedRuns: group.excludedRows.length,
-      statusSummary: formatStatusBreakdown(group.excludedRows),
       evals,
       languages,
       summaries,
@@ -1294,7 +1262,6 @@ function buildSummaryTableRows() {
         tokens: summaries.tokens_total?.mean,
         tools: summaries.tools?.mean,
         loc: summaries.loc?.mean,
-        excluded: group.excludedRows.length,
       },
     };
   });
@@ -1317,23 +1284,10 @@ function getSummaryGroup(row) {
 }
 
 function buildRunTableRows() {
-  const rows = getRowsForCurrentSelection(STATE.rows).map((row) => ({
+  return getRowsForCurrentSelection(STATE.rows).map((row) => ({
     ...row,
-    isExcluded: false,
     sortValues: getRunSortValues(row),
   }));
-
-  if (STATE.tableShowExcluded) {
-    getRowsForCurrentSelection(STATE.excludedRows).forEach((row) => {
-      rows.push({
-        ...row,
-        isExcluded: true,
-        sortValues: getRunSortValues({ ...row, isExcluded: true }),
-      });
-    });
-  }
-
-  return rows;
 }
 
 function getRunSortValues(row) {
@@ -1358,7 +1312,7 @@ function getRunSortValues(row) {
 function getRunStatusLabel(row) {
   const stopLabel = firstPresent(row.agent_stop_label, '');
   if (stopLabel) return stopLabel;
-  const exitReason = firstPresent(row.exit_reason, row.isExcluded ? 'excluded' : 'completed');
+  const exitReason = firstPresent(row.exit_reason, 'completed');
   if (exitReason === 'completed') return 'Finished';
   return firstPresent(
     row.status,
@@ -1370,7 +1324,7 @@ function getRunStatusLabel(row) {
 
 function getRunStatusTitle(row) {
   const stopLabel = getRunStatusLabel(row);
-  const exitReason = firstPresent(row.exit_reason, row.isExcluded ? 'excluded' : 'completed');
+  const exitReason = firstPresent(row.exit_reason, 'completed');
   const failureClass = firstPresent(row.failure_class, '');
   const stopReason = firstPresent(row.agent_stop_reason, '');
   const stopMessage = firstPresent(row.agent_stop_message, '');
@@ -1389,19 +1343,6 @@ function getRunStatusTitle(row) {
   return parts.join('\n');
 }
 
-function formatStatusBreakdown(rows) {
-  if (!rows.length) return '';
-  const counts = new Map();
-  rows.forEach((row) => {
-    const status = getRunStatusLabel({ ...row, isExcluded: true });
-    counts.set(status, (counts.get(status) || 0) + 1);
-  });
-  return Array.from(counts.entries())
-    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-    .map(([status, count]) => `${status}: ${count}`)
-    .join('; ');
-}
-
 function getRowsForCurrentSelection(rows) {
   return rows.filter((row) => {
     if (!STATE.selectedEvals.has(row.eval)) return false;
@@ -1416,7 +1357,7 @@ function getSummaryTableColumns() {
   const columns = [
     {
       key: 'pair',
-      label: 'Agent / Model',
+      label: 'Agent / Model / Effort',
       render: (row) => formatAgentModelDisplay(row.pairId),
       title: (row) => row.pairId,
     },
@@ -1464,15 +1405,6 @@ function getSummaryTableColumns() {
       render: (row) => formatSummaryMetric('loc', row.summaries.loc),
     },
   ];
-  if (STATE.tableShowExcluded) {
-    columns.splice(3, 0, {
-      key: 'excluded',
-      label: 'Excluded',
-      numeric: true,
-      render: (row) => (row.excludedRuns ? formatCount(row.excludedRuns) : ''),
-      title: (row) => row.statusSummary,
-    });
-  }
   return filterVisibleTableColumns(columns);
 }
 
@@ -1486,7 +1418,7 @@ function getRunTableColumns() {
     },
     {
       key: 'pair',
-      label: 'Agent / Model',
+      label: 'Agent / Model / Effort',
       render: (row) => formatAgentModelDisplay(rowPairId(row)),
       title: (row) => rowPairId(row),
     },
@@ -1730,24 +1662,46 @@ function abbreviateAgent(agent) {
 }
 
 function abbreviateModel(model) {
-  const normalized = String(model || '').toLowerCase();
+  const { baseModel, effort } = splitModelEffortLabel(model);
+  const normalized = String(baseModel || '').toLowerCase();
+  const withEffort = (label) => (effort ? `${label} (${abbreviateEffort(effort)})` : label);
   const claudeMatch = normalized.match(/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)/);
   if (claudeMatch) {
-    return `${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${claudeMatch[3]}`;
+    return withEffort(`${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${claudeMatch[3]}`);
   }
   const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
   if (gptMatch) {
     const suffix = gptMatch[2] === 'mini' ? '-m' : gptMatch[2] === 'codex' ? '-c' : '';
-    return `${gptMatch[1]}${suffix}`;
+    return withEffort(`${gptMatch[1]}${suffix}`);
   }
   const geminiMatch = normalized.match(/^gemini-(\d+(?:\.\d+)?)(?:-(flash|pro))?/);
   if (geminiMatch) {
     const version = geminiMatch[1].includes('.') ? geminiMatch[1] : `${geminiMatch[1]}.0`;
-    if (geminiMatch[2] === 'flash') return `${version}-f`;
-    if (geminiMatch[2] === 'pro') return `${version}-p`;
-    return version;
+    if (geminiMatch[2] === 'flash') return withEffort(`${version}-f`);
+    if (geminiMatch[2] === 'pro') return withEffort(`${version}-p`);
+    return withEffort(version);
   }
-  return model || 'n/a';
+  return withEffort(baseModel || 'n/a');
+}
+
+function splitModelEffortLabel(model) {
+  const value = String(model || '');
+  const match = value.match(/^(.*) \(([^)]+)\)$/);
+  if (!match) return { baseModel: value, effort: '' };
+  return { baseModel: match[1], effort: match[2] };
+}
+
+function abbreviateEffort(effort) {
+  const normalized = String(effort || '').toLowerCase();
+  const labels = {
+    none: 'none',
+    minimal: 'min',
+    low: 'low',
+    medium: 'med',
+    high: 'high',
+    xhigh: 'xhigh',
+  };
+  return labels[normalized] || effort;
 }
 
 function formatScore(row) {
@@ -3627,14 +3581,17 @@ function getCheckedValues(container, groupName) {
 
 function rowPairId(rowOrPair) {
   if (typeof rowOrPair === 'string') return rowOrPair;
-  return `${rowOrPair.agent} / ${rowOrPair.model}`;
+  const model = String(rowOrPair.model || 'default');
+  const effort = String(rowOrPair.effort || '').trim();
+  const modelLabel = effort ? `${model} (${effort})` : model;
+  return `${rowOrPair.agent} / ${modelLabel}`;
 }
 
 function splitPairId(pairId) {
   const split = pairId.split(' / ');
   return {
     agent: split[0] || '',
-    model: split[1] || '',
+    model: split.slice(1).join(' / ') || '',
   };
 }
 
@@ -3668,7 +3625,7 @@ function getEvals() {
 }
 
 function getAllRows() {
-  return [...STATE.rows, ...STATE.excludedRows];
+  return STATE.rows;
 }
 
 function versionKey(version) {
@@ -3876,11 +3833,10 @@ async function isPerTestDataAvailable() {
 
 function normalizeDataset(data) {
   if (Array.isArray(data)) {
-    return { rows: data, excludedRows: [] };
+    return { rows: data };
   }
   return {
     rows: Array.isArray(data?.rows) ? data.rows : [],
-    excludedRows: Array.isArray(data?.excludedRows) ? data.excludedRows : [],
   };
 }
 
@@ -3907,7 +3863,7 @@ function coerceRow(raw) {
     eval: normalizedEval,
     eval_instance: firstPresent(raw.eval_instance, ''),
     eval_version: firstPresent(raw.eval_version, ''),
-    exit_reason: firstPresent(raw.exit_reason, raw.excluded ? 'excluded' : 'completed'),
+    exit_reason: firstPresent(raw.exit_reason, 'completed'),
     status: firstPresent(raw.status, ''),
     agent_stop_reason: firstPresent(raw.agent_stop_reason, ''),
     agent_stop_label: firstPresent(raw.agent_stop_label, ''),
