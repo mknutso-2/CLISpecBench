@@ -20,7 +20,7 @@ still slip through — these tests are the belt-and-suspenders that fail CI
 if the tree drifts off-policy.
 """
 
-# pyright: reportUnknownMemberType=false
+# pyright: reportUnknownMemberType=false, reportUnknownVariableType=false, reportUnknownArgumentType=false
 
 from __future__ import annotations
 
@@ -111,7 +111,10 @@ def test_no_cap_hit_or_auth_failure_signatures_in_published() -> None:
     infra_signatures = [
         ("infra_usage_cap", ["you've hit your limit", "usage limit"]),
         ("infra_auth", ["failed to authenticate", "invalid api key", "expired credential"]),
-        ("stream_disconnect", ["unable to connect to api", "connectionrefused", "stream disconnected"]),
+        (
+            "stream_disconnect",
+            ["unable to connect to api", "connectionrefused", "stream disconnected"],
+        ),
     ]
 
     violations: list[str] = []
