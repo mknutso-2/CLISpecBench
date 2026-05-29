@@ -11,6 +11,7 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any, cast
 
 log = logging.getLogger(__name__)
 
@@ -339,7 +340,12 @@ def _windows_pid_exists(pid: int) -> bool:
     still_active = 259
     synchronize = 0x00100000
 
-    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    win_dll = cast(Any, getattr(ctypes, "WinDLL", None))
+    get_last_error = cast(Any, getattr(ctypes, "get_last_error", None))
+    if win_dll is None or get_last_error is None:
+        return False
+
+    kernel32 = win_dll("kernel32", use_last_error=True)
     kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
     kernel32.OpenProcess.restype = wintypes.HANDLE
     kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
@@ -353,7 +359,7 @@ def _windows_pid_exists(pid: int) -> bool:
         pid,
     )
     if not handle:
-        return ctypes.get_last_error() == error_access_denied
+        return int(get_last_error()) == error_access_denied
 
     exit_code = wintypes.DWORD()
     try:
