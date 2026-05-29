@@ -3,8 +3,12 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
+import pytest
+
+import clispecbench.harness.results as results
 from clispecbench.agents.claude_code import ClaudeCodeAdapter
 from clispecbench.harness.results import (
     BuildResult,
@@ -198,6 +202,60 @@ class TestBenchmarkCostPolicy:
 
         assert loaded.scores.correctness is None
         assert loaded.scores.task_score is None
+
+
+class TestEvalLock:
+    def test_live_lock_exits_without_replacing_lock(self, tmp_path: Path) -> None:
+        lock_path = tmp_path / "rs274-cpp" / "codex-cli" / "model_medium" / ".eval.lock"
+        lock_path.parent.mkdir(parents=True)
+        lock_path.write_text(str(os.getpid()), encoding="utf-8")
+
+        with pytest.raises(SystemExit, match="Another evaluation is already running"):
+            results.EvalLock.acquire(tmp_path, "rs274-cpp", "codex-cli", "model", "medium")
+
+        assert lock_path.read_text(encoding="utf-8") == str(os.getpid())
+
+    def test_stale_lock_is_replaced(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        lock_path = tmp_path / "rs274-cpp" / "codex-cli" / "model_medium" / ".eval.lock"
+        lock_path.parent.mkdir(parents=True)
+        lock_path.write_text("99999999", encoding="utf-8")
+
+        def pid_is_missing(pid: int) -> bool:
+            return False
+
+        monkeypatch.setattr(results, "_pid_exists", pid_is_missing)
+
+        lock = results.EvalLock.acquire(tmp_path, "rs274-cpp", "codex-cli", "model", "medium")
+        try:
+            assert lock_path.read_text(encoding="utf-8") == str(os.getpid())
+        finally:
+            lock.release()
+
+        assert not lock_path.exists()
+
+    def test_windows_pid_probe_does_not_use_os_kill(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        lock_path = tmp_path / "rs274-cpp" / "codex-cli" / "model_medium" / ".eval.lock"
+        lock_path.parent.mkdir(parents=True)
+        lock_path.write_text("12345", encoding="utf-8")
+
+        def windows_pid_exists(pid: int) -> bool:
+            return True
+
+        def fail_kill(pid: int, sig: int) -> None:
+            raise AssertionError("os.kill should not be used on Windows")
+
+        monkeypatch.setattr(results.os, "name", "nt")
+        monkeypatch.setattr(results, "_windows_pid_exists", windows_pid_exists)
+        monkeypatch.setattr(results.os, "kill", fail_kill)
+
+        with pytest.raises(SystemExit, match="Another evaluation is already running"):
+            results.EvalLock.acquire(tmp_path, "rs274-cpp", "codex-cli", "model", "medium")
+
+        assert lock_path.read_text(encoding="utf-8") == "12345"
 
 
 class TestModelEffortSlug:

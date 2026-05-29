@@ -326,6 +326,64 @@ def _model_base_dir(
     return base
 
 
+def _windows_pid_exists(pid: int) -> bool:
+    """Return whether ``pid`` is live on Windows without using ``os.kill(pid, 0)``."""
+    import ctypes
+    from ctypes import wintypes
+
+    if pid <= 0:
+        return False
+
+    error_access_denied = 5
+    process_query_limited_information = 0x1000
+    still_active = 259
+    synchronize = 0x00100000
+
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.OpenProcess.argtypes = (wintypes.DWORD, wintypes.BOOL, wintypes.DWORD)
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+    kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(
+        process_query_limited_information | synchronize,
+        False,
+        pid,
+    )
+    if not handle:
+        return ctypes.get_last_error() == error_access_denied
+
+    exit_code = wintypes.DWORD()
+    try:
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+            # If Windows let us open the process but not query its status,
+            # keep the lock conservative and treat the process as live.
+            return True
+        return exit_code.value == still_active
+    finally:
+        kernel32.CloseHandle(handle)
+
+
+def _pid_exists(pid: int) -> bool:
+    """Return whether ``pid`` appears to refer to a live process."""
+    if pid <= 0:
+        return False
+    if os.name == "nt":
+        return _windows_pid_exists(pid)
+
+    try:
+        os.kill(pid, 0)  # signal 0 = check existence on POSIX
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return False
+    return True
+
+
 def result_path(
     output_dir: Path,
     task: str,
@@ -399,9 +457,7 @@ class EvalLock:
         if lock_path.exists():
             try:
                 old_pid = int(lock_path.read_text().strip())
-                try:
-                    os.kill(old_pid, 0)  # signal 0 = check existence
-                except OSError:
+                if not _pid_exists(old_pid):
                     # Process is dead — stale lock
                     log.warning("Removing stale lock %s (pid %d is dead)", lock_path, old_pid)
                     lock_path.unlink(missing_ok=True)
