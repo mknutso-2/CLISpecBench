@@ -8,7 +8,7 @@
 #     requires the equivalent JSON at
 #     ~/.gemini/antigravity-cli/antigravity-oauth-token, which contains a
 #     plaintext OAuth refresh token and must not be committed or logged.
-#   - Version 1.0.2 still cannot force model/effort by flag, does not expose
+#   - Version 1.0.3 still cannot force model/effort by flag, does not expose
 #     token usage, and --print output remains unreliable when stdout is captured
 #     by a non-TTY subprocess.
 #
@@ -41,6 +41,7 @@ output="$(
         -e BROWSER=/bin/true \
         -e NO_COLOR=1 \
         -e TERM=dumb \
+        -e AGY_CLI_HIDE_ACCOUNT_INFO=1 \
         -w /workspace \
         clispecbench-antigravity-cli:latest \
         bash -c 'set -o pipefail

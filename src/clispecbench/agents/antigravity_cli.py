@@ -38,12 +38,12 @@ _AUTH_NOISE_MARKERS = (
 class AntigravityCLIAdapter(AgentAdapter):
     """Adapter for Google Antigravity CLI (``agy``).
 
-    Antigravity CLI 1.0.2 does not expose noninteractive model, effort, or
+    Antigravity CLI 1.0.3 does not expose noninteractive model, effort, or
     prompt-file flags. The adapter records the fixed default model label in run
     metadata, ignores unsupported overrides, then sends a short instruction that
     points the agent at CLISpecBench's mounted ``prompt.md``. This avoids shell
     argument limits for large eval docs. The adapter still requires a TTY
-    because 1.0.2 can generate a response but emit zero captured stdout when
+    because 1.0.3 can generate a response but emit zero captured stdout when
     ``agy --print`` is run by a non-TTY subprocess.
     """
 
@@ -86,6 +86,7 @@ class AntigravityCLIAdapter(AgentAdapter):
         env.setdefault("BROWSER", "/bin/true")
         env.setdefault("NO_COLOR", "1")
         env.setdefault("TERM", "dumb")
+        env.setdefault("AGY_CLI_HIDE_ACCOUNT_INFO", "1")
         return env
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:

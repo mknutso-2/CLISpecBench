@@ -131,6 +131,7 @@ class TestAntigravityCLIEnvironment:
         assert env["BROWSER"] == "/bin/true"
         assert env["NO_COLOR"] == "1"
         assert env["TERM"] == "dumb"
+        assert env["AGY_CLI_HIDE_ACCOUNT_INFO"] == "1"
 
     def test_invoke_command_points_at_prompt_file(self) -> None:
         adapter = AntigravityCLIAdapter()

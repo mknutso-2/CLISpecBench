@@ -240,10 +240,10 @@ harness and smoke tests.
 
 Antigravity CLI support is experimental and should not be used for counted
 CLISpecBench results yet. With a TTY and the credential workaround below, `agy`
-1.0.2 can run CLISpecBench tasks end-to-end: it writes implementation files
+1.0.3 can run CLISpecBench tasks end-to-end: it writes implementation files
 under `/workspace/output`, the harness builds them, runs hidden tests, and writes
 normal `result.json` correctness scores. The adapter records
-`gemini-3.5-flash` as the fixed default model label, but 1.0.2 does not expose
+`gemini-3.5-flash` as the fixed default model label, but 1.0.3 does not expose
 model, effort/reasoning, prompt-file, JSON, or output-file flags. Post-run logs
 can verify labels such as `Gemini 3.5 Flash (Medium)`, but the harness cannot
 force a model or reasoning level per invocation.
@@ -259,7 +259,7 @@ the harness does not yet copy the matching conversation into the run directory
 or scrub account/auth metadata from logs. Antigravity also does not currently
 provide parseable token usage, so `token_usage` and estimated cost are `null`.
 
-The CLI uses file-based token storage when it detects a container, and 1.0.2
+The CLI uses file-based token storage when it detects a container, and 1.0.3
 appears to improve some WSL auth-persistence cases, but Windows Credential
 Manager auth is not portable into Linux Docker automatically. A local workaround
 is to seed `~/.gemini/antigravity-cli/antigravity-oauth-token` from the Windows
