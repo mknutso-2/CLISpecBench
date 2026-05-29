@@ -1158,7 +1158,7 @@ function validateSelection() {
     return { ok: false, message: 'Choose at least one version for the selected evals.' };
   }
   if (!STATE.selectedPairs.size) {
-    return { ok: false, message: 'Choose at least one agent/model pair.' };
+    return { ok: false, message: 'Choose at least one agent/model/effort pair.' };
   }
   if (!STATE.selectedLanguages.size) {
     return { ok: false, message: 'Choose at least one language.' };

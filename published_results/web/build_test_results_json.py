@@ -50,7 +50,10 @@ def run_key(row: dict[str, Any]) -> str:
 
 
 def pair_id(row: dict[str, Any]) -> str:
-    return f"{row.get('agent', 'unknown')} / {row.get('model', 'unknown')}"
+    model = str(row.get("model", "unknown"))
+    effort = str(row.get("effort") or "").strip()
+    model_label = f"{model} ({effort})" if effort else model
+    return f"{row.get('agent', 'unknown')} / {model_label}"
 
 
 def eval_language(row: dict[str, Any]) -> str:

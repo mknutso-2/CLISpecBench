@@ -465,7 +465,7 @@ function getMatrixColumns() {
   const allColumn = {
     key: MATRIX_ALL_COLUMN_KEY,
     label: "All",
-    title: "All selected agent/model results",
+    title: "All selected agent/model/effort results",
     isSummary: true,
   };
 
@@ -790,7 +790,7 @@ function getTableColumns() {
     },
     {
       key: "pair",
-      label: "Agent/Model",
+      label: "Agent/Model/Effort",
       render: (td, row) => {
         td.textContent = formatPairShort(row);
         td.title = formatPairFull(row);
@@ -1106,7 +1106,7 @@ function formatVersionSummary(evalName) {
 }
 
 function formatPairShort(row) {
-  return `${formatAgentShort(row.agent)} / ${formatModelShort(row.model)}`;
+  return `${formatAgentShort(row.agent)} / ${formatModelShort(modelWithEffort(row.model, row.effort))}`;
 }
 
 function formatPairShortFromPair(pair) {
@@ -1115,7 +1115,7 @@ function formatPairShortFromPair(pair) {
 }
 
 function formatPairFull(row) {
-  return `${formatAgentFull(row.agent)} / ${formatModelFull(row.model)}`;
+  return `${formatAgentFull(row.agent)} / ${formatModelFull(modelWithEffort(row.model, row.effort))}`;
 }
 
 function formatPairFullFromPair(pair) {
@@ -1124,8 +1124,15 @@ function formatPairFullFromPair(pair) {
 }
 
 function splitPair(pair) {
-  const [agent = "", model = ""] = String(pair || "").split(" / ");
+  const parts = String(pair || "").split(" / ");
+  const agent = parts.shift() || "";
+  const model = parts.join(" / ");
   return { agent, model };
+}
+
+function modelWithEffort(model, effort) {
+  const level = String(effort || "").trim();
+  return level ? `${model} (${level})` : String(model || "");
 }
 
 function formatAgentShort(agent) {
@@ -1137,23 +1144,46 @@ function formatAgentFull(agent) {
 }
 
 function formatModelShort(model) {
-  const normalized = String(model || "").toLowerCase();
+  const { baseModel, effort } = splitModelEffortLabel(model);
+  const normalized = baseModel.toLowerCase();
+  const withEffort = (label) => (effort ? `${label} (${abbreviateEffort(effort)})` : label);
   const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
   if (gptMatch) {
     const suffix = gptMatch[2] === "mini" ? "-m" : gptMatch[2] === "codex" ? "-c" : "";
-    return `${gptMatch[1]}${suffix}`;
+    return withEffort(`${gptMatch[1]}${suffix}`);
   }
-  return MODEL_SHORT_NAMES[model] || String(model || "").toUpperCase();
+  return withEffort(MODEL_SHORT_NAMES[baseModel] || baseModel.toUpperCase());
 }
 
 function formatModelFull(model) {
-  const normalized = String(model || "").toLowerCase();
+  const { baseModel, effort } = splitModelEffortLabel(model);
+  const normalized = baseModel.toLowerCase();
+  const withEffort = (label) => (effort ? `${label} (${effort})` : label);
   const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
   if (gptMatch) {
     const suffix = gptMatch[2] === "mini" ? " Mini" : gptMatch[2] === "codex" ? " Codex" : "";
-    return `GPT-${gptMatch[1]}${suffix}`;
+    return withEffort(`GPT-${gptMatch[1]}${suffix}`);
   }
-  return MODEL_FULL_NAMES[model] || titleCaseIdentifier(model);
+  return withEffort(MODEL_FULL_NAMES[baseModel] || titleCaseIdentifier(baseModel));
+}
+
+function splitModelEffortLabel(model) {
+  const value = String(model || "").trim();
+  const match = value.match(/^(.*)\s+\(([^()]+)\)$/);
+  if (!match) return { baseModel: value, effort: "" };
+  return { baseModel: match[1], effort: match[2] };
+}
+
+function abbreviateEffort(effort) {
+  const normalized = String(effort || "").toLowerCase();
+  const labels = {
+    low: "low",
+    medium: "med",
+    high: "high",
+    max: "max",
+    xhigh: "xhigh",
+  };
+  return labels[normalized] || effort;
 }
 
 function titleCaseIdentifier(value) {
