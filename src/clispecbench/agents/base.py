@@ -159,6 +159,22 @@ class AgentAdapter(ABC):
         """
         return None
 
+    def refine_exit_reason(
+        self,
+        container_fs: Path,
+        container_logs: str,
+        current_exit_reason: str,
+    ) -> str:
+        """Refine the harness-level exit reason from adapter-specific telemetry.
+
+        The generic runner can only see the container process exit code and
+        timeout state. Some CLIs emit a more precise machine-readable terminal
+        event; adapters can use that telemetry to correct misleading process
+        exits.
+        """
+        del container_fs, container_logs
+        return current_exit_reason
+
     def estimate_cost(self, token_usage: TokenUsage) -> float | None:
         """Estimate benchmark cost for this run from normalized token usage."""
         if token_usage.estimated_cost_usd is not None:

@@ -364,6 +364,15 @@ def run_evaluation(
                 container_run.wall_clock_seconds,
             )
 
+        try:
+            exit_reason = adapter.refine_exit_reason(
+                extract_dir,
+                container_logs,
+                exit_reason,
+            )
+        except Exception:
+            log.debug("Failed to refine exit reason from adapter telemetry", exc_info=True)
+
         metadata = RunMetadata(
             run_uid=run_uid,
             task=task.task_id,

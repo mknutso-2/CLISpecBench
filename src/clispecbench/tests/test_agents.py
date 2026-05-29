@@ -291,6 +291,7 @@ class TestModelAndEffort:
             PurePosixPath("/workspace"),
         )
         bash_script = cmd[2]
+        assert "set -o pipefail" in bash_script
         assert '--model "o3"' in bash_script
         assert 'model_reasoning_effort="high"' in bash_script
 
@@ -411,6 +412,53 @@ class TestTelemetryPaths:
         adapter = OpenHandsCLIAdapter()
         assert any("openhands-events" in p for p in adapter.telemetry_paths)
         assert any("openhands-base-state" in p for p in adapter.telemetry_paths)
+
+
+class TestCodexCLIExitReason:
+    def test_final_turn_failed_refines_completed_to_error(self, tmp_path: Path) -> None:
+        adapter = CodexCLIAdapter()
+        (tmp_path / "codex-events.jsonl").write_text(
+            "\n".join(
+                [
+                    json.dumps({"type": "thread.started", "thread_id": "T"}),
+                    json.dumps({"type": "turn.started"}),
+                    json.dumps(
+                        {
+                            "type": "turn.failed",
+                            "error": {
+                                "message": "stream disconnected before completion",
+                            },
+                        }
+                    ),
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        exit_reason = adapter.refine_exit_reason(tmp_path, "", "completed")
+
+        assert exit_reason == "error"
+
+    def test_final_turn_completed_preserves_completed(self, tmp_path: Path) -> None:
+        adapter = CodexCLIAdapter()
+        logs = "\n".join(
+            [
+                json.dumps({"type": "turn.failed", "error": {"message": "retryable"}}),
+                json.dumps({"type": "turn.completed", "usage": {}}),
+            ]
+        )
+
+        exit_reason = adapter.refine_exit_reason(tmp_path, logs, "completed")
+
+        assert exit_reason == "completed"
+
+    def test_non_completed_current_exit_reason_is_preserved(self, tmp_path: Path) -> None:
+        adapter = CodexCLIAdapter()
+
+        exit_reason = adapter.refine_exit_reason(tmp_path, "", "timeout")
+
+        assert exit_reason == "timeout"
 
 
 class TestClaudeCodeTokenUsage:

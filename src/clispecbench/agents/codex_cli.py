@@ -69,10 +69,13 @@ class CodexCLIAdapter(AgentAdapter):
             flags += f' --model "{self._model}"'
         if self._effort:
             flags += f' -c model_reasoning_effort="{self._effort}"'
+        script = (
+            f"set -o pipefail; cat {prompt_path} | codex exec {flags} 2>&1 | tee {EVENT_LOG_PATH}"
+        )
         return [
             "bash",
             "-c",
-            f"cat {prompt_path} | codex exec {flags} 2>&1 | tee {EVENT_LOG_PATH}",
+            script,
         ]
 
     def parse_token_usage(
@@ -152,6 +155,18 @@ class CodexCLIAdapter(AgentAdapter):
             if isinstance(text, str) and text.strip():
                 return text
         return None
+
+    def refine_exit_reason(
+        self,
+        container_fs: Path,
+        container_logs: str,
+        current_exit_reason: str,
+    ) -> str:
+        """Mark a final Codex ``turn.failed`` as an error even if the shell exits 0."""
+        final_turn = _final_turn_event(_event_sources(container_fs, container_logs))
+        if final_turn is not None and final_turn.get("type") == "turn.failed":
+            return "error"
+        return current_exit_reason
 
 
 def _parse_exec_event_usage(sources: list[str], tool_calls: int | None = None) -> TokenUsage | None:
@@ -260,6 +275,25 @@ def _count_tool_calls(container_logs: str) -> int:
             if item_d.get("type") == "command_execution":
                 count += 1
     return count
+
+
+def _event_sources(container_fs: Path, container_logs: str = "") -> list[str]:
+    sources: list[str] = []
+    if container_logs:
+        sources.append(container_logs)
+    event_log = container_fs / "codex-events.jsonl"
+    if event_log.is_file():
+        sources.append(event_log.read_text(encoding="utf-8"))
+    return sources
+
+
+def _final_turn_event(sources: list[str]) -> dict[str, Any] | None:
+    final_turn: dict[str, Any] | None = None
+    for source in sources:
+        for event in _iter_dict_events(source):
+            if event.get("type") in {"turn.completed", "turn.failed"}:
+                final_turn = event
+    return final_turn
 
 
 def _iter_dict_events(

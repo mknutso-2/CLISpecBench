@@ -10,7 +10,7 @@ from docker import errors as docker_errors
 from requests import exceptions as requests_exceptions
 
 from clispecbench.agents.base import AgentAdapter
-from clispecbench.harness.results import load_result
+from clispecbench.harness.results import TestOutcome, TestSummary, load_result
 from clispecbench.harness.runner import run_evaluation
 from clispecbench.harness.task import TaskDefinition
 
@@ -56,7 +56,8 @@ class _StubAdapter(AgentAdapter):
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         return {}
 
-    def extract_last_agent_message(self, container_logs: str) -> None:
+    def extract_last_agent_message(self, container_logs: str) -> str | None:
+        del container_logs
         return None
 
 
@@ -410,3 +411,96 @@ def test_request_exception_uses_specific_infrastructure_failure_note(
     assert result.metadata.notes == (
         "infrastructure_failure: Docker request error before scoring completed"
     )
+
+
+def test_runner_uses_adapter_refined_exit_reason(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    task = _stub_task(tmp_path)
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+
+    class _RefiningAdapter(_StubAdapter):
+        def extract_last_agent_message(self, container_logs: str) -> str:
+            del container_logs
+            return "completed"
+
+        def refine_exit_reason(
+            self,
+            container_fs: Path,
+            container_logs: str,
+            current_exit_reason: str,
+        ) -> str:
+            assert container_fs.is_dir()
+            assert container_logs == "agent logs"
+            assert current_exit_reason == "completed"
+            return "error"
+
+    class _ContainerRun:
+        exit_code = 0
+        timed_out = False
+        wall_clock_seconds = 120.0
+
+    class _Sandbox:
+        def image_exists(self, tag: str) -> bool:
+            return True
+
+        def get_image_sha(self, tag: str) -> str:
+            return "sha256:test-image"
+
+        def create(self, config: object) -> None:
+            return None
+
+        def copy_in(self, src: Path, dest: object) -> None:
+            return None
+
+        def start_and_wait(self, timeout_seconds: float) -> _ContainerRun:
+            return _ContainerRun()
+
+        def get_logs(self) -> str:
+            return "agent logs"
+
+        def copy_out(self, container_path: object, extract_dir: Path) -> None:
+            if str(container_path) == "/workspace/output":
+                output = extract_dir / "output"
+                output.mkdir(parents=True, exist_ok=True)
+                (output / "main.cpp").write_text("int main() { return 0; }\n", encoding="utf-8")
+
+        def cleanup(self) -> None:
+            return None
+
+    def _prepare_workspace(task: TaskDefinition, prompt_variant: str | None) -> Path:
+        return _fake_workspace(task, prompt_variant, workspace)
+
+    def _run_hidden_tests(**kwargs: object) -> tuple[list[TestOutcome], TestSummary]:
+        return (
+            [TestOutcome(node_id="test_build", outcome="passed", duration_seconds=0.1)],
+            TestSummary(passed=1),
+        )
+
+    monkeypatch.setattr("clispecbench.harness.runner.DockerSandbox", _Sandbox)
+    monkeypatch.setattr(
+        "clispecbench.harness.runner.hash_prompt_content",
+        _fake_prompt_hash,
+    )
+    monkeypatch.setattr(
+        "clispecbench.harness.runner.hash_test_suite",
+        _fake_test_hash,
+    )
+    monkeypatch.setattr("clispecbench.harness.runner._git_sha", lambda: "abc1234")
+    monkeypatch.setattr("clispecbench.harness.runner._harness_version", lambda: "0.1.0")
+    monkeypatch.setattr(
+        "clispecbench.harness.runner.prepare_workspace",
+        _prepare_workspace,
+    )
+    monkeypatch.setattr("clispecbench.harness.runner.run_hidden_tests", _run_hidden_tests)
+
+    result = run_evaluation(
+        task=task,
+        adapter=_RefiningAdapter(),
+        run_number=6,
+        eval_number=9,
+        output_dir=tmp_path,
+    )
+
+    assert result.metadata.exit_reason == "error"
