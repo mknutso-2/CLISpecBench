@@ -9,6 +9,7 @@ from typing import Literal
 from clispecbench.agents.antigravity_cli import AntigravityCLIAdapter
 from clispecbench.agents.base import AgentAdapter
 from clispecbench.agents.claude_code import ClaudeCodeAdapter
+from clispecbench.agents.claude_code_legacy import ClaudeCodeLegacyAdapter
 from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
 from clispecbench.agents.gemini_cli import GeminiCLIAdapter
@@ -54,6 +55,14 @@ _AGENT_SPECS: dict[str, AgentSpec] = {
         docker_image="clispecbench-claude-code",
         version_command="claude --version",
         auth_smoke_script="scripts/smoke-test-claude.sh",
+        benchmark_cost_preference="estimated",
+    ),
+    "claude-code-legacy": AgentSpec(
+        agent_id="claude-code-legacy",
+        factory=lambda model, effort: ClaudeCodeLegacyAdapter(model=model, effort=effort),
+        docker_image="clispecbench-claude-code-legacy",
+        version_command="claude --version",
+        auth_smoke_script="scripts/smoke-test-claude-legacy.sh",
         benchmark_cost_preference="estimated",
     ),
     "codex-cli": AgentSpec(

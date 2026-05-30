@@ -1665,6 +1665,10 @@ function formatAgentDisplay(agent) {
 function abbreviateAgent(agent) {
   const normalized = String(agent || '').toLowerCase();
   if (normalized === 'claude-code') return 'CC';
+  // Legacy Claude Code CLI (2.0.x) used only for the deprecated 4.0-gen models;
+  // kept visually distinct from 'CC' so cross-CLI rows aren't misread as
+  // same-scaffolding comparisons.
+  if (normalized === 'claude-code-legacy') return 'CC-legacy';
   if (normalized === 'codex-cli') return 'C';
   if (normalized === 'gemini-cli') return 'G';
   const parts = normalized.split(/[-_\s]+/).filter(Boolean);
