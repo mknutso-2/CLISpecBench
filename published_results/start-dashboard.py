@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import socket
 import subprocess
 import sys
@@ -21,12 +20,15 @@ import urllib.parse
 import urllib.request
 import webbrowser
 from pathlib import Path
+from typing import Literal, TypeAlias, cast
 
 DEFAULT_PORT = 8000
 DEFAULT_DASHBOARD = "web/results-dashboard.html"
 DASHBOARD_MARKER = "CLISpecBench Results Explorer"
 EXPECTED_DATA_PATH = "results-published.json"
 EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id", "score_pct"}
+PortStatus: TypeAlias = Literal["running", "free"]
+PortSearchResult: TypeAlias = tuple[PortStatus, int] | tuple[None, None]
 
 
 def parse_args() -> argparse.Namespace:
@@ -93,17 +95,26 @@ def is_dashboard_running(base: str, dashboard: str) -> bool:
         ) as data_response:
             if data_response.status != 200:
                 return False
-            payload = json.loads(data_response.read().decode("utf-8", errors="ignore"))
-            rows = payload.get("rows", []) if isinstance(payload, dict) else payload
-            if not rows:
+            payload: object = json.loads(data_response.read().decode("utf-8", errors="ignore"))
+            if isinstance(payload, dict):
+                payload_dict = cast(dict[str, object], payload)
+                rows: object = payload_dict.get("rows", [])
+            else:
+                rows = payload
+
+            if not isinstance(rows, list) or not rows:
                 return False
-            column_set = set(rows[0])
+            rows_list = cast(list[object], rows)
+            first_row = rows_list[0]
+            if not isinstance(first_row, dict):
+                return False
+            column_set = set(cast(dict[str, object], first_row))
             return EXPECTED_DATA_COLUMNS.issubset(column_set)
-    except (urllib.error.URLError, TimeoutError, OSError):
+    except (json.JSONDecodeError, urllib.error.URLError, TimeoutError, OSError):
         return False
 
 
-def start_server(script_dir: Path, port: int, dashboard_dir: Path) -> subprocess.Popen:
+def start_server(script_dir: Path, port: int, dashboard_dir: Path) -> subprocess.Popen[bytes]:
     cmd = [
         sys.executable,
         "-m",
@@ -112,13 +123,22 @@ def start_server(script_dir: Path, port: int, dashboard_dir: Path) -> subprocess
         "--directory",
         str(dashboard_dir),
     ]
-    kwargs = {"cwd": str(script_dir), "stdout": subprocess.DEVNULL, "stderr": subprocess.DEVNULL}
     if sys.platform.startswith("win"):
-        kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    else:
-        kwargs["preexec_fn"] = os.setsid  # pragma: no cover
+        return subprocess.Popen(
+            cmd,
+            cwd=script_dir,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+        )
 
-    return subprocess.Popen(cmd, **kwargs)
+    return subprocess.Popen(
+        cmd,
+        cwd=script_dir,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
 
 
 def wait_for_url(url: str, timeout_seconds: float = 3.0) -> bool:
@@ -132,7 +152,12 @@ def wait_for_url(url: str, timeout_seconds: float = 3.0) -> bool:
     return False
 
 
-def find_port(host: str, requested_port: int, dashboard: str, max_ports: int):
+def find_port(
+    host: str,
+    requested_port: int,
+    dashboard: str,
+    max_ports: int,
+) -> PortSearchResult:
     for port in range(requested_port, requested_port + max_ports):
         base = f"http://{host}:{port}"
         if is_port_open(host, port):
@@ -153,7 +178,7 @@ def main() -> None:
     dashboard_dir = script_dir
     status, port = find_port(host, requested_port, dashboard, args.max_ports)
 
-    if status is None:
+    if status is None or port is None:
         print(
             f"No free or matching server port found in range {requested_port}.."
             f"{requested_port + args.max_ports - 1}.",
