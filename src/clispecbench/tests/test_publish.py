@@ -31,6 +31,7 @@ def _make_result_file(
     task: str = "rs274-cpp",
     agent: str = "claude-code",
     model: str | None = "claude-opus-4-7",
+    served_model: str | None = None,
     effort: str | None = "max",
     exit_reason: str = "completed",
     agent_last_message: str | None = None,
@@ -52,6 +53,7 @@ def _make_result_file(
             wall_clock_seconds=1.0,
             exit_reason=exit_reason,
             model=model,
+            served_model=served_model,
             effort=effort,
             agent_last_message=agent_last_message,
         ),
@@ -424,3 +426,44 @@ def test_publish_with_matching_commentary_does_not_warn(
 
     messages = [r.getMessage() for r in caplog.records]
     assert not any("commentary slug" in m for m in messages)
+
+
+def test_publish_rejects_served_model_mismatch(tmp_path: Path) -> None:
+    """A run whose served model differs from the requested one is unpublishable.
+
+    Regression guard for the silent CLI fallback where requesting
+    claude-opus-4-20250514 was served claude-opus-4-7.
+    """
+    published_root = tmp_path / "published"
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(
+        source,
+        run_uid="uid-mismatch",
+        model="claude-opus-4-20250514",
+        served_model="claude-opus-4-7",
+    )
+    with pytest.raises(PublishError, match="MODEL MISMATCH"):
+        publish_result(source, published_root, status="Complete", last_message="x")
+
+
+def test_publish_allows_alias_snapshot_served_model(tmp_path: Path) -> None:
+    """Requesting an alias and being served its dated snapshot is compatible."""
+    published_root = tmp_path / "published"
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(
+        source,
+        run_uid="uid-alias",
+        model="claude-opus-4-5",
+        served_model="claude-opus-4-5-20251101",
+    )
+    target = publish_result(source, published_root, status="Complete", last_message="x")
+    assert target.exists()
+
+
+def test_publish_allows_missing_served_model(tmp_path: Path) -> None:
+    """Legacy results without a served_model field still publish (no false gate)."""
+    published_root = tmp_path / "published"
+    source = tmp_path / "t" / "result.json"
+    _make_result_file(source, run_uid="uid-legacy", model="claude-opus-4-7", served_model=None)
+    target = publish_result(source, published_root, status="Complete", last_message="x")
+    assert target.exists()

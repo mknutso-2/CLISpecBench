@@ -36,6 +36,7 @@ from clispecbench.harness.results import (
     compute_source_stats,
     make_run_label,
     make_run_uid,
+    models_compatible,
     result_path,
     save_source_dir,
     save_transcript,
@@ -373,6 +374,41 @@ def run_evaluation(
         except Exception:
             log.debug("Failed to refine exit reason from adapter telemetry", exc_info=True)
 
+        # --- Served-vs-requested model guard ---
+        # The agent CLI can silently fall back to a default model when it
+        # doesn't recognize the requested --model snapshot ID (e.g. the pinned
+        # claude-code CLI serving Opus 4.7 for an unrecognized
+        # claude-opus-4-20250514). Such a run is mislabeled: its score belongs
+        # to whatever model actually ran, not the one we asked for. Detect the
+        # served model from the transcript and, on a positive mismatch, force
+        # exit_reason="error" so it is never mistaken for a clean run. The
+        # publish gate hard-refuses these (see publish.py), but failing here
+        # also surfaces it immediately in the transient result.
+        run_notes: str | None = None
+        served_model: str | None = None
+        try:
+            served_model = adapter.detect_served_model(container_logs)
+        except Exception:
+            log.debug("Failed to detect served model from transcript", exc_info=True)
+        model_mismatch = bool(
+            adapter.model
+            and served_model
+            and not models_compatible(adapter.model, served_model)
+        )
+        if model_mismatch:
+            exit_reason = "error"
+            mismatch_note = (
+                f"MODEL MISMATCH: requested {adapter.model!r} but the CLI served "
+                f"{served_model!r} (silent fallback). Score reflects {served_model!r}, "
+                f"not the requested model — scrap and do not publish."
+            )
+            run_notes = f"{mismatch_note}\n{run_notes}" if run_notes else mismatch_note
+            log.error(
+                "Served model %r != requested model %r — marking run as error",
+                served_model,
+                adapter.model,
+            )
+
         metadata = RunMetadata(
             run_uid=run_uid,
             task=task.task_id,
@@ -388,7 +424,9 @@ def run_evaluation(
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
             model=adapter.model,
+            served_model=served_model,
             effort=adapter.effort,
+            notes=run_notes,
             benchmark_cost_preference=_benchmark_cost_preference(adapter.name),
             prompt_content_sha=prompt_hash.sha256,
             test_suite_sha=test_hash.sha256,

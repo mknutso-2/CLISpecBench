@@ -19,7 +19,12 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 
-from clispecbench.harness.results import RunResult, load_result, model_effort_slug
+from clispecbench.harness.results import (
+    RunResult,
+    load_result,
+    model_effort_slug,
+    models_compatible,
+)
 from clispecbench.harness.status import (
     DEPRECATED_STATUS_REPLACEMENTS,
     STATUS_TO_EXIT_CLASS,
@@ -258,6 +263,21 @@ def publish_result(
             f"{source}: status {status!r} is not a recognized editorial label. "
             f"Pass one of: {valid}. See .claude/skills/run-eval/SKILL.md for the "
             "bucket definitions and clispecbench.harness.status for the canonical list."
+        )
+
+    # Hard gate: never publish a run whose served model differs from the
+    # requested model. The CLI can silently fall back to a default when it
+    # doesn't recognize a snapshot ID (e.g. claude-code serving Opus 4.7 for
+    # an unrecognized claude-opus-4-20250514), which mislabels the result as
+    # belonging to a model that never ran. The runner records both fields and
+    # flags the mismatch; this is the belt-and-suspenders against a
+    # hand-publish of pre-guard or manually-edited data.
+    if not models_compatible(meta.model, meta.served_model):
+        raise PublishError(
+            f"{source}: MODEL MISMATCH — requested model {meta.model!r} but the CLI "
+            f"served {meta.served_model!r}. This result belongs to {meta.served_model!r}, "
+            f"not {meta.model!r}; publishing it would mislabel the data. Scrap the run "
+            f"(the requested model is likely not recognized by the pinned agent CLI)."
         )
 
     stop_reason = _unpublishable_stop_reason(source, result, status, last_message)

@@ -193,6 +193,13 @@ class RunMetadata:
     wall_clock_seconds: float
     exit_reason: str  # "completed" | "timeout" | "token_limit" | "error"
     model: str | None = None
+    # The model the agent CLI actually served, as self-reported in its
+    # transcript (e.g. claude-code's system/init event). May differ from
+    # ``model`` (the requested ``--model``) when the CLI silently falls back
+    # to a default because it doesn't recognize the requested snapshot ID —
+    # see ``models_compatible`` and the runner's served-vs-requested guard.
+    # ``None`` when the adapter cannot determine the served model.
+    served_model: str | None = None
     effort: str | None = None
     notes: str | None = None
     benchmark_cost_preference: str | None = None
@@ -310,6 +317,41 @@ def model_effort_slug(model: str | None, effort: str | None) -> str | None:
         return None
     raw = f"{model}_{effort}" if effort else model
     return _UNSAFE_MODEL_SLUG_CHARS.sub("_", raw)
+
+
+def models_compatible(requested: str | None, served: str | None) -> bool:
+    """Whether a ``served`` model is an acceptable match for the ``requested`` one.
+
+    Used by the served-vs-requested guard to decide whether the agent CLI ran
+    the model we asked for. The check tolerates the alias/snapshot duality
+    (passing ``claude-opus-4-5`` and being served ``claude-opus-4-5-20251101``
+    is fine) but catches silent fallbacks where the CLI doesn't recognize a
+    snapshot ID and substitutes its default (requesting
+    ``claude-opus-4-20250514`` and being served ``claude-opus-4-7`` is NOT a
+    match).
+
+    Returns ``True`` (benefit of the doubt) when either value is missing — the
+    guard only fires on a positively-detected mismatch, never on absence of a
+    served-model signal.
+
+    Compatibility rule: case-insensitive equality, or one being a dotted/dashed
+    prefix of the other (``claude-opus-4-5`` ⊑ ``claude-opus-4-5-20251101``).
+    A prefix only counts on a segment boundary, so ``claude-opus-4`` does not
+    silently match ``claude-opus-4-7`` vs ``claude-opus-4-20250514`` — but
+    callers never pass bare-major IDs, and a real fallback (``...-4-20250514``
+    vs ``...-4-7``) fails the prefix test in both directions regardless.
+    """
+    if not requested or not served:
+        return True
+    a = requested.strip().lower()
+    b = served.strip().lower()
+    if a == b:
+        return True
+
+    def _is_segment_prefix(short: str, long: str) -> bool:
+        return long.startswith(short) and long[len(short) : len(short) + 1] == "-"
+
+    return _is_segment_prefix(a, b) or _is_segment_prefix(b, a)
 
 
 def _model_base_dir(

@@ -159,6 +159,19 @@ class AgentAdapter(ABC):
         """
         return None
 
+    def detect_served_model(self, container_logs: str) -> str | None:
+        """Return the model the CLI actually served, if self-reported.
+
+        Some agent CLIs echo the resolved model in their transcript (e.g.
+        claude-code's ``system/init`` event and per-turn ``model`` fields).
+        The runner compares this against the requested ``--model`` to catch
+        silent fallbacks where the CLI doesn't recognize a snapshot ID and
+        substitutes its default. Returns ``None`` when the adapter has no
+        reliable served-model signal, which disables the guard for that run.
+        """
+        del container_logs
+        return None
+
     def refine_exit_reason(
         self,
         container_fs: Path,

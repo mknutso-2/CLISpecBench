@@ -267,3 +267,43 @@ class TestModelEffortSlug:
             model_effort_slug("openrouter/moonshotai/kimi-k2.6:free", "high")
             == "openrouter_moonshotai_kimi-k2.6_free_high"
         )
+
+
+def test_models_compatible_exact_and_alias() -> None:
+    # Exact match
+    assert results.models_compatible("claude-opus-4-7", "claude-opus-4-7")
+    # Alias requested, dated snapshot served (and vice versa)
+    assert results.models_compatible("claude-opus-4-5", "claude-opus-4-5-20251101")
+    assert results.models_compatible("claude-opus-4-5-20251101", "claude-opus-4-5")
+    # Missing either side → benefit of the doubt
+    assert results.models_compatible(None, "claude-opus-4-7")
+    assert results.models_compatible("claude-opus-4-7", None)
+
+
+def test_models_compatible_detects_silent_fallback() -> None:
+    # The real-world bug: requested 4.0 snapshot, served 4.7 default.
+    assert not results.models_compatible("claude-opus-4-20250514", "claude-opus-4-7")
+    assert not results.models_compatible("claude-sonnet-4-20250514", "claude-opus-4-7")
+    # 4.1 falling back to 4.7 would also be caught.
+    assert not results.models_compatible("claude-opus-4-1-20250805", "claude-opus-4-7")
+
+
+def test_detect_served_model_reads_init_event() -> None:
+    adapter = ClaudeCodeAdapter(model="claude-opus-4-20250514", effort="max")
+    logs = "\n".join(
+        [
+            json.dumps({"type": "system", "subtype": "init", "model": "claude-opus-4-7"}),
+            json.dumps(
+                {"type": "assistant", "message": {"model": "claude-opus-4-7", "content": []}}
+            ),
+        ]
+    )
+    assert adapter.detect_served_model(logs) == "claude-opus-4-7"
+
+
+def test_detect_served_model_ignores_synthetic_and_returns_none_without_signal() -> None:
+    adapter = ClaudeCodeAdapter(model="claude-opus-4-7", effort="max")
+    assert adapter.detect_served_model("") is None
+    # A synthetic assistant model must not be treated as the served model.
+    logs = json.dumps({"type": "assistant", "message": {"model": "<synthetic>", "content": []}})
+    assert adapter.detect_served_model(logs) is None

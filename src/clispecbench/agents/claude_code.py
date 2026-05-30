@@ -165,6 +165,36 @@ class ClaudeCodeAdapter(AgentAdapter):
                 return texts[-1]
         return None
 
+    def detect_served_model(self, container_logs: str) -> str | None:
+        """Return the model claude-code actually ran, per its transcript.
+
+        The CLI emits a ``{"type":"system","subtype":"init",...}`` event at
+        startup whose ``model`` field is the resolved main-session model — the
+        ground truth for what was served, recorded before any API call. We
+        prefer it over per-turn ``model`` fields because the latter also
+        include subagent models (e.g. a haiku quota/title helper), which would
+        be false mismatches. Falls back to the first non-subagent assistant
+        turn's ``model`` if no init event is present.
+        """
+        first_assistant_model: str | None = None
+        for line in container_logs.splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                event = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if event.get("type") == "system" and event.get("subtype") == "init":
+                model = event.get("model")
+                if isinstance(model, str) and model:
+                    return model
+            if first_assistant_model is None and event.get("type") == "assistant":
+                model = event.get("message", {}).get("model")
+                if isinstance(model, str) and model and "<synthetic>" not in model:
+                    first_assistant_model = model
+        return first_assistant_model
+
 
 def _parse_stream_json_usage(
     container_logs: str,
