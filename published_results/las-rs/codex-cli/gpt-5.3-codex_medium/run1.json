@@ -1,0 +1,1396 @@
+{
+  "schema_version": "2.1",
+  "metadata": {
+    "run_uid": "5ade8043-a845-4c36-8349-83dfa3a7e1d4",
+    "task": "las-rs",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-05-29T21:20:07.018827+00:00",
+    "test_suite_version": "bd620d6",
+    "eval_version": "2.0.0",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 479.76500000001397,
+    "exit_reason": "completed",
+    "model": "gpt-5.3-codex",
+    "effort": "medium",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "77e0ff04de9b876383ff84227883733fccae42e6076ba455e365fb2a0ded113b",
+    "test_suite_sha": "6b43b123fbe42d00694ff7b6396830f3c2b00537a1e65a25f34690b0fbf3e0ad",
+    "agent_last_message": "Implemented a complete no-dependency Rust Cargo project in `output/`:\n\n- Manifest: [`/workspace/output/Cargo.toml`](/workspace/output/Cargo.toml)\n- Entry point: [`/workspace/output/src/main.rs`](/workspace/output/src/main.rs)\n\nWhat it supports:\n\n1. `inspect`\n- Reads request JSON from `--input`\n- Decodes `las_b64`\n- Parses and validates LAS 1.4 structure:\n  - Public Header Block (strict LAS 1.4 checks, including signature/version/header size)\n  - VLRs and EVLRs\n  - Point formats 0\u201310 (including waveform point fields and extra-bytes tail)\n  - LASF_Spec/LASF_Projection structured records\n  - CRS consistency rules (WKT/GeoTIFF + point format compatibility)\n  - Waveform descriptor requirements\n  - Extra-bytes structural checks\n- Returns structured dataset JSON on success\n- Returns `invalid_document` errors for LAS rule/document violations\n\n2. `render`\n- Reads dataset JSON\n- Validates semantic fields and record payload schemas\n- Recomputes derived header fields from content (does not trust caller-supplied derived values)\n- Serializes valid LAS 1.4 binary and returns `las_b64`\n- Enforces required constraints and returns `invalid_request` for invalid dataset input\n\nAlso implemented:\n- CLI exactly as requested: `--input <path> --output <path>`\n- Response envelope exactly with `status`, `error`, `result`\n- Exit codes:\n  - `0` success\n  - `1` invalid invocation/request/document\n  - `2` internal error\n- Base64 and JSON parser/serializer implemented using only Rust standard library.\n\nBuild verified with:\n\n```bash\ncargo build --release --manifest-path output/Cargo.toml\n```\n\nand runnable with:\n\n```bash\ncargo run --release --manifest-path output/Cargo.toml -- --input <path> --output <path>\n```",
+    "exit_class": "completed"
+  },
+  "token_usage": {
+    "input_tokens": 802791,
+    "output_tokens": 24699,
+    "cache_read_input_tokens": 747776,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 16,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 0.572923,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 827490
+  },
+  "build": {
+    "success": false,
+    "duration_seconds": 1.611963351999293,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_reference_cli_runs",
+      "outcome": "failed",
+      "duration_seconds": 1.611963351999293,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_reference_cli_runs0')\n\n    def test_reference_cli_runs(submission_command: Sequence[str], tmp_path: Path) -> None:\n        request = encode_request_for_inspect(dataset_for_point_format(0))\n        result, payload = run_las(submission_command, request, tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_build.py:14: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_source_id]",
+      "outcome": "failed",
+      "duration_seconds": 0.01611587600200437,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv0')\nfield = 'file_source_id'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv0')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[project_id]",
+      "outcome": "failed",
+      "duration_seconds": 0.017333766001684126,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv1')\nfield = 'project_id'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv1')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_major]",
+      "outcome": "failed",
+      "duration_seconds": 0.016921069989621174,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv2')\nfield = 'version_major'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv2')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_minor]",
+      "outcome": "failed",
+      "duration_seconds": 0.017878728998766746,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv3')\nfield = 'version_minor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv3')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[system_identifier]",
+      "outcome": "failed",
+      "duration_seconds": 0.015882947001955472,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv4')\nfield = 'system_identifier'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv4')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[generating_software]",
+      "outcome": "failed",
+      "duration_seconds": 0.019247370000812225,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv5')\nfield = 'generating_software'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv5')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_day_of_year]",
+      "outcome": "failed",
+      "duration_seconds": 0.024460738997731823,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv6')\nfield = 'file_creation_day_of_year'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv6')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_year]",
+      "outcome": "failed",
+      "duration_seconds": 0.01805219499510713,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv7')\nfield = 'file_creation_year'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv7')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[header_size]",
+      "outcome": "failed",
+      "duration_seconds": 0.015181932998530101,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv8')\nfield = 'header_size'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv8')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_scale_factor]",
+      "outcome": "failed",
+      "duration_seconds": 0.01671823300421238,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv9')\nfield = 'x_scale_factor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv9')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_scale_factor]",
+      "outcome": "failed",
+      "duration_seconds": 0.019699288000992965,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv10')\nfield = 'y_scale_factor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv10')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_scale_factor]",
+      "outcome": "failed",
+      "duration_seconds": 0.015515681996475905,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv11')\nfield = 'z_scale_factor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv11')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_offset]",
+      "outcome": "failed",
+      "duration_seconds": 0.01734407000185456,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv12')\nfield = 'x_offset'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv12')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_offset]",
+      "outcome": "failed",
+      "duration_seconds": 0.014715556004375685,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv13')\nfield = 'y_offset'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv13')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_offset]",
+      "outcome": "failed",
+      "duration_seconds": 0.015688777006289456,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv14')\nfield = 'z_offset'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv14')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.014349202006997075,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay0')\npoint_format = 0\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.016793905007943977,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay1')\npoint_format = 1\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.0216961179903592,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay2')\npoint_format = 2\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.01660689000709681,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay3')\npoint_format = 3\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.030951524000556674,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay4')\npoint_format = 4\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.01937590099259978,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay5')\npoint_format = 5\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.017891090996272396,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay6')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.015584266991936602,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay7')\npoint_format = 7\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.01845138998760376,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay8')\npoint_format = 8\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0159550980097265,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay9')\npoint_format = 9\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.01832111200201325,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay10')\npoint_format = 10\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.015454029002285097,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi0')\npoint_format = 0\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.020165296002232935,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi1')\npoint_format = 1\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.015237952007737476,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi2')\npoint_format = 2\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.018622267001774162,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi3')\npoint_format = 3\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.02857558899995638,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi4')\npoint_format = 4\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.015202109003439546,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi5')\npoint_format = 5\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.015173851999861654,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi6')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.01791434799815761,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi7')\npoint_format = 7\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.01784508000127971,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi8')\npoint_format = 8\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.015443148004123941,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi9')\npoint_format = 9\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.01652122200175654,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi10')\npoint_format = 10\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.020791212999029085,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie0')\npoint_format = 0\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.018550736996985506,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie1')\npoint_format = 1\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.028504656002041884,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie2')\npoint_format = 2\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.015435608002007939,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie3')\npoint_format = 3\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.014316466993477661,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie4')\npoint_format = 4\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.01799540299543878,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie5')\npoint_format = 5\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.019522410999343265,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie6')\npoint_format = 6\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.0220450940032606,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie7')\npoint_format = 7\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.015376549999928102,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie8')\npoint_format = 8\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.02031144599459367,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie9')\npoint_format = 9\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.01945814299688209,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie10')\npoint_format = 10\n\n    def _inspect_header(\n        submission_command: Sequence[str], tmp_path: Path, point_format: int\n    ) -> tuple[dict[str, Any], dict[str, Any]]:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.016615562002698425,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.017391366003721487,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.019771362996834796,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.01495301099930657,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.01875352101342287,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.015304932014259975,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.014704382992931642,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.01819786000123713,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.015644720013369806,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.014654823004093487,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.015924988001643214,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:167: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.01691439499700209,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.016315797001880128,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.021336092009732965,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.015588547998049762,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.01472200299758697,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.018022354008280672,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.014474023002549075,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.015361067991761956,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.015838294006243814,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.015300195991585497,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.01642840899876319,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:182: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.014665301998320501,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.014742264997039456,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.016756338001869153,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.019589821989939082,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.02175222100049723,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.020781717001227662,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.023127940992708318,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.018639710993738845,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.018674221995752305,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.030643552003311925,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.01642616299795918,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_point_formats.py:197: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.020209818001603708,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format0')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.013888510009564925,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format1')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.01374573399516521,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format2')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.014595765998819843,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format3')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.01741811600368237,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format4')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[0]",
+      "outcome": "failed",
+      "duration_seconds": 0.019098532997304574,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou0')\npoint_format = 0\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:235: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.014621078997151926,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou1')\npoint_format = 1\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:235: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.015291605996026192,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou2')\npoint_format = 2\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:235: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[3]",
+      "outcome": "failed",
+      "duration_seconds": 0.014734018994204234,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou3')\npoint_format = 3\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:235: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.01901018700300483,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:235: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.015342742997745518,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:235: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_legacy_multi_return_counts",
+      "outcome": "failed",
+      "duration_seconds": 0.01666406500589801,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_legacy_multi_retu0')\n\n    def test_inspect_legacy_multi_return_counts(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_legacy_multi_returns()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:258: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_modern_multi_return_counts",
+      "outcome": "failed",
+      "duration_seconds": 0.020335103996330872,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_modern_multi_retu0')\n\n    def test_inspect_modern_multi_return_counts(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_modern_multi_returns()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:272: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.02165936800156487,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_0')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.018331235005462077,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_1')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0176162240022677,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.016337804001523182,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_external_waveform_mode_does_not_require_waveform_evlr",
+      "outcome": "failed",
+      "duration_seconds": 0.018405300004815217,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_external_waveform_mode_do0')\n\n    def test_external_waveform_mode_does_not_require_waveform_evlr(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_external_waveform_packets()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_point_formats.py:300: AssertionError"
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_response_schema",
+      "outcome": "failed",
+      "duration_seconds": 0.01934764899488073,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_response_schema0')\n\n    def test_inspect_response_schema(submission_command: Sequence[str], tmp_path: Path) -> None:\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_inspect(dataset_for_point_format(0)),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_schema.py:27: AssertionError"
+    },
+    {
+      "node_id": "test_schema.py::test_render_response_schema",
+      "outcome": "failed",
+      "duration_seconds": 0.015026735003630165,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_response_schema0')\n\n    def test_render_response_schema(submission_command: Sequence[str], tmp_path: Path) -> None:\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset_for_point_format(6)),\n            tmp_path,\n        )\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_schema.py:44: AssertionError"
+    },
+    {
+      "node_id": "test_schema.py::test_invalid_action_uses_invalid_request_code",
+      "outcome": "passed",
+      "duration_seconds": 0.014683953995699994,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_non_object_request_is_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.014927675998478662,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_non_object_request_is_inv0')\n\n    def test_non_object_request_is_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        request_file = tmp_path / \"request.json\"\n        output_file = tmp_path / \"response.json\"\n        request_file.write_text(json.dumps([\"not\", \"an\", \"object\"]), encoding=\"utf-8\")\n    \n        result = subprocess.run(\n            [*submission_command, \"--input\", str(request_file), \"--output\", str(output_file)],\n            capture_output=True,\n            text=True,\n            timeout=30,\n        )\n>       payload = cast(dict[str, Any], json.loads(output_file.read_text(encoding=\"utf-8\")))\n                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_schema.py:81: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/usr/lib/python3.12/pathlib.py:1029: in read_text\n    with self.open(mode='r', encoding=encoding, errors=errors) as f:\n         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nself = PosixPath('/tmp/pytest-of-root/pytest-0/test_non_object_request_is_inv0/response.json')\nmode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None\n\n    def open(self, mode='r', buffering=-1, encoding=None,\n             errors=None, newline=None):\n        \"\"\"\n        Open the file pointed by this path and return a file object, as\n        the built-in open() function does.\n        \"\"\"\n        if \"b\" not in mode:\n            encoding = io.text_encoding(encoding)\n>       return io.open(self, mode, buffering, encoding, errors, newline)\n               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       FileNotFoundError: [Errno 2] No such file or directory: '/tmp/pytest-of-root/pytest-0/test_non_object_request_is_inv0/response.json'\n\n/usr/lib/python3.12/pathlib.py:1015: FileNotFoundError"
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_error_envelope_shape",
+      "outcome": "failed",
+      "duration_seconds": 0.02117740399989998,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_error_envelope_sh0')\n\n    def test_inspect_error_envelope_shape(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        \"\"\"Gate: malformed inspect input produces the documented error envelope.\"\"\"\n    \n        broken = bytearray(encode_dataset(dataset_for_point_format(0)))\n        broken[0:4] = b\"BAD!\"\n        request = {\"action\": \"inspect\", \"las_b64\": base64.b64encode(bytes(broken)).decode(\"ascii\")}\n        result, payload = run_las(submission_command, request, tmp_path)\n    \n        assert result.returncode == 1\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_schema.py:100: AssertionError"
+    },
+    {
+      "node_id": "test_schema.py::test_render_error_envelope_shape",
+      "outcome": "failed",
+      "duration_seconds": 0.018767060995742213,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_error_envelope_sha0')\n\n    def test_render_error_envelope_shape(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        \"\"\"Gate: malformed render input produces the documented error envelope.\"\"\"\n    \n        dataset = dataset_for_point_format(0)\n        dataset[\"header\"][\"project_id\"] = \"not-a-uuid\"\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n        assert result.returncode == 1\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_schema.py:120: AssertionError"
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_malformed_las_b64_routes_to_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.01665171999775339,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_malformed_las_b640')\n\n    def test_inspect_malformed_las_b64_routes_to_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        \"\"\"Routing: malformed base64 is a request-level error, not a document error.\n    \n        Pinning this distinction in one place keeps validation tests in\n        `test_validation.py` focused on whether the input was rejected at all,\n        rather than each test asserting the same `invalid_request` /\n        `invalid_document` routing rule.\n        \"\"\"\n    \n        result, payload = run_las(\n            submission_command,\n            {\"action\": \"inspect\", \"las_b64\": \"!!!!\"},\n            tmp_path,\n        )\n    \n        assert result.returncode == 1\n>       assert payload is not None\nE       assert None is not None\n\n/tmp/tests/test_schema.py:148: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_file_signature",
+      "outcome": "passed",
+      "duration_seconds": 0.01631552100297995,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_malformed_base64",
+      "outcome": "passed",
+      "duration_seconds": 0.016673421989253256,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_header_size",
+      "outcome": "passed",
+      "duration_seconds": 0.014487645996268839,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_reserved_global_encoding_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.014823714998783544,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_mutually_exclusive_waveform_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.016278117000183556,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_point_format_without_wkt_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.01509520500258077,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_geokeydirectory_in_geotiff_mode",
+      "outcome": "passed",
+      "duration_seconds": 0.01592429800075479,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_coordinate_system_wkt_record",
+      "outcome": "passed",
+      "duration_seconds": 0.016837517003295943,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_geokeydirectory_records",
+      "outcome": "passed",
+      "duration_seconds": 0.019203860996640287,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_coordinate_system_wkt_records",
+      "outcome": "passed",
+      "duration_seconds": 0.01874833099282114,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_truncated_point_data",
+      "outcome": "passed",
+      "duration_seconds": 0.01723242899606703,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_vlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.017570758005604148,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_evlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.01602813100180356,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_classification_lookup_length",
+      "outcome": "passed",
+      "duration_seconds": 0.01589644198975293,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_text_area_without_null_terminator",
+      "outcome": "passed",
+      "duration_seconds": 0.014669798001705203,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_wkt_without_null_terminator",
+      "outcome": "passed",
+      "duration_seconds": 0.013881069004128221,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_bad_geokeydirectory_header",
+      "outcome": "passed",
+      "duration_seconds": 0.014342944006784819,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_payload_length_not_multiple_of_192",
+      "outcome": "passed",
+      "duration_seconds": 0.014577810994524043,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.015259936997608747,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_reserved_bytes_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.01668211201467784,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_unused_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.016258125004242174,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_waveform_descriptor_length",
+      "outcome": "passed",
+      "duration_seconds": 0.021493548003491014,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.016546153994568158,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_above_32",
+      "outcome": "passed",
+      "duration_seconds": 0.014004101998580154,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_compression_type_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.016462348008644767,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_waveform_descriptor_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.018412487996101845,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_internal_waveform_bit_without_waveform_evlr",
+      "outcome": "passed",
+      "duration_seconds": 0.01393689099495532,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_evlr_without_internal_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.015190904996416066,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_zero_return_number_in_modern_format",
+      "outcome": "passed",
+      "duration_seconds": 0.014457023004069924,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_scan_angle_rank_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.015243871006532572,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_scan_angle_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.014833435001492035,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_offset_to_point_data_smaller_than_header",
+      "outcome": "passed",
+      "duration_seconds": 0.015219398002955131,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_point_records_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.023430650995578617,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_points_by_return_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.02380874999653315,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_nonzero_legacy_counters_for_modern_point_format",
+      "outcome": "passed",
+      "duration_seconds": 0.014455016003921628,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_zero_with_populated_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.016183704006834887,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_populated_with_zero_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.016785348001576494,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_header_extent_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.018796007003402337,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_for_legacy_non_color_format",
+      "outcome": "passed",
+      "duration_seconds": 0.01595796499896096,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_mismatched_extra_bytes_lengths",
+      "outcome": "passed",
+      "duration_seconds": 0.016931396996369585,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_data_packets_in_vlrs",
+      "outcome": "passed",
+      "duration_seconds": 0.022552084010385443,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_reserved_global_encoding_bits_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.016603702002612408,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_header_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.021678027995221782,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_project_id_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.018972619000123814,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[system_identifier]",
+      "outcome": "passed",
+      "duration_seconds": 0.017053846997441724,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[generating_software]",
+      "outcome": "passed",
+      "duration_seconds": 0.018088663993694354,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_fixed_ascii_header_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.01458427499892423,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[user_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.016250307999143843,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[description]",
+      "outcome": "passed",
+      "duration_seconds": 0.016811064000648912,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_record_description_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.016602225005044602,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_text_area_payload_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.014802085002884269,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_geo_ascii_payload_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.016654511993692722,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[0-header-x_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.02096978999179555,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[6-point-gps_time]",
+      "outcome": "passed",
+      "duration_seconds": 0.015597358011291362,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-xt]",
+      "outcome": "passed",
+      "duration_seconds": 0.019158467985107563,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-return_point_waveform_location]",
+      "outcome": "passed",
+      "duration_seconds": 0.019108410997432657,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_modern_geotiff_mode_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.01563588400313165,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_missing_waveform_descriptor_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.017169729006127454,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_longer_than_point_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.014826391001406591,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_extra_bytes_triplet_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.014639541004726198,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_wrong_user_id_for_geo_key_directory",
+      "outcome": "passed",
+      "duration_seconds": 0.014677339997433592,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_opaque_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.027431742993940134,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_bad_geokeydirectory_header_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.023223216994665563,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_geokeydirectory_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0157374900081777,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_bits_per_sample_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.015234863996738568,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint8_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.01696547599567566,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_compression_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.01920477500971174,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint32_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.018331221006519627,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_waveform_data_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.015210811994620599,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_opaque_extra_bytes_reserved_bytes_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.015152386004047003,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[31]",
+      "outcome": "passed",
+      "duration_seconds": 0.01702854400355136,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[256]",
+      "outcome": "passed",
+      "duration_seconds": 0.017245524999452755,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_options_uint8_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.020585625999956392,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_float_triplet_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.01481569300085539,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_point_extra_bytes_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.015010412003903184,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.01493926399416523,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.020910513994749635,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.014802132005570456,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-x-2147483648]",
+      "outcome": "passed",
+      "duration_seconds": 0.014454743002715986,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.015354555005615111,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-classification-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.018604472010338213,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.016881638002814725,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.01653992399951676,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-scanner_channel-4]",
+      "outcome": "passed",
+      "duration_seconds": 0.02229294400603976,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.014335148000100162,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_nir_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.015065971994772553,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[descriptor_index-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.016714334007701837,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[byte_offset_to_waveform_data-18446744073709551616]",
+      "outcome": "passed",
+      "duration_seconds": 0.016402787005063146,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[waveform_packet_size_in_bytes-4294967296]",
+      "outcome": "passed",
+      "duration_seconds": 0.020237025993992575,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_geotiff_triplet_records",
+      "outcome": "failed",
+      "duration_seconds": 0.027835439999762457,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_geotiff_triplet_r0')\n\n    def test_inspect_geotiff_triplet_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_geotiff_triplet()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:87: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_geotiff_triplet_records",
+      "outcome": "failed",
+      "duration_seconds": 0.017546321003464982,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_geotiff_triplet_re0')\n\n    def test_render_geotiff_triplet_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_geotiff_triplet()\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:101: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_wkt_pair_records",
+      "outcome": "failed",
+      "duration_seconds": 0.018537218995334115,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_wkt_pair_records0')\n\n    def test_inspect_wkt_pair_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_wkt_pair()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:115: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_classification_lookup_and_text_area_description",
+      "outcome": "failed",
+      "duration_seconds": 0.019349206006154418,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_classification_lo0')\n\n    def test_inspect_classification_lookup_and_text_area_description(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_classification_lookup()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:129: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_unknown_vlr_and_evlr_as_opaque",
+      "outcome": "failed",
+      "duration_seconds": 0.022400526991987135,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_unknown_vlr_and_e0')\n\n    def test_inspect_unknown_vlr_and_evlr_as_opaque(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_unknown_records()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:143: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_vlr_and_point_payload",
+      "outcome": "failed",
+      "duration_seconds": 0.017482617004134227,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_vlr_a0')\n\n    def test_inspect_extra_bytes_vlr_and_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_extra_bytes(6)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:158: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_multiple_evlrs_preserves_order_and_offsets",
+      "outcome": "failed",
+      "duration_seconds": 0.019578797997382935,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_multiple_evlrs_pr0')\n\n    def test_inspect_multiple_evlrs_preserves_order_and_offsets(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_multiple_evlrs()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:175: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.017383235004672315,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora0')\ndata_type = 1\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.017779602007067297,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora1')\ndata_type = 2\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.01737703799881274,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora2')\ndata_type = 9\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.016244772006757557,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora3')\ndata_type = 10\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[11]",
+      "outcome": "failed",
+      "duration_seconds": 0.020929535989125725,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora4')\ndata_type = 11\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[17]",
+      "outcome": "failed",
+      "duration_seconds": 0.01708961600525072,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora5')\ndata_type = 17\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[21]",
+      "outcome": "failed",
+      "duration_seconds": 0.01740579100442119,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora6')\ndata_type = 21\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[29]",
+      "outcome": "failed",
+      "duration_seconds": 0.017084094004530925,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora7')\ndata_type = 29\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[30]",
+      "outcome": "failed",
+      "duration_seconds": 0.01740217799670063,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora8')\ndata_type = 30\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_extra_bytes_dataset",
+      "outcome": "failed",
+      "duration_seconds": 0.015179160000116099,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_extra_bytes_datase0')\n\n    def test_render_extra_bytes_dataset(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_extra_bytes(6)\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:216: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_undocumented_extra_bytes_descriptor",
+      "outcome": "failed",
+      "duration_seconds": 0.030818558007013053,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_undocumented_extr0')\n\n    def test_inspect_undocumented_extra_bytes_descriptor(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(6)\n        dataset[\"vlrs\"].append(undocumented_extra_bytes_vlr(2))\n        dataset[\"points\"] = [dataset[\"points\"][0] | {\"extra_bytes_b64\": \"NBI=\"}]\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:232: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_empty_point_list_round_trips",
+      "outcome": "failed",
+      "duration_seconds": 0.025527184014208615,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_empty_point_list_r0')\n\n    def test_render_empty_point_list_round_trips(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(6)\n        dataset[\"points\"] = []\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n>       assert render_result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:254: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_waveform_dataset",
+      "outcome": "failed",
+      "duration_seconds": 0.01594417700835038,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_waveform_dataset0')\n\n    def test_render_waveform_dataset(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(9)\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:266: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_vlr_round_trips_as_tagged_kind",
+      "outcome": "failed",
+      "duration_seconds": 0.017232571997737978,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_superseded_vlr_ro0')\n\n    def test_inspect_superseded_vlr_round_trips_as_tagged_kind(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_superseded_record()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:281: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_evlr_round_trips_as_tagged_kind",
+      "outcome": "failed",
+      "duration_seconds": 0.01860058899183059,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_superseded_evlr_r0')\n\n    def test_inspect_superseded_evlr_round_trips_as_tagged_kind(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_superseded_evlr()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:296: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_vlr_payload_round_trips",
+      "outcome": "failed",
+      "duration_seconds": 0.01879326400376158,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_superseded_vlr_pay0')\n\n    def test_render_superseded_vlr_payload_round_trips(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_superseded_record()\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:311: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_evlr_payload_round_trips",
+      "outcome": "failed",
+      "duration_seconds": 0.016679127991665155,
+      "message": "submission_command = ('/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submission/output/Cargo.toml', ...)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_superseded_evlr_pa0')\n\n    def test_render_superseded_evlr_payload_round_trips(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_superseded_evlr()\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/local/cargo/bin/cargo', 'run', '--release', '--quiet', '--manifest-path', '/tmp/submissio... stdout='', stderr='{\"error\":{\"code\":\"invalid_request\",\"message\":\"expected string\"},\"result\":null,\"status\":\"error\"}\\n').returncode\n\n/tmp/tests/test_vlrs.py:325: AssertionError"
+    }
+  ],
+  "test_summary": {
+    "passed": 90,
+    "failed": 130,
+    "skipped": 0,
+    "error": 0,
+    "total": 220
+  },
+  "scores": {
+    "correctness": 0.4090909090909091,
+    "task_score": 0.4090909090909091,
+    "extension_scores": {
+      "subscore.point_formats.passed": 0.0,
+      "subscore.point_formats.total": 99.0,
+      "subscore.schema.passed": 1.0,
+      "subscore.schema.total": 7.0,
+      "subscore.validation.passed": 89.0,
+      "subscore.validation.total": 89.0,
+      "subscore.vlrs.passed": 0.0,
+      "subscore.vlrs.total": 24.0
+    }
+  },
+  "source_stats": {
+    "file_count": 1,
+    "lines_of_code": 979
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Completed with a submitted Rust implementation (1 files, 979 LOC), but hidden tests passed only 90/220; the run produced scorable code with major correctness gaps.",
+    "commentary": null
+  }
+}
