@@ -51,6 +51,15 @@ class ClaudeCodeLegacyAdapter(ClaudeCodeAdapter):
     def dockerfile(self) -> Path:
         return LEGACY_DOCKERFILE
 
+    def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
+        # Deliberately do NOT inherit the parent's OpenTelemetry env vars. The
+        # 2.0.x CLI's OTLP exporter does not support the file:// endpoint the
+        # parent configures and crashes at startup ("Unknown protocol ...")
+        # before doing any work. Token usage is parsed from the stream-json
+        # `result` event instead (the parser prefers it; OTEL is only a
+        # fallback), so dropping telemetry costs us nothing here.
+        return {**api_key_env}
+
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Same shape as the parent, with two deliberate changes:
         #   1. never add --effort (unsupported on the 2.0.x CLI), and
