@@ -27,6 +27,7 @@ DEFAULT_DASHBOARD = "web/results-dashboard.html"
 DASHBOARD_MARKER = "CLISpecBench Results Explorer"
 EXPECTED_DATA_PATH = "results-published.json"
 EXPECTED_DATA_COLUMNS = {"language", "agent", "model", "run_id", "score_pct"}
+CREATE_NEW_PROCESS_GROUP = 0x00000200
 PortStatus: TypeAlias = Literal["running", "free"]
 PortSearchResult: TypeAlias = tuple[PortStatus, int] | tuple[None, None]
 
@@ -129,7 +130,7 @@ def start_server(script_dir: Path, port: int, dashboard_dir: Path) -> subprocess
             cwd=script_dir,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
+            creationflags=CREATE_NEW_PROCESS_GROUP,
         )
 
     return subprocess.Popen(
