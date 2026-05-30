@@ -1679,7 +1679,10 @@ function abbreviateModel(model) {
   const withEffort = (label) => (effort ? `${label} (${abbreviateEffort(effort)})` : label);
   const claudeMatch = normalized.match(/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)/);
   if (claudeMatch) {
-    return withEffort(`${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${claudeMatch[3]}`);
+    // If the third group is an 8-digit date (e.g. 20250514), treat the model as
+    // major.0 — e.g. claude-opus-4-20250514 → O-4.0, not O-4.20250514.
+    const minor = claudeMatch[3].length === 8 ? '0' : claudeMatch[3];
+    return withEffort(`${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${minor}`);
   }
   const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
   if (gptMatch) {
