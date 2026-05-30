@@ -437,6 +437,7 @@ function getEligiblePairsForEvalLanguages(pairs, selectedEvals, selectedLanguage
   const countsByPairEvalLanguage = new Map();
   STATE.rows.forEach((row) => {
     if (!selectedEvalSet.has(row.eval) || !selectedLanguageSet.has(row.language)) return;
+    if (!isRowVersionSelected(row)) return;
     const pairId = rowPairId(row);
     const key = getPairEvalLanguageKey(pairId, row.eval, row.language);
     countsByPairEvalLanguage.set(key, (countsByPairEvalLanguage.get(key) || 0) + 1);
@@ -472,7 +473,16 @@ function getEvalLanguageSelectionKey(selectedEvals, selectedLanguages) {
   return JSON.stringify({
     evals: [...selectedEvals].sort(),
     languages: [...selectedLanguages].sort(),
+    versions: getSelectedEvalVersionsByEval(selectedEvals),
   });
+}
+
+function getSelectedEvalVersionsByEval(selectedEvals) {
+  const versionsByEval = {};
+  [...selectedEvals].sort().forEach((evalName) => {
+    versionsByEval[evalName] = Array.from(STATE.selectedEvalVersions.get(evalName) || []).sort();
+  });
+  return versionsByEval;
 }
 
 function getPairEvalLanguageKey(pairId, evalName, language) {
@@ -521,9 +531,11 @@ function attachEvents() {
 
   if (pairSelectAllButton) {
     pairSelectAllButton.addEventListener('click', () => {
-      const allPairInputs = Array.from(pairListEl.querySelectorAll('input[data-group="pair"]'));
-      STATE.selectedPairs = new Set(getPairs());
-      allPairInputs.forEach((input) => {
+      const selectablePairInputs = Array.from(
+        pairListEl.querySelectorAll('input[data-group="pair"]:not(:disabled)'),
+      );
+      STATE.selectedPairs = new Set(selectablePairInputs.map((input) => input.value));
+      selectablePairInputs.forEach((input) => {
         input.checked = true;
       });
       render();
