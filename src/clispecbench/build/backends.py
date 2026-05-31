@@ -7,13 +7,14 @@ argv that invokes the built/runnable program.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Final, Protocol, runtime_checkable
+from typing import Any, Final, Protocol, cast, runtime_checkable
 
 from .build import CMakeBuildResult, build_cmake_project
 from .target import ImplementationTarget
@@ -177,10 +178,11 @@ class JavaScriptBackend:
 
 
 class RustBackend:
-    """Builds a Rust submission via ``cargo build --release`` and runs it via ``cargo run``.
+    """Builds a Rust submission via ``cargo build --release`` and runs the binary directly.
 
-    The prepared command uses ``cargo run --release --quiet`` with an explicit
-    ``--target-dir`` so build artifacts land in the harness-managed ``build_dir``.
+    Build artifacts land in the harness-managed ``build_dir``. The prepared
+    command points at the release executable to avoid paying Cargo startup and
+    fingerprint-check overhead for every test invocation.
     Pre-building during ``prepare`` surfaces compile errors as build failures
     instead of first-test failures, mirroring :class:`CMakeBackend`.
     """
@@ -218,19 +220,14 @@ class RustBackend:
         if result.returncode != 0:
             raise AssertionError(f"cargo build failed (exit {result.returncode}):\n{result.stderr}")
 
-        run_cmd = (
-            cargo,
-            "run",
-            "--release",
-            "--quiet",
-            "--manifest-path",
-            str(manifest),
-            "--target-dir",
-            str(build_dir),
-            "--",
+        executable = _find_cargo_release_binary(
+            cargo=cargo,
+            manifest=manifest,
+            build_dir=build_dir,
+            timeout_seconds=timeout_seconds,
         )
         return PreparedSubmission(
-            command=run_cmd,
+            command=(str(executable),),
             build_dir=build_dir,
             language="rs",
         )
@@ -241,6 +238,69 @@ def _resolve_cargo() -> str:
     if cargo is not None:
         return cargo
     raise FileNotFoundError("Rust backend requires Cargo: 'cargo' was not found on PATH")
+
+
+def _find_cargo_release_binary(
+    *,
+    cargo: str,
+    manifest: Path,
+    build_dir: Path,
+    timeout_seconds: int,
+) -> Path:
+    metadata_cmd = (
+        cargo,
+        "metadata",
+        "--no-deps",
+        "--format-version",
+        "1",
+        "--manifest-path",
+        str(manifest),
+    )
+    result = subprocess.run(
+        metadata_cmd,
+        capture_output=True,
+        text=True,
+        timeout=timeout_seconds,
+    )
+    if result.returncode != 0:
+        raise AssertionError(f"cargo metadata failed (exit {result.returncode}):\n{result.stderr}")
+
+    metadata = cast(dict[str, Any], json.loads(result.stdout))
+    manifest_resolved = manifest.resolve()
+    metadata_packages = cast(list[dict[str, Any]], metadata.get("packages", []))
+    packages = [
+        package
+        for package in metadata_packages
+        if Path(cast(str, package["manifest_path"])).resolve() == manifest_resolved
+    ]
+    if not packages:
+        raise AssertionError(f"cargo metadata did not include manifest: {manifest}")
+
+    package = packages[0]
+    targets = cast(list[dict[str, Any]], package.get("targets", []))
+    bin_targets = [target for target in targets if "bin" in cast(list[str], target.get("kind", []))]
+    if not bin_targets:
+        raise AssertionError(f"Cargo package has no binary target: {manifest}")
+
+    package_name = str(package.get("name", ""))
+    matching_package_name = [
+        target for target in bin_targets if cast(str, target.get("name")) == package_name
+    ]
+    if len(bin_targets) == 1:
+        binary_name = cast(str, bin_targets[0]["name"])
+    elif len(matching_package_name) == 1:
+        binary_name = cast(str, matching_package_name[0]["name"])
+    else:
+        names = ", ".join(str(target.get("name", "<unknown>")) for target in bin_targets)
+        raise AssertionError(
+            f"Cargo package has multiple binary targets; unable to choose one: {names}"
+        )
+
+    executable_name = f"{binary_name}.exe" if os.name == "nt" else binary_name
+    executable = build_dir / "release" / executable_name
+    if not executable.is_file():
+        raise AssertionError(f"cargo build did not produce expected release binary: {executable}")
+    return executable
 
 
 def _resolve_node_interpreter() -> str:

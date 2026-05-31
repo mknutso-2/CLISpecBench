@@ -151,7 +151,7 @@ class TestJavaScriptBackend:
 
 @pytest.mark.skipif(not _HAS_CARGO, reason="cargo not installed on this host")
 class TestRustBackend:
-    def test_prepare_returns_cargo_run_command(self, tmp_path: Path) -> None:
+    def test_prepare_returns_release_binary_command(self, tmp_path: Path) -> None:
         (tmp_path / "src").mkdir()
         (tmp_path / "src" / "main.rs").write_text('fn main() { print!("ok"); }\n', encoding="utf-8")
         (tmp_path / "Cargo.toml").write_text(
@@ -171,9 +171,11 @@ class TestRustBackend:
 
         assert isinstance(prepared, PreparedSubmission)
         assert prepared.language == "rs"
-        assert "cargo" in Path(prepared.command[0]).stem.lower()
-        assert "run" in prepared.command
-        assert prepared.command[-1] == "--"
+        assert len(prepared.command) == 1
+        executable = Path(prepared.command[0])
+        assert executable.is_file()
+        assert executable.parent == tmp_path / "build" / "release"
+        assert executable.stem == "smoke"
 
     def test_prepared_command_actually_runs(self, tmp_path: Path) -> None:
         (tmp_path / "src").mkdir()
