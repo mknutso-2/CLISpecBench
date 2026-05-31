@@ -1,0 +1,1297 @@
+{
+  "schema_version": "2.1",
+  "metadata": {
+    "run_uid": "83ed67d0-631c-48e3-83d5-2c4f5acfc7ee",
+    "task": "gedcom-rs",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-05-30T06:33:36.497782+00:00",
+    "test_suite_version": "f3ae8cc",
+    "eval_version": "4.0.0",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 3786.5470000000205,
+    "exit_reason": "completed",
+    "model": "gpt-5.4-mini",
+    "served_model": null,
+    "effort": "xhigh",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "a9c289cbcf4262acd1497cfb783252da333ce521c7e1a5077e2f56f074397917",
+    "test_suite_sha": "73565632ffdd79c62c58a6404d26e51da7b091347f9dc348c85099a789a1b396",
+    "agent_last_message": "Implemented the Cargo CLI in `/workspace/output` with GEDCOM and GEDZIP support.\n\n- `[output/src/app.rs](/workspace/output/src/app.rs)` handles `--input` / `--output`, dispatches `inspect`, `render`, `inspect_gedzip`, and `render_gedzip`, and writes the required JSON response envelope with the correct exit codes.\n- `[output/src/gedcom.rs](/workspace/output/src/gedcom.rs)` parses, validates, canonicalizes, and renders GEDCOM trees, folds `CONT` continuations into payload strings, rejects malformed documents with structured errors, and reads/writes GEDZIP archives.\n- `[output/src/schema.rs](/workspace/output/src/schema.rs)` loads the FamilySearch GEDCOM spec from `docs/` and now resolves ambiguous root tags like `OBJE` to the record form instead of the link/substructure form.\n- `[output/src/zip.rs](/workspace/output/src/zip.rs)` provides a standard-library-only ZIP reader/writer so the project stays dependency-free.\n- GEDZIP rendering now keeps `gedcom.ged` collisions consistent by renaming the archive member and rewriting matching `FilePath` payloads in the rendered `gedcom.ged` content.\n\nVerified with:\n- `cargo build --release --manifest-path /workspace/output/Cargo.toml`\n- GEDCOM inspect/render roundtrip\n- malformed request JSON returning `status=error`, `code=invalid_request`, and exit code `1`\n- GEDZIP roundtrip, including the `gedcom.ged` rename case\n\nThe build succeeds. There are still a few benign warnings in helper modules (`json.rs`, `schema.rs`, `zip.rs`), but they do not affect behavior.",
+    "exit_class": "completed"
+  },
+  "token_usage": {
+    "input_tokens": 17783337,
+    "output_tokens": 327059,
+    "cache_read_input_tokens": 17440640,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 107,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 3.036836,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 18110396
+  },
+  "build": {
+    "success": false,
+    "duration_seconds": 0.2993361679982627,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "error",
+      "duration_seconds": 0.2993361679982627,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[]",
+      "outcome": "error",
+      "duration_seconds": 0.000443809010903351,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[1900]",
+      "outcome": "error",
+      "duration_seconds": 0.000317473997711204,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[JAN 1900]",
+      "outcome": "error",
+      "duration_seconds": 0.0002578479907242581,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[1 JAN 1900]",
+      "outcome": "error",
+      "duration_seconds": 0.0002304980152985081,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[ABT 1 JAN 1900]",
+      "outcome": "error",
+      "duration_seconds": 0.00022943600197322667,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[BET 1900 AND 1901]",
+      "outcome": "error",
+      "duration_seconds": 0.00023006800620350987,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[FROM JULIAN 1670 TO GREGORIAN 1800]",
+      "outcome": "error",
+      "duration_seconds": 0.0003044400073122233,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[1900/01]",
+      "outcome": "error",
+      "duration_seconds": 0.0002723450161283836,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[BET 1900 1901]",
+      "outcome": "error",
+      "duration_seconds": 0.00026098098896909505,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[1 FOO 1900]",
+      "outcome": "error",
+      "duration_seconds": 0.00026826601242646575,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[GREGORIAN BCE]",
+      "outcome": "error",
+      "duration_seconds": 0.00023251399397850037,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[FRENCH_R 1 VEND 1 BCE]",
+      "outcome": "error",
+      "duration_seconds": 0.00022557198826689273,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_julian_bce_date_is_accepted",
+      "outcome": "error",
+      "duration_seconds": 0.00023494899505749345,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_change_date_requires_date_exact",
+      "outcome": "error",
+      "duration_seconds": 0.00023566899471916258,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[2:50]",
+      "outcome": "error",
+      "duration_seconds": 0.0003311540058348328,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[02:50]",
+      "outcome": "error",
+      "duration_seconds": 0.0002373589959461242,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[23:59:59.123Z]",
+      "outcome": "error",
+      "duration_seconds": 0.00023136299569159746,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[24:00:00]",
+      "outcome": "error",
+      "duration_seconds": 0.00023222200979944319,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[12:60]",
+      "outcome": "error",
+      "duration_seconds": 0.0003120729961665347,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[12:30:60]",
+      "outcome": "error",
+      "duration_seconds": 0.00023866898845881224,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[32y]",
+      "outcome": "error",
+      "duration_seconds": 0.00035784600186161697,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[< 8d]",
+      "outcome": "error",
+      "duration_seconds": 0.0004991990135749802,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[> 1y 30m]",
+      "outcome": "error",
+      "duration_seconds": 0.0003368579928064719,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[8w 30d]",
+      "outcome": "error",
+      "duration_seconds": 0.0002528019977035001,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_rejects_legacy_phrase_payload",
+      "outcome": "error",
+      "duration_seconds": 0.00023697801225353032,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_language_payloads_are_validated",
+      "outcome": "error",
+      "duration_seconds": 0.00024738998035900295,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_invalid_email_payload_is_preserved",
+      "outcome": "error",
+      "duration_seconds": 0.00023106299340724945,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines0]",
+      "outcome": "error",
+      "duration_seconds": 0.00022808999347034842,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines1]",
+      "outcome": "error",
+      "duration_seconds": 0.00022752500080969185,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines2]",
+      "outcome": "error",
+      "duration_seconds": 0.00023979399702511728,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines3]",
+      "outcome": "error",
+      "duration_seconds": 0.00024326799029950052,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines4]",
+      "outcome": "error",
+      "duration_seconds": 0.00022562900267075747,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_percent_encoded_local_file_path_is_accepted",
+      "outcome": "error",
+      "duration_seconds": 0.0002382969978498295,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines0]",
+      "outcome": "error",
+      "duration_seconds": 0.0002685819927137345,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines1]",
+      "outcome": "error",
+      "duration_seconds": 0.0003415940154809505,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines2]",
+      "outcome": "error",
+      "duration_seconds": 0.0002723910001805052,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines0]",
+      "outcome": "error",
+      "duration_seconds": 0.00023928200243972242,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines1]",
+      "outcome": "error",
+      "duration_seconds": 0.0002512700011720881,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines2]",
+      "outcome": "error",
+      "duration_seconds": 0.0007933739834697917,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines3]",
+      "outcome": "error",
+      "duration_seconds": 0.00023820801288820803,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines4]",
+      "outcome": "error",
+      "duration_seconds": 0.00023167100152932107,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines0]",
+      "outcome": "error",
+      "duration_seconds": 0.00025170801382046193,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines1]",
+      "outcome": "error",
+      "duration_seconds": 0.00023989799956325442,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines2]",
+      "outcome": "error",
+      "duration_seconds": 0.00025322401779703796,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines3]",
+      "outcome": "error",
+      "duration_seconds": 0.00024142899201251566,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines4]",
+      "outcome": "error",
+      "duration_seconds": 0.00035456100886221975,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_render_rejects_invalid_datatype_payloads",
+      "outcome": "error",
+      "duration_seconds": 0.0002409979933872819,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_inspect_gedzip_returns_dataset_and_attachments",
+      "outcome": "error",
+      "duration_seconds": 0.00035988599120173603,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_render_gedzip_writes_dataset_and_attachments",
+      "outcome": "error",
+      "duration_seconds": 0.0005534550145966932,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_requires_gedcom_dataset_entry",
+      "outcome": "error",
+      "duration_seconds": 0.00031591299921274185,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_requires_local_file_entries",
+      "outcome": "error",
+      "duration_seconds": 0.00031335800304077566,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_rejects_local_file_url_payloads",
+      "outcome": "error",
+      "duration_seconds": 0.0002861120010493323,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_data_stream_allows_file_url_payloads_outside_gedzip",
+      "outcome": "error",
+      "duration_seconds": 0.00025353001547046006,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_matches_percent_encoded_file_payload_to_unescaped_entry_name",
+      "outcome": "error",
+      "duration_seconds": 0.0002693290007300675,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_render_gedzip_rejects_missing_required_attachment",
+      "outcome": "error",
+      "duration_seconds": 0.0003243870014557615,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_rejects_reserved_dataset_entry_as_local_file",
+      "outcome": "error",
+      "duration_seconds": 0.0003223390085622668,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_parses_sample_dataset_to_generic_tree",
+      "outcome": "error",
+      "duration_seconds": 0.00029122098931111395,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_roundtrip_preserves_sample_dataset_tree",
+      "outcome": "error",
+      "duration_seconds": 0.0002899609971791506,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_render_preserves_multiline_and_escaped_payload_content",
+      "outcome": "error",
+      "duration_seconds": 0.0002398080105194822,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_parses_extended_dataset_with_repository_source_and_multimedia_records",
+      "outcome": "error",
+      "duration_seconds": 0.00024335901252925396,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_roundtrip_preserves_extended_dataset_tree",
+      "outcome": "error",
+      "duration_seconds": 0.0002574179961811751,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[lines::cb5-0 @I1234@ INDI]",
+      "outcome": "error",
+      "duration_seconds": 0.00029292299586813897,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extensions::cb8-0 @P1@ _LOC\\n1 NAME \\u0392\\u03c5\\u03b6\\u03ac\\u03bd\\u03c4\\u03b9\\u03bf\\u03bd\\n2 DATE FROM 667 BCE TO 324\\n1 _POP 15149358\\n2 DATE 31 DEC 2020\\n0 @I1@ INDI\\n1 BIRT\\n2 _LOC @P1@]",
+      "outcome": "error",
+      "duration_seconds": 0.0002700080076465383,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extensions::cb9-0 @I1@ INDI\\n1 NAME John /Doe/\\n2 _DATE FROM 6 APR 1917 TO 11 NOV 1918\\n3 PHRASE During America's involvement in the Great War\\n1 BIRT\\n2 PLAC Queens, New York, New York, USA]",
+      "outcome": "error",
+      "duration_seconds": 0.00023329400573857129,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb12-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n2 TAG _MEMBER http://xmlns.com/foaf/0.1/member]",
+      "outcome": "error",
+      "duration_seconds": 0.0002475140063324943,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb13-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SKYPEID example.person]",
+      "outcome": "error",
+      "duration_seconds": 0.00027214299188926816,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb14-0 HEAD\\n1 SCHMA\\n2 TAG _SI http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SI example.person]",
+      "outcome": "error",
+      "duration_seconds": 0.0002666839864104986,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[removing-data::cb16-0 @I1@ INDI\\n1 NAME John /Doe/\\n1 NAME John /Doe/\\n1 FAMC @F1@\\n1 FAMC @F1@\\n0 @F1@ FAM\\n1 CHIL @I1@\\n1 CHIL @I1@]",
+      "outcome": "error",
+      "duration_seconds": 0.00024337800277862698,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[removing-data::cb17-0 @I1@ INDI\\n1 NAME John /Doe/]",
+      "outcome": "error",
+      "duration_seconds": 0.00023175599926616997,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDIVIDUAL_RECORD::cb39-0 @I1@ INDI\\n1 ASSO @I2@\\n2 ROLE GODP]",
+      "outcome": "error",
+      "duration_seconds": 0.00026680300652515143,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[SHARED_NOTE_RECORD::cb43-0 @GORDON@ SNOTE \"Gordon\" is a traditional Scottish surname.\\n1 CONT It became a given name in honor of Charles George Gordon.\\n0 @I1@ INDI\\n1 NAME Gordon /Jones/\\n2 NOTE Named after the astronaut Gordon Cooper\\n2 SNOTE @GORDON@]",
+      "outcome": "error",
+      "duration_seconds": 0.0002849079901352525,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ASSOCIATION_STRUCTURE::cb48-0 @I1@ INDI\\n1 ASSO @VOID@\\n2 PHRASE Mr Stockdale\\n2 ROLE OTHER\\n3 PHRASE Teacher\\n1 BAPM\\n2 DATE 1930\\n2 ASSO @I2@\\n3 ROLE CLERGY]",
+      "outcome": "error",
+      "duration_seconds": 0.0002386619889875874,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[PLACE_STRUCTURE::cb71-0 @S1@ SOUR\\n1 DATA\\n2 EVEN BIRT\\n3 PLAC , Oneida, Idaho, USA\\n4 FORM City, County, State, Country]",
+      "outcome": "error",
+      "duration_seconds": 0.0002359180070925504,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDI-EVEN::cb79-0 @I1@ INDI\\n1 EVEN\\n2 TYPE Land Lease\\n2 DATE 2 OCT 1837\\n1 EVEN Mining equipment\\n2 TYPE Equipment Lease\\n2 DATE 4 NOV 1837]",
+      "outcome": "error",
+      "duration_seconds": 0.00022922499920241535,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDI-FACT::cb80-0 @I1@ INDI\\n1 FACT Woodworking\\n2 TYPE Skills]",
+      "outcome": "error",
+      "duration_seconds": 0.00022999099746812135,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[HEIGHT::cb82-0 @I45@ INDI\\n1 DSCR brown eyes, 5ft 10in, 198 pounds]",
+      "outcome": "error",
+      "duration_seconds": 0.00023248700017575175,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[HUSB::cb83-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 HUSB\\n3 AGE 32y]",
+      "outcome": "error",
+      "duration_seconds": 0.00034637800126802176,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ROLE::cb97-0 @I1@ INDI\\n1 NAME Mary //\\n2 SOUR @S1@\\n3 EVEN BIRT\\n4 ROLE MOTH]",
+      "outcome": "error",
+      "duration_seconds": 0.00024288399436045438,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ROLE::cb98-0 @I2@ INDI\\n1 ASSO @I3@\\n2 ROLE FRIEND\\n3 PHRASE best friend\\n1 BAPM\\n2 ASSO @I3@\\n3 ROLE WITN]",
+      "outcome": "error",
+      "duration_seconds": 0.0002475279907230288,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[FILE-TRAN::cb102-0 @EX@ OBJE\\n1 FILE media/original.mp3\\n2 FORM audio/mp3\\n2 TRAN media/derived.oga\\n3 FORM audio/ogg\\n2 TRAN media/transcript.vtt\\n3 FORM text/vtt]",
+      "outcome": "error",
+      "duration_seconds": 0.00026628300838638097,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[TYPE::cb103-0 @I1@ INDI\\n1 ORDN\\n2 TYPE Bishop]",
+      "outcome": "error",
+      "duration_seconds": 0.00023655999393668026,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[WIFE::cb104-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 WIFE\\n3 AGE 32y]",
+      "outcome": "error",
+      "duration_seconds": 0.0002371480077272281,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[lines::cb5-0 @I1234@ INDI]",
+      "outcome": "error",
+      "duration_seconds": 0.0003269549924880266,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[extensions::cb8-0 @P1@ _LOC\\n1 NAME \\u0392\\u03c5\\u03b6\\u03ac\\u03bd\\u03c4\\u03b9\\u03bf\\u03bd\\n2 DATE FROM 667 BCE TO 324\\n1 _POP 15149358\\n2 DATE 31 DEC 2020\\n0 @I1@ INDI\\n1 BIRT\\n2 _LOC @P1@]",
+      "outcome": "error",
+      "duration_seconds": 0.0002865890128305182,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[extensions::cb9-0 @I1@ INDI\\n1 NAME John /Doe/\\n2 _DATE FROM 6 APR 1917 TO 11 NOV 1918\\n3 PHRASE During America's involvement in the Great War\\n1 BIRT\\n2 PLAC Queens, New York, New York, USA]",
+      "outcome": "error",
+      "duration_seconds": 0.00032310999813489616,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[extension-tags::cb12-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n2 TAG _MEMBER http://xmlns.com/foaf/0.1/member]",
+      "outcome": "error",
+      "duration_seconds": 0.00037650499143637717,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[extension-tags::cb13-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SKYPEID example.person]",
+      "outcome": "error",
+      "duration_seconds": 0.00025082398497033864,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[extension-tags::cb14-0 HEAD\\n1 SCHMA\\n2 TAG _SI http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SI example.person]",
+      "outcome": "error",
+      "duration_seconds": 0.00023743699421174824,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[removing-data::cb16-0 @I1@ INDI\\n1 NAME John /Doe/\\n1 NAME John /Doe/\\n1 FAMC @F1@\\n1 FAMC @F1@\\n0 @F1@ FAM\\n1 CHIL @I1@\\n1 CHIL @I1@]",
+      "outcome": "error",
+      "duration_seconds": 0.00023869100550655276,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[removing-data::cb17-0 @I1@ INDI\\n1 NAME John /Doe/]",
+      "outcome": "error",
+      "duration_seconds": 0.00025757099501788616,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[INDIVIDUAL_RECORD::cb39-0 @I1@ INDI\\n1 ASSO @I2@\\n2 ROLE GODP]",
+      "outcome": "error",
+      "duration_seconds": 0.00033175101270899177,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[SHARED_NOTE_RECORD::cb43-0 @GORDON@ SNOTE \"Gordon\" is a traditional Scottish surname.\\n1 CONT It became a given name in honor of Charles George Gordon.\\n0 @I1@ INDI\\n1 NAME Gordon /Jones/\\n2 NOTE Named after the astronaut Gordon Cooper\\n2 SNOTE @GORDON@]",
+      "outcome": "error",
+      "duration_seconds": 0.0005022639816161245,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[ASSOCIATION_STRUCTURE::cb48-0 @I1@ INDI\\n1 ASSO @VOID@\\n2 PHRASE Mr Stockdale\\n2 ROLE OTHER\\n3 PHRASE Teacher\\n1 BAPM\\n2 DATE 1930\\n2 ASSO @I2@\\n3 ROLE CLERGY]",
+      "outcome": "error",
+      "duration_seconds": 0.0002473460044711828,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[PLACE_STRUCTURE::cb71-0 @S1@ SOUR\\n1 DATA\\n2 EVEN BIRT\\n3 PLAC , Oneida, Idaho, USA\\n4 FORM City, County, State, Country]",
+      "outcome": "error",
+      "duration_seconds": 0.000382022000849247,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[INDI-EVEN::cb79-0 @I1@ INDI\\n1 EVEN\\n2 TYPE Land Lease\\n2 DATE 2 OCT 1837\\n1 EVEN Mining equipment\\n2 TYPE Equipment Lease\\n2 DATE 4 NOV 1837]",
+      "outcome": "error",
+      "duration_seconds": 0.0005039009993197396,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[INDI-FACT::cb80-0 @I1@ INDI\\n1 FACT Woodworking\\n2 TYPE Skills]",
+      "outcome": "error",
+      "duration_seconds": 0.0004521839873632416,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[HEIGHT::cb82-0 @I45@ INDI\\n1 DSCR brown eyes, 5ft 10in, 198 pounds]",
+      "outcome": "error",
+      "duration_seconds": 0.00044277499546296895,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[HUSB::cb83-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 HUSB\\n3 AGE 32y]",
+      "outcome": "error",
+      "duration_seconds": 0.00030452800274360925,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[ROLE::cb97-0 @I1@ INDI\\n1 NAME Mary //\\n2 SOUR @S1@\\n3 EVEN BIRT\\n4 ROLE MOTH]",
+      "outcome": "error",
+      "duration_seconds": 0.00025705998996272683,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[ROLE::cb98-0 @I2@ INDI\\n1 ASSO @I3@\\n2 ROLE FRIEND\\n3 PHRASE best friend\\n1 BAPM\\n2 ASSO @I3@\\n3 ROLE WITN]",
+      "outcome": "error",
+      "duration_seconds": 0.00024436600506305695,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[FILE-TRAN::cb102-0 @EX@ OBJE\\n1 FILE media/original.mp3\\n2 FORM audio/mp3\\n2 TRAN media/derived.oga\\n3 FORM audio/ogg\\n2 TRAN media/transcript.vtt\\n3 FORM text/vtt]",
+      "outcome": "error",
+      "duration_seconds": 0.00023486099962610751,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[TYPE::cb103-0 @I1@ INDI\\n1 ORDN\\n2 TYPE Bishop]",
+      "outcome": "error",
+      "duration_seconds": 0.00022882100893184543,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_roundtrip_when_wrapped_as_dataset[WIFE::cb104-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 WIFE\\n3 AGE 32y]",
+      "outcome": "error",
+      "duration_seconds": 0.0003618810005718842,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_success_schema",
+      "outcome": "error",
+      "duration_seconds": 0.0004114719922654331,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_success_schema",
+      "outcome": "error",
+      "duration_seconds": 0.0002388379944022745,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_error_response_schema_for_invalid_request",
+      "outcome": "error",
+      "duration_seconds": 0.00025017300504259765,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_missing_head_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00024203698558267206,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_missing_trailer_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.0003360419941600412,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_head_requires_gedc_and_vers",
+      "outcome": "error",
+      "duration_seconds": 0.00023751999833621085,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_second_head_record_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.000235810992307961,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_second_trailer_record_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00026842700026463717,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_conc_is_invalid_in_gedcom7",
+      "outcome": "error",
+      "duration_seconds": 0.00023943801352288574,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_trailer_may_not_have_children",
+      "outcome": "error",
+      "duration_seconds": 0.0002251109981443733,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_multiple_spaces_between_components_are_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00031473301351070404,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_duplicate_xref_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.0002427629951853305,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_dangling_pointer_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00023551899357698858,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_void_pointer_is_allowed",
+      "outcome": "error",
+      "duration_seconds": 0.00024115901032928377,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unescaped_leading_at_in_non_pointer_payload_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00025338899285998195,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_illegal_level_jump_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00023815299209672958,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_banned_control_character_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.0002390790032222867,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_invalid_line_syntax_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.0002363579988013953,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_list_records",
+      "outcome": "error",
+      "duration_seconds": 0.0002390329900663346,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_node_with_non_string_tag",
+      "outcome": "error",
+      "duration_seconds": 0.00023618500563316047,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_duplicate_xref_in_dataset",
+      "outcome": "error",
+      "duration_seconds": 0.0003742400149349123,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_escapes_leading_at_in_non_pointer_payload",
+      "outcome": "error",
+      "duration_seconds": 0.00047186200390569866,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_explicit_conc_node",
+      "outcome": "error",
+      "duration_seconds": 0.00033151199750136584,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_banned_control_character",
+      "outcome": "error",
+      "duration_seconds": 0.0002412819885648787,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unknown_top_level_record_tag_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.00023288799275178462,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[FAM]",
+      "outcome": "error",
+      "duration_seconds": 0.00023173500085249543,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[INDI]",
+      "outcome": "error",
+      "duration_seconds": 0.00024274499446619302,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[OBJE]",
+      "outcome": "error",
+      "duration_seconds": 0.00022966100368648767,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[REPO]",
+      "outcome": "error",
+      "duration_seconds": 0.0003071169921895489,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[SNOTE]",
+      "outcome": "error",
+      "duration_seconds": 0.00034935200528707355,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[SOUR]",
+      "outcome": "error",
+      "duration_seconds": 0.00048678099119570106,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_top_level_record_type_from_official_grammar_requires_xref[SUBM]",
+      "outcome": "error",
+      "duration_seconds": 0.00032446900149807334,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-ANUL]",
+      "outcome": "error",
+      "duration_seconds": 0.00023071799660101533,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-CENS]",
+      "outcome": "error",
+      "duration_seconds": 0.00030189601238816977,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-DIV]",
+      "outcome": "error",
+      "duration_seconds": 0.0002346640103496611,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-DIVF]",
+      "outcome": "error",
+      "duration_seconds": 0.00023937600781209767,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-ENGA]",
+      "outcome": "error",
+      "duration_seconds": 0.00023349298862740397,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARB]",
+      "outcome": "error",
+      "duration_seconds": 0.0002779930073302239,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARC]",
+      "outcome": "error",
+      "duration_seconds": 0.00024721299996599555,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARL]",
+      "outcome": "error",
+      "duration_seconds": 0.00023283598420675844,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARR]",
+      "outcome": "error",
+      "duration_seconds": 0.00027917099941987544,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARS]",
+      "outcome": "error",
+      "duration_seconds": 0.0002492280036676675,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-ADOP]",
+      "outcome": "error",
+      "duration_seconds": 0.00022831100795883685,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BAPM]",
+      "outcome": "error",
+      "duration_seconds": 0.00023888399300631136,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BARM]",
+      "outcome": "error",
+      "duration_seconds": 0.00024061300791800022,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BASM]",
+      "outcome": "error",
+      "duration_seconds": 0.0003967730008298531,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BIRT]",
+      "outcome": "error",
+      "duration_seconds": 0.000499760004458949,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BLES]",
+      "outcome": "error",
+      "duration_seconds": 0.00034171399602200836,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BURI]",
+      "outcome": "error",
+      "duration_seconds": 0.0002545220049796626,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CENS]",
+      "outcome": "error",
+      "duration_seconds": 0.0002307899994775653,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CHR]",
+      "outcome": "error",
+      "duration_seconds": 0.0002282799978274852,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CHRA]",
+      "outcome": "error",
+      "duration_seconds": 0.00023511100152973086,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CONF]",
+      "outcome": "error",
+      "duration_seconds": 0.00022536300821229815,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CREM]",
+      "outcome": "error",
+      "duration_seconds": 0.00023789098486304283,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-DEAT]",
+      "outcome": "error",
+      "duration_seconds": 0.0002533920051064342,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-EMIG]",
+      "outcome": "error",
+      "duration_seconds": 0.00024337900686077774,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-FCOM]",
+      "outcome": "error",
+      "duration_seconds": 0.00023733799753244966,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-GRAD]",
+      "outcome": "error",
+      "duration_seconds": 0.000237792992265895,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-IMMI]",
+      "outcome": "error",
+      "duration_seconds": 0.0002345389948459342,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-NATU]",
+      "outcome": "error",
+      "duration_seconds": 0.00032394699519500136,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-ORDN]",
+      "outcome": "error",
+      "duration_seconds": 0.0006192919972818345,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-PROB]",
+      "outcome": "error",
+      "duration_seconds": 0.00024997000582516193,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-RETI]",
+      "outcome": "error",
+      "duration_seconds": 0.00023274400155059993,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-WILL]",
+      "outcome": "error",
+      "duration_seconds": 0.00023356200836133212,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_head_payload_is_invalid",
+      "outcome": "error",
+      "duration_seconds": 0.0002329279959667474,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_shared_note_record_requires_payload",
+      "outcome": "error",
+      "duration_seconds": 0.00023535102081950754,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_header_place_requires_form",
+      "outcome": "error",
+      "duration_seconds": 0.0002327130059711635,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_header_place_may_not_have_payload",
+      "outcome": "error",
+      "duration_seconds": 0.0002341430081287399,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_submitter_requires_name",
+      "outcome": "error",
+      "duration_seconds": 0.0002334809978492558,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_repository_requires_name",
+      "outcome": "error",
+      "duration_seconds": 0.00023422799131367356,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_multimedia_record_requires_file",
+      "outcome": "error",
+      "duration_seconds": 0.0002846669958671555,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_file_requires_form",
+      "outcome": "error",
+      "duration_seconds": 0.00026605799212120473,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_file_tran_requires_form",
+      "outcome": "error",
+      "duration_seconds": 0.00024365099670831114,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_change_date_requires_date",
+      "outcome": "error",
+      "duration_seconds": 0.000375540999812074,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_creation_date_requires_date",
+      "outcome": "error",
+      "duration_seconds": 0.0003744710120372474,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_association_requires_role",
+      "outcome": "error",
+      "duration_seconds": 0.00048270501429215074,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_map_requires_lati",
+      "outcome": "error",
+      "duration_seconds": 0.00036947599437553436,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_map_requires_long",
+      "outcome": "error",
+      "duration_seconds": 0.00032183500297833234,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_name_translation_requires_lang",
+      "outcome": "error",
+      "duration_seconds": 0.00035709199437405914,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_individual_even_tag_requires_type",
+      "outcome": "error",
+      "duration_seconds": 0.00036308899871073663,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_event_husb_requires_age",
+      "outcome": "error",
+      "duration_seconds": 0.0002499750116840005,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_child_link_is_only_valid_under_family_records",
+      "outcome": "error",
+      "duration_seconds": 0.000301220003166236,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_individual_fact_requires_type",
+      "outcome": "error",
+      "duration_seconds": 0.00038983699050731957,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_translation_requires_lang",
+      "outcome": "error",
+      "duration_seconds": 0.00024620999465696514,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_adoption_famc_substructure_allows_enum_payload",
+      "outcome": "error",
+      "duration_seconds": 0.0002514609950594604,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[FAMS]",
+      "outcome": "error",
+      "duration_seconds": 0.00024764200497884303,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SUBM]",
+      "outcome": "error",
+      "duration_seconds": 0.0002863729896489531,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SNOTE]",
+      "outcome": "error",
+      "duration_seconds": 0.00026444700779393315,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[OBJE]",
+      "outcome": "error",
+      "duration_seconds": 0.00023743101337458938,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SOUR]",
+      "outcome": "error",
+      "duration_seconds": 0.00024291400040965527,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[FAMS]",
+      "outcome": "error",
+      "duration_seconds": 0.00023800598864909261,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SUBM]",
+      "outcome": "error",
+      "duration_seconds": 0.0002336559846298769,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SNOTE]",
+      "outcome": "error",
+      "duration_seconds": 0.00023196800611913204,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[OBJE]",
+      "outcome": "error",
+      "duration_seconds": 0.0003250459994887933,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SOUR]",
+      "outcome": "error",
+      "duration_seconds": 0.00026202200388070196,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_name_translation_without_lang",
+      "outcome": "error",
+      "duration_seconds": 0.0002463369892211631,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_multimedia_record_without_file_form",
+      "outcome": "error",
+      "duration_seconds": 0.0003013460082001984,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_multimedia_record_with_top_level_titl",
+      "outcome": "error",
+      "duration_seconds": 0.000282108987448737,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_submitter_without_name",
+      "outcome": "error",
+      "duration_seconds": 0.0003935150016332045,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "error": 203,
+    "total": 203
+  },
+  "scores": {
+    "correctness": 0.0,
+    "task_score": 0.0,
+    "extension_scores": {
+      "subscore.data_types.passed": 0.0,
+      "subscore.data_types.total": 47.0,
+      "subscore.gedzip.passed": 0.0,
+      "subscore.gedzip.total": 9.0,
+      "subscore.parse.passed": 0.0,
+      "subscore.parse.total": 47.0,
+      "subscore.schema.passed": 0.0,
+      "subscore.schema.total": 3.0,
+      "subscore.validation.passed": 0.0,
+      "subscore.validation.total": 96.0
+    }
+  },
+  "source_stats": {
+    "file_count": 7,
+    "lines_of_code": 2937
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Completed with a submitted Rust implementation (7 files, 2937 LOC), but hidden tests passed only 0/203; the run produced scorable code with major correctness gaps.",
+    "commentary": null
+  }
+}

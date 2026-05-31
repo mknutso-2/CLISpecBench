@@ -1,0 +1,1397 @@
+{
+  "schema_version": "2.1",
+  "metadata": {
+    "run_uid": "f7b69a8b-5db2-42fe-a2a8-a98435d07ab9",
+    "task": "las-cpp",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 2,
+    "timestamp": "2026-05-30T12:43:32.843857+00:00",
+    "test_suite_version": "f3ae8cc",
+    "eval_version": "2.0.0",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 2798.579000000027,
+    "exit_reason": "completed",
+    "model": "gpt-5.4-mini",
+    "served_model": null,
+    "effort": "xhigh",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "3acff7dc6ac972895411ea4419b8f7985f00907e6200fad0b82ff90be65bd2a8",
+    "test_suite_sha": "6b43b123fbe42d00694ff7b6396830f3c2b00537a1e65a25f34690b0fbf3e0ad",
+    "agent_last_message": "Implemented in [CMakeLists.txt](/workspace/output/CMakeLists.txt), [main.cpp](/workspace/output/main.cpp), [las.cpp](/workspace/output/las.cpp), [json.cpp](/workspace/output/json.cpp), and [base64.cpp](/workspace/output/base64.cpp).\n\nWhat it now does:\n- Inspects LAS 1.4 bytes from base64 into structured JSON.\n- Renders the JSON dataset back into LAS 1.4 bytes.\n- Enforces the LAS 1.4 structure for:\n  - public header block\n  - VLRs and EVLRs\n  - WKT and GeoTIFF CRS records\n  - point formats 0 through 10\n  - waveform descriptors and waveform packets\n  - extra-bytes metadata\n\nBehavior is strict in the places you called out:\n- malformed or contradictory standard `LASF_Spec` / `LASF_Projection` records fail the whole inspect\n- point format 6-10 rejects GeoTIFF CRS records\n- point format 0-5 enforces the WKT-vs-GeoTIFF split\n- waveform EVLR offsets are validated against the header\n- extra-bytes descriptions cannot overrun the actual point payload\n- malformed GeoTIFF key references are rejected\n- waveform packet descriptor references are checked\n\nBuild and verification:\n- `cmake -B build && cmake --build build` succeeds\n- exercised sample inspect/render roundtrip\n- exercised negative cases for CRS violations, extra-bytes mismatch, duplicate WKT records, waveform offset mismatch, and bad GeoTIFF references\n\nIf you want, I can also give you a short synopsis of the JSON schema the tool accepts/returns.",
+    "exit_class": "completed"
+  },
+  "token_usage": {
+    "input_tokens": 17534514,
+    "output_tokens": 226669,
+    "cache_read_input_tokens": 17009024,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 139,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 2.689805,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 17761183
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 2.1669784510013415,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_reference_cli_runs",
+      "outcome": "passed",
+      "duration_seconds": 2.1669784510013415,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_source_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.0032801899942569435,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[project_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.00374987100076396,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_major]",
+      "outcome": "passed",
+      "duration_seconds": 0.004258931978256442,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_minor]",
+      "outcome": "passed",
+      "duration_seconds": 0.0038247569900704548,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[system_identifier]",
+      "outcome": "passed",
+      "duration_seconds": 0.0036920910060871392,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[generating_software]",
+      "outcome": "passed",
+      "duration_seconds": 0.003642470997874625,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_day_of_year]",
+      "outcome": "passed",
+      "duration_seconds": 0.0033300839859293774,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_year]",
+      "outcome": "passed",
+      "duration_seconds": 0.0031384329922730103,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[header_size]",
+      "outcome": "passed",
+      "duration_seconds": 0.004621021987986751,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.005142471010913141,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.003479245016933419,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.002580110973212868,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_offset]",
+      "outcome": "passed",
+      "duration_seconds": 0.0027590710087679327,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_offset]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025227379956049845,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_offset]",
+      "outcome": "passed",
+      "duration_seconds": 0.002589556999737397,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.00934486900223419,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.003015922993654385,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0028272269992157817,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.002351403993088752,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.0023412880254909396,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.002875748003134504,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.0027711100119631737,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.002339883998502046,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.002265359988086857,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.002937154014944099,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.003530611007590778,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'point record length mismatch', 'offset': 558}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0028202809917274863,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026331370027037337,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0023978550016181543,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.002277349020005204,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.002314001991180703,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.0032336220028810203,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.005519579004612751,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.002910390991019085,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.002445438993163407,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0023618079867446795,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.003093781997449696,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'point record length mismatch', 'offset': 558}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0029673609969904646,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.007079057992086746,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0039946010074345395,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.002924244006862864,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.0025305330054834485,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.0033742169907782227,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.002997646981384605,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.002744420024100691,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025800120056374,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0029747840017080307,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.00296596901898738,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'point record length mismatch', 'offset': 558}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0029099570092512295,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0041090849990723655,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.003034712019143626,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026135509979212657,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.002580346990725957,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.0036181500036036596,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.0034960890043294057,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.00289056399196852,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025935650046449155,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.002785841003060341,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.003004957005032338,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'point record length mismatch', 'offset': 558}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0030794070044066757,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0024441499990643933,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0024021239951252937,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.002636120989336632,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.002679347002413124,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.0031757199903950095,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.0036908439942635596,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.0034304679866181687,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.004075320990523323,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.003376567008672282,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.003105932002654299,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'point record length mismatch', 'offset': 558}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0036990410008002073,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.003301139993709512,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0032995999936247244,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.0035745659843087196,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.00400112199713476,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.0035932299942942336,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.005973685008939356,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.005017303003114648,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.0044774020061595365,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0032564349967287853,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'waveform packet reference exceeds waveform payload'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.003566650004358962,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'point record length mismatch', 'offset': 558}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.0033735180040821433,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.003505854998365976,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.0033639749890426174,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.003155493992380798,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.0037682820111513138,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format4')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 105 diff: b'?' != b'C'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.003327505008201115,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.003533413997502066,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0033748480054782704,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.003446745002293028,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.004281782006728463,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.003765524015761912,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_legacy_multi_return_counts",
+      "outcome": "passed",
+      "duration_seconds": 0.003401979003683664,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_modern_multi_return_counts",
+      "outcome": "passed",
+      "duration_seconds": 0.00470522599061951,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.0051554010133259,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_0')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool', '--input', '/tmp/pytest-of-root/pyt...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.0042875600047409534,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_1')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool', '--input', '/tmp/pytest-of-root/pyt...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_1/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0032867630070541054,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool', '--input', '/tmp/pytest-of-root/pyt...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.0034553029981907457,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool', '--input', '/tmp/pytest-of-root/pyt...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_external_waveform_mode_does_not_require_waveform_evlr",
+      "outcome": "passed",
+      "duration_seconds": 0.003706716015585698,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_response_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.003259522985899821,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_response_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.0029969460010761395,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_invalid_action_uses_invalid_request_code",
+      "outcome": "passed",
+      "duration_seconds": 0.0022027039958629757,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_non_object_request_is_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0018413239886285737,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_error_envelope_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.0026913309993688017,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_error_envelope_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.002314629018655978,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_malformed_las_b64_routes_to_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.002842827991116792,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_malformed_las_b640')\n\n    def test_inspect_malformed_las_b64_routes_to_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        \"\"\"Routing: malformed base64 is a request-level error, not a document error.\n    \n        Pinning this distinction in one place keeps validation tests in\n        `test_validation.py` focused on whether the input was rejected at all,\n        rather than each test asserting the same `invalid_request` /\n        `invalid_document` routing rule.\n        \"\"\"\n    \n        result, payload = run_las(\n            submission_command,\n            {\"action\": \"inspect\", \"las_b64\": \"!!!!\"},\n            tmp_path,\n        )\n    \n>       assert result.returncode == 1\nE       AssertionError: assert 2 == 1\nE        +  where 2 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool', '--input', '/tmp/pytest-of-root/pyt...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_malformed_las_b640/response.json'], returncode=2, stdout='', stderr='').returncode\n\n/tmp/tests/test_schema.py:147: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_file_signature",
+      "outcome": "passed",
+      "duration_seconds": 0.0023521460097981617,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_malformed_base64",
+      "outcome": "passed",
+      "duration_seconds": 0.002513884988729842,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_header_size",
+      "outcome": "passed",
+      "duration_seconds": 0.002193409003666602,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_reserved_global_encoding_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.0021320160012692213,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_mutually_exclusive_waveform_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.0026914000045508146,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_point_format_without_wkt_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.002960769008495845,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_geokeydirectory_in_geotiff_mode",
+      "outcome": "passed",
+      "duration_seconds": 0.003036804002476856,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_coordinate_system_wkt_record",
+      "outcome": "passed",
+      "duration_seconds": 0.0022427670046454296,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_geokeydirectory_records",
+      "outcome": "passed",
+      "duration_seconds": 0.002499787005945109,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_coordinate_system_wkt_records",
+      "outcome": "passed",
+      "duration_seconds": 0.002505491007468663,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_truncated_point_data",
+      "outcome": "passed",
+      "duration_seconds": 0.0028665589925367385,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_vlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.0024733460013521835,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_evlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.002474779001204297,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_classification_lookup_length",
+      "outcome": "passed",
+      "duration_seconds": 0.0028047599917044863,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_text_area_without_null_terminator",
+      "outcome": "failed",
+      "duration_seconds": 0.0035101670073345304,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_text_area_without0')\n\n    def test_rejects_text_area_without_null_terminator(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"].append(\n            {\n                \"user_id\": \"LASF_Spec\",\n                \"record_id\": 3,\n                \"description\": \"BadText\",\n                \"kind\": \"opaque\",\n                \"data_b64\": base64.b64encode(b\"not-terminated\").decode(\"ascii\"),\n            }\n        )\n        data = encode_dataset(dataset)\n>       assert _inspect_was_rejected(submission_command, tmp_path, data)\nE       AssertionError: assert False\nE        +  where False = _inspect_was_rejected(('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_text_area_without0'), b'LASF\\x07\\x00\\x00\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...0\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00not-terminatedd\\x00\\x00\\x00\\xc8\\x00\\x00\\x00,\\x01\\x00\\x00\\n\\x00\\tB\\xfb\\x00\\x07\\x00')\n\n/tmp/tests/test_validation.py:242: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_wkt_without_null_terminator",
+      "outcome": "failed",
+      "duration_seconds": 0.003973139988374896,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_wkt_without_null_0')\n\n    def test_rejects_wkt_without_null_terminator(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(6)\n        dataset[\"vlrs\"] = [\n            {\n                \"user_id\": \"LASF_Projection\",\n                \"record_id\": 2112,\n                \"description\": \"BadWKT\",\n                \"kind\": \"opaque\",\n                \"data_b64\": base64.b64encode(b\"PROJCS[bad]\").decode(\"ascii\"),\n            }\n        ]\n        data = encode_dataset(dataset)\n>       assert _inspect_was_rejected(submission_command, tmp_path, data)\nE       AssertionError: assert False\nE        +  where False = _inspect_was_rejected(('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_wkt_without_null_0'), b'LASF\\x07\\x00\\x10\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...0\\x00PROJCS[bad]j\\x00\\x00\\x00\\xce\\x00\\x00\\x002\\x01\\x00\\x00\\x10\\x00\\x11(\\x11\\x06X\\x02\\x07\\x00\\x00\\x00\\x00\\x00\\x00r\\x8f@')\n\n/tmp/tests/test_validation.py:260: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_bad_geokeydirectory_header",
+      "outcome": "passed",
+      "duration_seconds": 0.0029314029961824417,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_payload_length_not_multiple_of_192",
+      "outcome": "passed",
+      "duration_seconds": 0.0032405999809270725,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.004384771003969945,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_reserved_bytes_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.004504960990743712,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_unused_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.0040923119959188625,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_waveform_descriptor_length",
+      "outcome": "passed",
+      "duration_seconds": 0.003857720977975987,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0035558569943532348,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_above_32",
+      "outcome": "passed",
+      "duration_seconds": 0.0036605589848477393,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_compression_type_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.00310282499413006,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_waveform_descriptor_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.0033550099906278774,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_internal_waveform_bit_without_waveform_evlr",
+      "outcome": "passed",
+      "duration_seconds": 0.0036132109962636605,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_evlr_without_internal_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.003963751994888298,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_zero_return_number_in_modern_format",
+      "outcome": "passed",
+      "duration_seconds": 0.00368258600065019,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_scan_angle_rank_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0038840250053908676,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_scan_angle_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0036183900228934363,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_offset_to_point_data_smaller_than_header",
+      "outcome": "passed",
+      "duration_seconds": 0.003792242016061209,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_point_records_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.003306979007902555,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_points_by_return_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.003476519006653689,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_nonzero_legacy_counters_for_modern_point_format",
+      "outcome": "passed",
+      "duration_seconds": 0.0034231469908263534,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_zero_with_populated_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.003124597016721964,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_populated_with_zero_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.0031182020029518753,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_header_extent_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.0033887780155055225,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_for_legacy_non_color_format",
+      "outcome": "failed",
+      "duration_seconds": 0.0035007970000151545,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_color_for_0')\n\n    def test_render_rejects_color_for_legacy_non_color_format(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"points\"][0][\"color\"] = {\"red\": 1, \"green\": 2, \"blue\": 3}\n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_color_for_0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:501: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_mismatched_extra_bytes_lengths",
+      "outcome": "failed",
+      "duration_seconds": 0.0029121540137566626,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_mismatched0')\n\n    def test_render_rejects_mismatched_extra_bytes_lengths(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_extra_bytes(6)\n        second = clone(dataset[\"points\"][0])\n        second[\"extra_bytes_b64\"] = base64.b64encode(b\"\\x00\\x01\\x02\\x03\").decode(\"ascii\")\n        dataset[\"points\"].append(second)\n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_mismatched0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating... 'Normalized reflectivity', 'max': [5000, 0, 0], 'min': [0, 0, 0], ...}], 'kind': 'extra_bytes', 'record_id': 4, ...}]})\n\n/tmp/tests/test_validation.py:512: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_data_packets_in_vlrs",
+      "outcome": "passed",
+      "duration_seconds": 0.004108027016627602,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_reserved_global_encoding_bits_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.00308197399135679,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_header_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0027248080004937947,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_project_id_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0027219729963690042,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[system_identifier]",
+      "outcome": "passed",
+      "duration_seconds": 0.003071850020205602,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[generating_software]",
+      "outcome": "passed",
+      "duration_seconds": 0.003074237989494577,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_fixed_ascii_header_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.003756374993827194,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[user_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.0034538949985289946,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[description]",
+      "outcome": "passed",
+      "duration_seconds": 0.003186474001267925,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_record_description_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002540081986808218,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_text_area_payload_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0020912180189043283,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_geo_ascii_payload_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002713792011491023,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[0-header-x_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022243179992074147,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[6-point-gps_time]",
+      "outcome": "passed",
+      "duration_seconds": 0.00199334898206871,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-xt]",
+      "outcome": "failed",
+      "duration_seconds": 0.0024588070082245395,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va2')\npoint_format = 9, target = 'waveform', field = 'xt'\n\n    @pytest.mark.parametrize(\n        (\"point_format\", \"target\", \"field\"),\n        [\n            (0, \"header\", \"x_scale_factor\"),\n            (6, \"point\", \"gps_time\"),\n            (9, \"waveform\", \"xt\"),\n            (9, \"waveform\", \"return_point_waveform_location\"),\n        ],\n    )\n    def test_render_rejects_numeric_values_that_do_not_fit_target_binary_float(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n        target: str,\n        field: str,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        if target == \"header\":\n            dataset[\"header\"][field] = 10**1000\n        elif target == \"point\":\n            dataset[\"points\"][0][field] = 10**1000\n        else:\n            dataset[\"points\"][0][\"waveform\"][field] = 1e100\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va2'), {'evlrs': [{'data_b64': 'AQIDBA==', 'description': 'WaveData', 'kind': 'waveform_data_packets', 'record_id': 65535, ..... 2112, ...}, {'bits_per_sample': 16, 'description': 'WaveDesc', 'digitizer_gain': 0.5, 'digitizer_offset': 1.25, ...}]})\n\n/tmp/tests/test_validation.py:674: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-return_point_waveform_location]",
+      "outcome": "failed",
+      "duration_seconds": 0.003170120995491743,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va3')\npoint_format = 9, target = 'waveform', field = 'return_point_waveform_location'\n\n    @pytest.mark.parametrize(\n        (\"point_format\", \"target\", \"field\"),\n        [\n            (0, \"header\", \"x_scale_factor\"),\n            (6, \"point\", \"gps_time\"),\n            (9, \"waveform\", \"xt\"),\n            (9, \"waveform\", \"return_point_waveform_location\"),\n        ],\n    )\n    def test_render_rejects_numeric_values_that_do_not_fit_target_binary_float(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n        target: str,\n        field: str,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        if target == \"header\":\n            dataset[\"header\"][field] = 10**1000\n        elif target == \"point\":\n            dataset[\"points\"][0][field] = 10**1000\n        else:\n            dataset[\"points\"][0][\"waveform\"][field] = 1e100\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va3'), {'evlrs': [{'data_b64': 'AQIDBA==', 'description': 'WaveData', 'kind': 'waveform_data_packets', 'record_id': 65535, ..... 2112, ...}, {'bits_per_sample': 16, 'description': 'WaveDesc', 'digitizer_gain': 0.5, 'digitizer_offset': 1.25, ...}]})\n\n/tmp/tests/test_validation.py:674: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_modern_geotiff_mode_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002274850005051121,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_missing_waveform_descriptor_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002102981976349838,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_longer_than_point_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002126746010617353,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_extra_bytes_triplet_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.01059114799136296,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_wrong_user_id_for_geo_key_directory",
+      "outcome": "passed",
+      "duration_seconds": 0.00200201099505648,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_opaque_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.00199983999482356,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_bad_geokeydirectory_header_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.00266645300143864,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_geokeydirectory_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0023497949878219515,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_bits_per_sample_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0020101350091863424,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint8_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0020172270014882088,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_compression_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0019795619882643223,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint32_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002079459998640232,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_waveform_data_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0019822549948003143,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_opaque_extra_bytes_reserved_bytes_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.002797818000544794,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[31]",
+      "outcome": "passed",
+      "duration_seconds": 0.003008307990967296,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[256]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019837509898934513,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_options_uint8_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.0019300599815323949,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_float_triplet_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.002078730016364716,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_point_extra_bytes_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0022585230035474524,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.0020972409984096885,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021002529974794015,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.0020510780159384012,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-x-2147483648]",
+      "outcome": "passed",
+      "duration_seconds": 0.0018884210148826241,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.001923714007716626,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-classification-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.002010508018429391,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022895799920661375,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.0020529770117718726,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-scanner_channel-4]",
+      "outcome": "passed",
+      "duration_seconds": 0.001981078996323049,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.0020011010055895895,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_nir_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.0018950560042867437,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[descriptor_index-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019355229887878522,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[byte_offset_to_waveform_data-18446744073709551616]",
+      "outcome": "passed",
+      "duration_seconds": 0.001993230005609803,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[waveform_packet_size_in_bytes-4294967296]",
+      "outcome": "passed",
+      "duration_seconds": 0.002038264981820248,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_geotiff_triplet_records",
+      "outcome": "failed",
+      "duration_seconds": 0.0025488900137133896,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_geotiff_triplet_r0')\n\n    def test_inspect_geotiff_triplet_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_geotiff_triplet()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert result.returncode == 0\n        assert payload is not None\n        observed = payload_dataset(payload)\n        expected = canonical_dataset(dataset)\n>       assert _vlrs_from(observed) == _vlrs_from(expected)\nE       AssertionError: assert [{'descriptio...e 15N|', ...}] == [{'descriptio...N|\\x00', ...}]\nE         \nE         At index 2 diff: {'user_id': 'LASF_Projection', 'record_id': 34737, 'description': 'GeoASCII', 'kind': 'geo_ascii_params', 'text': 'EPSG:32615|WGS 84 / UTM zone 15N|'} != {'user_id': 'LASF_Projection', 'record_id': 34737, 'description': 'GeoASCII', 'kind': 'geo_ascii_params', 'text': 'EPSG:32615|WGS 84 / UTM zone 15N|\\x00'}\nE         Use -v to get more diff\n\n/tmp/tests/test_vlrs.py:91: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_geotiff_triplet_records",
+      "outcome": "failed",
+      "duration_seconds": 0.0023037240171106532,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_geotiff_triplet_re0')\n\n    def test_render_geotiff_triplet_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_geotiff_triplet()\n        result, payload = run_las(submission_command, encode_request_for_render(dataset), tmp_path)\n    \n        assert result.returncode == 0\n        assert payload is not None\n        rendered = payload_las_bytes(payload)\n        expected = encode_dataset(dataset)\n>       assert _vlr_payloads(rendered) == _vlr_payloads(expected)\nE       AssertionError: assert [('LASF_Proje...5N|\\x00\\x00')] == [('LASF_Proje...ne 15N|\\x00')]\nE         \nE         At index 2 diff: ('LASF_Projection', 34737, b'EPSG:32615|WGS 84 / UTM zone 15N|\\x00\\x00') != ('LASF_Projection', 34737, b'EPSG:32615|WGS 84 / UTM zone 15N|\\x00')\nE         Use -v to get more diff\n\n/tmp/tests/test_vlrs.py:105: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_wkt_pair_records",
+      "outcome": "passed",
+      "duration_seconds": 0.0020257470023352653,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_classification_lookup_and_text_area_description",
+      "outcome": "passed",
+      "duration_seconds": 0.00295885099330917,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_unknown_vlr_and_evlr_as_opaque",
+      "outcome": "passed",
+      "duration_seconds": 0.0024374159838771448,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_vlr_and_point_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.0023013489844743162,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_multiple_evlrs_preserves_order_and_offsets",
+      "outcome": "passed",
+      "duration_seconds": 0.0020873879839200526,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.002256549007142894,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0023702779872110114,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.0025075500016100705,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora2')\ndata_type = 9\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/las-build0/build/las14_tool', '--input', '/tmp/pytest-of-root/pyt...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora2/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.0024253559968201444,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[11]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022505740053020418,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[17]",
+      "outcome": "passed",
+      "duration_seconds": 0.0023279080050997436,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[21]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022936300083529204,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[29]",
+      "outcome": "passed",
+      "duration_seconds": 0.0024196440062951297,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[30]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022070420091040432,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_extra_bytes_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.0022128310083644465,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_undocumented_extra_bytes_descriptor",
+      "outcome": "passed",
+      "duration_seconds": 0.0022586809791391715,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_empty_point_list_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.0019911350100301206,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_waveform_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.0022100919886725023,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_vlr_round_trips_as_tagged_kind",
+      "outcome": "passed",
+      "duration_seconds": 0.0021107659849803895,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_evlr_round_trips_as_tagged_kind",
+      "outcome": "passed",
+      "duration_seconds": 0.0020577679970301688,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_vlr_payload_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.001980407992959954,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_evlr_payload_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.0027435180090833455,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 181,
+    "failed": 39,
+    "skipped": 0,
+    "error": 0,
+    "total": 220
+  },
+  "scores": {
+    "correctness": 0.8227272727272728,
+    "task_score": 0.8227272727272728,
+    "extension_scores": {
+      "subscore.point_formats.passed": 70.0,
+      "subscore.point_formats.total": 99.0,
+      "subscore.schema.passed": 6.0,
+      "subscore.schema.total": 7.0,
+      "subscore.validation.passed": 83.0,
+      "subscore.validation.total": 89.0,
+      "subscore.vlrs.passed": 21.0,
+      "subscore.vlrs.total": 24.0
+    }
+  },
+  "source_stats": {
+    "file_count": 8,
+    "lines_of_code": 4759
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Completed with a submitted C++ implementation (8 files, 4759 LOC); hidden tests passed 181/220, so substantial behavior works but important gaps remain.",
+    "commentary": null
+  }
+}
