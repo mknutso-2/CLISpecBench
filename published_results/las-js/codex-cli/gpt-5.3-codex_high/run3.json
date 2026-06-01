@@ -1,0 +1,1397 @@
+{
+  "schema_version": "2.1",
+  "metadata": {
+    "run_uid": "8bcab8ae-12aa-4828-a06d-1b746fb0b92e",
+    "task": "las-js",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 3,
+    "timestamp": "2026-05-31T17:19:25.344855+00:00",
+    "test_suite_version": "127ea49",
+    "eval_version": "2.0.0",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 696.2339999999385,
+    "exit_reason": "completed",
+    "model": "gpt-5.3-codex",
+    "served_model": null,
+    "effort": "high",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "730ad770d80791089f7fd8cde301444026fc754ba207307a88677ac3e37eed1f",
+    "test_suite_sha": "6b43b123fbe42d00694ff7b6396830f3c2b00537a1e65a25f34690b0fbf3e0ad",
+    "agent_last_message": "Implemented a complete LAS 1.4 inspector/renderer in Node.js (standard library only) at:\n\n- [output/main.js](/workspace/output/main.js)\n\nWhat it does:\n\n- `inspect`:\n  - Decodes base64 LAS bytes.\n  - Parses and validates LAS 1.4 public header, VLRs, points, and EVLRs.\n  - Supports point formats `0..10`, waveform fields/records, CRS records, and extra-bytes metadata.\n  - Interprets supported VLR/EVLR kinds into structured JSON.\n  - Rejects malformed/contradictory LASF_Spec and LASF_Projection records as `invalid_document`.\n- `render`:\n  - Validates dataset JSON.\n  - Recomputes derived header fields from semantic content (counts, offsets, point length, extents, EVLR pointers, etc.).\n  - Serializes LAS 1.4 binary and returns `las_b64`.\n  - Handles optional missing waveform objects for formats `4/5/9/10` by writing zeroed waveform fields.\n\nBehavior/error handling:\n\n- Output always matches required response envelope.\n- Uses only allowed error codes: `invalid_request`, `invalid_document`, `internal_error`.\n- Exit codes:\n  - `0` success\n  - `1` invalid invocation/request/document\n  - `2` internal error\n\nValidation smoke tests run locally:\n\n- `node --check /workspace/output/main.js` passed.\n- Render\u2192inspect round-trip passed on a LAS 1.4 format-6 sample.\n- Waveform format-4 case (omitted waveform object) passed and wrote zeroed waveform fields.\n- Invalid-document detection verified (reserved global-encoding bit set).",
+    "exit_class": "completed"
+  },
+  "token_usage": {
+    "input_tokens": 977781,
+    "output_tokens": 34391,
+    "cache_read_input_tokens": 731264,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 16,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 1.04085,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 1012172
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.027280636015348136,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_reference_cli_runs",
+      "outcome": "passed",
+      "duration_seconds": 0.027280636015348136,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_source_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.02803832001518458,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[project_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.020194699987769127,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_major]",
+      "outcome": "passed",
+      "duration_seconds": 0.028878414013888687,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_minor]",
+      "outcome": "passed",
+      "duration_seconds": 0.024861345009412616,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[system_identifier]",
+      "outcome": "passed",
+      "duration_seconds": 0.02322766199358739,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[generating_software]",
+      "outcome": "passed",
+      "duration_seconds": 0.022526890999870375,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_day_of_year]",
+      "outcome": "passed",
+      "duration_seconds": 0.021416169940494,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_year]",
+      "outcome": "passed",
+      "duration_seconds": 0.022014535003108904,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[header_size]",
+      "outcome": "passed",
+      "duration_seconds": 0.025449412991292775,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.020548911998048425,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.020649916026741266,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.024431119032669812,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_offset]",
+      "outcome": "passed",
+      "duration_seconds": 0.026788690011017025,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_offset]",
+      "outcome": "passed",
+      "duration_seconds": 0.02040039998246357,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_offset]",
+      "outcome": "passed",
+      "duration_seconds": 0.02638533804565668,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.02015291398856789,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.02736246195854619,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.025169396016281098,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.023488539998652413,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.028807758033508435,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.02518077802960761,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.023621418979018927,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.026916737988358364,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.020548312983009964,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.025406495027709752,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.02592080904287286,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.022510014969157055,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.02678271898184903,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.02288908199989237,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.022412292018998414,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.027768750995164737,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.02793238396407105,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.022867117018904537,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.019947595981648192,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.022584597987588495,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.023430119996191934,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.02469023599405773,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.02268705898313783,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.019794218009337783,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.018692064011702314,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.028414370986865833,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.02886805302114226,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.025006043986650184,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.02655936501105316,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.019870098971296102,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.022363021998899058,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.029166046995669603,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.023996325995540246,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.023572570993565023,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0342350420251023,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.023845979012548923,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.025974418997066095,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.02348302397876978,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.02472808098536916,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.032672899978933856,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.02323159499792382,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.022456277976743877,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.022935672983294353,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.02551427698927,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.019777707027969882,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.020890787011012435,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.01965417998144403,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.02103804497164674,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.02603958299732767,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.024867391010047868,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.0260033399972599,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.022515449963975698,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.023497347021475434,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.021499323018360883,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.02284626101027243,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.018644726980710402,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.021987993008224294,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.02441683498909697,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.021169068990275264,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.02152193899382837,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.02289968598051928,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[6]",
+      "outcome": "passed",
+      "duration_seconds": 0.024317744973814115,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[7]",
+      "outcome": "passed",
+      "duration_seconds": 0.024819031008519232,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[8]",
+      "outcome": "passed",
+      "duration_seconds": 0.023677832970861346,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.023535462998552248,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.024863209982868284,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.023614662990439683,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format0')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...x00\\x00r\\x8f@' == b'LASF\\x07\\x0...x00\\x00r\\x8f@'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.031795501010492444,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format1')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...7\\x07\\xbf\\x0b' == b'LASF\\x07\\x0...7\\x07\\xbf\\x0b'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.027903788984986022,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format2')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...0\\x0b\\xa8\\x0f' == b'LASF\\x07\\x0...0\\x0b\\xa8\\x0f'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.027386132976971567,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format3')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.020642304996727034,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format4')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.024304505030158907,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.023249823017977178,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.027964359964244068,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.02387228497536853,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.027939519000938162,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.024238637008238584,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_legacy_multi_return_counts",
+      "outcome": "passed",
+      "duration_seconds": 0.019849739997880533,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_modern_multi_return_counts",
+      "outcome": "passed",
+      "duration_seconds": 0.022643179021542892,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.021810307982377708,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_0')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.021632147021591663,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_1')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_1/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.026293925009667873,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.024499153019860387,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_external_waveform_mode_does_not_require_waveform_evlr",
+      "outcome": "passed",
+      "duration_seconds": 0.023072206968208775,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_response_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.02584020799258724,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_response_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.0221261189726647,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_invalid_action_uses_invalid_request_code",
+      "outcome": "passed",
+      "duration_seconds": 0.023162666999269277,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_non_object_request_is_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.01714881998486817,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_error_envelope_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.02672440401511267,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_error_envelope_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.02437651201034896,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_malformed_las_b64_routes_to_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.02382860198849812,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_file_signature",
+      "outcome": "passed",
+      "duration_seconds": 0.023501565010519698,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_malformed_base64",
+      "outcome": "passed",
+      "duration_seconds": 0.0207427830027882,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_header_size",
+      "outcome": "passed",
+      "duration_seconds": 0.026373358006821945,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_reserved_global_encoding_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.02131257302244194,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_mutually_exclusive_waveform_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.020351353014120832,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_point_format_without_wkt_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.026538706006249413,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_geokeydirectory_in_geotiff_mode",
+      "outcome": "passed",
+      "duration_seconds": 0.027342300018062815,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_coordinate_system_wkt_record",
+      "outcome": "passed",
+      "duration_seconds": 0.03687735999119468,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_geokeydirectory_records",
+      "outcome": "passed",
+      "duration_seconds": 0.02805784295196645,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_coordinate_system_wkt_records",
+      "outcome": "passed",
+      "duration_seconds": 0.027216366957873106,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_truncated_point_data",
+      "outcome": "passed",
+      "duration_seconds": 0.019765190983889624,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_vlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.02697496797190979,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_evlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.019247064978117123,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_classification_lookup_length",
+      "outcome": "passed",
+      "duration_seconds": 0.020788859023014084,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_text_area_without_null_terminator",
+      "outcome": "passed",
+      "duration_seconds": 0.022683086019242182,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_wkt_without_null_terminator",
+      "outcome": "passed",
+      "duration_seconds": 0.02806308801518753,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_bad_geokeydirectory_header",
+      "outcome": "passed",
+      "duration_seconds": 0.022048379003535956,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_payload_length_not_multiple_of_192",
+      "outcome": "passed",
+      "duration_seconds": 0.01762118499027565,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.029190331988502294,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_reserved_bytes_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.024910731008276343,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_unused_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.025901371001964435,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_waveform_descriptor_length",
+      "outcome": "passed",
+      "duration_seconds": 0.023277648986550048,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.024511861003702506,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_above_32",
+      "outcome": "passed",
+      "duration_seconds": 0.021491685009095818,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_compression_type_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.018871627980843186,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_waveform_descriptor_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.023803952004527673,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_internal_waveform_bit_without_waveform_evlr",
+      "outcome": "passed",
+      "duration_seconds": 0.025134747993433848,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_evlr_without_internal_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.021032426971942186,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_zero_return_number_in_modern_format",
+      "outcome": "passed",
+      "duration_seconds": 0.021356372017180547,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_scan_angle_rank_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.02107874400098808,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_scan_angle_out_of_range",
+      "outcome": "failed",
+      "duration_seconds": 0.023740481992717832,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_modern_scan_angle0')\n\n    def test_rejects_modern_scan_angle_out_of_range(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        data = encode_dataset(dataset_for_point_format(6))\n        point_offset = int.from_bytes(data[96:100], \"little\")\n        broken = _patch_bytes(data, point_offset + 18, (30001).to_bytes(2, \"little\", signed=True))\n>       assert _inspect_was_rejected(submission_command, tmp_path, broken)\nE       assert False\nE        +  where False = _inspect_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_modern_scan_angle0'), b'LASF\\x07\\x00\\x10\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...OGCS[\"WGS 84\"]]\\x00j\\x00\\x00\\x00\\xce\\x00\\x00\\x002\\x01\\x00\\x00\\x10\\x00\\x11(\\x11\\x061u\\x07\\x00\\x00\\x00\\x00\\x00\\x00r\\x8f@')\n\n/tmp/tests/test_validation.py:429: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_offset_to_point_data_smaller_than_header",
+      "outcome": "passed",
+      "duration_seconds": 0.022157865983899683,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_point_records_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.02121512801386416,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_points_by_return_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.02038049401016906,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_nonzero_legacy_counters_for_modern_point_format",
+      "outcome": "passed",
+      "duration_seconds": 0.02378834199043922,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_zero_with_populated_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.02093178199720569,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_populated_with_zero_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.02069499099161476,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_header_extent_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.02043693096493371,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_for_legacy_non_color_format",
+      "outcome": "failed",
+      "duration_seconds": 0.02355901204282418,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_color_for_0')\n\n    def test_render_rejects_color_for_legacy_non_color_format(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"points\"][0][\"color\"] = {\"red\": 1, \"green\": 2, \"blue\": 3}\n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_color_for_0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:501: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_mismatched_extra_bytes_lengths",
+      "outcome": "passed",
+      "duration_seconds": 0.018706235015997663,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_data_packets_in_vlrs",
+      "outcome": "passed",
+      "duration_seconds": 0.02215039700968191,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_reserved_global_encoding_bits_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.02383804798591882,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_header_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.019077152013778687,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_project_id_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.019819379958789796,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[system_identifier]",
+      "outcome": "passed",
+      "duration_seconds": 0.019839519984088838,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[generating_software]",
+      "outcome": "passed",
+      "duration_seconds": 0.019724022975424305,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_fixed_ascii_header_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.020389151031849906,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[user_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.02239602798363194,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[description]",
+      "outcome": "passed",
+      "duration_seconds": 0.022219191014301032,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_record_description_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.02234715799568221,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_text_area_payload_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.022181622975040227,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_non_ascii_4')\n\n    def test_render_rejects_non_ascii_text_area_payload_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"].append(\n            {\n                \"user_id\": \"LASF_Spec\",\n                \"record_id\": 3,\n                \"description\": \"Text\",\n                \"kind\": \"text_area_description\",\n                \"text\": \"Caf\\u00e9\",\n            }\n        )\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_non_ascii_4'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating...offset': 32615}], ...}, {'description': 'Text', 'kind': 'text_area_description', 'record_id': 3, 'text': 'Caf\u00e9', ...}]})\n\n/tmp/tests/test_validation.py:629: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_geo_ascii_payload_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.02449524201801978,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_non_ascii_5')\n\n    def test_render_rejects_non_ascii_geo_ascii_payload_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"].append(\n            {\n                \"user_id\": \"LASF_Projection\",\n                \"record_id\": 34737,\n                \"description\": \"GeoASCII\",\n                \"kind\": \"geo_ascii_params\",\n                \"text\": \"Caf\\u00e9\",\n            }\n        )\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_non_ascii_5'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating...set': 32615}], ...}, {'description': 'GeoASCII', 'kind': 'geo_ascii_params', 'record_id': 34737, 'text': 'Caf\u00e9', ...}]})\n\n/tmp/tests/test_validation.py:647: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[0-header-x_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.0222359070321545,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[6-point-gps_time]",
+      "outcome": "passed",
+      "duration_seconds": 0.02472495796973817,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-xt]",
+      "outcome": "failed",
+      "duration_seconds": 0.025227834994439036,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va2')\npoint_format = 9, target = 'waveform', field = 'xt'\n\n    @pytest.mark.parametrize(\n        (\"point_format\", \"target\", \"field\"),\n        [\n            (0, \"header\", \"x_scale_factor\"),\n            (6, \"point\", \"gps_time\"),\n            (9, \"waveform\", \"xt\"),\n            (9, \"waveform\", \"return_point_waveform_location\"),\n        ],\n    )\n    def test_render_rejects_numeric_values_that_do_not_fit_target_binary_float(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n        target: str,\n        field: str,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        if target == \"header\":\n            dataset[\"header\"][field] = 10**1000\n        elif target == \"point\":\n            dataset[\"points\"][0][field] = 10**1000\n        else:\n            dataset[\"points\"][0][\"waveform\"][field] = 1e100\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va2'), {'evlrs': [{'data_b64': 'AQIDBA==', 'description': 'WaveData', 'kind': 'waveform_data_packets', 'record_id': 65535, ..... 2112, ...}, {'bits_per_sample': 16, 'description': 'WaveDesc', 'digitizer_gain': 0.5, 'digitizer_offset': 1.25, ...}]})\n\n/tmp/tests/test_validation.py:674: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-return_point_waveform_location]",
+      "outcome": "failed",
+      "duration_seconds": 0.021193749009398744,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va3')\npoint_format = 9, target = 'waveform', field = 'return_point_waveform_location'\n\n    @pytest.mark.parametrize(\n        (\"point_format\", \"target\", \"field\"),\n        [\n            (0, \"header\", \"x_scale_factor\"),\n            (6, \"point\", \"gps_time\"),\n            (9, \"waveform\", \"xt\"),\n            (9, \"waveform\", \"return_point_waveform_location\"),\n        ],\n    )\n    def test_render_rejects_numeric_values_that_do_not_fit_target_binary_float(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n        target: str,\n        field: str,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        if target == \"header\":\n            dataset[\"header\"][field] = 10**1000\n        elif target == \"point\":\n            dataset[\"points\"][0][field] = 10**1000\n        else:\n            dataset[\"points\"][0][\"waveform\"][field] = 1e100\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_numeric_va3'), {'evlrs': [{'data_b64': 'AQIDBA==', 'description': 'WaveData', 'kind': 'waveform_data_packets', 'record_id': 65535, ..... 2112, ...}, {'bits_per_sample': 16, 'description': 'WaveDesc', 'digitizer_gain': 0.5, 'digitizer_offset': 1.25, ...}]})\n\n/tmp/tests/test_validation.py:674: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_modern_geotiff_mode_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0225779140018858,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_missing_waveform_descriptor_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.023820507019991055,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_longer_than_point_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.022585347993299365,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_extra_bytes_triplet_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.021243249997496605,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_wrong_user_id_for_geo_key_directory",
+      "outcome": "passed",
+      "duration_seconds": 0.025456960021983832,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_opaque_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.02062557401950471,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_bad_geokeydirectory_header_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.022679285000776872,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_bad_geokey0')\n\n    def test_render_rejects_bad_geokeydirectory_header_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"][0][\"key_directory_version\"] = 2\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/node', '/tmp/submission/output/main.js'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_bad_geokey0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:748: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_geokeydirectory_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.022400799964088947,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_bits_per_sample_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.023656703007873148,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint8_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.020252145011909306,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_compression_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.025496654969174415,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint32_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.024448159005260095,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_waveform_data_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.024799696024274454,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_opaque_extra_bytes_reserved_bytes_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.02089013598742895,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[31]",
+      "outcome": "passed",
+      "duration_seconds": 0.02112470197607763,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[256]",
+      "outcome": "passed",
+      "duration_seconds": 0.02092343001277186,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_options_uint8_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.023952172021381557,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_float_triplet_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.023022877983748913,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_point_extra_bytes_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.01773628595401533,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.020799944963073358,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.020054787979461253,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.019704352045664564,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-x-2147483648]",
+      "outcome": "passed",
+      "duration_seconds": 0.022843936021672562,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.02858896303223446,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-classification-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.028005957981804386,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.021526557015022263,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.020907797035761178,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-scanner_channel-4]",
+      "outcome": "passed",
+      "duration_seconds": 0.021423864003736526,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.018480953003745526,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_nir_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.01818939298391342,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[descriptor_index-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.02123814995866269,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[byte_offset_to_waveform_data-18446744073709551616]",
+      "outcome": "passed",
+      "duration_seconds": 0.0191076310002245,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[waveform_packet_size_in_bytes-4294967296]",
+      "outcome": "passed",
+      "duration_seconds": 0.01845950202550739,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_geotiff_triplet_records",
+      "outcome": "passed",
+      "duration_seconds": 0.022019572992576286,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_geotiff_triplet_records",
+      "outcome": "passed",
+      "duration_seconds": 0.022247265034820884,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_wkt_pair_records",
+      "outcome": "passed",
+      "duration_seconds": 0.023619836021680385,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_classification_lookup_and_text_area_description",
+      "outcome": "passed",
+      "duration_seconds": 0.021480025025084615,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_unknown_vlr_and_evlr_as_opaque",
+      "outcome": "passed",
+      "duration_seconds": 0.02191704500000924,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_vlr_and_point_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.023803625983418897,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_multiple_evlrs_preserves_order_and_offsets",
+      "outcome": "passed",
+      "duration_seconds": 0.02056586995604448,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.023323726025409997,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.025314329977845773,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[9]",
+      "outcome": "passed",
+      "duration_seconds": 0.019372496055439115,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[10]",
+      "outcome": "passed",
+      "duration_seconds": 0.019789651967585087,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[11]",
+      "outcome": "passed",
+      "duration_seconds": 0.0189053529757075,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[17]",
+      "outcome": "passed",
+      "duration_seconds": 0.021855022030649707,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[21]",
+      "outcome": "passed",
+      "duration_seconds": 0.02361910798936151,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[29]",
+      "outcome": "passed",
+      "duration_seconds": 0.021935104014119133,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[30]",
+      "outcome": "passed",
+      "duration_seconds": 0.025350943964440376,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_extra_bytes_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.0195153399836272,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_undocumented_extra_bytes_descriptor",
+      "outcome": "passed",
+      "duration_seconds": 0.023790985957020894,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_empty_point_list_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.02175279802759178,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_waveform_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.025948661990696564,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_vlr_round_trips_as_tagged_kind",
+      "outcome": "passed",
+      "duration_seconds": 0.020054285967489704,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_evlr_round_trips_as_tagged_kind",
+      "outcome": "passed",
+      "duration_seconds": 0.020245744002750143,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_vlr_payload_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.02181211198330857,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_evlr_payload_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.021260341978631914,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 204,
+    "failed": 16,
+    "skipped": 0,
+    "error": 0,
+    "total": 220
+  },
+  "scores": {
+    "correctness": 0.9272727272727272,
+    "task_score": 0.9272727272727272,
+    "extension_scores": {
+      "subscore.point_formats.passed": 90.0,
+      "subscore.point_formats.total": 99.0,
+      "subscore.schema.passed": 7.0,
+      "subscore.schema.total": 7.0,
+      "subscore.validation.passed": 82.0,
+      "subscore.validation.total": 89.0,
+      "subscore.vlrs.passed": 24.0,
+      "subscore.vlrs.total": 24.0
+    }
+  },
+  "source_stats": {
+    "file_count": 1,
+    "lines_of_code": 1733
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims a complete JavaScript implementation; hidden tests passed 204/220, with remaining gaps limited to edge cases.",
+    "commentary": null
+  }
+}

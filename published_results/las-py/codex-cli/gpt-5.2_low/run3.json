@@ -1,0 +1,1397 @@
+{
+  "schema_version": "2.1",
+  "metadata": {
+    "run_uid": "98ce7a50-8939-4c22-85f5-d4991d813fbd",
+    "task": "las-py",
+    "agent": "codex-cli",
+    "agent_version": "0.126.0-alpha.1",
+    "prompt_variant": "base",
+    "run_number": 3,
+    "timestamp": "2026-06-01T10:26:11.565946+00:00",
+    "test_suite_version": "d073c01",
+    "eval_version": "2.0.0",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:9ae135609a6cd0aa3cc52527b4d13e33938a9d7cf132d662e14eb78d564fdc6c",
+    "wall_clock_seconds": 466.7029999999795,
+    "exit_reason": "completed",
+    "model": "gpt-5.2",
+    "served_model": null,
+    "effort": "low",
+    "notes": null,
+    "benchmark_cost_preference": "reported",
+    "prompt_content_sha": "2e1efa9e4b69e26ef113ded384704ac789a6c5bf63f6a6ea08f1b5d860078f1b",
+    "test_suite_sha": "6b43b123fbe42d00694ff7b6396830f3c2b00537a1e65a25f34690b0fbf3e0ad",
+    "agent_last_message": "Implemented a strict LAS 1.4 inspector/renderer in Python (stdlib-only).\n\n- Entry point: `output/main.py`\n- Usage: `python main.py --input <request.json> --output <response.json>` (run from `output/`, or use `python output/main.py ...` from repo root)\n- Supports:\n  - Public Header Block (LAS 1.4, header size 375) with cross-field validation\n  - VLRs + EVLRs (including strict reserved=0 checks and offset/length consistency)\n  - LASF_Projection records: OGC WKT (2111/2112) + GeoTIFF tags (34735/34736/34737)\n  - LASF_Spec records: classification lookup (0), text area description (3), extra bytes (4), superseded (7), waveform packet descriptors (100..354), waveform data packets EVLR (65535)\n  - Point record formats 0\u201310, including waveform point fields and round-trippable `extra_bytes_b64`\n  - Errors on LAS 1.4 structural/semantic violations (per the provided docs), with optional byte `offset` where applicable\n\nFiles added:\n- `output/main.py`\n- `output/las14.py`\n- `output/struct_reader.py`\n- `output/io_utils.py`\n- `output/errors.py`",
+    "exit_class": "completed"
+  },
+  "token_usage": {
+    "input_tokens": 1092973,
+    "output_tokens": 22739,
+    "cache_read_input_tokens": 1049856,
+    "cache_creation_input_tokens": null,
+    "tool_calls": 24,
+    "reported_cost_usd": null,
+    "estimated_cost_usd": 0.577526,
+    "cost_estimate_blocked_reason": null,
+    "source": "codex_exec_turn_completed",
+    "is_partial": false,
+    "total_tokens": 1115712
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.039085616008378565,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_reference_cli_runs",
+      "outcome": "passed",
+      "duration_seconds": 0.039085616008378565,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_source_id]",
+      "outcome": "failed",
+      "duration_seconds": 0.033924179966561496,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv0')\nfield = 'file_source_id'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[project_id]",
+      "outcome": "failed",
+      "duration_seconds": 0.035761714971158653,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv1')\nfield = 'project_id'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_major]",
+      "outcome": "failed",
+      "duration_seconds": 0.034850148076657206,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv2')\nfield = 'version_major'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[version_minor]",
+      "outcome": "failed",
+      "duration_seconds": 0.03567801701137796,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv3')\nfield = 'version_minor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[system_identifier]",
+      "outcome": "failed",
+      "duration_seconds": 0.03975898306816816,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv4')\nfield = 'system_identifier'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[generating_software]",
+      "outcome": "failed",
+      "duration_seconds": 0.043629758059978485,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv5')\nfield = 'generating_software'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_day_of_year]",
+      "outcome": "failed",
+      "duration_seconds": 0.03712754411390051,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv6')\nfield = 'file_creation_day_of_year'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[file_creation_year]",
+      "outcome": "failed",
+      "duration_seconds": 0.04508678102865815,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv7')\nfield = 'file_creation_year'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[header_size]",
+      "outcome": "failed",
+      "duration_seconds": 0.04223472106968984,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv8')\nfield = 'header_size'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_scale_factor]",
+      "outcome": "failed",
+      "duration_seconds": 0.041785650013480335,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv9')\nfield = 'x_scale_factor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_scale_factor]",
+      "outcome": "failed",
+      "duration_seconds": 0.04293111898005009,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv10')\nfield = 'y_scale_factor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_scale_factor]",
+      "outcome": "failed",
+      "duration_seconds": 0.03756166301900521,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv11')\nfield = 'z_scale_factor'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[x_offset]",
+      "outcome": "failed",
+      "duration_seconds": 0.03942326799733564,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv12')\nfield = 'x_offset'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[y_offset]",
+      "outcome": "failed",
+      "duration_seconds": 0.03918288502609357,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv13')\nfield = 'y_offset'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_invariant_field[z_offset]",
+      "outcome": "failed",
+      "duration_seconds": 0.03842737199738622,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_inv14')\nfield = 'z_offset'\n\n    @pytest.mark.parametrize(\"field\", _HEADER_FORMAT_INVARIANT_FIELDS)\n    def test_inspect_header_format_invariant_field(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        field: str,\n    ) -> None:\n        \"\"\"Parametrize by *field* (not by format) so a single misread offset for\n        `system_identifier` fails one named test, not 11 copies of the same fact.\n        Format 6 is representative for the format-invariant fields tested here.\"\"\"\n    \n>       actual, expected = _inspect_header(submission_command, tmp_path, 6)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:121: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.03998015797697008,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.037623963959049433,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.039306841033976525,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.037379133980721235,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.040119234879966825,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.03790824208408594,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.036730343010276556,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.04055428400170058,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.036936051037628204,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.04236669995589182,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_format_layout_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.03767667600186542,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_format_lay10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_format_layout_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:131: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.036776975030079484,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.034693832974880934,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.03956725407624617,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.037432509067002684,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.03707523597404361,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.03865918499650434,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.035405966045800596,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.04281107702990994,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.034005697001703084,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.03935214597731829,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_counter_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.034286326030269265,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_counter_fi10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_counter_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:142: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.03612924099434167,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.03431980294408277,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.03740953601663932,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.03554206405533478,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.03554535796865821,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.03775196697097272,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.03571086807642132,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.03714644996216521,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.037455287005286664,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.03990125498967245,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_header_extent_fields[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.03791770088719204,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_header_extent_fie10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_header_extent_fields(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n>       actual, expected = _inspect_header(submission_command, tmp_path, point_format)\n                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:153: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n/tmp/tests/test_point_formats.py:106: in _inspect_header\n    actual = cast(dict[str, Any], payload_dataset(payload)[\"header\"])\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^\n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.034879099926911294,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.036353610979858786,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.03578348411247134,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.03480511100497097,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.035314957960508764,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.03622909699333832,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.03664508293149993,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.03938827203819528,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.035665981005877256,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.04120714496821165,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_point_payload[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.035109832999296486,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_poin10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:168: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0368539800401777,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.03649814409436658,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.04152138199424371,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.035580979951191694,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.0353595310007222,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.037005099991802126,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.037390500016044825,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.03469676605891436,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.036024839035235345,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.035621520946733654,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_vlrs[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.038671031943522394,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_vlrs10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_vlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:183: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.035494719981215894,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.035424585978034884,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.03691675595473498,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.03628321608994156,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.035742781998123974,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.039142412948422134,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.034700605960097164,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr6')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.03769715200178325,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr7')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.039478447986766696,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr8')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.04394290404161438,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr9')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_point_format_evlrs[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.045964486023876816,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_point_format_evlr10')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", list(range(11)))\n    def test_inspect_point_format_evlrs(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        _, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n        assert payload is not None\n>       actual = payload_dataset(payload)\n                 ^^^^^^^^^^^^^^^^^^^^^^^^\n\n/tmp/tests/test_point_formats.py:198: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\npayload = {'error': {'code': 'invalid_document', 'message': 'legacy_number_of_point_records must equal number_of_point_records when representable'}, 'result': None, 'status': 'error'}\n\n    def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:\n>       return cast(dict[str, Any], cast(dict[str, Any], payload[\"result\"])[\"dataset\"])\n                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nE       TypeError: 'NoneType' object is not subscriptable\n\n/tmp/tests/las_support.py:1152: TypeError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[6]",
+      "outcome": "failed",
+      "duration_seconds": 0.04373017797479406,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format0')\npoint_format = 6\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...x00\\x00r\\x8f@' == b'LASF\\x07\\x0...x00\\x00r\\x8f@'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[7]",
+      "outcome": "failed",
+      "duration_seconds": 0.037699565931688994,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format1')\npoint_format = 7\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...7\\x07\\xbf\\x0b' == b'LASF\\x07\\x0...7\\x07\\xbf\\x0b'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[8]",
+      "outcome": "failed",
+      "duration_seconds": 0.04080724494997412,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format2')\npoint_format = 8\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...0\\x0b\\xa8\\x0f' == b'LASF\\x07\\x0...0\\x0b\\xa8\\x0f'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.038938554062042385,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format3')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_exact_point_format_samples[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.03820205299416557,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_exact_point_format4')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", EXACT_RENDER_FORMATS)\n    def test_render_exact_point_format_samples(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        result, payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert result.returncode == 0\n        assert payload is not None\n        assert payload[\"status\"] == \"ok\"\n>       assert payload_las_bytes(payload) == encode_dataset(dataset)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 107 diff: b'\\x01' != b'\\x00'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:219: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[0]",
+      "outcome": "passed",
+      "duration_seconds": 0.03514224902028218,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[1]",
+      "outcome": "passed",
+      "duration_seconds": 0.03784654202172533,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[2]",
+      "outcome": "passed",
+      "duration_seconds": 0.034907875990029424,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[3]",
+      "outcome": "passed",
+      "duration_seconds": 0.036728798935655504,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[4]",
+      "outcome": "failed",
+      "duration_seconds": 0.035099783912301064,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou4')\npoint_format = 4\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert render_result.returncode == 0\n        assert render_payload is not None\n    \n        rendered = payload_las_bytes(render_payload)\n        expected = encode_dataset(dataset)\n>       assert _without_legacy_counter_pair(rendered) == _without_legacy_counter_pair(expected)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 227 diff: b'\\x8a' != b'N'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:240: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_render_legacy_formats_roundtrip_semantics[5]",
+      "outcome": "failed",
+      "duration_seconds": 0.03721611702349037,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_legacy_formats_rou5')\npoint_format = 5\n\n    @pytest.mark.parametrize(\"point_format\", LEGACY_RENDER_FORMATS)\n    def test_render_legacy_formats_roundtrip_semantics(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_for_point_format(point_format)\n        render_result, render_payload = run_las(\n            submission_command,\n            encode_request_for_render(dataset),\n            tmp_path,\n        )\n    \n        assert render_result.returncode == 0\n        assert render_payload is not None\n    \n        rendered = payload_las_bytes(render_payload)\n        expected = encode_dataset(dataset)\n>       assert _without_legacy_counter_pair(rendered) == _without_legacy_counter_pair(expected)\nE       AssertionError: assert b'LASF\\x07\\x0...1\\x02\\x03\\x04' == b'LASF\\x07\\x0...1\\x02\\x03\\x04'\nE         \nE         At index 227 diff: b'\\x90' != b'T'\nE         Use -v to get more diff\n\n/tmp/tests/test_point_formats.py:240: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_legacy_multi_return_counts",
+      "outcome": "passed",
+      "duration_seconds": 0.03437894897069782,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_inspect_modern_multi_return_counts",
+      "outcome": "failed",
+      "duration_seconds": 0.03498729702550918,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_modern_multi_retu0')\n\n    def test_inspect_modern_multi_return_counts(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_modern_multi_returns()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_modern_multi_retu0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:272: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[4]",
+      "outcome": "passed",
+      "duration_seconds": 0.03591058496385813,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[5]",
+      "outcome": "passed",
+      "duration_seconds": 0.03607493394520134,
+      "message": null
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.03660847898572683,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2')\npoint_format = 9\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_2/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.036784501920919865,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3')\npoint_format = 10\n\n    @pytest.mark.parametrize(\"point_format\", [4, 5, 9, 10])\n    def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        point_format: int,\n    ) -> None:\n        dataset = dataset_without_waveform_packets(point_format)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_waveform_capable_formats_3/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:288: AssertionError"
+    },
+    {
+      "node_id": "test_point_formats.py::test_external_waveform_mode_does_not_require_waveform_evlr",
+      "outcome": "failed",
+      "duration_seconds": 0.035713704011868685,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_external_waveform_mode_do0')\n\n    def test_external_waveform_mode_does_not_require_waveform_evlr(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_external_waveform_packets()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_external_waveform_mode_do0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_point_formats.py:300: AssertionError"
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_response_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.03513962199212983,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_response_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.039082376926671714,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_invalid_action_uses_invalid_request_code",
+      "outcome": "passed",
+      "duration_seconds": 0.037883039040025324,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_non_object_request_is_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03238687798148021,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_error_envelope_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.03833524393849075,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_error_envelope_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.040747691062279046,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_malformed_las_b64_routes_to_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03919806896010414,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_file_signature",
+      "outcome": "passed",
+      "duration_seconds": 0.03420203598216176,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_malformed_base64",
+      "outcome": "passed",
+      "duration_seconds": 0.03758611797820777,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_header_size",
+      "outcome": "passed",
+      "duration_seconds": 0.04625634104013443,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_reserved_global_encoding_bits",
+      "outcome": "failed",
+      "duration_seconds": 0.034411992062814534,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_reserved_global_e0')\n\n    def test_rejects_reserved_global_encoding_bits(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        data = encode_dataset(dataset_for_point_format(0))\n        broken = _patch_bytes(data, 6, (1 << 7).to_bytes(2, \"little\"))\n>       assert _inspect_was_rejected(submission_command, tmp_path, broken)\nE       AssertionError: assert False\nE        +  where False = _inspect_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_reserved_global_e0'), b'LASF\\x07\\x00\\x80\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...00\\x00\\x01\\x00\\x02\\x00\\x00\\x0c\\x00\\x00\\x01\\x00g\\x7fd\\x00\\x00\\x00\\xc8\\x00\\x00\\x00,\\x01\\x00\\x00\\n\\x00\\tB\\xfb\\x00\\x07\\x00')\n\n/tmp/tests/test_validation.py:119: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_mutually_exclusive_waveform_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.038966855965554714,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_point_format_without_wkt_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.04174109501764178,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_geokeydirectory_in_geotiff_mode",
+      "outcome": "failed",
+      "duration_seconds": 0.04066285997396335,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_missing_geokeydir0')\n\n    def test_rejects_missing_geokeydirectory_in_geotiff_mode(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"] = []\n        data = encode_dataset(dataset)\n>       assert _inspect_was_rejected(submission_command, tmp_path, data)\nE       AssertionError: assert False\nE        +  where False = _inspect_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_missing_geokeydir0'), b'LASF\\x07\\x00\\x00\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00d\\x00\\x00\\x00\\xc8\\x00\\x00\\x00,\\x01\\x00\\x00\\n\\x00\\tB\\xfb\\x00\\x07\\x00')\n\n/tmp/tests/test_validation.py:148: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_coordinate_system_wkt_record",
+      "outcome": "passed",
+      "duration_seconds": 0.035832316032610834,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_geokeydirectory_records",
+      "outcome": "failed",
+      "duration_seconds": 0.03851604904048145,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_duplicate_geokeyd0')\n\n    def test_rejects_duplicate_geokeydirectory_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"].append(clone(dataset[\"vlrs\"][0]))\n        data = encode_dataset(dataset)\n>       assert _inspect_was_rejected(submission_command, tmp_path, data)\nE       AssertionError: assert False\nE        +  where False = _inspect_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_duplicate_geokeyd0'), b'LASF\\x07\\x00\\x00\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...00\\x00\\x01\\x00\\x02\\x00\\x00\\x0c\\x00\\x00\\x01\\x00g\\x7fd\\x00\\x00\\x00\\xc8\\x00\\x00\\x00,\\x01\\x00\\x00\\n\\x00\\tB\\xfb\\x00\\x07\\x00')\n\n/tmp/tests/test_validation.py:168: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_duplicate_coordinate_system_wkt_records",
+      "outcome": "passed",
+      "duration_seconds": 0.035899626032914966,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_truncated_point_data",
+      "outcome": "passed",
+      "duration_seconds": 0.03899925301084295,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_vlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.040867539995815605,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_evlr_reserved_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.03461619303561747,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_classification_lookup_length",
+      "outcome": "passed",
+      "duration_seconds": 0.04070732602849603,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_text_area_without_null_terminator",
+      "outcome": "passed",
+      "duration_seconds": 0.04409128805855289,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_wkt_without_null_terminator",
+      "outcome": "passed",
+      "duration_seconds": 0.03714917605975643,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_bad_geokeydirectory_header",
+      "outcome": "passed",
+      "duration_seconds": 0.039961459988262504,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_payload_length_not_multiple_of_192",
+      "outcome": "passed",
+      "duration_seconds": 0.035841377917677164,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.03501406096620485,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_reserved_bytes_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.03612239903304726,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_extra_bytes_unused_field_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.03646659501828253,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_invalid_waveform_descriptor_length",
+      "outcome": "passed",
+      "duration_seconds": 0.04277627303963527,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.035214784962590784,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_bits_per_sample_above_32",
+      "outcome": "passed",
+      "duration_seconds": 0.04392260295571759,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_compression_type_nonzero",
+      "outcome": "passed",
+      "duration_seconds": 0.0338616669178009,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_missing_waveform_descriptor_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.05655728897545487,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_internal_waveform_bit_without_waveform_evlr",
+      "outcome": "passed",
+      "duration_seconds": 0.03786892897915095,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_waveform_evlr_without_internal_bit",
+      "outcome": "passed",
+      "duration_seconds": 0.033461682964116335,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_zero_return_number_in_modern_format",
+      "outcome": "passed",
+      "duration_seconds": 0.04949591204058379,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_scan_angle_rank_out_of_range",
+      "outcome": "failed",
+      "duration_seconds": 0.04052158503327519,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_scan_angle_rank_o0')\n\n    def test_rejects_scan_angle_rank_out_of_range(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        data = encode_dataset(dataset_for_point_format(0))\n        point_offset = int.from_bytes(data[96:100], \"little\")\n        broken = _patch_bytes(data, point_offset + 16, (120).to_bytes(1, \"little\", signed=True))\n>       assert _inspect_was_rejected(submission_command, tmp_path, broken)\nE       AssertionError: assert False\nE        +  where False = _inspect_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_rejects_scan_angle_rank_o0'), b'LASF\\x07\\x00\\x00\\x00gE>\\x12\\x9b\\xe8\\xd3\\x12\\xa4VBf\\x14\\x17@\\x00\\x01\\x04OTHER\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00...4\\x00\\x00\\x01\\x00\\x02\\x00\\x00\\x0c\\x00\\x00\\x01\\x00g\\x7fd\\x00\\x00\\x00\\xc8\\x00\\x00\\x00,\\x01\\x00\\x00\\n\\x00\\tBx\\x00\\x07\\x00')\n\n/tmp/tests/test_validation.py:419: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_modern_scan_angle_out_of_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0403165269526653,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_offset_to_point_data_smaller_than_header",
+      "outcome": "passed",
+      "duration_seconds": 0.03893018397502601,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_point_records_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.03933226503431797,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_number_of_points_by_return_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.044683852000162005,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_nonzero_legacy_counters_for_modern_point_format",
+      "outcome": "passed",
+      "duration_seconds": 0.03448442299850285,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_zero_with_populated_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.03541705396492034,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_legacy_count_populated_with_zero_return_counters",
+      "outcome": "passed",
+      "duration_seconds": 0.03983881906606257,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_rejects_header_extent_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.037382788956165314,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_for_legacy_non_color_format",
+      "outcome": "failed",
+      "duration_seconds": 0.03673464199528098,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_color_for_0')\n\n    def test_render_rejects_color_for_legacy_non_color_format(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"points\"][0][\"color\"] = {\"red\": 1, \"green\": 2, \"blue\": 3}\n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_color_for_0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:501: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_mismatched_extra_bytes_lengths",
+      "outcome": "passed",
+      "duration_seconds": 0.043548037006985396,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_data_packets_in_vlrs",
+      "outcome": "passed",
+      "duration_seconds": 0.03702511597657576,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_reserved_global_encoding_bits_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.03633591998368502,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_reserved_g0')\n\n    def test_render_rejects_reserved_global_encoding_bits_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(6)\n        dataset[\"header\"][\"global_encoding\"] = dataset[\"header\"][\"global_encoding\"] | (1 << 7)\n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_reserved_g0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating...}], 'vlrs': [{'_evlr_hint': False, 'description': 'WKT CRS', 'kind': 'wkt_coordinate_system', 'record_id': 2112, ...}]})\n\n/tmp/tests/test_validation.py:530: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_header_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03568161994917318,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_project_id_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03394884295994416,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[system_identifier]",
+      "outcome": "passed",
+      "duration_seconds": 0.03651552798692137,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_header_text_as_invalid_request[generating_software]",
+      "outcome": "passed",
+      "duration_seconds": 0.03286468703299761,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_fixed_ascii_header_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.043592596950475127,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_embedded_n0')\n\n    def test_render_rejects_embedded_nul_in_fixed_ascii_header_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"header\"][\"system_identifier\"] = \"A\\x00B\"\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_embedded_n0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:572: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[user_id]",
+      "outcome": "passed",
+      "duration_seconds": 0.03337299596751109,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_record_header_text_as_invalid_request[description]",
+      "outcome": "passed",
+      "duration_seconds": 0.043539407080970705,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_embedded_nul_in_record_description_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.03544093493837863,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_embedded_n1')\n\n    def test_render_rejects_embedded_nul_in_record_description_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"].append(\n            {\n                \"user_id\": \"CUSTOM\",\n                \"record_id\": 42,\n                \"description\": \"A\\x00B\",\n                \"kind\": \"opaque\",\n                \"data_b64\": \"\",\n            }\n        )\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_embedded_n1'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating...: 0, 'value_offset': 32615}], ...}, {'data_b64': '', 'description': 'A\\x00B', 'kind': 'opaque', 'record_id': 42, ...}]})\n\n/tmp/tests/test_validation.py:611: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_text_area_payload_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.035605685028713197,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_non_ascii_4')\n\n    def test_render_rejects_non_ascii_text_area_payload_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"].append(\n            {\n                \"user_id\": \"LASF_Spec\",\n                \"record_id\": 3,\n                \"description\": \"Text\",\n                \"kind\": \"text_area_description\",\n                \"text\": \"Caf\\u00e9\",\n            }\n        )\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_non_ascii_4'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating...offset': 32615}], ...}, {'description': 'Text', 'kind': 'text_area_description', 'record_id': 3, 'text': 'Caf\u00e9', ...}]})\n\n/tmp/tests/test_validation.py:629: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_ascii_geo_ascii_payload_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.04137422505300492,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[0-header-x_scale_factor]",
+      "outcome": "passed",
+      "duration_seconds": 0.06059861707035452,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[6-point-gps_time]",
+      "outcome": "passed",
+      "duration_seconds": 0.049202717025764287,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-xt]",
+      "outcome": "passed",
+      "duration_seconds": 0.0526225219364278,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_numeric_values_that_do_not_fit_target_binary_float[9-waveform-return_point_waveform_location]",
+      "outcome": "passed",
+      "duration_seconds": 0.041918948001693934,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_modern_geotiff_mode_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.047268805967178196,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_modern_geo0')\n\n    def test_render_rejects_modern_geotiff_mode_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(6)\n        dataset[\"header\"][\"global_encoding\"] = 0\n        dataset[\"vlrs\"] = [geo_key_directory_vlr()]\n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_modern_geo0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:684: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_missing_waveform_descriptor_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03804742597276345,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_longer_than_point_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03920144197763875,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_invalid_extra_bytes_triplet_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.03870319901034236,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_wrong_user_id_for_geo_key_directory",
+      "outcome": "passed",
+      "duration_seconds": 0.039150009979493916,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_opaque_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.036221996997483075,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_bad_geokeydirectory_header_as_invalid_request",
+      "outcome": "failed",
+      "duration_seconds": 0.03899392898892984,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_bad_geokey0')\n\n    def test_render_rejects_bad_geokeydirectory_header_as_invalid_request(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(0)\n        dataset[\"vlrs\"][0][\"key_directory_version\"] = 2\n    \n>       assert _render_was_rejected(submission_command, tmp_path, dataset)\nE       AssertionError: assert False\nE        +  where False = _render_was_rejected(('/usr/bin/python3', '/tmp/submission/output/main.py'), PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_bad_geokey0'), {'evlrs': [], 'header': {'file_creation_day_of_year': 42, 'file_creation_year': 2026, 'file_source_id': 7, 'generating..._location': 0, 'value_offset': 2}, {'count': 1, 'key_id': 3072, 'tiff_tag_location': 0, 'value_offset': 32615}], ...}]})\n\n/tmp/tests/test_validation.py:748: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_geokeydirectory_uint16_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03630940290167928,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_bits_per_sample_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.040717946947552264,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint8_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0361867910833098,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_compression_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03535824303980917,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_descriptor_uint32_overflow_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.035457150952424854,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_waveform_data_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03900295699713752,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_opaque_extra_bytes_reserved_bytes_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0414066850207746,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[31]",
+      "outcome": "passed",
+      "duration_seconds": 0.046839924063533545,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_data_type_outside_supported_range[256]",
+      "outcome": "passed",
+      "duration_seconds": 0.03518042591167614,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_descriptor_options_uint8_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.03798635001294315,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_extra_bytes_float_triplet_overflow",
+      "outcome": "passed",
+      "duration_seconds": 0.04117546899942681,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_malformed_point_extra_bytes_base64_as_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.03892066597472876,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.04459088895237073,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.03963031305465847,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[0-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.03485422598896548,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-x-2147483648]",
+      "outcome": "passed",
+      "duration_seconds": 0.04556631197920069,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-intensity-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.03750908398069441,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-classification-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.0394098199903965,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-user_data-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.037118651962373406,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-point_source_id-70000]",
+      "outcome": "passed",
+      "duration_seconds": 0.03973420598777011,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_point_scalar_values_outside_las_ranges[6-scanner_channel-4]",
+      "outcome": "passed",
+      "duration_seconds": 0.04303158901166171,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_color_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.03610371600370854,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_nir_component_outside_uint16",
+      "outcome": "passed",
+      "duration_seconds": 0.0450810759793967,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[descriptor_index-256]",
+      "outcome": "passed",
+      "duration_seconds": 0.03387106495210901,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[byte_offset_to_waveform_data-18446744073709551616]",
+      "outcome": "passed",
+      "duration_seconds": 0.04506169201340526,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_waveform_integer_values_outside_las_ranges[waveform_packet_size_in_bytes-4294967296]",
+      "outcome": "passed",
+      "duration_seconds": 0.035092987993266433,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_geotiff_triplet_records",
+      "outcome": "passed",
+      "duration_seconds": 0.041601598961278796,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_geotiff_triplet_records",
+      "outcome": "passed",
+      "duration_seconds": 0.04148595500737429,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_wkt_pair_records",
+      "outcome": "failed",
+      "duration_seconds": 0.040945743035990745,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_wkt_pair_records0')\n\n    def test_inspect_wkt_pair_records(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_wkt_pair()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...put', '/tmp/pytest-of-root/pytest-0/test_inspect_wkt_pair_records0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:115: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_classification_lookup_and_text_area_description",
+      "outcome": "passed",
+      "duration_seconds": 0.038537896994967014,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_unknown_vlr_and_evlr_as_opaque",
+      "outcome": "failed",
+      "duration_seconds": 0.042010735953226686,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_unknown_vlr_and_e0')\n\n    def test_inspect_unknown_vlr_and_evlr_as_opaque(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_unknown_records()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_unknown_vlr_and_e0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:143: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_vlr_and_point_payload",
+      "outcome": "failed",
+      "duration_seconds": 0.04028983402531594,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_vlr_a0')\n\n    def test_inspect_extra_bytes_vlr_and_point_payload(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_extra_bytes(6)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_vlr_a0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:158: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_multiple_evlrs_preserves_order_and_offsets",
+      "outcome": "failed",
+      "duration_seconds": 0.04132104496238753,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_multiple_evlrs_pr0')\n\n    def test_inspect_multiple_evlrs_preserves_order_and_offsets(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_multiple_evlrs()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_multiple_evlrs_pr0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:175: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[1]",
+      "outcome": "failed",
+      "duration_seconds": 0.0413110259687528,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora0')\ndata_type = 1\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[2]",
+      "outcome": "failed",
+      "duration_seconds": 0.03350884304381907,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora1')\ndata_type = 2\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora1/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[9]",
+      "outcome": "failed",
+      "duration_seconds": 0.04327665100572631,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora2')\ndata_type = 9\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora2/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[10]",
+      "outcome": "failed",
+      "duration_seconds": 0.043310709996148944,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora3')\ndata_type = 10\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora3/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[11]",
+      "outcome": "failed",
+      "duration_seconds": 0.04540672799339518,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora4')\ndata_type = 11\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora4/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[17]",
+      "outcome": "failed",
+      "duration_seconds": 0.04207640001550317,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora5')\ndata_type = 17\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora5/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[21]",
+      "outcome": "failed",
+      "duration_seconds": 0.03735675907228142,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora6')\ndata_type = 21\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora6/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[29]",
+      "outcome": "failed",
+      "duration_seconds": 0.03707033599494025,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora7')\ndata_type = 29\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora7/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_extra_bytes_storage_types[30]",
+      "outcome": "failed",
+      "duration_seconds": 0.037935041065793484,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora8')\ndata_type = 30\n\n    @pytest.mark.parametrize(\"data_type\", [1, 2, 9, 10, 11, 17, 21, 29, 30])\n    def test_inspect_extra_bytes_storage_types(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n        data_type: int,\n    ) -> None:\n        dataset = dataset_with_extra_bytes_type(data_type)\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_extra_bytes_stora8/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:199: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_extra_bytes_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.042567220982164145,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_undocumented_extra_bytes_descriptor",
+      "outcome": "failed",
+      "duration_seconds": 0.03384820104110986,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_undocumented_extr0')\n\n    def test_inspect_undocumented_extra_bytes_descriptor(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_for_point_format(6)\n        dataset[\"vlrs\"].append(undocumented_extra_bytes_vlr(2))\n        dataset[\"points\"] = [dataset[\"points\"][0] | {\"extra_bytes_b64\": \"NBI=\"}]\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_undocumented_extr0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:232: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_empty_point_list_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.03798552101943642,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_waveform_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.040613890916574746,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_vlr_round_trips_as_tagged_kind",
+      "outcome": "failed",
+      "duration_seconds": 0.039645782962907106,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_superseded_vlr_ro0')\n\n    def test_inspect_superseded_vlr_round_trips_as_tagged_kind(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_superseded_record()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_superseded_vlr_ro0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:281: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_inspect_superseded_evlr_round_trips_as_tagged_kind",
+      "outcome": "failed",
+      "duration_seconds": 0.03412306506652385,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_inspect_superseded_evlr_r0')\n\n    def test_inspect_superseded_evlr_round_trips_as_tagged_kind(\n        submission_command: Sequence[str],\n        tmp_path: Path,\n    ) -> None:\n        dataset = dataset_with_superseded_evlr()\n        result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)\n    \n>       assert result.returncode == 0\nE       AssertionError: assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_inspect_superseded_evlr_r0/response.json'], returncode=1, stdout='', stderr='').returncode\n\n/tmp/tests/test_vlrs.py:296: AssertionError"
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_vlr_payload_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.038841029978357255,
+      "message": null
+    },
+    {
+      "node_id": "test_vlrs.py::test_render_superseded_evlr_payload_round_trips",
+      "outcome": "passed",
+      "duration_seconds": 0.03424648306099698,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 125,
+    "failed": 95,
+    "skipped": 0,
+    "error": 0,
+    "total": 220
+  },
+  "scores": {
+    "correctness": 0.5681818181818182,
+    "task_score": 0.5681818181818182,
+    "extension_scores": {
+      "subscore.point_formats.passed": 31.0,
+      "subscore.point_formats.total": 99.0,
+      "subscore.schema.passed": 7.0,
+      "subscore.schema.total": 7.0,
+      "subscore.validation.passed": 78.0,
+      "subscore.validation.total": 89.0,
+      "subscore.vlrs.passed": 8.0,
+      "subscore.vlrs.total": 24.0
+    }
+  },
+  "source_stats": {
+    "file_count": 5,
+    "lines_of_code": 1233
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Completed with a submitted Python implementation; hidden tests passed 125/220, so substantial behavior works but important gaps remain.",
+    "commentary": null
+  }
+}
