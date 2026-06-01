@@ -13,15 +13,89 @@ from clispecbench.harness.results import TokenUsage
 
 log = logging.getLogger(__name__)
 
-DOCKERFILE = (
-    Path(__file__).resolve().parent.parent.parent.parent
-    / "docker"
-    / "agents"
-    / "claude-code.Dockerfile"
-)
+_AGENTS_DOCKER_DIR = Path(__file__).resolve().parent.parent.parent.parent / "docker" / "agents"
+DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code.Dockerfile"
+LEGACY_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-legacy.Dockerfile"
 
 # OpenTelemetry export directory inside the container
 OTEL_COLLECTOR_DIR = "/tmp/otel"
+
+
+@dataclass(frozen=True)
+class _CliVariant:
+    """A pinned Claude Code CLI generation behind the single ``claude-code`` agent.
+
+    The agent identity is always ``claude-code``; the *variant* selects which
+    container image / CLI version runs and how it is driven. The CLI version is
+    recorded per-run in ``metadata.agent_version`` (read from the variant's
+    Dockerfile), so the dashboard can distinguish e.g. 2.1.120 from 2.0.2
+    without inventing separate agent names.
+    """
+
+    key: str
+    image_tag: str
+    dockerfile: Path
+    supports_effort: bool  # 2.1+ has --effort; 2.0.x controls reasoning via a budget
+    telemetry: bool  # 2.0.x's OTLP exporter crashes on file:// — disable there
+    max_thinking_tokens: str | None  # fixed reasoning budget when --effort is absent
+
+
+# Default: the current pinned CLI (2.1.x), adaptive thinking via --effort, OTEL on.
+_DEFAULT_VARIANT = _CliVariant(
+    key="default",
+    image_tag="clispecbench-claude-code",
+    dockerfile=DOCKERFILE,
+    supports_effort=True,
+    telemetry=True,
+    max_thinking_tokens=None,
+)
+# Legacy: a 2.0.x CLI that still recognizes the deprecated 4.0-generation
+# snapshot IDs. No --effort flag; reasoning set via MAX_THINKING_TOKENS; OTEL off.
+_LEGACY_VARIANT = _CliVariant(
+    key="legacy",
+    image_tag="clispecbench-claude-code-legacy",
+    dockerfile=LEGACY_DOCKERFILE,
+    supports_effort=False,
+    telemetry=False,
+    max_thinking_tokens="31999",
+)
+_VARIANTS: dict[str, _CliVariant] = {v.key: v for v in (_DEFAULT_VARIANT, _LEGACY_VARIANT)}
+
+# Models the current pinned CLI no longer serves faithfully — it silently falls
+# back to its default model (verified: claude-opus-4-7). These must run on the
+# legacy CLI variant. The served-vs-requested model guard backstops this map:
+# if a model routes to the wrong CLI, the run fails rather than mislabels.
+_LEGACY_MODELS: frozenset[str] = frozenset(
+    {
+        "claude-opus-4-20250514",
+        "claude-sonnet-4-20250514",
+        "claude-opus-4-1-20250805",
+    }
+)
+
+
+def _resolve_cli_variant(model: str | None, cli_version: str | None) -> _CliVariant:
+    """Pick the CLI variant for a run: explicit override, else model-driven default.
+
+    ``cli_version`` accepts a variant key (``"default"``/``"legacy"``) or the
+    resolved CLI version string (e.g. ``"2.0.2"``). When unset, models in
+    :data:`_LEGACY_MODELS` route to the legacy variant and everything else to
+    the default.
+    """
+    if cli_version:
+        if cli_version in _VARIANTS:
+            return _VARIANTS[cli_version]
+        for variant in _VARIANTS.values():
+            if read_dockerfile_arg(variant.dockerfile, "CLAUDE_CODE_VERSION") == cli_version:
+                return variant
+        versions = {
+            read_dockerfile_arg(v.dockerfile, "CLAUDE_CODE_VERSION") for v in _VARIANTS.values()
+        }
+        valid = ", ".join(sorted({*_VARIANTS} | versions))
+        raise ValueError(f"Unknown --cli-version {cli_version!r}. Valid: {valid}")
+    if model in _LEGACY_MODELS:
+        return _LEGACY_VARIANT
+    return _DEFAULT_VARIANT
 
 
 class ClaudeCodeAdapter(AgentAdapter):
@@ -31,9 +105,15 @@ class ClaudeCodeAdapter(AgentAdapter):
         self,
         model: str | None = None,
         effort: str | None = None,
+        cli_version: str | None = None,
     ) -> None:
         self._model = model
         self._effort = effort
+        # One agent identity ("claude-code") spanning multiple pinned CLI
+        # generations. The variant (default vs legacy) is chosen by an explicit
+        # --cli-version or, by default, by the model. The CLI version is
+        # surfaced per-run via the `version` property → metadata.agent_version.
+        self._variant = _resolve_cli_variant(model, cli_version)
 
     @property
     def name(self) -> str:
@@ -41,19 +121,27 @@ class ClaudeCodeAdapter(AgentAdapter):
 
     @property
     def version(self) -> str:
-        return read_dockerfile_arg(DOCKERFILE, "CLAUDE_CODE_VERSION")
+        return read_dockerfile_arg(self._variant.dockerfile, "CLAUDE_CODE_VERSION")
 
     @property
     def dockerfile(self) -> Path:
-        return DOCKERFILE
+        return self._variant.dockerfile
+
+    @property
+    def image_tag(self) -> str:
+        return self._variant.image_tag
 
     def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
         env = {**api_key_env}
-        # Configure OpenTelemetry file export for token tracking
-        env["CLAUDE_CODE_ENABLE_TELEMETRY"] = "1"
-        env["OTEL_METRICS_EXPORTER"] = "otlp"
-        env["OTEL_LOGS_EXPORTER"] = "otlp"
-        env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"file://{OTEL_COLLECTOR_DIR}"
+        if self._variant.telemetry:
+            # Configure OpenTelemetry file export for token tracking. Disabled
+            # on the legacy variant — the 2.0.x OTLP exporter crashes on the
+            # file:// endpoint; token/cost there come from the stream-json
+            # result event instead (the preferred parse path).
+            env["CLAUDE_CODE_ENABLE_TELEMETRY"] = "1"
+            env["OTEL_METRICS_EXPORTER"] = "otlp"
+            env["OTEL_LOGS_EXPORTER"] = "otlp"
+            env["OTEL_EXPORTER_OTLP_ENDPOINT"] = f"file://{OTEL_COLLECTOR_DIR}"
         return env
 
     @property
@@ -71,8 +159,13 @@ class ClaudeCodeAdapter(AgentAdapter):
         flags = "--print --dangerously-skip-permissions --verbose --output-format stream-json"
         if self._model:
             flags += f" --model {self._model}"
-        if self._effort:
+        # --effort only exists on 2.1+. On the legacy variant we instead set a
+        # fixed reasoning budget via MAX_THINKING_TOKENS inside the agent shell.
+        if self._variant.supports_effort and self._effort:
             flags += f" --effort {self._effort}"
+        thinking_prefix = ""
+        if self._variant.max_thinking_tokens:
+            thinking_prefix = f"export MAX_THINKING_TOKENS={self._variant.max_thinking_tokens}; "
         setup = (
             f"chown -R agent:agent {work_dir}"
             # Docker creates ~/.claude/ as root when bind-mounting credential
@@ -80,7 +173,7 @@ class ClaudeCodeAdapter(AgentAdapter):
             # the bind-mounted files inside are ro) so Claude Code can create
             # session-env/ (needed by its Bash tool).
             f" && mkdir -p /home/agent/.claude && chown agent:agent /home/agent/.claude"
-            f" && su agent -c 'cat {prompt_path}"
+            f" && su agent -c '{thinking_prefix}cat {prompt_path}"
             f" | claude {flags}'"
         )
         return ["bash", "-c", setup]

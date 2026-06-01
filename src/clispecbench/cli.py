@@ -39,6 +39,7 @@ def _get_adapter(
     agent_name: str,
     model: str | None = None,
     effort: str | None = None,
+    cli_version: str | None = None,
 ) -> AgentAdapter:
     """Resolve an agent name to an adapter instance."""
     try:
@@ -46,7 +47,11 @@ def _get_adapter(
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(1)
-    return spec.create(model=model, effort=effort)
+    try:
+        return spec.create(model=model, effort=effort, cli_version=cli_version)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
 
 
 # ---------------------------------------------------------------------------
@@ -61,6 +66,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
         args.agent,
         model=getattr(args, "model", None),
         effort=getattr(args, "effort", None),
+        cli_version=getattr(args, "cli_version", None),
     )
 
     api_key_env: dict[str, str] = {}
@@ -728,6 +734,16 @@ def main(argv: list[str] | None = None) -> None:
         "--effort",
         default=None,
         help="Effort / reasoning level (e.g. low, medium, high, max)",
+    )
+    run_parser.add_argument(
+        "--cli-version",
+        default=None,
+        help=(
+            "Pin a specific agent CLI generation where the agent supports more "
+            "than one (currently only claude-code: 'default'/'2.1.x' vs "
+            "'legacy'/'2.0.2'). Default: chosen by model — deprecated 4.0-gen "
+            "snapshots auto-route to the legacy CLI."
+        ),
     )
     run_parser.add_argument("--api-key-env", action="append", help="VAR=value pairs for API keys")
 

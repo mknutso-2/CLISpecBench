@@ -1643,9 +1643,33 @@ function formatEvalLanguageLabel(evalLabel, languageLabel) {
   return `${evalLabel || 'Unknown'}-${languageLabel || 'n/a'}`;
 }
 
+// Cache mapping a pairId -> the agent CLI version seen for it. Lets the label
+// surface which CLI generation produced a row (e.g. claude-code 2.0.2 vs
+// 2.1.120) without baking version into the grouping key. Rebuilt when
+// STATE.rows changes identity.
+let _pairVersionCache = null;
+let _pairVersionCacheRows = null;
+function pairAgentVersion(pairId) {
+  if (_pairVersionCacheRows !== STATE.rows) {
+    _pairVersionCache = {};
+    (STATE.rows || []).forEach((r) => {
+      const id = rowPairId(r);
+      if (r.agent_version && !_pairVersionCache[id]) _pairVersionCache[id] = r.agent_version;
+    });
+    _pairVersionCacheRows = STATE.rows;
+  }
+  return _pairVersionCache[pairId] || '';
+}
+
 function formatAgentModelShort(pairId) {
   const { agent, model } = splitPairId(pairId);
-  return `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+  let agentLabel = abbreviateAgent(agent);
+  // Surface the CLI version for claude-code so legacy (2.0.x, deprecated
+  // 4.0-gen models) rows are visually distinct from the current CLI without a
+  // separate agent id.
+  const ver = pairAgentVersion(pairId);
+  if (ver && agent === 'claude-code') agentLabel = `${agentLabel} ${ver}`;
+  return `${agentLabel} / ${abbreviateModel(model)}`;
 }
 
 function formatAgentModelDisplay(pairId) {
@@ -1664,11 +1688,10 @@ function formatAgentDisplay(agent) {
 
 function abbreviateAgent(agent) {
   const normalized = String(agent || '').toLowerCase();
+  // claude-code is a single agent across CLI generations; the CLI version
+  // (e.g. 2.0.2 vs 2.1.120) is appended in formatAgentModelShort, not encoded
+  // as a separate agent id.
   if (normalized === 'claude-code') return 'CC';
-  // Legacy Claude Code CLI (2.0.x) used only for the deprecated 4.0-gen models;
-  // kept visually distinct from 'CC' so cross-CLI rows aren't misread as
-  // same-scaffolding comparisons.
-  if (normalized === 'claude-code-legacy') return 'CC-legacy';
   if (normalized === 'codex-cli') return 'C';
   if (normalized === 'gemini-cli') return 'G';
   const parts = normalized.split(/[-_\s]+/).filter(Boolean);
@@ -3876,6 +3899,8 @@ function coerceRow(raw) {
   return {
     language: firstPresent(raw.language, languageFromTask(task), ''),
     agent: firstPresent(raw.agent, ''),
+    agent_version: firstPresent(raw.agent_version, ''),
+    served_model: firstPresent(raw.served_model, ''),
     model: firstPresent(raw.model, 'default'),
     effort: firstPresent(raw.effort, ''),
     run_id: String(firstPresent(raw.run_id, raw.run, '')),

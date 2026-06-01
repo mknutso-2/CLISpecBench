@@ -309,6 +309,8 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "task": task,
         "language": language,
         "agent": metadata.get("agent") or "",
+        "agent_version": metadata.get("agent_version") or "",
+        "served_model": metadata.get("served_model") or "",
         "model": metadata.get("model") or "",
         "effort": metadata.get("effort") or "",
         "run_id": run_id,

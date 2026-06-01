@@ -9,14 +9,13 @@ from typing import Literal
 from clispecbench.agents.antigravity_cli import AntigravityCLIAdapter
 from clispecbench.agents.base import AgentAdapter
 from clispecbench.agents.claude_code import ClaudeCodeAdapter
-from clispecbench.agents.claude_code_legacy import ClaudeCodeLegacyAdapter
 from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.copilot_cli import CopilotCLIAdapter
 from clispecbench.agents.gemini_cli import GeminiCLIAdapter
 from clispecbench.agents.opencode import OpenCodeAdapter
 from clispecbench.agents.openhands_cli import OpenHandsCLIAdapter
 
-AgentFactory = Callable[[str | None, str | None], AgentAdapter]
+AgentFactory = Callable[[str | None, str | None, str | None], AgentAdapter]
 BenchmarkCostPreference = Literal["reported", "estimated"]
 
 
@@ -36,66 +35,72 @@ class AgentSpec:
         *,
         model: str | None = None,
         effort: str | None = None,
+        cli_version: str | None = None,
     ) -> AgentAdapter:
-        """Instantiate this agent adapter for a single run."""
-        return self.factory(model, effort)
+        """Instantiate this agent adapter for a single run.
+
+        ``cli_version`` selects a pinned CLI generation where an agent supports
+        more than one (currently only ``claude-code``); other agents ignore it.
+        """
+        return self.factory(model, effort, cli_version)
 
 
 _AGENT_SPECS: dict[str, AgentSpec] = {
     "antigravity-cli": AgentSpec(
         agent_id="antigravity-cli",
-        factory=lambda model, effort: AntigravityCLIAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: AntigravityCLIAdapter(
+            model=model, effort=effort
+        ),
         docker_image="clispecbench-antigravity-cli",
         version_command="agy changelog",
         auth_smoke_script="scripts/smoke-test-antigravity.sh",
     ),
+    # Single agent identity spanning multiple pinned CLI generations. The
+    # variant (and thus image / CLI version) is chosen by --cli-version or, by
+    # default, by the model — deprecated 4.0-gen snapshots route to the legacy
+    # 2.0.x image automatically. The CLI version is recorded in
+    # metadata.agent_version, so there is no separate "claude-code-legacy" id.
     "claude-code": AgentSpec(
         agent_id="claude-code",
-        factory=lambda model, effort: ClaudeCodeAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: ClaudeCodeAdapter(
+            model=model, effort=effort, cli_version=cli_version
+        ),
         docker_image="clispecbench-claude-code",
         version_command="claude --version",
         auth_smoke_script="scripts/smoke-test-claude.sh",
         benchmark_cost_preference="estimated",
     ),
-    "claude-code-legacy": AgentSpec(
-        agent_id="claude-code-legacy",
-        factory=lambda model, effort: ClaudeCodeLegacyAdapter(model=model, effort=effort),
-        docker_image="clispecbench-claude-code-legacy",
-        version_command="claude --version",
-        auth_smoke_script="scripts/smoke-test-claude-legacy.sh",
-        benchmark_cost_preference="estimated",
-    ),
     "codex-cli": AgentSpec(
         agent_id="codex-cli",
-        factory=lambda model, effort: CodexCLIAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: CodexCLIAdapter(model=model, effort=effort),
         docker_image="clispecbench-codex-cli",
         version_command="codex --version",
         auth_smoke_script="scripts/smoke-test-codex.sh",
     ),
     "copilot-cli": AgentSpec(
         agent_id="copilot-cli",
-        factory=lambda model, effort: CopilotCLIAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: CopilotCLIAdapter(model=model, effort=effort),
         docker_image="clispecbench-copilot-cli",
         version_command="copilot --version",
         auth_smoke_script="scripts/smoke-test-copilot.sh",
     ),
     "gemini-cli": AgentSpec(
         agent_id="gemini-cli",
-        factory=lambda model, effort: GeminiCLIAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: GeminiCLIAdapter(model=model, effort=effort),
         docker_image="clispecbench-gemini-cli",
         version_command="gemini --version",
         auth_smoke_script="scripts/smoke-test-gemini.sh",
     ),
     "opencode": AgentSpec(
         agent_id="opencode",
-        factory=lambda model, effort: OpenCodeAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: OpenCodeAdapter(model=model, effort=effort),
         docker_image="clispecbench-opencode",
         version_command="opencode --version",
         auth_smoke_script="scripts/smoke-test-opencode.sh",
     ),
     "openhands": AgentSpec(
         agent_id="openhands",
-        factory=lambda model, effort: OpenHandsCLIAdapter(model=model, effort=effort),
+        factory=lambda model, effort, cli_version: OpenHandsCLIAdapter(model=model, effort=effort),
         docker_image="clispecbench-openhands",
         version_command="openhands --version",
         auth_smoke_script="scripts/smoke-test-openhands.sh",
