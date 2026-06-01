@@ -305,6 +305,34 @@ class TestModelAndEffort:
         assert '--model "gemini-2.5-pro"' in bash_script
         assert "--yolo" in bash_script
         assert "--skip-trust" in bash_script
+        assert "/tmp/gemini-request-audit-preload.js" in bash_script
+        assert "thinkingLevel" not in bash_script
+
+    def test_gemini_effort_injects_thinking_level_config(self) -> None:
+        adapter = GeminiCLIAdapter(model="gemini-3.1-pro-preview", effort="medium")
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        bash_script = cmd[2]
+        assert adapter.effort == "medium"
+        assert "--effort" not in bash_script
+        assert "settings.modelConfigs.customOverrides" in bash_script
+        assert '"gemini-3.1-pro-preview"' in bash_script
+        assert '"gemini-3.1-pro-preview-customtools"' in bash_script
+        assert '"thinkingLevel":"MEDIUM"' in bash_script
+
+    def test_gemini_effort_requires_supported_thinking_level(self) -> None:
+        with pytest.raises(ValueError, match="must be one of"):
+            GeminiCLIAdapter(model="gemini-3.1-pro-preview", effort="xhigh")
+
+    def test_gemini_effort_requires_model(self) -> None:
+        with pytest.raises(ValueError, match="requires an explicit model"):
+            GeminiCLIAdapter(effort="high")
+
+    def test_gemini_effort_requires_gemini_3_model(self) -> None:
+        with pytest.raises(ValueError, match="only supported for Gemini 3.x"):
+            GeminiCLIAdapter(model="gemini-2.5-pro", effort="high")
 
     def test_antigravity_default_model_is_gemini_35_flash(self) -> None:
         adapter = AntigravityCLIAdapter()
@@ -395,9 +423,9 @@ class TestTelemetryPaths:
         assert "/tmp/antigravity-cli.log" in adapter.telemetry_paths
         assert adapter.requires_tty is True
 
-    def test_gemini_has_no_telemetry_paths(self) -> None:
+    def test_gemini_has_request_audit_path(self) -> None:
         adapter = GeminiCLIAdapter()
-        assert adapter.telemetry_paths == []
+        assert adapter.telemetry_paths == ["/tmp/gemini-request-audit.jsonl"]
         assert adapter.requires_tty is False
 
     def test_copilot_has_otel_path(self) -> None:

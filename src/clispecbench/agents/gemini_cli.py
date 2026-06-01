@@ -18,6 +18,13 @@ DOCKERFILE = (
     / "agents"
     / "gemini-cli.Dockerfile"
 )
+REQUEST_AUDIT_PATH = "/tmp/gemini-request-audit.jsonl"
+REQUEST_AUDIT_PRELOAD_PATH = "/tmp/gemini-request-audit-preload.js"
+THINKING_LEVEL_BY_EFFORT = {
+    "low": "LOW",
+    "medium": "MEDIUM",
+    "high": "HIGH",
+}
 
 
 class GeminiCLIAdapter(AgentAdapter):
@@ -28,6 +35,21 @@ class GeminiCLIAdapter(AgentAdapter):
         model: str | None = None,
         effort: str | None = None,
     ) -> None:
+        if effort is not None:
+            effort = effort.strip().lower()
+            if effort not in THINKING_LEVEL_BY_EFFORT:
+                supported = ", ".join(sorted(THINKING_LEVEL_BY_EFFORT))
+                raise ValueError(
+                    "Gemini CLI effort is applied through settings.json "
+                    f"thinkingLevel and must be one of: {supported}"
+                )
+            if model is None:
+                raise ValueError("Gemini CLI effort requires an explicit model")
+            if not model.startswith("gemini-3"):
+                raise ValueError(
+                    "Gemini CLI effort maps to thinkingLevel and is only supported "
+                    "for Gemini 3.x models"
+                )
         self._model = model
         self._effort = effort
 
@@ -78,19 +100,34 @@ class GeminiCLIAdapter(AgentAdapter):
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         # Copy staged auth files into a writable ~/.gemini/ and seed
         # projects.json before running gemini.
-        setup = (
-            "mkdir -p /root/.gemini"
-            " && cp /tmp/gemini-auth/* /root/.gemini/"
-            " && echo '{\"projects\":{}}' > /root/.gemini/projects.json"
-        )
+        setup_parts = [
+            "mkdir -p /root/.gemini",
+            "cp /tmp/gemini-auth/* /root/.gemini/",
+            "echo '{\"projects\":{}}' > /root/.gemini/projects.json",
+            self._request_audit_preload_script(),
+        ]
+        thinking_override = self._thinking_override_script()
+        if thinking_override:
+            setup_parts.append(thinking_override)
+        setup = "\n".join(setup_parts)
         flags = "--yolo --skip-trust --output-format stream-json"
         if self._model:
             flags += f' --model "{self._model}"'
         return [
             "bash",
             "-c",
-            f'{setup} && cd "{work_dir}" && cat "{prompt_path}" | gemini {flags}',
+            (
+                f'{setup}\ncd "{work_dir}"\n'
+                f'cat "{prompt_path}" | NODE_OPTIONS="--require '
+                f"{REQUEST_AUDIT_PRELOAD_PATH}"
+                '${NODE_OPTIONS:+ $NODE_OPTIONS}" gemini '
+                f"{flags}"
+            ),
         ]
+
+    @property
+    def telemetry_paths(self) -> list[str]:
+        return [REQUEST_AUDIT_PATH]
 
     def parse_token_usage(
         self,
@@ -107,6 +144,104 @@ class GeminiCLIAdapter(AgentAdapter):
     @property
     def allowed_hosts(self) -> list[str]:
         return ["generativelanguage.googleapis.com", "oauth2.googleapis.com"]
+
+    def _thinking_override_script(self) -> str:
+        if self._effort is None or self._model is None:
+            return ""
+        thinking_level = THINKING_LEVEL_BY_EFFORT[self._effort]
+        models = [self._model]
+        if not self._model.endswith("-customtools"):
+            models.append(f"{self._model}-customtools")
+        patch = {
+            "models": models,
+            "thinkingLevel": thinking_level,
+        }
+        patch_json = json.dumps(patch, separators=(",", ":"))
+        return f"""node <<'NODE'
+const fs = require("fs");
+const settingsPath = "/root/.gemini/settings.json";
+const patch = {patch_json};
+const settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+settings.modelConfigs ??= {{}};
+settings.modelConfigs.customOverrides ??= [];
+for (const model of patch.models) {{
+  settings.modelConfigs.customOverrides.push({{
+    match: {{ model }},
+    modelConfig: {{
+      generateContentConfig: {{
+        thinkingConfig: {{ thinkingLevel: patch.thinkingLevel }},
+      }},
+    }},
+  }});
+}}
+fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
+NODE"""
+
+    def _request_audit_preload_script(self) -> str:
+        # Gemini CLI's built-in OpenTelemetry omits thinkingConfig. This preload
+        # records sanitized outbound generationConfig values without prompts,
+        # credentials, URLs, headers, or response bodies.
+        return f"""cat > {REQUEST_AUDIT_PRELOAD_PATH} <<'JS'
+const fs = require("fs");
+const http = require("http");
+const https = require("https");
+const auditPath = "{REQUEST_AUDIT_PATH}";
+
+function optionUrl(options) {{
+  if (typeof options === "string" || options instanceof URL) return String(options);
+  const protocol = options.protocol || "https:";
+  const host = options.hostname || options.host || "";
+  const path = options.path || options.pathname || "";
+  return protocol + "//" + host + path;
+}}
+
+function maybeLogRequest(url, chunks) {{
+  if (!/generativelanguage|aiplatform|googleapis/.test(String(url || ""))) return;
+  const text = Buffer.concat(chunks).toString("utf8");
+  if (!text.trim().startsWith("{{")) return;
+  const parsed = JSON.parse(text);
+  const generationConfig =
+    parsed.generationConfig || (parsed.request && parsed.request.generationConfig);
+  if (!generationConfig) return;
+  fs.appendFileSync(auditPath, JSON.stringify({{ generationConfig }}) + "\\n");
+}}
+
+function patchRequests(mod) {{
+  const originalRequest = mod.request;
+  mod.request = function patchedRequest(options, ...rest) {{
+    const url = optionUrl(options);
+    const chunks = [];
+    const req = originalRequest.call(this, options, ...rest);
+    const originalWrite = req.write;
+    const originalEnd = req.end;
+    req.write = function patchedWrite(chunk, encoding, cb) {{
+      if (chunk) {{
+        chunks.push(
+          Buffer.isBuffer(chunk)
+            ? chunk
+            : Buffer.from(chunk, typeof encoding === "string" ? encoding : undefined)
+        );
+      }}
+      return originalWrite.apply(this, arguments);
+    }};
+    req.end = function patchedEnd(chunk, encoding, cb) {{
+      if (chunk) {{
+        chunks.push(
+          Buffer.isBuffer(chunk)
+            ? chunk
+            : Buffer.from(chunk, typeof encoding === "string" ? encoding : undefined)
+        );
+      }}
+      try {{ maybeLogRequest(url, chunks); }} catch (_) {{}}
+      return originalEnd.apply(this, arguments);
+    }};
+    return req;
+  }};
+}}
+
+patchRequests(http);
+patchRequests(https);
+JS"""
 
     def extract_last_agent_message(self, container_logs: str) -> str | None:
         """Extract last assistant turn from Gemini stream-json output.
