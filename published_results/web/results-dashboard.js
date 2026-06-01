@@ -1371,7 +1371,7 @@ function getSummaryTableColumns() {
       key: 'pair',
       label: 'Agent / Model / Effort',
       render: (row) => formatAgentModelDisplay(row.pairId),
-      title: (row) => row.pairId,
+      title: (row) => pairTitleWithVersion(row.pairId),
     },
     {
       key: 'eval_language',
@@ -1432,7 +1432,7 @@ function getRunTableColumns() {
       key: 'pair',
       label: 'Agent / Model / Effort',
       render: (row) => formatAgentModelDisplay(rowPairId(row)),
-      title: (row) => rowPairId(row),
+      title: (row) => pairTitleWithVersion(rowPairId(row)),
     },
     { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
     { key: 'version', label: 'Version', render: (row) => row.eval_version || 'n/a' },
@@ -1662,20 +1662,34 @@ function pairAgentVersion(pairId) {
 }
 
 function formatAgentModelShort(pairId) {
+  // Abbreviated mode stays clean (no inline CLI version) — the version is
+  // surfaced on hover via the column `title` (see pairTitleWithVersion).
   const { agent, model } = splitPairId(pairId);
-  let agentLabel = abbreviateAgent(agent);
-  // Surface the CLI version for claude-code so legacy (2.0.x, deprecated
-  // 4.0-gen models) rows are visually distinct from the current CLI without a
-  // separate agent id.
+  return `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+}
+
+function formatAgentModelFull(pairId) {
+  // Full-names mode inlines the CLI version after the agent where available,
+  // e.g. "claude-code 2.0.2 / claude-opus-4-20250514 (max)".
+  const { agent, model } = splitPairId(pairId);
   const ver = pairAgentVersion(pairId);
-  if (ver && agent === 'claude-code') agentLabel = `${agentLabel} ${ver}`;
-  return `${agentLabel} / ${abbreviateModel(model)}`;
+  const agentLabel = ver ? `${agent} ${ver}` : agent;
+  return `${agentLabel} / ${model}`;
+}
+
+// Hover-tooltip text for the agent/model column: the full pair id plus the CLI
+// version where available. Used in both name modes so the version is always
+// reachable on hover even when the label itself omits it.
+function pairTitleWithVersion(pairId) {
+  const id = rowPairId(pairId);
+  const ver = pairAgentVersion(id);
+  return ver ? `${id} · CLI ${ver}` : id;
 }
 
 function formatAgentModelDisplay(pairId) {
   const fullName = rowPairId(pairId);
   return normalizeNameMode(STATE.nameMode) === 'full'
-    ? fullName
+    ? formatAgentModelFull(fullName)
     : formatAgentModelShort(fullName);
 }
 
