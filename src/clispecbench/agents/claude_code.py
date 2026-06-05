@@ -20,6 +20,16 @@ LEGACY_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-legacy.Dockerfile"
 # OpenTelemetry export directory inside the container
 OTEL_COLLECTOR_DIR = "/tmp/otel"
 
+# Per-message output-token ceiling for the CLI. The CLI default is 32000, which
+# truncates the most verbose models mid-task (Opus 4.8 at --effort max hit it on
+# every run, dying with stub submissions). We set a virtually-unlimited value;
+# the CLI clamps it down to each model's true max output (verified: 1e6 succeeds
+# on both 128k- and 64k-max models, with no API max_tokens rejection), so this
+# is safe across all models and simply removes the artificial 32k truncation.
+# Kept well under int32 max to avoid any downstream overflow. Models that don't
+# exceed 32k (4.5/4.6/4.7 historically did so only twice ever) are unaffected.
+MAX_OUTPUT_TOKENS = "1000000"
+
 
 @dataclass(frozen=True)
 class _CliVariant:
@@ -133,6 +143,8 @@ class ClaudeCodeAdapter(AgentAdapter):
 
     def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
         env = {**api_key_env}
+        # Lift the 32k per-message output cap (CLI clamps to each model's max).
+        env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = MAX_OUTPUT_TOKENS
         if self._variant.telemetry:
             # Configure OpenTelemetry file export for token tracking. Disabled
             # on the legacy variant — the 2.0.x OTLP exporter crashes on the
