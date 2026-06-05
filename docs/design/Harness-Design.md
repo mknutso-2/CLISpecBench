@@ -349,7 +349,7 @@ agent has different requirements (verified via smoke testing):
 
 | Agent | Host files | Mount strategy |
 |-------|-----------|----------------|
-| Antigravity CLI | `~/.gemini/antigravity-cli`, `~/.gemini/config` | Mount state dirs `:rw`; correctness-only experimental because Windows Credential Manager OAuth state must be seeded into `~/.gemini/antigravity-cli/antigravity-oauth-token`, 1.0.3 cannot force model/effort by flag, and non-TTY `--print` can drop captured stdout |
+| Antigravity CLI | `~/.gemini/antigravity-cli`, `~/.gemini/config` | Mount state dirs `:rw`; correctness-only experimental because Windows Credential Manager OAuth state must be seeded into `~/.gemini/antigravity-cli/antigravity-oauth-token`, 1.0.5 can force `--model` but not effort/reasoning, and non-TTY `--print` can drop captured stdout |
 | Claude Code | `~/.claude/.credentials.json` (read-only), `~/.claude/settings.json` (read-only) | Mount the two files individually `:ro` |
 | Codex CLI | `~/.codex/auth.json` (read/write, file only) | Mount single file `:rw`; rest of `.codex/` stays writable |
 | Gemini CLI | `~/.gemini/oauth_creds.json`, `google_accounts.json`, `settings.json` | Copy to writable dir at startup; seed `projects.json` |
@@ -371,21 +371,29 @@ Notes:
 - Codex requires `ca-certificates` and `git` installed in the container.
 - Gemini CLI needs a writable `~/.gemini/` directory (writes `projects.json`
   at startup), so auth files are copied in rather than mounted read-only.
-- Antigravity CLI 1.0.3 supports `agy --print`, but does not expose model,
-  effort/reasoning, prompt-file, JSON, or output-file flags. The adapter records
-  `gemini-3.5-flash` as a fixed default model label, ignores unsupported
-  model/effort overrides, and sends a short prompt telling `agy` to read
-  `/workspace/prompt.md`. In Linux containers, `agy` uses file-based token
-  storage. Windows host-side login stores the same OAuth state in Credential
-  Manager under `gemini:antigravity`; seeding that JSON into
+- Gemini CLI effort for Gemini 3.x models is applied by patching the copied
+  `/root/.gemini/settings.json` with `modelConfigs.customOverrides` and
+  `generateContentConfig.thinkingConfig.thinkingLevel`. This is intentionally a
+  settings-file control, because current Gemini CLI help exposes `--model` but
+  no `--effort` flag.
+- Antigravity CLI 1.0.5 supports `agy --model` and `agy --print`, but does not
+  expose effort/reasoning, prompt-file, JSON, or output-file flags. The adapter
+  passes `--model gemini-3.5-flash` by default, honors explicit model overrides,
+  and sends a short prompt telling `agy` to read `/workspace/prompt.md`. Local
+  1.0.5 logs verify that `gemini-3.5-flash` resolves to `Gemini 3.5 Flash
+  (Medium)`, but no documented settings-file equivalent to Gemini CLI
+  `thinkingLevel` has been found for scripted Antigravity reasoning selection.
+  In Linux containers, `agy` uses file-based token storage. Windows host-side
+  login stores the same OAuth state in Credential Manager under
+  `gemini:antigravity`; seeding that JSON into
   `~/.gemini/antigravity-cli/antigravity-oauth-token` lets Docker auth pass, but
   the file contains a plaintext OAuth refresh token and must stay out of logs
   and source control. The harness can run Antigravity correctness checks with a
   TTY and grade `/workspace/output`, but counted results still require
-  deterministic model/effort selection, canonical Antigravity transcript capture
-  and scrubbing, and token/cost accounting. Local and public 1.0.3 smoke tests
-  also show `agy --print` can complete a model call but emit zero captured
-  stdout from a non-TTY subprocess, so non-TTY empty-output cases remain
+  deterministic effort selection, canonical Antigravity transcript capture and
+  scrubbing, and token/cost accounting. Local 1.0.5 smoke tests and public 1.0.3
+  issue reports also show `agy --print` can complete a model call but emit zero
+  captured stdout from a non-TTY subprocess, so non-TTY empty-output cases remain
   infrastructure failures until upstream adds a reliable headless output path.
 
 See `scripts/smoke-test-docker-auth.sh` and the per-agent smoke scripts for the

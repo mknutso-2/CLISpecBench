@@ -38,13 +38,12 @@ _AUTH_NOISE_MARKERS = (
 class AntigravityCLIAdapter(AgentAdapter):
     """Adapter for Google Antigravity CLI (``agy``).
 
-    Antigravity CLI 1.0.3 does not expose noninteractive model, effort, or
-    prompt-file flags. The adapter records the fixed default model label in run
-    metadata, ignores unsupported overrides, then sends a short instruction that
-    points the agent at CLISpecBench's mounted ``prompt.md``. This avoids shell
-    argument limits for large eval docs. The adapter still requires a TTY
-    because 1.0.3 can generate a response but emit zero captured stdout when
-    ``agy --print`` is run by a non-TTY subprocess.
+    Antigravity CLI 1.0.5 exposes noninteractive model selection but not
+    effort/reasoning or prompt-file flags. The adapter passes ``--model`` and
+    sends a short instruction that points the agent at CLISpecBench's mounted
+    ``prompt.md``. This avoids shell argument limits for large eval docs. The
+    adapter still requires a TTY because 1.0.5 can generate a response but emit
+    zero captured stdout when ``agy --print`` is run by a non-TTY subprocess.
     """
 
     def __init__(
@@ -52,20 +51,13 @@ class AntigravityCLIAdapter(AgentAdapter):
         model: str | None = None,
         effort: str | None = None,
     ) -> None:
-        if model and model != DEFAULT_MODEL:
-            log.warning(
-                "Antigravity CLI does not expose a model flag; ignoring unsupported "
-                "model override %r and recording %r",
-                model,
-                DEFAULT_MODEL,
-            )
         if effort:
             log.warning(
                 "Antigravity CLI does not expose an effort flag; ignoring unsupported "
                 "effort override %r",
                 effort,
             )
-        self._model = DEFAULT_MODEL
+        self._model = model or DEFAULT_MODEL
 
     @property
     def name(self) -> str:
@@ -121,6 +113,8 @@ class AntigravityCLIAdapter(AgentAdapter):
             "24h",
             "--log-file",
             CLI_LOG_PATH,
+            "--model",
+            self.model or DEFAULT_MODEL,
             "--add-dir",
             str(work_dir),
             "--print",

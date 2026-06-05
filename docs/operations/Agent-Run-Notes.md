@@ -27,7 +27,7 @@ the runs.
 
 ## Antigravity CLI Status
 
-Antigravity CLI (`agy`) support is experimental as of 1.0.3. With a TTY and the
+Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the
 credential workaround below, `agy` can run CLISpecBench tasks end-to-end: it
 writes implementation files under `/workspace/output`, the harness builds them,
 runs hidden tests, and writes normal `result.json` correctness scores. This is
@@ -35,13 +35,22 @@ enough for diagnostic correctness-only experiments, but not yet enough for
 counted CLISpecBench results.
 
 The remaining blockers are first-class run control and publication-quality
-artifacts. Version 1.0.3 does not expose model, effort/reasoning, prompt-file,
-JSON, or output-file flags. The adapter therefore records `gemini-3.5-flash` as
-the fixed default model label and ignores unsupported model/effort overrides;
-post-run logs can verify labels such as `Gemini 3.5 Flash (Medium)`, but the
-harness cannot force a model or reasoning level per invocation. Antigravity does
-not currently provide parseable token usage, so `token_usage` and estimated cost
+artifacts. Version 1.0.5 adds `--model` and a `models` subcommand, so the
+adapter now passes `--model gemini-3.5-flash` by default and can honor explicit
+model overrides. Local 1.0.5 logs verify that `gemini-3.5-flash` resolves to
+`Gemini 3.5 Flash (Medium)`. Antigravity still does not expose effort/reasoning,
+prompt-file, JSON, or output-file flags. Unlike Gemini CLI, no documented
+settings-file equivalent to `thinkingLevel` has been found for scripted
+Antigravity reasoning selection; simple probes for `gemini-3.5-flash-low` and
+`gemini-3.5-flash-high` still resolved to the Medium label. Antigravity does not
+currently provide parseable token usage, so `token_usage` and estimated cost
 remain `null`.
+
+The Gemini CLI comparison matters: CLISpecBench can set Gemini CLI effort for
+Gemini 3.x models even though `gemini --help` does not expose `--effort`,
+because the adapter patches the copied `/root/.gemini/settings.json` with
+`modelConfigs.customOverrides` and
+`generateContentConfig.thinkingConfig.thinkingLevel` before invoking `gemini`.
 
 Headless output capture is also still unreliable. Public issue reports and
 local smoke tests show that `agy --print` can authenticate, complete the model
@@ -68,11 +77,11 @@ Manager under the `gemini:antigravity` target. A local workaround is to seed the
 Credential Manager JSON into
 `~/.gemini/antigravity-cli/antigravity-oauth-token` before mounting
 `~/.gemini/antigravity-cli` into Docker; this passed the container smoke test
-locally on 1.0.3 and lets `agy` authenticate inside the harness container. That
-file contains a plaintext OAuth refresh token, so keep it out of the repo, logs,
-and shared artifacts. The Antigravity smoke test remains diagnostic and may
-still fail with an auth timeout if the token file is absent, or empty output on
-current releases when stdout is captured without a TTY.
+locally on 1.0.3 and 1.0.5 and lets `agy` authenticate inside the harness
+container. That file contains a plaintext OAuth refresh token, so keep it out of
+the repo, logs, and shared artifacts. The Antigravity smoke test remains
+diagnostic and may still fail with an auth timeout if the token file is absent,
+or empty output on current releases when stdout is captured without a TTY.
 
 ## Network Access Audit and Study Consistency
 

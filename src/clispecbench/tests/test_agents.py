@@ -146,10 +146,10 @@ class TestAntigravityCLIEnvironment:
         assert "--dangerously-skip-permissions" in bash_script
         assert "--print-timeout 24h" in bash_script
         assert "--log-file /tmp/antigravity-cli.log" in bash_script
+        assert "--model gemini-3.5-flash" in bash_script
         assert "--add-dir /workspace" in bash_script
         assert "/workspace/prompt.md" in bash_script
         assert "/workspace/output" in bash_script
-        assert "--model" not in bash_script
         assert "$(cat" not in bash_script
 
 
@@ -339,16 +339,16 @@ class TestModelAndEffort:
         assert adapter.model == "gemini-3.5-flash"
         assert adapter.effort is None
 
-    def test_antigravity_ignores_unsupported_model_and_effort_overrides(self) -> None:
+    def test_antigravity_supports_model_override_but_ignores_effort(self) -> None:
         adapter = AntigravityCLIAdapter(model="gemini-2.5-pro", effort="high")
         cmd = adapter.invoke_command(
             PurePosixPath("/workspace/prompt.md"),
             PurePosixPath("/workspace"),
         )
 
-        assert adapter.model == "gemini-3.5-flash"
+        assert adapter.model == "gemini-2.5-pro"
         assert adapter.effort is None
-        assert "--model" not in cmd[2]
+        assert "--model gemini-2.5-pro" in cmd[2]
         assert "--effort" not in cmd[2]
 
     def test_opencode_model_in_command(self) -> None:

@@ -8,9 +8,9 @@
 #     requires the equivalent JSON at
 #     ~/.gemini/antigravity-cli/antigravity-oauth-token, which contains a
 #     plaintext OAuth refresh token and must not be committed or logged.
-#   - Version 1.0.3 still cannot force model/effort by flag, does not expose
-#     token usage, and --print output remains unreliable when stdout is captured
-#     by a non-TTY subprocess.
+#   - Version 1.0.5 can force --model but still cannot force effort/reasoning,
+#     does not expose token usage, and --print output remains unreliable when
+#     stdout is captured by a non-TTY subprocess.
 #
 # Run from Git Bash:
 #   bash scripts/smoke-test-antigravity.sh
@@ -47,6 +47,7 @@ output="$(
         bash -c 'set -o pipefail
             agy --dangerously-skip-permissions --print-timeout 30s \
                 --log-file /tmp/antigravity-smoke.log \
+                --model gemini-3.5-flash \
                 --print "respond with just the word hello" 2>&1 \
                 | tee /tmp/antigravity-smoke-output.log
             status="${PIPESTATUS[0]}"
