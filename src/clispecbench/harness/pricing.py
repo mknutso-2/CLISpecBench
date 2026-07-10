@@ -79,6 +79,14 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
     "claude-sonnet-4-6": ModelPricing(
         input=3.00, output=15.00, cached_input=0.30, cache_write=6.00
     ),  # noqa: E501
+    # Claude Sonnet 5 (released 2026-06-30). Standard list pricing; an
+    # introductory promo of $2/$10 runs through 2026-08-31. Both the alias and
+    # the dated snapshot are listed since Claude Code's modelUsage block may
+    # report usage under either id.
+    "claude-sonnet-5": ModelPricing(input=3.00, output=15.00, cached_input=0.30, cache_write=6.00),  # noqa: E501
+    "claude-sonnet-5-20260630": ModelPricing(
+        input=3.00, output=15.00, cached_input=0.30, cache_write=6.00
+    ),  # noqa: E501
     "claude-opus-4-5-20251101": ModelPricing(
         input=5.00, output=25.00, cached_input=0.50, cache_write=10.00
     ),  # noqa: E501

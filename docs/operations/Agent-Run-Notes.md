@@ -25,6 +25,36 @@ Use that only when the run launcher can keep the token out of logs and shell
 history, and verify the behavior with the Claude smoke test before counting
 the runs.
 
+## Claude Code CLI Version Pins
+
+All Claude Code runs report the single agent identity `claude-code`; the pinned
+CLI version actually used is recorded per-run in `metadata.agent_version` and
+surfaced on the dashboard. Three pins exist (see the variant table in
+`src/clispecbench/agents/claude_code.py`):
+
+- **2.1.120** (default, 2026-04-24) — the benchmark's standard pin; all
+  4.5/4.6/4.7/4.8-generation runs use it.
+- **2.0.2** (legacy) — for the deprecated 4.0-generation snapshot IDs, which
+  2.1.120 no longer serves faithfully (it silently falls back to its default
+  model; the served-vs-requested guard fails such runs).
+- **2.1.174** (fable, 2026-06-11) — for Fable-family models. 2.1.120 predates
+  Fable 5 and reproducibly cannot complete its RS274 runs: Fable's verbosity
+  (single messages up to its full 128k output max) forces auto-compaction
+  mid-session, and 2.1.120's compact request fails — observed both as an
+  internal 20k-token cap on the compact summary (not configurable via
+  `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, which only governs normal generation) and
+  as a spurious Usage Policy refusal. After the failed compact, every API call
+  returns "Prompt is too long" and the CLI exits 1 with no output written
+  (6/6 attempts on 2026-06-11, ~$11-13 each). The npm `stable` dist-tag
+  (2.1.153, 2026-05-27) also predates Fable's launch, so the pin uses the
+  highest stable release at collection time. Comparisons against Fable runs
+  therefore cross a CLI-version boundary; the dashboard's version column makes
+  this visible. The fable variant additionally sets `API_TIMEOUT_MS=1800000`
+  (30 min per request): Fable's single messages run up to its full 128k output
+  max and can legitimately stream for 20+ minutes, and a 2026-06-12 attempt
+  died "Request timed out" after exhausting all API retries despite verified
+  host- and container-level connectivity.
+
 ## Antigravity CLI Status
 
 Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the

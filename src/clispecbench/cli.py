@@ -88,6 +88,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
         adapter.name,
         adapter.model,
         adapter.effort,
+        args.prompt_variant,
     )
     try:
         eval_num = next_eval_number(
@@ -96,6 +97,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
             adapter.name,
             adapter.model,
             adapter.effort,
+            args.prompt_variant,
         )
         log = logging.getLogger(__name__)
         log.info("Writing results to eval%d (runs 1-%d)", eval_num, num_runs)
@@ -137,6 +139,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
                     adapter.model,
                     adapter.effort,
                     eval_num,
+                    args.prompt_variant,
                 ).parent.parent
                 / "progress.txt"
             )

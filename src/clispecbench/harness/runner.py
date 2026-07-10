@@ -204,6 +204,7 @@ def run_evaluation(
         adapter.model,
         adapter.effort,
         eval_number,
+        prompt_variant,
     )
 
     sandbox: DockerSandbox | None = None
@@ -391,9 +392,7 @@ def run_evaluation(
         except Exception:
             log.debug("Failed to detect served model from transcript", exc_info=True)
         model_mismatch = bool(
-            adapter.model
-            and served_model
-            and not models_compatible(adapter.model, served_model)
+            adapter.model and served_model and not models_compatible(adapter.model, served_model)
         )
         if model_mismatch:
             exit_reason = "error"

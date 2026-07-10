@@ -313,6 +313,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "served_model": metadata.get("served_model") or "",
         "model": metadata.get("model") or "",
         "effort": metadata.get("effort") or "",
+        "prompt_variant": metadata.get("prompt_variant") or "base",
         "run_id": run_id,
         "eval": eval_name,
         "eval_instance": f"run{run_id}" if run_id else "",

@@ -268,6 +268,33 @@ class TestModelEffortSlug:
             == "openrouter_moonshotai_kimi-k2.6_free_high"
         )
 
+    def test_non_base_prompt_variant_gets_distinct_slug(self) -> None:
+        # A steered prompt series must not collide with standard base runs.
+        assert (
+            model_effort_slug("claude-fable-5", "max", "fable-steered")
+            == "claude-fable-5_max__fable-steered"
+        )
+
+    def test_base_and_none_prompt_variant_leave_slug_unchanged(self) -> None:
+        # Both the default (None) and an explicit "base" keep the standard slug,
+        # so existing runs are byte-for-byte path-compatible.
+        standard = model_effort_slug("claude-fable-5", "max")
+        assert model_effort_slug("claude-fable-5", "max", None) == standard
+        assert model_effort_slug("claude-fable-5", "max", "base") == standard
+        assert standard == "claude-fable-5_max"
+
+    def test_prompt_variant_separates_eval_lock_dirs(self, tmp_path: Path) -> None:
+        # Base and steered runs of the same model+effort acquire independent
+        # locks (distinct directories), so they can run concurrently.
+        base = results.EvalLock.acquire(tmp_path, "rs274-cpp", "claude-code", "m", "max")
+        try:
+            steered = results.EvalLock.acquire(
+                tmp_path, "rs274-cpp", "claude-code", "m", "max", "fable-steered"
+            )
+            steered.release()
+        finally:
+            base.release()
+
 
 def test_models_compatible_exact_and_alias() -> None:
     # Exact match

@@ -16,6 +16,8 @@ log = logging.getLogger(__name__)
 _AGENTS_DOCKER_DIR = Path(__file__).resolve().parent.parent.parent.parent / "docker" / "agents"
 DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code.Dockerfile"
 LEGACY_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-legacy.Dockerfile"
+FABLE_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-fable.Dockerfile"
+SONNET5_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-sonnet5.Dockerfile"
 
 # OpenTelemetry export directory inside the container
 OTEL_COLLECTOR_DIR = "/tmp/otel"
@@ -48,6 +50,7 @@ class _CliVariant:
     supports_effort: bool  # 2.1+ has --effort; 2.0.x controls reasoning via a budget
     telemetry: bool  # 2.0.x's OTLP exporter crashes on file:// — disable there
     max_thinking_tokens: str | None  # fixed reasoning budget when --effort is absent
+    api_timeout_ms: str | None = None  # per-request client timeout override (API_TIMEOUT_MS)
 
 
 # Default: the current pinned CLI (2.1.x), adaptive thinking via --effort, OTEL on.
@@ -69,7 +72,42 @@ _LEGACY_VARIANT = _CliVariant(
     telemetry=False,
     max_thinking_tokens="31999",
 )
-_VARIANTS: dict[str, _CliVariant] = {v.key: v for v in (_DEFAULT_VARIANT, _LEGACY_VARIANT)}
+# Fable: a 2.1.17x CLI new enough to run Fable 5. The default 2.1.120 predates
+# the model and reproducibly dies on its long sessions: Fable's verbosity forces
+# auto-compaction, whose summary request 2.1.120 caps at an internal 20k output
+# tokens — the compact fails, then every call errors "Prompt is too long" before
+# the agent writes any output. Driven identically to the default otherwise.
+_FABLE_VARIANT = _CliVariant(
+    key="fable",
+    image_tag="clispecbench-claude-code-fable",
+    dockerfile=FABLE_DOCKERFILE,
+    supports_effort=True,
+    telemetry=True,
+    max_thinking_tokens=None,
+    # Fable emits single messages up to its full 128k output max; at observed
+    # serving speeds a legitimate generation can stream for 20+ minutes, and a
+    # 2026-06-12 rs274-cpp attempt died "Request timed out" after exhausting
+    # all API retries ($24, 2h40m of work lost). 30 min covers the worst-case
+    # legitimate generation without letting a truly hung connection eat hours.
+    api_timeout_ms="1800000",
+)
+# Sonnet 5: a 2.1.19x CLI new enough to serve Claude Sonnet 5 (released
+# 2026-06-30). Like Fable, the default 2.1.120 predates the model and would
+# silently fall back to its default (rejected by the served-model guard). Sonnet
+# 5 shares Fable's 128k max output, so it inherits the raised request timeout to
+# survive long single-message generations. Driven like the default otherwise.
+_SONNET5_VARIANT = _CliVariant(
+    key="sonnet5",
+    image_tag="clispecbench-claude-code-sonnet5",
+    dockerfile=SONNET5_DOCKERFILE,
+    supports_effort=True,
+    telemetry=True,
+    max_thinking_tokens=None,
+    api_timeout_ms="1800000",
+)
+_VARIANTS: dict[str, _CliVariant] = {
+    v.key: v for v in (_DEFAULT_VARIANT, _LEGACY_VARIANT, _FABLE_VARIANT, _SONNET5_VARIANT)
+}
 
 # Models the current pinned CLI no longer serves faithfully — it silently falls
 # back to its default model (verified: claude-opus-4-7). These must run on the
@@ -87,10 +125,12 @@ _LEGACY_MODELS: frozenset[str] = frozenset(
 def _resolve_cli_variant(model: str | None, cli_version: str | None) -> _CliVariant:
     """Pick the CLI variant for a run: explicit override, else model-driven default.
 
-    ``cli_version`` accepts a variant key (``"default"``/``"legacy"``) or the
-    resolved CLI version string (e.g. ``"2.0.2"``). When unset, models in
-    :data:`_LEGACY_MODELS` route to the legacy variant and everything else to
-    the default.
+    ``cli_version`` accepts a variant key
+    (``"default"``/``"legacy"``/``"fable"``/``"sonnet5"``) or the resolved CLI
+    version string (e.g. ``"2.0.2"``). When unset, models in
+    :data:`_LEGACY_MODELS` route to the legacy variant, Fable-family models to
+    the fable variant, Sonnet-5-family models to the sonnet5 variant, and
+    everything else to the default.
     """
     if cli_version:
         if cli_version in _VARIANTS:
@@ -105,6 +145,12 @@ def _resolve_cli_variant(model: str | None, cli_version: str | None) -> _CliVari
         raise ValueError(f"Unknown --cli-version {cli_version!r}. Valid: {valid}")
     if model in _LEGACY_MODELS:
         return _LEGACY_VARIANT
+    # Any Fable-family model (alias or dated snapshot) needs the newer CLI.
+    if model and model.startswith("claude-fable"):
+        return _FABLE_VARIANT
+    # Sonnet 5 (alias or dated snapshot) likewise needs a launch-day CLI.
+    if model and model.startswith("claude-sonnet-5"):
+        return _SONNET5_VARIANT
     return _DEFAULT_VARIANT
 
 
@@ -145,6 +191,8 @@ class ClaudeCodeAdapter(AgentAdapter):
         env = {**api_key_env}
         # Lift the 32k per-message output cap (CLI clamps to each model's max).
         env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = MAX_OUTPUT_TOKENS
+        if self._variant.api_timeout_ms:
+            env["API_TIMEOUT_MS"] = self._variant.api_timeout_ms
         if self._variant.telemetry:
             # Configure OpenTelemetry file export for token tracking. Disabled
             # on the legacy variant — the 2.0.x OTLP exporter crashes on the

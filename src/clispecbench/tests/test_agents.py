@@ -284,6 +284,54 @@ class TestModelAndEffort:
         assert "--model" not in bash_script
         assert "--effort" not in bash_script
 
+    def test_claude_code_fable_models_route_to_fable_cli(self) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-fable-5", effort="max")
+        assert adapter.image_tag == "clispecbench-claude-code-fable"
+        assert adapter.version.startswith("2.1.")
+        assert adapter.version != ClaudeCodeAdapter(model="claude-sonnet-4-6").version
+        # Driven like the default variant: --effort works, OTEL stays on.
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        assert "--effort max" in cmd[2]
+        env = adapter.environment({})
+        assert "OTEL_METRICS_EXPORTER" in env
+        # Fable's long generations need a raised per-request client timeout.
+        assert env["API_TIMEOUT_MS"] == "1800000"
+
+    def test_claude_code_sonnet5_models_route_to_sonnet5_cli(self) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-sonnet-5", effort="max")
+        assert adapter.image_tag == "clispecbench-claude-code-sonnet5"
+        assert adapter.version.startswith("2.1.")
+        assert adapter.version != ClaudeCodeAdapter(model="claude-sonnet-4-6").version
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+        assert "--effort max" in cmd[2]
+        env = adapter.environment({})
+        assert "OTEL_METRICS_EXPORTER" in env
+        assert env["API_TIMEOUT_MS"] == "1800000"
+
+    def test_claude_code_sonnet5_dated_snapshot_routes_to_sonnet5_cli(self) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-sonnet-5-20260630")
+        assert adapter.image_tag == "clispecbench-claude-code-sonnet5"
+
+    def test_claude_code_non_fable_models_keep_default_cli(self) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-opus-4-8")
+        assert adapter.image_tag == "clispecbench-claude-code"
+        assert "API_TIMEOUT_MS" not in adapter.environment({})
+
+    def test_claude_code_sonnet4_keeps_default_cli(self) -> None:
+        # startswith("claude-sonnet-5") must not capture the sonnet-4 line.
+        adapter = ClaudeCodeAdapter(model="claude-sonnet-4-6")
+        assert adapter.image_tag == "clispecbench-claude-code"
+
+    def test_claude_code_explicit_cli_version_overrides_model_routing(self) -> None:
+        adapter = ClaudeCodeAdapter(model="claude-fable-5", cli_version="default")
+        assert adapter.image_tag == "clispecbench-claude-code"
+
     def test_codex_model_in_command(self) -> None:
         adapter = CodexCLIAdapter(model="o3", effort="high")
         cmd = adapter.invoke_command(

@@ -311,11 +311,23 @@ def make_run_label(task: str, agent: str, run_number: int, model: str | None = N
     return f"{task}_{agent}{model_part}_{ts}_run-{run_number}"
 
 
-def model_effort_slug(model: str | None, effort: str | None) -> str | None:
-    """Build a folder name like 'opus_max' or 'gpt-5.4' from model + effort."""
+def model_effort_slug(
+    model: str | None,
+    effort: str | None,
+    prompt_variant: str | None = None,
+) -> str | None:
+    """Build a folder name like 'opus_max' or 'gpt-5.4' from model + effort.
+
+    A non-default ``prompt_variant`` (anything other than ``None``/``"base"``)
+    is appended as ``__<variant>`` so that runs measured under an alternate
+    prompt live in a separate results directory and never mix with the
+    standard base-prompt runs for the same model+effort.
+    """
     if not model:
         return None
     raw = f"{model}_{effort}" if effort else model
+    if prompt_variant and prompt_variant != "base":
+        raw = f"{raw}__{prompt_variant}"
     return _UNSAFE_MODEL_SLUG_CHARS.sub("_", raw)
 
 
@@ -360,10 +372,11 @@ def _model_base_dir(
     agent: str,
     model: str | None = None,
     effort: str | None = None,
+    prompt_variant: str | None = None,
 ) -> Path:
     """Return the base directory for a task/agent/model combination."""
     base = output_dir / task / agent
-    slug = model_effort_slug(model, effort)
+    slug = model_effort_slug(model, effort, prompt_variant)
     if slug:
         base = base / slug
     return base
@@ -440,8 +453,9 @@ def result_path(
     model: str | None = None,
     effort: str | None = None,
     eval_number: int = 1,
+    prompt_variant: str | None = None,
 ) -> Path:
-    base = _model_base_dir(output_dir, task, agent, model, effort)
+    base = _model_base_dir(output_dir, task, agent, model, effort, prompt_variant)
     return base / f"eval{eval_number}" / f"run{run_number}" / "result.json"
 
 
@@ -451,12 +465,13 @@ def next_eval_number(
     agent: str,
     model: str | None = None,
     effort: str | None = None,
+    prompt_variant: str | None = None,
 ) -> int:
     """Return the next available eval number (1-based).
 
     Scans for existing ``evalN/`` directories and returns max(N) + 1.
     """
-    base = _model_base_dir(output_dir, task, agent, model, effort)
+    base = _model_base_dir(output_dir, task, agent, model, effort, prompt_variant)
     if not base.is_dir():
         return 1
     existing = [
@@ -494,9 +509,10 @@ class EvalLock:
         agent: str,
         model: str | None = None,
         effort: str | None = None,
+        prompt_variant: str | None = None,
     ) -> EvalLock:
         """Acquire a lock, or raise ``SystemExit`` if one is already held."""
-        base = _model_base_dir(output_dir, task, agent, model, effort)
+        base = _model_base_dir(output_dir, task, agent, model, effort, prompt_variant)
         base.mkdir(parents=True, exist_ok=True)
         lock_path = base / ".eval.lock"
         pid = os.getpid()

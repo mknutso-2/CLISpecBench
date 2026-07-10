@@ -1,5 +1,27 @@
 # RS274 Changelog
 
+## v3.2.0 — 2026-07-02
+
+- Added an optional `fable-steered` prompt variant
+  (`prompt/variants/fable-steered.md`), selected with `--prompt-variant
+  fable-steered`. It is the standard base prompt plus a short working-style
+  paragraph that targets a documented Claude Fable 5 pathology: at high effort
+  under the standard prompt, Fable elaborates on its reading/planning so
+  heavily that it exhausts the session (hitting the model's 128K output
+  ceiling) before writing any code, scoring 0/546. The addendum steers it to
+  write code early, iterate, and not narrate — it adds no task-specific hints.
+  (Note: initial validation found this prompt alone does not resolve the
+  failure — the session is consumed by extended *thinking*, which is governed
+  by the effort level / `MAX_THINKING_TOKENS`, not by prompt wording. The
+  variant and the series-separation machinery below stand on their own; the
+  effective lever for Fable is still under investigation.)
+- Runs under a non-`base` prompt variant now write to a distinct results
+  directory (`<model>_<effort>__<variant>`, e.g.
+  `claude-fable-5_max__fable-steered`) and record `prompt_variant` in
+  `metadata` and the dashboard row, so a steered series never mixes with the
+  standard base-prompt fleet. The base contract (base prompt, docs, tests) is
+  unchanged, so existing base-prompt runs remain directly comparable.
+
 ## v3.1.11 — 2026-04-26
 
 - Clarified in `technical-requirements-prompt.md` that when a moving block
