@@ -128,6 +128,11 @@ class AgentAdapter(ABC):
         return []
 
     @property
+    def network_policy(self) -> str:
+        """Machine-readable network condition recorded with each run."""
+        return "web-enabled"
+
+    @property
     def requires_tty(self) -> bool:
         """Whether this CLI needs a pseudo-TTY for correct noninteractive output."""
         return False

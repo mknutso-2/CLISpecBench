@@ -30,6 +30,10 @@ class TestContainerConfig:
         config = ContainerConfig(image="test", environment={}, command=["echo"], volumes=vols)
         assert config.volumes == vols
 
+    def test_egress_allowlist_default_empty(self) -> None:
+        config = ContainerConfig(image="test", environment={}, command=["echo"])
+        assert config.egress_allowlist == []
+
 
 class TestResolveDockerClient:
     def test_returns_default_client_when_from_env_succeeds(

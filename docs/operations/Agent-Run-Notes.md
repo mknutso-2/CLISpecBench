@@ -127,12 +127,8 @@ therefore ran on Docker's default bridge network. This allowed agent CLIs to
 use their own built-in web-search facilities when those facilities were
 available.
 
-At this point in the current study, changing that access policy would create a
-new experimental condition and make later results less comparable to the
-already-published runs. For consistency, the current study should preserve the
-same effective access level used by the existing published runs. A stricter
-API-only/offline policy can be introduced only as a new, separately labeled
-run series after the harness implements and verifies real egress controls.
+Those results remain a separate historical condition. Do not mix them with
+new runs protected by the harness's Docker-level API-only egress controls.
 
 ### Codex CLI / OpenAI
 
@@ -159,14 +155,32 @@ and the historical lack of enforced container egress policy mean they should be
 grouped under the same current study condition rather than presented as
 strictly network-isolated runs.
 
-### Publishing and Comparison Rule
+### API-only restart and comparison rule
 
-For the current study, do not tighten network egress, disable CLI web-search
-features, or omit otherwise valid runs solely because the transcript shows web
-search or web fetch activity. Publish and compare runs only within the same
-effective access condition, and keep noting observed web-search/web-fetch use
-in audit notes or result metadata where practical.
+On August 30, 2026, the GPT-5.6 Codex collection restarted under an `api-only`
+condition. Each agent container is attached only to a fresh Docker `--internal`
+bridge network, which has no external route. A separate per-run CONNECT proxy
+is attached to both that network and Docker's egress bridge; it permits only
+port 443 to the adapter's declared API hostname (for Codex, `chatgpt.com`) and
+rejects every other destination. The agent receives proxy variables pointing
+to the proxy's internal IP and no usable DNS resolver. Codex runs in external-
+sandbox mode inside that Docker boundary, and `web_search="disabled"` plus
+`tools.web_search=false` removes the separate hosted search surface.
 
-If CLISpecBench later starts an offline/API-only study, that should be a new
-run series with a clear label, verified network controls, and no mixing with
-the current web-access-enabled results.
+The container keeps Docker's default seccomp profile. Do not add
+`seccomp=unconfined`: the Docker network is the isolation boundary, so Codex
+does not need to create a nested bubblewrap namespace. The proxy records each
+allow/deny decision in `network-audit.jsonl`, referenced by
+`artifacts.network_audit` in the run result.
+
+The required probes verify that direct IP egress, external DNS resolution, and
+a proxy request to a non-allowlisted host all fail; a Luna/max model request
+still reaches `chatgpt.com`; a model-invoked `curl` to `example.com` is denied;
+and hosted web search is unavailable. Re-run `TestRestrictedEgress` and
+`TestCodexNetworkIsolation` after changing Docker networking, the Codex CLI,
+or its invocation flags.
+
+All pre-change results remain `web-enabled`. New results record `api-only` in
+`metadata.network_policy`. Publish and compare results only within the same
+network condition; never combine the earlier web-enabled runs with this
+restart series in Best/Mean calculations.

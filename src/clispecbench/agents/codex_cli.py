@@ -63,8 +63,16 @@ class CodexCLIAdapter(AgentAdapter):
         return self._effort
 
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
-        # Use `codex exec --json` and tee the event stream for token parsing.
-        flags = f'--json --dangerously-bypass-approvals-and-sandbox --cd "{work_dir}"'
+        # Docker supplies the trust boundary: the whole agent container is on
+        # an internal network and can egress only through an allowlisting
+        # proxy. Codex therefore runs in its documented external-sandbox mode,
+        # while hosted web search is disabled separately.
+        flags = (
+            f'--json --dangerously-bypass-approvals-and-sandbox --cd "{work_dir}"'
+            " --skip-git-repo-check"
+            ' -c web_search="disabled"'
+            " -c tools.web_search=false"
+        )
         if self._model:
             flags += f' --model "{self._model}"'
         if self._effort:
@@ -139,6 +147,10 @@ class CodexCLIAdapter(AgentAdapter):
     @property
     def allowed_hosts(self) -> list[str]:
         return ["chatgpt.com"]
+
+    @property
+    def network_policy(self) -> str:
+        return "api-only"
 
     def extract_last_agent_message(self, container_logs: str) -> str | None:
         """Extract last agent_message text from Codex CLI JSONL output."""

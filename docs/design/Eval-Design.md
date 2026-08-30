@@ -188,7 +188,14 @@ controlled for; it is the capability being evaluated.
 
 ### 5.2 Infrastructure Requirements
 
-**Sandboxing.** Agent runs must execute in Docker containers with resource limits (CPU, memory) and filesystem isolation. The original design intent was no outbound network access except the agent's API endpoint. A May 2026 audit found that already-published runs did not fully enforce that API-only policy, so the current study preserves the same effective web-access level for consistency. A future offline/API-only series must be labeled separately and should not be mixed with the current results.
+**Sandboxing.** Agent runs must execute in Docker containers with resource
+limits (CPU, memory) and filesystem isolation. A May 2026 audit found that
+historical runs did not fully enforce the intended API-only policy. Those
+results remain labeled `web-enabled`. Codex CLI runs started under the August
+30, 2026 restart use the separately labeled `api-only` condition: the agent
+container has no external route, a per-run proxy allows only the Codex API
+host, and hosted web search is removed. Proxy decisions are preserved as a run
+artifact. Results from the two conditions must not be mixed.
 
 **No artificial timeouts.** Agent sessions run until the agent exits naturally. The harness has a 24-hour safety backstop to catch truly hung containers, but this is not intended as a meaningful constraint. Agents that need hours to iterate should be allowed to finish — killing a run mid-execution produces artificially low scores and wastes compute.
 

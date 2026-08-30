@@ -36,8 +36,8 @@ implementation: how those concepts become running code.
 3. **Sandbox agent execution** so that agents cannot affect the host and the
    network condition for a run series is explicit and reproducible. The current
    published study preserves the historical effective access level documented
-   in `../operations/Agent-Run-Notes.md`; future API-only/offline runs must be labeled as a
-   separate condition.
+   in `../operations/Agent-Run-Notes.md`; Docker-enforced API-only runs are
+   labeled as a separate condition.
 
 4. **Be agent-agnostic.** Adding a new agent CLI should require only a small
    adapter module, not changes to the core harness.
@@ -267,7 +267,7 @@ class AgentAdapter(ABC):
 
     @property
     def allowed_hosts(self) -> list[str]:
-        """Declared API hosts for future restricted-network run series."""
+        """API hosts allowed by the per-run restricted-egress proxy."""
         return []
 ```
 
@@ -421,12 +421,16 @@ Claude Code / Anthropic transcripts audited at the same time advertised
 `WebSearch` / `WebFetch` tools but showed no actual web tool-use events and
 zero reported web-search/web-fetch requests.
 
-**Current study policy.** Because published results already used this effective
-access level, changing egress or disabling web-search tools mid-study would
-create a new experimental condition. Continue using the same effective access
-level for the current study, and treat any future API-only/offline runs as a
-separate, clearly labeled run series. See `../operations/Agent-Run-Notes.md` before
-publishing or comparing agent results across network-access conditions.
+**Current study policy.** Historical results retain the `web-enabled` label.
+Beginning with the August 30, 2026 GPT-5.6 restart, Codex CLI runs use an
+`api-only` condition. The agent container has only an internal Docker network;
+a separate per-run proxy permits HTTPS CONNECT only to `chatgpt.com`, while
+hosted web search is disabled in Codex configuration. Docker's default seccomp
+profile remains active. Every new result records the condition in
+`metadata.network_policy` and preserves proxy decisions in
+`artifacts.network_audit`; never combine the two conditions in a published
+aggregate. See `../operations/Agent-Run-Notes.md` before publishing or
+comparing results.
 
 ### 6.4 Resource Limits
 
@@ -440,13 +444,14 @@ publishing or comparing agent results across network-access conditions.
 ### 6.5 Container Lifecycle
 
 ```
-1. docker create  (image, env vars, resource limits, network)
-2. docker cp      (prompt + docs → /workspace/prompt/)
-3. docker start
-4. docker exec    (agent invoke command)
-5. wait           (poll for exit or timeout)
-6. docker cp      (agent's /workspace/output/ → host)
-7. docker rm -f   (cleanup)
+1. docker network create --internal  (API-only runs)
+2. docker create/start egress proxy  (allowlisted API hosts only)
+3. docker create  (agent image, env vars, resource limits, internal network)
+4. docker cp      (prompt + docs → /workspace/prompt/)
+5. docker start
+6. wait           (poll for exit or timeout)
+7. docker cp      (agent's /workspace/output/ → host)
+8. preserve proxy audit; remove agent, proxy, and network
 ```
 
 The harness never enters the container interactively. All interaction is
@@ -514,7 +519,7 @@ inspection and programmatic aggregation.
 
 ```json
 {
-  "schema_version": "2.1",
+  "schema_version": "2.2",
 
   "metadata": {
     "run_uid": "e81e6027-5353-479b-babd-cff232765773",
@@ -530,6 +535,7 @@ inspection and programmatic aggregation.
     "docker_image_sha": "sha256:...",
     "wall_clock_seconds": 1423.7,
     "exit_reason": "completed",
+    "network_policy": "web-enabled",
     "model": "claude-opus-4-6",
     "effort": null,
     "prompt_content_sha": "sha256...",
@@ -594,8 +600,8 @@ inspection and programmatic aggregation.
 
 ### 8.1 Result Directory Structure
 
-Each run produces a result JSON file plus two preserved artifacts: the full
-agent transcript and the complete source code directory.
+Each run produces a result JSON file plus the full agent transcript, complete
+source directory, and (for API-only runs) restricted-egress audit.
 
 ```
 transient_results/
@@ -617,6 +623,7 @@ transient_results/
           run1/
             result.json
             transcript.jsonl
+            network-audit.jsonl
             source/
 ```
 
@@ -626,7 +633,8 @@ The result JSON includes an `artifacts` field with relative paths:
 {
   "artifacts": {
     "transcript": "transcript.jsonl",
-    "source_dir": "source"
+    "source_dir": "source",
+    "network_audit": "network-audit.jsonl"
   }
 }
 ```

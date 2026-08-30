@@ -26,6 +26,14 @@ Meta: This file is a breathing document. If you read it and find that any of the
 - Prefer detached runs over blocking the shell. Monitor `progress.txt` in the eval directory as runs complete, and also check container status when you need to tell whether work is still active.
 - Use `clispecbench run ...` if the console script is available; otherwise use `uv run clispecbench run ...`.
 - Use `clispecbench results` or `uv run clispecbench results` to inspect aggregate run output after completion.
+- Codex CLI runs launched after the August 30, 2026 GPT-5.6 restart use the
+  `api-only` network condition: the agent container has no external route, a
+  per-run proxy allows only the declared Codex API host, and hosted web search
+  is removed. Confirm `metadata.network_policy == "api-only"`, verify
+  `artifacts.network_audit`, and do not mix these runs with historical
+  `web-enabled` results. Re-run `TestRestrictedEgress` and the two opt-in
+  `TestCodexNetworkIsolation` probes after changing the Codex CLI, Docker
+  networking, or invocation flags.
 - On Windows + WSL2 Docker, authenticate `claude`, `codex`, and `gemini` on Windows, not inside WSL. Credential paths under `C:\Users\<you>\.claude`, `.codex`, and `.gemini` are translated to `/mnt/c/...` for the WSL daemon; `scripts/smoke-test-*.sh` is the source of truth for the mount strategy.
 - Claude Desktop sign-in does not guarantee headless `claude --print` eval auth. Refresh Claude Code CLI credentials on Windows with `/login` or `claude auth login`, then run `scripts/smoke-test-claude.sh`. For long unattended queues, `claude setup-token` can generate a one-year `CLAUDE_CODE_OAUTH_TOKEN`; use it only if the launcher can keep the token out of logs/history.
 - Antigravity CLI (`agy`) is experimental as of 1.0.3. Do not count Antigravity evals until `scripts/smoke-test-antigravity.sh` passes and non-TTY `agy --print` output is reliable; current public and local tests show it can exit 0 with empty captured stdout after generating a response.

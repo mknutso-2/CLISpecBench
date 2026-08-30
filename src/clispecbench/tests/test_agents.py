@@ -80,6 +80,11 @@ class TestCodexCLICredentialMounts:
         assert mounts[key]["bind"] == "/root/.codex/auth.json"
         assert mounts[key]["mode"] == "rw"
 
+    def test_declares_api_only_network_policy(self) -> None:
+        adapter = CodexCLIAdapter()
+        assert adapter.allowed_hosts == ["chatgpt.com"]
+        assert adapter.network_policy == "api-only"
+
 
 class TestGeminiCLICredentialMounts:
     def test_mounts_three_files_to_staging(self) -> None:
@@ -342,6 +347,20 @@ class TestModelAndEffort:
         assert "set -o pipefail" in bash_script
         assert '--model "o3"' in bash_script
         assert 'model_reasoning_effort="high"' in bash_script
+
+    def test_codex_uses_external_sandbox_and_disables_hosted_web_search(self) -> None:
+        adapter = CodexCLIAdapter(model="gpt-5.6-luna", effort="max")
+        cmd = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
+
+        bash_script = cmd[2]
+        assert "--dangerously-bypass-approvals-and-sandbox" in bash_script
+        assert "--sandbox workspace-write" not in bash_script
+        assert "--skip-git-repo-check" in bash_script
+        assert 'web_search="disabled"' in bash_script
+        assert "tools.web_search=false" in bash_script
 
     def test_gemini_model_in_command(self) -> None:
         adapter = GeminiCLIAdapter(model="gemini-2.5-pro")

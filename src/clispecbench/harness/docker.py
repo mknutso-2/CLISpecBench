@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import socket
 import sys
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path, PurePosixPath
 
@@ -14,6 +16,7 @@ import docker
 import docker.errors
 from docker import DockerClient
 from docker.models.containers import Container
+from docker.models.networks import Network
 from requests import exceptions as requests_exceptions
 from urllib3 import exceptions as urllib3_exceptions
 
@@ -33,6 +36,117 @@ CONTAINER_OUTPUT = CONTAINER_WORKSPACE / "output"
 DEFAULT_MEM_LIMIT = "8g"
 DEFAULT_CPU_COUNT = min(4, os.cpu_count() or 4)
 DEFAULT_DISK_LIMIT = "10g"
+
+EGRESS_PROXY_PORT = 3128
+_EGRESS_PROXY_SOURCE = r'''
+import json
+import selectors
+import socket
+import socketserver
+import sys
+import threading
+import time
+
+PORT = int(sys.argv[1])
+ALLOWED_HOSTS = tuple(json.loads(sys.argv[2]))
+EMIT_LOCK = threading.Lock()
+
+
+def emit(event, **fields):
+    line = json.dumps({"event": event, "timestamp": time.time(), **fields})
+    # Proxy handlers run concurrently. Serialize the complete line and flush
+    # while holding one lock so Docker's combined log is valid JSONL.
+    with EMIT_LOCK:
+        sys.stdout.write(line + "\n")
+        sys.stdout.flush()
+
+
+def allowed(host, port):
+    host = host.rstrip(".").lower()
+    return port == 443 and any(
+        host == suffix or host.endswith("." + suffix) for suffix in ALLOWED_HOSTS
+    )
+
+
+def split_authority(authority):
+    if authority.startswith("["):
+        host, _, remainder = authority[1:].partition("]")
+        port = int(remainder[1:]) if remainder.startswith(":") else 443
+        return host, port
+    host, separator, raw_port = authority.rpartition(":")
+    if not separator:
+        return authority, 443
+    return host, int(raw_port)
+
+
+def relay(client, upstream):
+    selector = selectors.DefaultSelector()
+    selector.register(client, selectors.EVENT_READ, upstream)
+    selector.register(upstream, selectors.EVENT_READ, client)
+    while selector.get_map():
+        for key, _ in selector.select(timeout=60):
+            source = key.fileobj
+            destination = key.data
+            data = source.recv(65536)
+            if not data:
+                return
+            destination.sendall(data)
+
+
+class Handler(socketserver.BaseRequestHandler):
+    def handle(self):
+        self.request.settimeout(30)
+        header = b""
+        while b"\r\n\r\n" not in header and len(header) < 65536:
+            chunk = self.request.recv(4096)
+            if not chunk:
+                return
+            header += chunk
+        try:
+            first_line = header.split(b"\r\n", 1)[0].decode("ascii")
+            method, authority, _ = first_line.split(" ", 2)
+            host, port = split_authority(authority)
+        except (UnicodeDecodeError, ValueError):
+            emit("denied", reason="malformed_request", client=self.client_address[0])
+            self.request.sendall(b"HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n")
+            return
+
+        normalized_host = host.rstrip(".").lower()
+        if method.upper() != "CONNECT" or not allowed(normalized_host, port):
+            emit(
+                "denied",
+                host=normalized_host,
+                port=port,
+                method=method.upper(),
+                client=self.client_address[0],
+            )
+            self.request.sendall(b"HTTP/1.1 403 Forbidden\r\nConnection: close\r\n\r\n")
+            return
+
+        try:
+            upstream = socket.create_connection((normalized_host, port), timeout=30)
+        except OSError as exc:
+            emit("upstream_error", host=normalized_host, port=port, error=str(exc))
+            self.request.sendall(b"HTTP/1.1 502 Bad Gateway\r\nConnection: close\r\n\r\n")
+            return
+
+        emit("allowed", host=normalized_host, port=port, client=self.client_address[0])
+        self.request.sendall(b"HTTP/1.1 200 Connection Established\r\n\r\n")
+        try:
+            relay(self.request, upstream)
+        finally:
+            upstream.close()
+
+
+class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    allow_reuse_address = True
+    daemon_threads = True
+
+
+emit("ready", port=PORT, allowed_hosts=ALLOWED_HOSTS)
+with Server(("0.0.0.0", PORT), Handler) as server:
+    server.serve_forever()
+'''
 
 
 def _docker_env_value(name: str) -> str:
@@ -153,6 +267,7 @@ class ContainerConfig:
     mem_limit: str = DEFAULT_MEM_LIMIT
     cpu_count: int = DEFAULT_CPU_COUNT
     network_mode: str = "bridge"
+    egress_allowlist: list[str] = field(default_factory=list[str])
     tty: bool = False
 
 
@@ -172,6 +287,8 @@ class DockerSandbox:
     def __init__(self) -> None:
         self._client = _resolve_docker_client()
         self._container: Container | None = None
+        self._egress_proxy: Container | None = None
+        self._isolated_network: Network | None = None
 
     def build_image(self, dockerfile: Path, tag: str) -> str:
         """Build (or rebuild) a Docker image from a Dockerfile.
@@ -206,21 +323,114 @@ class DockerSandbox:
 
     def create(self, config: ContainerConfig) -> str:
         """Create a stopped container and return its ID."""
-        container: Container = self._client.containers.create(
-            image=config.image,
-            command=config.command,
-            environment=config.environment,
-            volumes=config.volumes or None,
-            mem_limit=config.mem_limit,
-            nano_cpus=config.cpu_count * 10**9,
-            network_mode=config.network_mode,
-            working_dir=str(CONTAINER_WORKSPACE),
-            tty=config.tty,
-            detach=True,
-        )
+        environment = dict(config.environment)
+        network_mode = config.network_mode
+        dns: list[str] | None = None
+
+        try:
+            if config.egress_allowlist:
+                network_mode, proxy_ip = self._create_restricted_egress(
+                    config.image,
+                    config.egress_allowlist,
+                )
+                proxy_url = f"http://{proxy_ip}:{EGRESS_PROXY_PORT}"
+                environment.update(
+                    {
+                        "HTTP_PROXY": proxy_url,
+                        "HTTPS_PROXY": proxy_url,
+                        "ALL_PROXY": proxy_url,
+                        "http_proxy": proxy_url,
+                        "https_proxy": proxy_url,
+                        "all_proxy": proxy_url,
+                        "NO_PROXY": "localhost,127.0.0.1",
+                        "no_proxy": "localhost,127.0.0.1",
+                    }
+                )
+                # The proxy receives hostnames and performs DNS resolution on
+                # the egress network. The agent itself needs no DNS service.
+                dns = ["127.0.0.1"]
+
+            container: Container = self._client.containers.create(
+                image=config.image,
+                command=config.command,
+                environment=environment,
+                volumes=config.volumes or None,
+                mem_limit=config.mem_limit,
+                nano_cpus=config.cpu_count * 10**9,
+                network_mode=network_mode,
+                dns=dns,
+                working_dir=str(CONTAINER_WORKSPACE),
+                tty=config.tty,
+                detach=True,
+            )
+        except Exception:
+            self._cleanup_restricted_egress()
+            raise
         self._container = container
         log.info("Created container %s (image=%s)", container.short_id, config.image)
         return str(container.id)
+
+    def _create_restricted_egress(
+        self,
+        image: str,
+        allowed_hosts: list[str],
+    ) -> tuple[str, str]:
+        """Create an internal network plus a host-allowlisting CONNECT proxy."""
+        normalized_hosts = sorted({host.rstrip(".").lower() for host in allowed_hosts})
+        invalid_host = any("/" in host or ":" in host for host in normalized_hosts)
+        if not all(normalized_hosts) or invalid_host:
+            raise ValueError("egress_allowlist entries must be DNS hostnames without ports")
+
+        network_name = f"clispecbench-isolated-{uuid.uuid4().hex[:12]}"
+        network = self._client.networks.create(
+            network_name,
+            driver="bridge",
+            internal=True,
+            labels={"clispecbench.network-policy": "api-only"},
+        )
+        self._isolated_network = network
+
+        proxy: Container = self._client.containers.create(
+            image=image,
+            command=[
+                "python3",
+                "-u",
+                "-c",
+                _EGRESS_PROXY_SOURCE,
+                str(EGRESS_PROXY_PORT),
+                json.dumps(normalized_hosts),
+            ],
+            network_mode="bridge",
+            mem_limit="128m",
+            nano_cpus=10**9,
+            working_dir="/tmp",
+            detach=True,
+            labels={"clispecbench.component": "egress-proxy"},
+        )
+        self._egress_proxy = proxy
+        network.connect(proxy)  # pyright: ignore[reportUnknownMemberType]
+        proxy.start()
+        proxy.reload()
+        network_settings = proxy.attrs["NetworkSettings"]["Networks"][network_name]
+        proxy_ip = str(network_settings["IPAddress"])
+        if not proxy_ip:
+            raise RuntimeError("Restricted-egress proxy did not receive an internal address")
+
+        deadline = time.monotonic() + 10
+        while time.monotonic() < deadline:
+            proxy.reload()
+            if proxy.status == "exited":
+                audit = self.get_network_audit_logs()
+                raise RuntimeError(f"Restricted-egress proxy exited: {audit}")
+            if '"event": "ready"' in self.get_network_audit_logs():
+                log.info(
+                    "Created restricted network %s (allowed hosts: %s)",
+                    network_name,
+                    ", ".join(normalized_hosts),
+                )
+                return network_name, proxy_ip
+            time.sleep(0.05)
+        raise RuntimeError("Restricted-egress proxy did not become ready")
 
     def copy_in(self, host_path: Path, container_path: PurePosixPath) -> None:
         """Copy a file or directory from the host into the container.
@@ -313,21 +523,46 @@ class DockerSandbox:
             tar.extractall(path=str(host_path))
 
     def cleanup(self) -> None:
-        """Remove the container."""
-        if self._container is None:
-            return
-        try:
-            self._container.remove(force=True)
-            log.info("Removed container %s", self._container.short_id)
-        except docker.errors.NotFound:
-            pass
-        self._container = None
+        """Remove the agent container and its per-run network resources."""
+        if self._container is not None:
+            try:
+                self._container.remove(force=True)
+                log.info("Removed container %s", self._container.short_id)
+            except docker.errors.NotFound:
+                pass
+            self._container = None
+        self._cleanup_restricted_egress()
+
+    def _cleanup_restricted_egress(self) -> None:
+        if self._egress_proxy is not None:
+            try:
+                self._egress_proxy.remove(force=True)
+                log.info("Removed egress proxy %s", self._egress_proxy.short_id)
+            except docker.errors.NotFound:
+                pass
+            finally:
+                self._egress_proxy = None
+        if self._isolated_network is not None:
+            try:
+                self._isolated_network.remove()
+                log.info("Removed isolated Docker network")
+            except docker.errors.NotFound:
+                pass
+            finally:
+                self._isolated_network = None
 
     def get_logs(self) -> str:
         """Return stdout + stderr logs from the container."""
         if self._container is None:
             raise RuntimeError("No container created")
         raw: bytes = self._container.logs()
+        return raw.decode("utf-8", errors="replace")
+
+    def get_network_audit_logs(self) -> str:
+        """Return JSONL connection decisions from the restricted-egress proxy."""
+        if self._egress_proxy is None:
+            return ""
+        raw: bytes = self._egress_proxy.logs()
         return raw.decode("utf-8", errors="replace")
 
     def run_oneshot(
@@ -339,7 +574,10 @@ class DockerSandbox:
 
         The container is removed after use regardless of outcome.
         """
-        prev = self._container
+        prev = (self._container, self._egress_proxy, self._isolated_network)
+        self._container = None
+        self._egress_proxy = None
+        self._isolated_network = None
         try:
             self.create(config)
             run = self.start_and_wait(timeout_seconds)
@@ -348,4 +586,4 @@ class DockerSandbox:
         finally:
             if self._container is not None:
                 self.cleanup()
-            self._container = prev
+            self._container, self._egress_proxy, self._isolated_network = prev

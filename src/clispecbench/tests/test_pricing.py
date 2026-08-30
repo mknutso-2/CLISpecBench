@@ -100,6 +100,45 @@ class TestEstimateCost:
         assert cost is not None
         assert cost == pytest.approx(0.5 * 5.00 + 0.5 * 0.50 + 30.00)  # type: ignore[reportUnknownMemberType]
 
+    def test_gpt_5_6_sol_model(self) -> None:
+        cost = estimate_cost(
+            "gpt-5.6-sol",
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_input_tokens=500_000,
+            cache_creation_input_tokens=100_000,
+        )
+        assert cost is not None
+        assert cost == pytest.approx(0.4 * 4.00 + 0.5 * 0.40 + 0.1 * 5.00 + 20.00)  # type: ignore[reportUnknownMemberType]
+
+    @pytest.mark.parametrize(
+        ("model", "input_price", "output_price", "cached_input_price", "cache_write_price"),
+        [
+            ("gpt-5.6-terra", 2.00, 12.00, 0.20, 2.50),
+            ("gpt-5.6-luna", 0.20, 1.20, 0.02, 0.25),
+        ],
+    )
+    def test_gpt_5_6_tier_pricing(
+        self,
+        model: str,
+        input_price: float,
+        output_price: float,
+        cached_input_price: float,
+        cache_write_price: float,
+    ) -> None:
+        cost = estimate_cost(
+            model,
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_input_tokens=500_000,
+            cache_creation_input_tokens=100_000,
+        )
+        assert cost is not None
+        expected = (
+            0.4 * input_price + 0.5 * cached_input_price + 0.1 * cache_write_price + output_price
+        )
+        assert cost == pytest.approx(expected)  # type: ignore[reportUnknownMemberType]
+
     def test_gemini_model(self) -> None:
         cost = estimate_cost(
             "gemini-2.5-flash-lite",
@@ -128,6 +167,9 @@ class TestPricingTableCompleteness:
 
     def test_all_openai_models_present(self) -> None:
         for model in (
+            "gpt-5.6-sol",
+            "gpt-5.6-terra",
+            "gpt-5.6-luna",
             "gpt-5.5",
             "gpt-5.4",
             "gpt-5.4-mini",

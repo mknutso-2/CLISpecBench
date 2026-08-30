@@ -38,6 +38,7 @@ from clispecbench.harness.results import (
     make_run_uid,
     models_compatible,
     result_path,
+    save_network_audit,
     save_source_dir,
     save_transcript,
 )
@@ -107,6 +108,7 @@ def _write_infrastructure_failure_result(
         docker_image_sha=docker_image_sha,
         wall_clock_seconds=wall_clock_seconds,
         exit_reason="error",
+        network_policy=adapter.network_policy,
         model=adapter.model,
         effort=adapter.effort,
         notes=notes,
@@ -211,6 +213,7 @@ def run_evaluation(
     workspace: Path | None = None
     extract_dir: Path | None = None
     container_logs: str = ""
+    network_audit_logs: str = ""
     docker_image_sha = "unknown"
 
     try:
@@ -235,6 +238,9 @@ def run_evaluation(
                 work_dir=PurePosixPath(CONTAINER_WORKSPACE),
             ),
             volumes=adapter.credential_mounts(host_home),
+            egress_allowlist=(
+                adapter.allowed_hosts if adapter.network_policy == "api-only" else []
+            ),
             tty=adapter.requires_tty,
         )
         sandbox.create(config)
@@ -255,6 +261,10 @@ def run_evaluation(
                 log.debug("Container logs:\n%s", container_logs[:5000])
         except Exception:
             log.debug("Could not retrieve container logs", exc_info=True)
+        try:
+            network_audit_logs = sandbox.get_network_audit_logs()
+        except Exception:
+            log.debug("Could not retrieve restricted-egress audit logs", exc_info=True)
 
         # --- 4. Extract agent output ---
         extract_dir = Path(tempfile.mkdtemp(prefix="clispecbench-extract-"))
@@ -422,6 +432,7 @@ def run_evaluation(
             docker_image_sha=docker_image_sha,
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
+            network_policy=adapter.network_policy,
             model=adapter.model,
             served_model=served_model,
             effort=adapter.effort,
@@ -439,6 +450,8 @@ def run_evaluation(
         # Save agent transcript (container stdout/stderr)
         if container_logs:
             artifacts.transcript = save_transcript(out_path, container_logs)
+        if network_audit_logs:
+            artifacts.network_audit = save_network_audit(out_path, network_audit_logs)
 
         # Save extracted telemetry files alongside results
         for tpath in adapter.telemetry_paths:

@@ -65,7 +65,7 @@ class ModelPricing:
 # ---------------------------------------------------------------------------
 # Pricing tables
 # Anthropic rows last verified 2026-04-19
-# OpenAI rows last verified 2026-04-26
+# OpenAI rows last verified 2026-08-29
 # Google rows last verified 2026-04-02
 # OpenRouter rows last verified 2026-05-08
 # ---------------------------------------------------------------------------
@@ -104,9 +104,20 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 }
 
 # OpenAI GPT / Codex
-# https://openai.com/api/pricing/
-# cache_write = 0 (Codex CLI doesn't report cache creation tokens)
+# https://developers.openai.com/api/docs/models/compare
+# Cache writes for GPT-5.6 are billed at 1.25x uncached input. Codex CLI does
+# not currently report cache-creation tokens, but retain the published rate
+# for telemetry that does expose them.
+# GPT-5.6 requests with prompts over 272K input tokens are billed at 2x input
+# and 1.5x output for the full request. Codex CLI reports session aggregates,
+# not the per-request prompt sizes needed to apply that surcharge reliably, so
+# these rows contain the standard rates.
+# OpenAI describes the current Sol rate as promotional through at least
+# 2026-11-21; verify it again before using the table after that date.
 OPENAI_PRICING: dict[str, ModelPricing] = {
+    "gpt-5.6-sol": ModelPricing(input=4.00, output=20.00, cached_input=0.40, cache_write=5.00),  # noqa: E501
+    "gpt-5.6-terra": ModelPricing(input=2.00, output=12.00, cached_input=0.20, cache_write=2.50),
+    "gpt-5.6-luna": ModelPricing(input=0.20, output=1.20, cached_input=0.02, cache_write=0.25),  # noqa: E501
     "gpt-5.5": ModelPricing(input=5.00, output=30.00, cached_input=0.50, cache_write=0),  # noqa: E501
     "gpt-5.4": ModelPricing(input=2.50, output=15.00, cached_input=0.25, cache_write=0),  # noqa: E501
     "gpt-5.4-mini": ModelPricing(input=0.75, output=4.50, cached_input=0.075, cache_write=0),  # noqa: E501

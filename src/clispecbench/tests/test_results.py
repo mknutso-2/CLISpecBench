@@ -189,6 +189,39 @@ class TestBenchmarkCostPolicy:
 
         assert loaded.metadata.exit_class == "completed"
 
+    def test_network_policy_round_trips(self, tmp_path: Path) -> None:
+        path = tmp_path / "result.json"
+        result = _make_run_result("codex-cli", None)
+        result.metadata.network_policy = "api-only"
+
+        result.write(path)
+        loaded = load_result(path)
+
+        assert loaded.schema_version == "2.2"
+        assert loaded.metadata.network_policy == "api-only"
+
+    def test_network_audit_artifact_round_trips(self, tmp_path: Path) -> None:
+        path = tmp_path / "result.json"
+        result = _make_run_result("codex-cli", None)
+        result.artifacts.network_audit = "network-audit.jsonl"
+
+        result.write(path)
+        loaded = load_result(path)
+
+        assert loaded.artifacts.network_audit == "network-audit.jsonl"
+
+    def test_historical_result_defaults_to_web_enabled(self, tmp_path: Path) -> None:
+        path = tmp_path / "result.json"
+        result = _make_run_result("codex-cli", None)
+        result.write(path)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        del data["metadata"]["network_policy"]
+        path.write_text(json.dumps(data), encoding="utf-8")
+
+        loaded = load_result(path)
+
+        assert loaded.metadata.network_policy == "web-enabled"
+
     def test_load_result_ignores_historical_score_placeholders(self, tmp_path: Path) -> None:
         path = tmp_path / "result.json"
         result = _make_run_result("codex-cli", None)

@@ -15,7 +15,7 @@ from typing import Any, cast
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "2.1"
+SCHEMA_VERSION = "2.2"
 _VALID_BENCHMARK_COST_PREFERENCES = frozenset({"reported", "estimated"})
 _UNSAFE_MODEL_SLUG_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
 
@@ -166,6 +166,7 @@ class RunArtifacts:
 
     transcript: str | None = None  # e.g. "transcript.jsonl"
     source_dir: str | None = None  # e.g. "source/"
+    network_audit: str | None = None  # e.g. "network-audit.jsonl"
 
 
 @dataclass
@@ -192,6 +193,7 @@ class RunMetadata:
     docker_image_sha: str
     wall_clock_seconds: float
     exit_reason: str  # "completed" | "timeout" | "token_limit" | "error"
+    network_policy: str = "web-enabled"
     model: str | None = None
     # The model the agent CLI actually served, as self-reported in its
     # transcript (e.g. claude-code's system/init event). May differ from
@@ -573,6 +575,13 @@ def save_transcript(result_json_path: Path, transcript_data: str) -> str:
     return "transcript.jsonl"
 
 
+def save_network_audit(result_json_path: Path, audit_data: str) -> str:
+    """Save restricted-egress decisions alongside the result JSON."""
+    dest = result_json_path.parent / "network-audit.jsonl"
+    dest.write_text(audit_data, encoding="utf-8")
+    return "network-audit.jsonl"
+
+
 def save_source_dir(result_json_path: Path, source_dir: Path) -> str:
     """Copy agent source output alongside the result JSON. Returns the relative dir name."""
     dest = result_json_path.parent / "source"
@@ -621,6 +630,7 @@ def load_result(path: Path) -> RunResult:
     artifacts = RunArtifacts(
         transcript=artifacts_data.get("transcript"),
         source_dir=artifacts_data.get("source_dir"),
+        network_audit=artifacts_data.get("network_audit"),
     )
     ss_data = data.get("source_stats", {})
     source_stats = SourceStats(

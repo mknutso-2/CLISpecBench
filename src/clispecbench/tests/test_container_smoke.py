@@ -19,12 +19,16 @@ Markers used here:
 
 from __future__ import annotations
 
-from pathlib import Path
+import json
+import re
+from pathlib import Path, PurePosixPath
 
 import pytest
 
+from clispecbench.agents.codex_cli import CodexCLIAdapter
 from clispecbench.agents.registry import AgentSpec, get_agent_spec, list_agent_specs
 from clispecbench.harness.docker import ContainerConfig, DockerSandbox
+from clispecbench.harness.platform import resolve_host_home
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -282,6 +286,143 @@ class TestAgentCliInstalled:
 
         exit_code, logs = _run_in_container(spec.docker_image, spec.version_command)
         assert exit_code == 0, f"{spec.version_command} failed: {logs}"
+
+
+# ---------------------------------------------------------------------------
+# Codex CLI network isolation — live agent probes
+# ---------------------------------------------------------------------------
+
+
+@docker
+@skip_no_base_image
+class TestRestrictedEgress:
+    """Network-boundary probes that do not invoke or charge an AI model."""
+
+    def test_direct_egress_dns_and_non_allowlisted_proxy_are_blocked(self) -> None:
+        config = ContainerConfig(
+            image=BASE_IMAGE,
+            environment={},
+            command=[
+                "bash",
+                "-c",
+                """set +e
+curl --noproxy '*' -fsS --connect-timeout 3 https://1.1.1.1 >/dev/null 2>&1
+printf 'DIRECT_EXIT=%s\n' "$?"
+getent hosts example.com >/dev/null 2>&1
+printf 'DNS_EXIT=%s\n' "$?"
+curl -fsS --connect-timeout 3 https://github.com >/dev/null 2>&1
+printf 'PROXY_EXIT=%s\n' "$?"
+for _ in $(seq 1 24); do
+    curl -fsS --connect-timeout 3 https://github.com >/dev/null 2>&1 &
+done
+wait
+""",
+            ],
+            egress_allowlist=["chatgpt.com"],
+        )
+        sandbox = DockerSandbox()
+        try:
+            sandbox.create(config)
+            run = sandbox.start_and_wait(30)
+            logs = sandbox.get_logs()
+            network_audit = sandbox.get_network_audit_logs()
+        finally:
+            sandbox.cleanup()
+
+        assert run.exit_code == 0, logs
+        for probe in ("DIRECT", "DNS", "PROXY"):
+            match = re.search(rf"{probe}_EXIT=(\d+)", logs)
+            assert match is not None, logs
+            assert int(match.group(1)) != 0, logs
+        audit_events = [json.loads(line) for line in network_audit.splitlines()]
+        github_denials = [
+            event
+            for event in audit_events
+            if event.get("event") == "denied" and event.get("host") == "github.com"
+        ]
+        assert len(github_denials) == 25
+
+
+@docker
+@pytest.mark.prompts_agent
+@skip_no_codex_image
+class TestCodexNetworkIsolation:
+    """Live probes for the two Codex internet-access surfaces.
+
+    These tests consume a small number of model tokens and are therefore
+    excluded from ordinary Docker smoke runs. Run them explicitly when the
+    Codex CLI or its sandbox configuration changes.
+    """
+
+    @staticmethod
+    def _run_probe(tmp_path: Path, prompt: str) -> tuple[str, str]:
+        adapter = CodexCLIAdapter(model="gpt-5.6-luna", effort="max")
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        (workspace / "prompt.md").write_text(prompt, encoding="utf-8")
+
+        config = ContainerConfig(
+            image=adapter.image_tag,
+            environment=adapter.environment({}),
+            command=adapter.invoke_command(
+                PurePosixPath("/workspace/prompt.md"),
+                PurePosixPath("/workspace"),
+            ),
+            volumes=adapter.credential_mounts(resolve_host_home()),
+            egress_allowlist=adapter.allowed_hosts,
+        )
+        sandbox = DockerSandbox()
+        try:
+            sandbox.create(config)
+            sandbox.copy_in(workspace, PurePosixPath("/workspace"))
+            run = sandbox.start_and_wait(300)
+            logs = sandbox.get_logs()
+            network_audit = sandbox.get_network_audit_logs()
+        finally:
+            sandbox.cleanup()
+
+        assert not run.timed_out, logs
+        assert run.exit_code == 0, logs
+        for line in network_audit.splitlines():
+            assert isinstance(json.loads(line), dict)
+        return logs, network_audit
+
+    def test_model_shell_cannot_reach_public_web(self, tmp_path: Path) -> None:
+        logs, network_audit = self._run_probe(
+            tmp_path,
+            """Use the shell exactly once to run this exact command:
+curl -fsS --max-time 10 https://example.com >/dev/null; printf 'CURL_EXIT=%s\\n' "$?"
+Then report the observed CURL_EXIT value. Do not use web search and do not infer the result.
+""",
+        )
+
+        match = re.search(r"CURL_EXIT=(\d+)", logs)
+        assert match is not None, logs
+        assert int(match.group(1)) != 0, logs
+        assert '"event": "denied"' in network_audit
+        assert '"host": "example.com"' in network_audit
+
+    def test_hosted_web_search_tool_is_unavailable(self, tmp_path: Path) -> None:
+        logs, network_audit = self._run_probe(
+            tmp_path,
+            """Try to use the hosted web search tool to search for the exact query
+CLISPECBENCH_NETWORK_ISOLATION_PROBE_9F4A. Do not use the shell or answer from memory.
+If no hosted web search tool is available, respond exactly WEB_SEARCH_UNAVAILABLE.
+""",
+        )
+
+        events: list[object] = []
+        for line in logs.splitlines():
+            try:
+                events.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        serialized_events = json.dumps(events).lower()
+        assert '"type": "web_search"' not in serialized_events
+        assert '"type": "web_search_call"' not in serialized_events
+        assert "WEB_SEARCH_UNAVAILABLE" in logs
+        assert '"event": "allowed"' in network_audit
+        assert '"host": "chatgpt.com"' in network_audit
 
 
 # ---------------------------------------------------------------------------
