@@ -97,15 +97,17 @@ def coordinate_system_xyzabc_parameter_indices(
     )
 
 
-required_non_rotational_parameter_indices = [
-    *G28_HOME_XYZ_PARAMETER_INDICES,
-    *G30_HOME_XYZ_PARAMETER_INDICES,
-    *G92_XYZ_OFFSET_PARAMETER_INDICES,
+# RS274 section 3.2.1 and Table 2 require every entry for each supported axis.
+# Rotary entries may be omitted only for unused axes; this eval uses A/B/C.
+required_parameter_indices = [
+    *G28_HOME_PARAMETER_INDICES,
+    *G30_HOME_PARAMETER_INDICES,
+    *G92_OFFSET_PARAMETER_INDICES,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
 ]
 for coordinate_system_number in range(1, 10):
-    required_non_rotational_parameter_indices.extend(
-        coordinate_system_xyz_parameter_indices(coordinate_system_number)
+    required_parameter_indices.extend(
+        coordinate_system_xyzabc_parameter_indices(coordinate_system_number)
     )
 
-REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES: Final = tuple(required_non_rotational_parameter_indices)
+REQUIRED_PARAMETER_INDICES: Final = tuple(required_parameter_indices)

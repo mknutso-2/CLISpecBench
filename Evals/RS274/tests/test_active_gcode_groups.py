@@ -23,7 +23,9 @@ CoordinateSystemSelectionCase = tuple[str, str, dict[str, float]]
 
 ACTIVE_GCODE_GROUP_CASES: list[ActiveGcodeGroupCase] = [
     (
-        "G94\nG0 X0\nG1 X0\n",
+        # Section 3.5.2 uses the current feed even when selecting G1 at the
+        # current endpoint. Supply it so this case isolates modal selection.
+        "G94 F60\nG0 X0\nG1 X0\n",
         GCODE_MODAL_GROUP_MOTION,
         "G1",
     ),

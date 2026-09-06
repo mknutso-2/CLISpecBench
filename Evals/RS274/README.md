@@ -19,6 +19,7 @@ prompt/
   technical-requirements-prompt.md  # CLI contract, language, output schema
   docs/
     RS274NGC.md                     # Full RS274/NGC specification
+    Clarifications.md              # Normative disambiguations/adaptations
     figure_*.png                    # Specification figures
 tests/
   conftest.py                       # Build fixtures and executable discovery
@@ -29,13 +30,13 @@ tests/
   test_*.py                         # Hidden test suite (~40 test modules)
 reference-implementation-cpp/
   CMakeLists.txt                    # CMake project
-  src/                              # C++ reference solution (passes all tests)
+  src/                              # C++ reference: snapshot interface
 reference-implementation-py/
-  main.py                           # Python reference solution (passes all tests)
+  main.py                           # Python reference: snapshot and motion trace
 reference-implementation-js/
-  main.js                           # JavaScript reference solution (passes all tests)
+  main.js                           # JavaScript reference: snapshot interface
 reference-implementation-rs/
-  Cargo.toml / src/                 # Rust reference solution (passes all tests)
+  Cargo.toml / src/                 # Rust reference: snapshot and motion trace
 ```
 
 ## What RS274 Evaluates
@@ -69,20 +70,34 @@ correct RS274 interpretation.
 
 ## Running Tests
 
-Against the reference implementation:
+Against a reference implementing both scoring surfaces:
 
 ```bash
-pytest Evals/RS274/tests --language=cpp -v
+uv run pytest Evals/RS274/tests --language=py -v
 ```
+
+C++ and JavaScript references currently implement the snapshot CLI only. Use
+`-m "not trace"` for their supported baseline; their full-suite trace failures
+are known reference limitations, not a reason to suppress trace scoring for
+agent submissions. Run all four full suites when auditing reference coverage
+and report these limitations explicitly.
 
 Against a different implementation:
 
 ```bash
-pytest Evals/RS274/tests --language=<lang> --implementation-root /path/to/submission
+uv run pytest Evals/RS274/tests --language=<lang> --implementation-root /path/to/submission
 ```
 
 The `--build-timeout-seconds` option (default 300) controls the CMake build
 timeout.
+
+To judge an archived submission without a new agent session, use
+`uv run clispecbench regrade path/to/result.json --output-dir path/to/new-grade`.
+The [regrading workflow](../../docs/operations/Regrading.md) preserves the
+original result and records the generation contract separately from the new
+grading contract. RS274 v3.2.1 keeps every model-input byte unchanged while
+correcting the grading tests. Compare submissions rescored under the same test
+hash; retain the original v3.2.0 scores as historical observations.
 
 ## Prompt Structure
 
@@ -99,12 +114,13 @@ timeout.
 
 ## Design Decisions
 
-### Single-document corpus
+### Specification corpus
 
-RS274 uses only the RS274/NGC specification as its documentation corpus. The
-spec is self-contained, and the single-document constraint makes RS274 a clean
-test of dense specification comprehension. Future tasks may use multi-document
-corpora to test document synthesis across sources.
+RS274 uses the RS274/NGC specification plus `prompt/docs/Clarifications.md`.
+The clarification file resolves ambiguous clauses, including G87 default
+arguments and the non-interactive G88 retract. Both documents are supplied to
+agents; the specification mirror is preserved. The separate `TODO.md` records
+the deferred EOF contradiction and is not part of the model-visible corpus.
 
 ### Why this task
 
@@ -117,10 +133,12 @@ corpora to test document synthesis across sources.
 
 ### Requirement provenance
 
-The RS274/NGC document is the sole behavioral source of truth. Tests only assert
-behavior that is explicit and unambiguous in the spec. If a behavior requires
-nontrivial inference across multiple clauses, it must be clarified in the prompt
-or this document before becoming a test requirement.
+The RS274/NGC document and its normative clarifications define behavior; the
+technical-requirements prompt defines the CLI and serialization contract.
+Tests assert only requirements derivable unambiguously from the agent-visible
+corpus. If a behavioral requirement needs clarification, place it in
+`prompt/docs/Clarifications.md`, not only in this maintainer README or in the
+technical contract. Version and hash changes must accompany such updates.
 
 ### Motion Trace
 

@@ -89,8 +89,11 @@ struct ProbeBox {
 };
 
 constexpr int kMinParameterIndex = 1;
+// The file range in 3.2.1 includes 5400; program reads/settings in
+// 3.3.2.2 and 3.3.3 retain the narrower upper bound 5399.
 constexpr int kMaxParameterIndex = 5399;
-constexpr int kParameterCount = kMaxParameterIndex + 1;
+constexpr int kMaxParameterFileIndex = 5400;
+constexpr int kParameterCount = kMaxParameterFileIndex + 1;
 constexpr int kProbeTripXParameter = 5061;
 constexpr int kProbeTripYParameter = 5062;
 constexpr int kProbeTripZParameter = 5063;
@@ -412,7 +415,7 @@ std::string parse_g10_coordinate_system_number(const ParsedLine& parsed_line);
 std::string strip_comments(std::string_view raw_line);
 std::string json_escape(std::string_view text);
 std::string to_json(const MachineState& state, std::optional<std::string_view> error = std::nullopt);
-bool is_required_non_rotational_parameter(int parameter_index);
+bool is_required_parameter(int parameter_index);
 std::string to_parameter_file(const MachineState& state);
 std::string to_string(SpindleDirection direction);
 void write_output_file(const std::string& output_path, const std::string& contents);
@@ -554,8 +557,34 @@ MachineState execute_program(
         load_tool_table(*tool_table_path, state);
     }
 
+    // RS274 3.1: a percent-delimited file ends at its second percent line;
+    // require that closing delimiter even if an M2/M30 appears first.
+    // Preserve the existing plain-EOF behavior; delimiter parsing is separate
+    // from the unresolved EOF policy and must not synthesize M2/M30 resets.
+    std::vector<std::string> lines;
     std::string line;
     while (std::getline(input_stream, line)) {
+        lines.push_back(line);
+    }
+    std::size_t first = 0;
+    std::size_t end = lines.size();
+    while (first < end && remove_ignorable_whitespace(lines[first]).empty()) {
+        ++first;
+    }
+    if (first < end && remove_ignorable_whitespace(lines[first]) == "%") {
+        ++first;
+        std::size_t closing = first;
+        while (closing < end && remove_ignorable_whitespace(lines[closing]) != "%") {
+            ++closing;
+        }
+        if (closing == end) {
+            throw InputError("File with percent prefix is missing closing percent line");
+        }
+        end = closing;
+    }
+
+    for (std::size_t index = first; index < end; ++index) {
+        line = lines[index];
         const std::string compact_line = remove_ignorable_whitespace(strip_comments(line));
         if (block_delete && !compact_line.empty() && compact_line.front() == '/') {
             continue;
@@ -582,6 +611,7 @@ void load_parameter_file(const std::string& parameter_input_path, MachineState& 
     std::string line;
     bool in_data_section = false;
     int previous_parameter_index = 0;
+    std::vector<bool> loaded_parameters(kParameterCount, false);
     while (std::getline(parameter_stream, line)) {
         if (!in_data_section) {
             if (line.empty()) {
@@ -600,8 +630,8 @@ void load_parameter_file(const std::string& parameter_input_path, MachineState& 
         if (!(line_stream >> parameter_index >> value)) {
             throw InputError("Invalid parameter file entry");
         }
-        if (parameter_index < kMinParameterIndex || parameter_index > kMaxParameterIndex) {
-            throw InputError("Parameter file index must be from 1 to 5399");
+        if (parameter_index < kMinParameterIndex || parameter_index > kMaxParameterFileIndex) {
+            throw InputError("Parameter file index must be from 1 to 5400");
         }
         if (parameter_index <= previous_parameter_index) {
             throw InputError("Parameter file indices must be in ascending order");
@@ -609,6 +639,7 @@ void load_parameter_file(const std::string& parameter_input_path, MachineState& 
 
         state.parameters[parameter_index] = value;
         state.reported_parameters[parameter_index] = true;
+        loaded_parameters[parameter_index] = true;
 
         int system_number = 0;
         int axis_index = 0;
@@ -624,6 +655,14 @@ void load_parameter_file(const std::string& parameter_input_path, MachineState& 
         }
 
         previous_parameter_index = parameter_index;
+    }
+
+    // RS274 3.2.1, Table 2 requires all entries for the six supported axes.
+    // Validate the file itself, even if a default value exists in state.
+    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterFileIndex; ++parameter_index) {
+        if (is_required_parameter(parameter_index) && !loaded_parameters[parameter_index]) {
+            throw InputError("Parameter file missing required parameter " + std::to_string(parameter_index));
+        }
     }
 }
 
@@ -1907,17 +1946,8 @@ void validate_canned_cycle_command(
     if (effective_motion == "G86" && state.spindle_direction == SpindleDirection::kOff) {
         throw InputError("G86 requires the spindle to be turning");
     }
-    if (effective_motion == "G87") {
-        if (!parsed_line.i.has_value()) {
-            throw InputError("G87 requires an I word");
-        }
-        if (!parsed_line.j.has_value()) {
-            throw InputError("G87 requires a J word");
-        }
-        if (!parsed_line.k.has_value()) {
-            throw InputError("G87 requires a K word");
-        }
-    }
+    // Clarifications.md defines omitted G87 I/J/K words as zero. They
+    // affect intermediate back-boring motion, not this snapshot's endpoint.
 
     char depth_axis_letter = 'Z';
     switch (state.selected_plane) {
@@ -3571,7 +3601,7 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
            << "  \"parameters\": {";
 
     bool is_first_parameter = true;
-    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterIndex; ++parameter_index) {
+    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterFileIndex; ++parameter_index) {
         if (!state.reported_parameters.at(parameter_index)) {
             continue;
         }
@@ -3593,11 +3623,11 @@ std::string to_json(const MachineState& state, std::optional<std::string_view> e
     return output.str();
 }
 
-bool is_required_non_rotational_parameter(int parameter_index) {
+bool is_required_parameter(int parameter_index) {
     if (
-        parameter_index == 5161 || parameter_index == 5162 || parameter_index == 5163
-        || parameter_index == 5181 || parameter_index == 5182 || parameter_index == 5183
-        || parameter_index == 5211 || parameter_index == 5212 || parameter_index == 5213
+        (parameter_index >= 5161 && parameter_index <= 5166)
+        || (parameter_index >= 5181 && parameter_index <= 5186)
+        || (parameter_index >= 5211 && parameter_index <= 5216)
         || parameter_index == 5220
     ) {
         return true;
@@ -3605,17 +3635,16 @@ bool is_required_non_rotational_parameter(int parameter_index) {
 
     int system_number = 0;
     int axis_index = 0;
-    return decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index)
-        && axis_uses_length_units(axis_index);
+    return decode_coordinate_system_axis_parameter(parameter_index, system_number, axis_index);
 }
 
 std::string to_parameter_file(const MachineState& state) {
     std::ostringstream output;
     output << "RS274 parameter file\n\n";
 
-    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterIndex; ++parameter_index) {
+    for (int parameter_index = kMinParameterIndex; parameter_index <= kMaxParameterFileIndex; ++parameter_index) {
         if (
-            !is_required_non_rotational_parameter(parameter_index)
+            !is_required_parameter(parameter_index)
             && !state.reported_parameters.at(parameter_index)
         ) {
             continue;

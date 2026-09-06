@@ -5,7 +5,7 @@ from typing import Any, cast
 
 import pytest
 
-from rs274_support import run_rs274, run_rs274_trace
+from rs274_support import input_line, run_rs274, run_rs274_trace
 
 AXES = {"x", "y", "z", "a", "b", "c"}
 COORDINATE_SYSTEM_KEYS = {str(index) for index in range(1, 10)}
@@ -259,4 +259,4 @@ def test_error_trace_payload_has_required_schema(
     assert completed.returncode == 1, completed.stderr
     assert_output_payload_schema(payload, expect_error=True)
     assert_trace_payload_schema(trace, expect_error=True)
-    assert trace["error_line_number"] == 2
+    assert trace["error_line_number"] == input_line(2)

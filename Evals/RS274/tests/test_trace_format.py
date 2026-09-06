@@ -10,7 +10,10 @@ import pytest
 
 from rs274_support import (
     build_parameter_file,
+    input_line,
+    read_json_object,
     reconstruct_state,
+    rs274_program,
     run_rs274_trace,
     trace_entries,
     trace_initial_state,
@@ -109,12 +112,15 @@ def test_success_trace_has_null_error_fields(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    _, _, trace = run_rs274_trace(
+    completed, _, trace = run_rs274_trace(
         submission_command,
         input_gcode="G1 X1 F60\n",
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
+    assert completed.returncode == 0
+    # An absent trace cannot establish that an error field or entry is absent.
+    assert trace, "The interpreter must produce an observable trace object"
     assert trace.get("error_line_number") is None
     assert trace.get("error_block_segment_index") is None
 
@@ -139,7 +145,7 @@ def test_m2_only_produces_state_only_entry(
     entries = trace_entries(trace)
     assert len(entries) == 1
     e = entries[0]
-    assert e["line_number"] == 1
+    assert e["line_number"] == input_line(1)
     assert e["time"] == pytest.approx(0.0001)
 
 
@@ -157,7 +163,7 @@ def test_comment_only_produces_no_entries(
     entries = trace_entries(trace)
     # Only the M2 entry (line 2), not the comment (line 1).
     assert len(entries) == 1
-    assert entries[0]["line_number"] == 2
+    assert entries[0]["line_number"] == input_line(2)
 
 
 # ---------------------------------------------------------------------------
@@ -180,11 +186,11 @@ def test_error_trace_sets_error_line_number(
         tmp_path=tmp_path,
     )
     assert completed.returncode == 1
-    assert trace.get("error_line_number") == 2
+    assert trace.get("error_line_number") == input_line(2)
     # Entries from line 1 should still be present.
     assert len(trace_entries(trace)) >= 1
     for e in trace_entries(trace):
-        assert e["line_number"] == 1  # Only line 1 completed.
+        assert e["line_number"] == input_line(1)  # Only line 1 completed.
 
 
 def test_error_trace_has_correct_entries_from_completed_blocks(
@@ -212,12 +218,15 @@ def test_error_block_segment_index_null_for_simple_block(
     tmp_path: Path,
 ) -> None:
     """Non-multi-sub-motion errors have null error_block_segment_index."""
-    _, _, trace = run_rs274_trace(
+    completed, _, trace = run_rs274_trace(
         submission_command,
         input_gcode="G1 X1 F60\nG2 X2\n",
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
+    assert completed.returncode == 1
+    # An absent trace cannot establish that an error field or entry is absent.
+    assert trace, "The interpreter must produce an observable trace object"
     assert trace.get("error_block_segment_index") is None
 
 
@@ -237,7 +246,10 @@ def test_no_entry_at_time_zero(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    for entry in trace_entries(trace):
+    entries = trace_entries(trace)
+    # The predicate must examine emitted entries, not an empty iteration.
+    assert entries, "This motion program must produce trace entries"
+    for entry in entries:
         assert entry["time"] != 0.0
 
 
@@ -251,7 +263,10 @@ def test_entries_do_not_contain_error_field(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    for entry in trace_entries(trace):
+    entries = trace_entries(trace)
+    # The predicate must examine emitted entries, not an empty iteration.
+    assert entries, "This motion program must produce trace entries"
+    for entry in entries:
         assert "error" not in entry
 
 
@@ -336,7 +351,7 @@ def test_trace_output_without_stepping_flag_exits_1(
     input_path = tmp_path / "program.nc"
     output_path = tmp_path / "result.json"
     trace_path = tmp_path / "trace.json"
-    input_path.write_text("G1 X1 F60\n", encoding="utf-8")
+    input_path.write_text(rs274_program("G1 X1 F60\n"), encoding="utf-8")
 
     import subprocess
 
@@ -356,6 +371,7 @@ def test_trace_output_without_stepping_flag_exits_1(
         timeout=30,
     )
     assert completed.returncode == 1
+    assert read_json_object(output_path), "CLI rejection must produce a JSON result"
 
 
 def test_stepping_flag_without_trace_output_exits_1(
@@ -365,7 +381,7 @@ def test_stepping_flag_without_trace_output_exits_1(
     """--trace-time-step without --trace-output is invalid."""
     input_path = tmp_path / "program.nc"
     output_path = tmp_path / "result.json"
-    input_path.write_text("G1 X1 F60\n", encoding="utf-8")
+    input_path.write_text(rs274_program("G1 X1 F60\n"), encoding="utf-8")
 
     import subprocess
 
@@ -385,6 +401,7 @@ def test_stepping_flag_without_trace_output_exits_1(
         timeout=30,
     )
     assert completed.returncode == 1
+    assert read_json_object(output_path), "CLI rejection must produce a JSON result"
 
 
 def test_multiple_stepping_flags_exits_1(
@@ -395,7 +412,7 @@ def test_multiple_stepping_flags_exits_1(
     input_path = tmp_path / "program.nc"
     output_path = tmp_path / "result.json"
     trace_path = tmp_path / "trace.json"
-    input_path.write_text("G1 X1 F60\n", encoding="utf-8")
+    input_path.write_text(rs274_program("G1 X1 F60\n"), encoding="utf-8")
 
     import subprocess
 
@@ -419,6 +436,7 @@ def test_multiple_stepping_flags_exits_1(
         timeout=30,
     )
     assert completed.returncode == 1
+    assert read_json_object(output_path), "CLI rejection must produce a JSON result"
 
 
 # ---------------------------------------------------------------------------
@@ -442,17 +460,17 @@ def test_spec_example_1_linear_motion_time_stepping(
         tmp_path=tmp_path,
     )
     assert completed.returncode == 0
-    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g1_entries) == 2
 
     e0, e1 = g1_entries[0], g1_entries[1]
-    assert e0["line_number"] == 2
+    assert e0["line_number"] == input_line(2)
     assert e0["time"] == pytest.approx(0.5)
     assert e0["feed_rate"] == pytest.approx(60.0)
     assert e0["active_modal_g_codes"]["1"] == "G1"
     assert e0["machine_position"]["x"] == pytest.approx(0.5)
 
-    assert e1["line_number"] == 2
+    assert e1["line_number"] == input_line(2)
     assert e1["time"] == pytest.approx(1.0)
     assert e1["machine_position"]["x"] == pytest.approx(1.0)
     # Second entry should not repeat modal or feed_rate.
@@ -488,7 +506,7 @@ def test_spec_example_2_g81_canned_cycle_distance_stepping(
     assert completed.returncode == 0
 
     # Filter to entries from the G81 line (the last source line).
-    g81_line = 4  # Line 4: G81 ...
+    g81_line = input_line(4)  # Line 4: G81 ...
     g81_entries = [e for e in trace_entries(trace) if e["line_number"] == g81_line]
     assert len(g81_entries) == 4
 
@@ -531,7 +549,7 @@ def test_spec_example_3_error_case(
         tmp_path=tmp_path,
     )
     assert completed.returncode == 1
-    assert trace.get("error_line_number") == 2
+    assert trace.get("error_line_number") == input_line(2)
     assert trace.get("error_block_segment_index") is None
     entries = trace_entries(trace)
     assert len(entries) == 2
@@ -558,10 +576,11 @@ def test_modal_only_line_produces_state_only_entry(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    # G91 on line 1 is a state change, G90 on line 2 is another.
-    entries = trace_entries(trace)
-    for e in entries:
-        assert e["time"] == pytest.approx(0.0001)
+    # G91 establishes the precondition regardless of the startup mode. The
+    # following G90 must actually emit a state change at the state-only time.
+    entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
+    assert len(entries) == 1, "The explicit G91-to-G90 change must emit an entry"
+    assert entries[0]["time"] == pytest.approx(0.0001)
 
 
 def test_feed_rate_only_line_produces_state_only_entry(
@@ -610,7 +629,7 @@ def test_nullable_fields_can_be_explicit_null_in_delta(
         "G41 D1 should set cutter_radius_compensation_number"
     )
     # Find the M2 entry.
-    m2_entries = [e for e in trace_entries(trace) if e["line_number"] == 5]
+    m2_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(5)]
     assert len(m2_entries) >= 1
     m2_delta = m2_entries[-1]
     # M2 resets CRC — cutter_radius_compensation_number transitions to null.
@@ -695,7 +714,7 @@ def test_cs_offset_delta_uses_active_units(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    g10_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g10_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g10_entries) == 1
     cs_delta = g10_entries[0]["coordinate_system_offsets"]["1"]
     # Value should be 25.4 (mm), not 1.0 (inches).
@@ -735,7 +754,7 @@ def test_trace_coordinates_are_absolute_machine_coordinates(
         tmp_path=tmp_path,
     )
     # G10 changes the CS offset but does NOT move the machine.
-    g10_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    g10_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(g10_entries) == 1
     g10 = g10_entries[0]
     # The CS offset should appear in the delta.
@@ -743,7 +762,7 @@ def test_trace_coordinates_are_absolute_machine_coordinates(
     # machine_position should NOT change (machine didn't move).
     assert "machine_position" not in g10
     # Check the G1 motion entry:
-    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g1_entries) == 1
     # Reconstruct X after the G1: should be 7.0 (programmed 2 + CS offset 5).
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
@@ -770,7 +789,7 @@ def test_m2_resets_produce_correct_delta(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    m2_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    m2_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(m2_entries) == 1
     m2_entry = m2_entries[0]
     assert m2_entry["time"] == pytest.approx(0.0001)
@@ -800,7 +819,7 @@ def test_m2_parameter_delta_includes_selected_cs_reset(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    m2_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    m2_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(m2_entries) == 1
     m2_entry = m2_entries[0]
     assert m2_entry["time"] == pytest.approx(0.0001)
@@ -859,11 +878,11 @@ def test_initial_state_includes_tool_table(
     assert init["selected_tool"] is None
     assert init["tool_in_spindle"] is None
     # After T1 M6, the trace entries should reflect tool selection.
-    t1_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    t1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(t1_entries) == 1
     assert t1_entries[0].get("selected_tool") == 1
     # M6 loads the tool into the spindle — verify tool_in_spindle delta.
-    m6_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    m6_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(m6_entries) == 1
     assert m6_entries[0].get("tool_in_spindle") == 1
 
@@ -886,14 +905,14 @@ def test_block_deleted_line_produces_no_entry(
         tmp_path=tmp_path,
     )
     line_numbers = {e["line_number"] for e in trace_entries(trace)}
-    assert 2 not in line_numbers  # Block-deleted line 2.
-    assert 1 in line_numbers
-    assert 3 in line_numbers
+    assert input_line(2) not in line_numbers  # Block-deleted line 2.
+    assert input_line(1) in line_numbers
+    assert input_line(3) in line_numbers
     # Line 3 moves from X=1 (skipping deleted line 2) to X=3.
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
     assert final["machine_position"]["x"] == pytest.approx(3.0, abs=1e-6)
     # Duration: 2 inches at 60 ipm = 2.0 s (not 1.0 s if line 2 executed).
-    l3_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    l3_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert l3_entries[-1]["time"] == pytest.approx(2.0, abs=0.05)
 
 
@@ -922,7 +941,7 @@ def test_crc_trace_reports_compensated_path(
         tmp_path=tmp_path,
     )
     # Line 4: the follow-on compensated motion to X6.
-    line4 = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    line4 = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(line4) >= 1
     # Reconstruct final position from initial_state + all deltas.
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
@@ -955,9 +974,9 @@ def test_error_in_canned_cycle_preserves_completed_sms(
         trace_distance_step=1000.0,
         tmp_path=tmp_path,
     )
-    assert trace.get("error_line_number") == 5
+    assert trace.get("error_line_number") == input_line(5)
     # Line 4 (G81) entries should be present (completed before error).
-    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(g81_entries) >= 2  # At least rapid-to-R + feed-to-Z.
 
 
@@ -979,7 +998,7 @@ def test_modal_g_codes_sparse_in_delta(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    g18_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    g18_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(g18_entries) == 1
     g_delta = g18_entries[0].get("active_modal_g_codes", {})
     # Only group "2" (plane) should appear.
@@ -1007,7 +1026,7 @@ def test_parameters_sparse_in_delta(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    line1_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    line1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(line1_entries) == 1
     p_delta = line1_entries[0].get("parameters", {})
     assert "100" in p_delta
@@ -1030,7 +1049,7 @@ def test_parameter_output_not_written_on_error(
     output_path = tmp_path / "result.json"
     trace_path = tmp_path / "trace.json"
     param_out_path = tmp_path / "parameters-out.var"
-    input_path.write_text("G1 X1 F60\nG2 X2\n", encoding="utf-8")  # Arc error
+    input_path.write_text(rs274_program("G1 X1 F60\nG2 X2\n"), encoding="utf-8")  # Arc error
 
     command = [
         *submission_command,
@@ -1074,9 +1093,9 @@ def test_probe_no_trip_records_commanded_endpoint(
         tool_table_content="POCKET FMS TLO DIAMETER\n\n1 1 0.0 0.0\n",
         tmp_path=tmp_path,
     )
-    assert trace.get("error_line_number") == 4
+    assert trace.get("error_line_number") == input_line(4)
     # The probe motion to the commanded endpoint should appear in entries.
-    probe_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    probe_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(probe_entries) >= 1, "Probe motion should produce at least one trace entry"
     # The final entry should show the commanded endpoint (X=3).
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
@@ -1095,14 +1114,17 @@ def test_zero_length_g28_suppresses_nonmodal_label(
     """Spec: zero-duration sub-motions produce no entries and their labels don't appear."""
     # G28 from the home position (all zeros) with no axis words → both SMs
     # are zero-length. The nonmodal label should not appear.
-    _, _, trace = run_rs274_trace(
+    completed, _, trace = run_rs274_trace(
         submission_command,
         input_gcode="G28\nM2\n",
         trace_time_step=0.5,
         parameter_input_content=build_parameter_file({5161: 0.0, 5162: 0.0, 5163: 0.0}),
         tmp_path=tmp_path,
     )
-    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    assert completed.returncode == 0
+    # An absent trace cannot establish that an error field or entry is absent.
+    assert trace, "The interpreter must produce an observable trace object"
+    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     # No entries should exist for the G28 line (all SMs zero-length).
     for e in g28_entries:
         assert "nonmodal_g_codes" not in e, "Zero-length G28 should not emit nonmodal_g_codes label"

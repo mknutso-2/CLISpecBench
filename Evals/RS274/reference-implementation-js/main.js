@@ -78,9 +78,10 @@ function parseParameterFile(text) {
     lastIdx = idx;
     params.set(idx, val);
   }
-  // Check required params
-  const required = [...G28_HOME.slice(0,3), ...G30_HOME.slice(0,3), ...G92_OFF.slice(0,3), COORD_SYS_PARAM];
-  for (let s = 1; s <= 9; s++) required.push(...csParams(s).slice(0,3));
+  // RS274 3.2.1, Table 2: this interpreter supports all six axes, so
+  // required A/B/C entries cannot be omitted along with the XYZ entries.
+  const required = [...G28_HOME, ...G30_HOME, ...G92_OFF, COORD_SYS_PARAM];
+  for (let s = 1; s <= 9; s++) required.push(...csParams(s));
   for (const r of required) {
     if (!params.has(r)) throw new Error(`parameter file: missing required parameter ${r}`);
   }
@@ -719,7 +720,7 @@ function executeBlock(state, block) {
       state.crcMode = newCrc;
       state.crcDNumber = dn;
       state.crcActive = true;
-      state.crcRadius = radius;
+      state.crcRadius = radius * uf(state);
       state.crcSide = (newCrc === 'G41') ? 'L' : 'R';
       state.crcFirstMove = true;
       state.contour = {...state.pos};
@@ -1063,7 +1064,11 @@ function doCrcStraight(state, programmedTarget) {
     newSpindle = {x: sp.x + CD*upx, y: sp.y + CD*upy};
   } else {
     // Follow-on straight move: check concave-corner rule, then offset endpoint.
-    const inDx = cp.x - getPrevContour(state).x, inDy = cp.y - getPrevContour(state).y;
+    // The incoming contour tangent is perpendicular to the actual tool
+    // offset. The first entry chord is not that tangent (Appendix B.6).
+    const offsetX = sp.x - cp.x, offsetY = sp.y - cp.y;
+    const inDx = side === 'L' ? offsetY : -offsetY;
+    const inDy = side === 'L' ? -offsetX : offsetX;
     const outDx = P.x - cp.x, outDy = P.y - cp.y;
     const outLen = Math.hypot(outDx, outDy);
     if (outLen < 1e-12) {
@@ -1080,108 +1085,56 @@ function doCrcStraight(state, programmedTarget) {
         const cross = iux*ouy - iuy*oux; // >0 means turning left
         if (side === 'L' && cross > 1e-9) throw new Error('concave corner with cutter radius compensation');
         if (side === 'R' && cross < -1e-9) throw new Error('concave corner with cutter radius compensation');
-        // Concave if turning into the tool side... wait:
-        // For G41 (left side), a CONCAVE corner is one where the turn is to the RIGHT (cross<0)?
-        // Actually: when tool is on LEFT of path, and path turns LEFT (cross>0), that's CONVEX (tool goes around outside).
-        // When path turns RIGHT (cross<0), it's CONCAVE (tool would crash into corner).
-        // OK logic above is correct.
       }
       newSpindle = {x: P.x + r*nx, y: P.y + r*ny};
     }
   }
   state.pos = {x: newSpindle.x, y: newSpindle.y, z: programmedTarget.z, a: programmedTarget.a, b: programmedTarget.b, c: programmedTarget.c};
-  state._prevContour = {...state.contour};
   state.contour = {...programmedTarget};
   state.crcFirstMove = false;
 }
 
-// Track previous contour for corner geometry.
-function getPrevContour(state) {
-  return state._prevContour || state.contour;
-}
-function stashPrevContour(state) { state._prevContour = {...state.contour}; }
-
 // ---- CRC arc (G17 only) ----
 function doCrcArc(state, wvals, mode, programmedTarget) {
   const r = state.crcRadius;
-  const side = state.crcSide;
-  const cw = (mode === 'G2');
-  const cp = state.contour;
+  const cw = mode === 'G2';
+  const inside = state.crcSide === 'L' ? !cw : cw;
   const sp = state.pos;
-  // Determine center and radii.
+  const units = uf(state);
   let cx, cy, contourR, toolR;
-  // First, tentatively compute using contour start for center (subsequent moves).
-  const firstMove = state.crcFirstMove;
-  // Determine inside/outside
-  let inside;
-  if (side === 'L') inside = !cw;
-  else inside = cw;
-
-  if (!firstMove) {
-    // Subsequent arc: center is defined by I/J relative to contour start (cp).
-    if (wvals.R !== undefined) {
-      contourR = Math.abs(wvals.R);
-      const mx = (cp.x + programmedTarget.x) / 2;
-      const my = (cp.y + programmedTarget.y) / 2;
-      const dx = programmedTarget.x - cp.x, dy = programmedTarget.y - cp.y;
-      const chord = Math.hypot(dx, dy);
-      if (chord < 1e-12) throw new Error('radius-format arc endpoint matches start');
-      if (contourR < chord/2 - 1e-6) throw new Error('radius format arc radius too small');
-      const h = Math.sqrt(Math.max(0, contourR*contourR - (chord/2)*(chord/2)));
-      const px = -dy/chord, py = dx/chord;
-      const sgn = (wvals.R > 0) !== cw ? 1 : -1;
-      cx = mx + sgn*h*px; cy = my + sgn*h*py;
-    } else {
-      if (wvals.I === undefined && wvals.J === undefined) throw new Error('arc missing center offsets');
-      const I = wvals.I || 0, J = wvals.J || 0;
-      cx = cp.x + I; cy = cp.y + J;
-      contourR = Math.hypot(cp.x - cx, cp.y - cy);
-    }
-    if (inside) {
-      if (r >= contourR - 1e-9) throw new Error('tool radius not less than arc radius');
-    }
-    toolR = inside ? contourR - r : contourR + r;
+  // Clarifications.md (v3.1.1): R names the tool-tip path radius;
+  // I/J start at the current tool tip on both entry and continuation arcs.
+  // X/Y name the endpoint of the auxiliary contour sharing that center.
+  if (wvals.R !== undefined) {
+    toolR = Math.abs(wvals.R) * units;
+    contourR = inside ? toolR + r : toolR - r;
+    if (contourR <= 1e-9) throw new Error('tool radius not less than arc radius');
+    const dx = programmedTarget.x - sp.x, dy = programmedTarget.y - sp.y;
+    const chord = Math.hypot(dx, dy);
+    if (chord > toolR + contourR + 1e-9) throw new Error('cutter compensation arc cannot be constructed');
+    if (chord <= Math.abs(toolR - contourR) + 1e-9) throw new Error('degenerate cutter compensation arc');
+    // Intersect a toolR circle around the current tool tip and a contourR
+    // circle around the programmed endpoint. R's sign selects short/long arc.
+    const a = (toolR*toolR - contourR*contourR + chord*chord) / (2*chord);
+    const h = Math.sqrt(Math.max(0, toolR*toolR - a*a));
+    const ux = dx/chord, uy = dy/chord;
+    const midx = sp.x + a*ux, midy = sp.y + a*uy;
+    const sign = (wvals.R >= 0) !== cw ? 1 : -1;
+    cx = midx - sign*h*uy;
+    cy = midy + sign*h*ux;
   } else {
-    // First move. The center and contour/tool radii must satisfy:
-    //   |C - sp| = toolR    (spindle on tool-center arc)
-    //   |C - P|  = contourR (contour endpoint on contour arc)
-    //   toolR = contourR +/- r
-    if (wvals.R !== undefined) {
-      contourR = Math.abs(wvals.R);
-      toolR = inside ? contourR - r : contourR + r;
-      if (toolR <= 0) throw new Error('tool radius not less than arc radius');
-      // Solve two-circle intersection: |C-sp|=toolR, |C-P|=contourR.
-      const dxp = programmedTarget.x - sp.x, dyp = programmedTarget.y - sp.y;
-      const d = Math.hypot(dxp, dyp);
-      if (d < 1e-12) throw new Error('radius-format arc endpoint matches start');
-      // Distance from sp along chord to midperpendicular foot:
-      const a = (toolR*toolR - contourR*contourR + d*d) / (2*d);
-      const h2 = toolR*toolR - a*a;
-      if (h2 < -1e-6) throw new Error('radius-format arc: no valid center');
-      const h = Math.sqrt(Math.max(0, h2));
-      const ux = dxp/d, uy = dyp/d;
-      const midx = sp.x + a*ux, midy = sp.y + a*uy;
-      // Two candidates: pick based on sign of R and direction
-      const px = -uy, py = ux;
-      const sgn = (wvals.R > 0) !== cw ? 1 : -1;
-      cx = midx + sgn*h*px; cy = midy + sgn*h*py;
-    } else {
-      if (wvals.I === undefined && wvals.J === undefined) throw new Error('arc missing center offsets');
-      // For first move I/J are relative to the current spindle and give the tool-center center.
-      const I = wvals.I || 0, J = wvals.J || 0;
-      cx = sp.x + I; cy = sp.y + J;
-      toolR = Math.hypot(sp.x - cx, sp.y - cy);
-      contourR = inside ? toolR + r : toolR - r;
-      if (contourR <= 1e-9) throw new Error('tool radius not less than arc radius');
-    }
+    if (wvals.I === undefined && wvals.J === undefined) throw new Error('arc missing center offsets');
+    cx = sp.x + (wvals.I || 0) * units;
+    cy = sp.y + (wvals.J || 0) * units;
+    contourR = Math.hypot(programmedTarget.x - cx, programmedTarget.y - cy);
+    if (inside && r >= contourR - 1e-9) throw new Error('tool radius not less than arc radius');
+    toolR = inside ? contourR - r : contourR + r;
   }
-  // Endpoint: spindle is at distance toolR from center, along direction from center to programmedTarget.
-  const ex = programmedTarget.x - cx, ey = programmedTarget.y - cy;
-  const eLen = Math.hypot(ex, ey);
-  if (eLen < 1e-12) throw new Error('arc endpoint at center');
-  const scale = toolR / eLen;
-  const newSpindle = {x: cx + ex*scale, y: cy + ey*scale};
-  state.pos = {x: newSpindle.x, y: newSpindle.y, z: programmedTarget.z, a: programmedTarget.a, b: programmedTarget.b, c: programmedTarget.c};
+  const dx = programmedTarget.x - cx, dy = programmedTarget.y - cy;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 1e-12) throw new Error('arc endpoint at center');
+  const scale = toolR / distance;
+  state.pos = {...programmedTarget, x: cx + dx*scale, y: cy + dy*scale};
   state.contour = {...programmedTarget};
   state.crcFirstMove = false;
 }
@@ -1530,9 +1483,12 @@ function main() {
         const v = state.params.get(G92_OFF[i]) || 0;
         state.g92Int[['x','y','z','a','b','c'][i]] = v;
       }
-      const sys = Math.round(state.params.get(COORD_SYS_PARAM));
-      if (!Number.isFinite(sys) || sys < 1 || sys > 9) {
-        throw new Error('parameter 5220 must be 1..9');
+      const selected = state.params.get(COORD_SYS_PARAM);
+      const sys = Math.round(selected);
+      // Section 3.2.2 requires a whole-number coordinate-system selector;
+      // rounding an arbitrary fractional value silently selected another one.
+      if (!Number.isFinite(sys) || Math.abs(selected - sys) > 0.0001 || sys < 1 || sys > 9) {
+        throw new Error('parameter 5220 must be a whole number from 1 to 9');
       }
       state.coordSystem = sys;
     } catch (e) {

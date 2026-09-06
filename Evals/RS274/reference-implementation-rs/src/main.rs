@@ -1342,6 +1342,7 @@ impl Interpreter {
         }
         let blank = blank.ok_or_else(|| ngc("parameter file has no blank separator line"))?;
         let mut last_idx: i64 = 0;
+        let mut loaded_indices = std::collections::BTreeSet::new();
         for line in &lines[blank + 1..] {
             let s = line.trim();
             if s.is_empty() { continue; }
@@ -1359,6 +1360,15 @@ impl Interpreter {
             }
             last_idx = idx;
             self.state.parameters.insert(idx as u32, val);
+            loaded_indices.insert(idx as u32);
+        }
+
+        // RS274 3.2.1, Table 2: all six supported axes are required.
+        // Defaults in machine state cannot replace entries missing from input.
+        for idx in required_output_parameters() {
+            if !loaded_indices.contains(&idx) {
+                return Err(ngc(format!("parameter file missing required parameter {idx}")));
+            }
         }
 
         let sel = *self.state.parameters.get(&SELECTED_CS_PARAM).unwrap_or(&1.0);
@@ -2158,44 +2168,43 @@ impl Interpreter {
         }
 
         if crc_active {
-            let (cx, cy, arc_r, ex, ey) = if word_dict.contains_key(&'r') {
-                let ex = new_prog.x;
-                let ey = new_prog.y;
-                let arc_r = to_inches_units(word_dict[&'r'], &units).abs();
-                let (cx, cy) = if self.state.crc_first_move {
-                    let sx0 = self.state.programmed.x;
-                    let sy0 = self.state.programmed.y;
-                    let inside_first = (mode == "G3" && self.state.cutter_comp == "G41")
-                        || (mode == "G2" && self.state.cutter_comp == "G42");
-                    let spindle_dist = if inside_first {
-                        arc_r - self.state.crc_radius_inches
-                    } else {
-                        arc_r + self.state.crc_radius_inches
-                    };
-                    two_circle_intersection_pick(ex, ey, arc_r, sx0, sy0, spindle_dist, mode)
-                } else {
-                    let sx0 = self.state.crc_contour_x;
-                    let sy0 = self.state.crc_contour_y;
-                    arc_center_from_radius(sx0, sy0, ex, ey, word_dict[&'r'], mode)
-                };
-                (cx, cy, arc_r, ex, ey)
-            } else {
-                let (sx0, sy0) = if self.state.crc_first_move {
-                    (self.state.programmed.x, self.state.programmed.y)
-                } else {
-                    (self.state.crc_contour_x, self.state.crc_contour_y)
-                };
-                let cx = sx0 + i_val;
-                let cy = sy0 + j_val;
-                let ex = new_prog.x;
-                let ey = new_prog.y;
-                let arc_r = ((ex - cx).powi(2) + (ey - cy).powi(2)).sqrt();
-                (cx, cy, arc_r, ex, ey)
-            };
-
+            // Clarifications.md (v3.1.1): R is the tool-tip path radius,
+            // I/J start at the current tool tip, and X/Y name the auxiliary
+            // contour endpoint. Entry and continuation use the same geometry.
+            let (ex, ey) = (new_prog.x, new_prog.y);
+            let (sx0, sy0) = (self.state.programmed.x, self.state.programmed.y);
             let inside = (mode == "G3" && self.state.cutter_comp == "G41")
                 || (mode == "G2" && self.state.cutter_comp == "G42");
             let tool_r = self.state.crc_radius_inches;
+            let (cx, cy, arc_r) = if let Some(&radius_word) = word_dict.get(&'r') {
+                let path_r = to_inches_units(radius_word, &units).abs();
+                let aux_r = if inside { path_r + tool_r } else { path_r - tool_r };
+                if aux_r <= 1e-9 {
+                    return Err(ngc("tool radius not less than arc radius with cutter radius compensation"));
+                }
+                let chord = (ex - sx0).hypot(ey - sy0);
+                if chord > aux_r + path_r + 1e-9 {
+                    return Err(ngc("cutter compensation arc cannot be constructed"));
+                }
+                if chord <= (aux_r - path_r).abs() + 1e-9 {
+                    return Err(ngc("degenerate cutter compensation arc"));
+                }
+                // A negative R selects the other (greater-than-semicircle)
+                // center for the same G2/G3 traversal, per section 3.5.3.1.
+                let center_mode = if radius_word < 0.0 {
+                    if mode == "G3" { "G2" } else { "G3" }
+                } else { mode };
+                let (cx, cy) = two_circle_intersection_pick(
+                    ex, ey, aux_r, sx0, sy0, path_r, center_mode,
+                );
+                (cx, cy, aux_r)
+            } else {
+                let cx = sx0 + i_val;
+                let cy = sy0 + j_val;
+                let arc_r = ((ex - cx).powi(2) + (ey - cy).powi(2)).sqrt();
+                (cx, cy, arc_r)
+            };
+
             if inside && tool_r >= arc_r - 1e-9 {
                 return Err(ngc("tool radius not less than arc radius with cutter radius compensation"));
             }
@@ -2661,17 +2670,47 @@ impl Interpreter {
                     self.cycle_sub_motion(e, "rapid");
                 }
                 "G87" => {
-                    let mut e = self.state.programmed;
-                    e.set(depth_axis, z_val);
-                    self.cycle_sub_motion(e, "rapid");
-                    let mut e = self.state.programmed;
-                    e.set(depth_axis, r_val);
-                    self.cycle_sub_motion(e, "feed");
-                    if (clear - r_val).abs() > 1e-12 {
-                        let mut e = self.state.programmed;
-                        e.set(depth_axis, clear);
-                        self.cycle_sub_motion(e, "rapid");
+                    // RS274 3.5.16.8: I/J clearance, feed up to K,
+                    // feed back down to Z, and retract through clearance.
+                    // Clarifications.md supplies zero for omitted I/J/K.
+                    let mut hole = self.state.programmed;
+                    let mut offset = hole;
+                    for (axis, word) in [(plane_axes.0, 'i'), (plane_axes.1, 'j')] {
+                        offset.set(axis, hole.get(axis) + to_inches_units(
+                            word_dict.get(&word).copied().unwrap_or(0.0), &self.state.units,
+                        ));
                     }
+                    let mut top = to_inches_units(
+                        word_dict.get(&'k').copied().unwrap_or(0.0), &self.state.units,
+                    );
+                    if self.state.distance_mode == "G91" {
+                        top += z_val;
+                    }
+                    let spindle_before = self.state.spindle_direction.clone();
+                    let spindle_code_before = self.state.active_m_codes
+                        .get("7").cloned().unwrap_or_else(|| "M5".into());
+                    self.cycle_sub_motion(offset, "rapid");
+                    self.state.spindle_direction = "OFF".into();
+                    self.state.active_m_codes.insert("7".into(), "M5".into());
+                    offset.set(depth_axis, z_val);
+                    self.cycle_sub_motion(offset, "rapid");
+                    hole.set(depth_axis, z_val);
+                    self.cycle_sub_motion(hole, "rapid");
+                    self.state.spindle_direction = spindle_before.clone();
+                    self.state.active_m_codes.insert("7".into(), spindle_code_before.clone());
+                    hole.set(depth_axis, top);
+                    self.cycle_sub_motion(hole, "feed");
+                    hole.set(depth_axis, z_val);
+                    self.cycle_sub_motion(hole, "feed");
+                    self.state.spindle_direction = "OFF".into();
+                    self.state.active_m_codes.insert("7".into(), "M5".into());
+                    self.cycle_sub_motion(offset, "rapid");
+                    offset.set(depth_axis, clear);
+                    self.cycle_sub_motion(offset, "rapid");
+                    hole.set(depth_axis, clear);
+                    self.cycle_sub_motion(hole, "rapid");
+                    self.state.spindle_direction = spindle_before;
+                    self.state.active_m_codes.insert("7".into(), spindle_code_before);
                 }
                 "G89" => {
                     let mut e = self.state.programmed;

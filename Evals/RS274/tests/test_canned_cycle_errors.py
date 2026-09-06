@@ -82,17 +82,17 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         "G81 X2.8 Y4.0 Z5.0 R1.5 F7.0\n",
     ),
     (
-        # In preliminary testing, Opus 4.6 and GPT-5.4 both fail this test.
-        # From Section 3.5.16:
+        # Section 3.5.16:
         # "It is an error if: X, Y, and Z words are all missing during a canned cycle"
-        # On the last line G81 is active, but none of X, Y, or Z is programmed.
-        "active-g81-rejects-a-following-line-without-x-y-or-z",
+        # Explicitly invoke G81 again: section 3.3.7 does not unambiguously
+        # require bare R to trigger a modal cycle without any axis words.
+        "explicit-g81-rejects-a-following-line-without-x-y-or-z",
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G81 X4.0 Y5.0 Z1.5 R2.8 F7.0\n"
-        + "R3.0\n",
+        + "G81 R3.0\n",
     ),
     (
         "canned-cycles-reject-a-axis-motion",

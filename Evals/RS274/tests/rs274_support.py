@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import math
 import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any, cast
 
 from rs274_parameters import (
-    REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES,
+    REQUIRED_PARAMETER_INDICES,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
 )
 
@@ -15,10 +16,24 @@ ProbeBox = tuple[float, float, float, float, float, float]
 RS274_INVOCATION_TIMEOUT_SECONDS = 5
 
 
+def rs274_program(body: str) -> str:
+    """Frame a program body with the percent delimiters required by section 3.1."""
+    # Most behavioral bodies intentionally inspect state before M2/M30 resets.
+    # Section 3.1 requires paired percent lines for such files. Explicitly
+    # frame inputs instead of depending on an implementation's EOF extension.
+    # Preserve all body whitespace so trace assertions map to physical lines.
+    return "%\n" + body + ("" if body.endswith("\n") else "\n") + "%\n"
+
+
+def input_line(body_line: int) -> int:
+    """Map a one-based program-body line to the submitted file's physical line."""
+    return body_line + 1
+
+
 def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
-    entries = {
-        parameter_index: 0.0 for parameter_index in REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES
-    }
+    # Supply a complete, valid six-axis file so unrelated startup, homing, and
+    # trace checks cannot stop at a missing Table 2 entry (RS274 section 3.2.1).
+    entries = {parameter_index: 0.0 for parameter_index in REQUIRED_PARAMETER_INDICES}
     entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] = 1.0
 
     if overrides is not None:
@@ -46,7 +61,7 @@ def _build_rs274_command(
 ) -> tuple[list[str], Path, Path | None]:
     input_path = tmp_path / "program.nc"
     output_path = tmp_path / "result.json"
-    input_path.write_text(input_gcode, encoding="utf-8")
+    input_path.write_text(rs274_program(input_gcode), encoding="utf-8")
 
     command = [*submission_command, "--input", str(input_path), "--output", str(output_path)]
 
@@ -218,8 +233,13 @@ def run_rs274_invalid_input(
     )
 
     assert completed.returncode == 1, completed.stderr
-    assert isinstance(payload.get("error"), str)
-    assert payload.get("error")
+    # A bare crash can also exit 1. Require an observable JSON result before
+    # treating the status as interpreter rejection; individual field schemas
+    # still belong to the dedicated schema gate below.
+    assert payload, "Controlled rejection must produce a nonempty JSON result"
+    # Negative behavior cases verify rejection through the contract's exit
+    # code. test_error_output_payload_has_required_schema owns the error JSON
+    # shape, so an omitted error field cannot cascade across unrelated rules.
     return completed, payload
 
 
@@ -270,6 +290,19 @@ def with_default_rotary_axes(values: Mapping[str, float]) -> dict[str, float]:
     }
 
 
+def assert_numeric_mapping_close(actual: object, expected: Mapping[str, float]) -> None:
+    """Compare coordinate values with roundoff tolerance, preserving exact keys."""
+    assert isinstance(actual, dict)
+    coordinates = cast(dict[str, object], actual)
+    assert coordinates.keys() == expected.keys()
+    for axis, expected_value in expected.items():
+        value = coordinates[axis]
+        assert isinstance(value, int | float)
+        assert math.isclose(float(value), expected_value, rel_tol=1e-9, abs_tol=1e-9), (
+            f"{axis}: expected {expected_value}, got {value}"
+        )
+
+
 def _build_rs274_trace_command(
     submission_command: Sequence[str],
     *,
@@ -292,7 +325,7 @@ def _build_rs274_trace_command(
     input_path = tmp_path / "program.nc"
     output_path = tmp_path / "result.json"
     trace_path = tmp_path / "trace.json"
-    input_path.write_text(input_gcode, encoding="utf-8")
+    input_path.write_text(rs274_program(input_gcode), encoding="utf-8")
 
     command = [
         *submission_command,

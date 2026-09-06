@@ -9,6 +9,7 @@ from rs274_parameters import (
     coordinate_system_xyzabc_parameter_indices,
 )
 from rs274_support import (
+    assert_numeric_mapping_close,
     get_parameter_value,
     mapping_field,
     run_rs274,
@@ -111,9 +112,13 @@ def test_application_tracks_g10_coordinate_system_offsets(
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
     for system_number, expected_offset in expected_offsets.items():
-        assert mapping_field(payload, "coordinate_system_offsets").get(
-            system_number
-        ) == with_default_rotary_axes(expected_offset)
+        # The contract serializes offsets in active units, without prescribing
+        # decimal rounding. Keep tiny conversion roundoff out of this behavior
+        # check; the mapping must still contain the same six axis keys.
+        assert_numeric_mapping_close(
+            mapping_field(payload, "coordinate_system_offsets").get(system_number),
+            with_default_rotary_axes(expected_offset),
+        )
 
 
 @pytest.mark.parametrize(
@@ -149,14 +154,6 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
     expected_parameter_values: dict[str, float],
     tmp_path: Path,
 ) -> None:
-    # PASS-RATE NOTE (2026-04-18): the g21-to-g20 parametrization passed 5 /
-    # 255 attempts across all models. Unlike the CRC cluster, the relevant
-    # contract is spec-clear (RS274 §4.3.3.3 and the harness serialization
-    # rule in technical-requirements-prompt.md). The low pass rate reflects
-    # implementation difficulty — models conflate
-    # stored-parameter units with serialized-offset units — rather than spec
-    # ambiguity. Kept as-is; no proposed change.
-    #
     # RS274 section 4.3.3.2 says the effective program-origin location should
     # not change when units change, while section 4.3.3.3 says stored
     # coordinate-system offsets are not numerically changed by a unit switch.
@@ -176,8 +173,13 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert mapping_field(payload, "coordinate_system_offsets").get("1") == with_default_rotary_axes(
-        expected_offset
+    # Serialized offsets undergo conversion, while backing parameters below
+    # must keep their original values. A low historical pass rate did not
+    # justify the former exact-float assertion: 25.4 / 25.4 need not be
+    # serialized as exactly 1.0 after an implementation's internal round trip.
+    assert_numeric_mapping_close(
+        mapping_field(payload, "coordinate_system_offsets").get("1"),
+        with_default_rotary_axes(expected_offset),
     )
     assert get_parameter_value(payload, cs1_x_parameter) == expected_parameter_values["x"]
     assert get_parameter_value(payload, cs1_y_parameter) == expected_parameter_values["y"]

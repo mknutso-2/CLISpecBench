@@ -15,7 +15,7 @@ from rs274_parameters import (
     G30_HOME_Y_PARAMETER,
     G30_HOME_Z_PARAMETER,
 )
-from rs274_support import build_parameter_file, run_rs274_trace, trace_entries
+from rs274_support import input_line, run_rs274_trace, trace_entries
 
 pytestmark = pytest.mark.trace
 
@@ -35,7 +35,7 @@ def test_g53_label_on_first_entry_of_motion(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    g53_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g53_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g53_entries) >= 1
     # First entry should carry the nonmodal label.
     assert "nonmodal_g_codes" in g53_entries[0]
@@ -55,21 +55,19 @@ def test_g28_label_on_both_sub_motions(
     tmp_path: Path,
 ) -> None:
     """G28 expands into two sub-motions. Both should carry nonmodal_g_codes."""
-    params = build_parameter_file(
-        {
-            G28_HOME_X_PARAMETER: 10.0,
-            G28_HOME_Y_PARAMETER: 10.0,
-            G28_HOME_Z_PARAMETER: 10.0,
-        }
-    )
+    # Section 3.5.8 takes home coordinates from parameters. Set them in the
+    # program so this label test does not also grade parameter-file loading.
     _, _, trace = run_rs274_trace(
         submission_command,
-        input_gcode="G0 X1 Y1 Z1\nG28 X5 Y5 Z5\n",
+        input_gcode=(
+            f"#{G28_HOME_X_PARAMETER}=10 #{G28_HOME_Y_PARAMETER}=10 "
+            f"#{G28_HOME_Z_PARAMETER}=10\n"
+            "G0 X1 Y1 Z1\nG28 X5 Y5 Z5\n"
+        ),
         trace_distance_step=1000.0,  # Only final entries.
-        parameter_input_content=params,
         tmp_path=tmp_path,
     )
-    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     # Two sub-motions: (1,1,1)→(5,5,5) then (5,5,5)→(10,10,10).
     assert len(g28_entries) == 2
     # Both should carry the G28 label.
@@ -87,21 +85,16 @@ def test_g28_zero_intermediate_no_label_on_zero_sm(
     Zero-duration SM produces no entries, so its label is NOT rolled forward.
     Only SM2 (to home) emits entries and carries the label.
     """
-    params = build_parameter_file(
-        {
-            G28_HOME_X_PARAMETER: 10.0,
-            G28_HOME_Y_PARAMETER: 0.0,
-            G28_HOME_Z_PARAMETER: 0.0,
-        }
-    )
+    # In-program assignments isolate zero-sub-motion labeling from file I/O.
     _, _, trace = run_rs274_trace(
         submission_command,
-        input_gcode="G28\n",
+        input_gcode=(
+            f"#{G28_HOME_X_PARAMETER}=10 #{G28_HOME_Y_PARAMETER}=0 #{G28_HOME_Z_PARAMETER}=0\nG28\n"
+        ),
         trace_distance_step=1000.0,
-        parameter_input_content=params,
         tmp_path=tmp_path,
     )
-    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     # SM1 is zero-length (current pos = (0,0,0), intermediate = (0,0,0)).
     # SM2 is (0,0,0) → (10,0,0).
     assert len(g28_entries) == 1  # Only SM2.
@@ -118,21 +111,18 @@ def test_g30_label_on_both_sub_motions(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    params = build_parameter_file(
-        {
-            G30_HOME_X_PARAMETER: 20.0,
-            G30_HOME_Y_PARAMETER: 20.0,
-            G30_HOME_Z_PARAMETER: 20.0,
-        }
-    )
+    # Section 3.5.8 permits these assignments independently of parameter files.
     _, _, trace = run_rs274_trace(
         submission_command,
-        input_gcode="G0 X1 Y1 Z1\nG30 X5 Y5 Z5\n",
+        input_gcode=(
+            f"#{G30_HOME_X_PARAMETER}=20 #{G30_HOME_Y_PARAMETER}=20 "
+            f"#{G30_HOME_Z_PARAMETER}=20\n"
+            "G0 X1 Y1 Z1\nG30 X5 Y5 Z5\n"
+        ),
         trace_distance_step=1000.0,
-        parameter_input_content=params,
         tmp_path=tmp_path,
     )
-    g30_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g30_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(g30_entries) == 2
     for e in g30_entries:
         assert "nonmodal_g_codes" in e
@@ -200,7 +190,7 @@ def test_g92_1_label(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    g921_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g921_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g921_entries) == 1
     assert "nonmodal_g_codes" in g921_entries[0]
     assert "G92.1" in g921_entries[0]["nonmodal_g_codes"]
@@ -221,7 +211,7 @@ def test_g92_2_label(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    g922_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    g922_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(g922_entries) == 1
     assert "nonmodal_g_codes" in g922_entries[0]
     assert "G92.2" in g922_entries[0]["nonmodal_g_codes"]
@@ -241,7 +231,7 @@ def test_g92_3_label(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    g923_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g923_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(g923_entries) == 1
     assert "nonmodal_g_codes" in g923_entries[0]
     assert "G92.3" in g923_entries[0]["nonmodal_g_codes"]
@@ -287,7 +277,10 @@ def test_nonmodal_g_codes_omitted_when_none_fired(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    for e in trace_entries(trace):
+    entries = trace_entries(trace)
+    # The predicate must examine emitted entries, not an empty iteration.
+    assert entries, "This motion program must produce trace entries"
+    for e in entries:
         assert "nonmodal_g_codes" not in e
 
 
@@ -328,7 +321,10 @@ def test_motion_kind_absent_outside_canned_cycles(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    for e in trace_entries(trace):
+    entries = trace_entries(trace)
+    # The predicate must examine emitted entries, not an empty iteration.
+    assert entries, "This motion program must produce trace entries"
+    for e in entries:
         assert "motion_kind" not in e
 
 
@@ -353,7 +349,7 @@ def test_g4_p0_with_modal_change_emits_state_only(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    line1_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    line1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(line1_entries) == 1, "G91 modal change should produce state-only entry"
     e = line1_entries[0]
     # G4 P0 label should be suppressed; G91 is a modal, not a nonmodal.

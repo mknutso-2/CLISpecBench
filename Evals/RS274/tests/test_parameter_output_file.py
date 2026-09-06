@@ -9,7 +9,7 @@ from rs274_parameters import (
     G92_X_OFFSET_PARAMETER,
     G92_Y_OFFSET_PARAMETER,
     G92_Z_OFFSET_PARAMETER,
-    REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES,
+    REQUIRED_PARAMETER_INDICES,
     SELECTED_COORDINATE_SYSTEM_PARAMETER,
     coordinate_system_xyz_parameter_indices,
     coordinate_system_xyzabc_parameter_indices,
@@ -18,10 +18,6 @@ from rs274_support import (
     build_parameter_file,
     run_rs274_with_parameter_output,
 )
-
-
-def required_non_rotational_parameter_indices() -> set[int]:
-    return set(REQUIRED_NON_ROTATIONAL_PARAMETER_INDICES)
 
 
 def parse_parameter_output_file(parameter_output: str) -> dict[int, float]:
@@ -42,12 +38,13 @@ def parse_parameter_output_file(parameter_output: str) -> dict[int, float]:
 
     indices = [parameter_index for parameter_index, _ in parsed_entries]
     assert indices == sorted(indices)
+    assert len(indices) == len(set(indices))
     return dict(parsed_entries)
 
 
 # RS274 section 3.2.1 says the interpreter writes a parameter file when it
-# exits. The file must contain the required non-rotational Table 2 parameters
-# and parameter numbers must be arranged in ascending order.
+# exits. The file must contain all Table 2 parameters for the six supported
+# axes, including A/B/C, in strictly ascending order (no duplicate indices).
 def test_application_writes_required_parameter_output_file_entries(
     submission_command: tuple[str, ...],
     tmp_path: Path,
@@ -62,7 +59,7 @@ def test_application_writes_required_parameter_output_file_entries(
     assert payload.get("error") is None
 
     parsed_entries = parse_parameter_output_file(parameter_output)
-    assert required_non_rotational_parameter_indices() <= set(parsed_entries)
+    assert set(REQUIRED_PARAMETER_INDICES) <= set(parsed_entries)
     assert parsed_entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] == 1.0
 
 

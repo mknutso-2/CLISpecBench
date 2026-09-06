@@ -27,4 +27,4 @@ CLISpecBench is a benchmark for evaluating AI coding agents on doc-driven implem
 - `Evals/RS274/prompt/base-prompt.md` — non-technical prompt shown to the coding agent
 - `Evals/RS274/prompt/technical-requirements-prompt.md` — harness contract prompt
 - `Evals/RS274/prompt/docs/RS274NGC.md` — RS274 spec mirror; do not edit unless explicitly asked
-- `Evals/RS274/reference-implementation-cpp/` and `Evals/RS274/reference-implementation-py/` — reference implementations. The current C++ reference lacks the motion-trace CLI and passes the `-m "not trace"` baseline; do not treat its full-suite trace failures as a host setup regression.
+- `Evals/RS274/reference-implementation-{cpp,py,js,rs}/` — reference implementations. C++ and JavaScript currently lack the motion-trace CLI; validate their supported `-m "not trace"` baseline and report their full-suite trace failures as known reference limitations, not host setup regressions. Python and Rust implement both interfaces.

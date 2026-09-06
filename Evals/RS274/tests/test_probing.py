@@ -15,12 +15,20 @@ from rs274_parameters import (
 from rs274_support import ProbeBox, get_parameter_value, run_rs274, with_default_rotary_axes
 
 PROBE_TOOL = 2
-PROBE_TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
+PROBE_TLC_TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
 
 2 2 1.5 0.25 probe
 """
 
-ProbeSuccessCase = tuple[str, ProbeBox, str, dict[int, float], str | None]
+# A probe designation is not a tool-table entry. Section 3.7.3 permits
+# empty slots, so successful M6 setup explicitly supplies an occupied slot.
+PROBE_TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
+
+1 1 0.0 0.0 non-probe
+2 2 0.0 0.0 probe
+"""
+
+ProbeSuccessCase = tuple[str, ProbeBox, str, dict[int, float], str]
 
 PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
     (
@@ -42,7 +50,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
     (
         "y-probe-without-tlc",
@@ -56,7 +64,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
     (
         "x-probe-without-tlc-in-g21-converts-inch-box-extents",
@@ -70,7 +78,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
     (
         "z-probe-without-tlc",
@@ -84,7 +92,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
     (
         "selected-tool-does-not-change-the-probe-in-spindle-until-m6",
@@ -98,9 +106,15 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
     (
+        # These TLC/probe integration cases necessarily depend on the
+        # controlled-point shift from G43 (sections 2.1.2.10 and 3.5.11).
+        # Dedicated tool-length tests diagnose that prerequisite separately;
+        # retaining a nonzero offset here verifies that probe-box intersection
+        # uses the tool tip rather than the spindle gauge point. A failure in
+        # that shared prerequisite may therefore also fail these bounded cases.
         "x-probe-with-tlc",
         (12.0, 20.0, 0.0, 10.0, 0.0, 1.0),
         "G20\nG90 G94\nT2 M6\nG0 X0.0 Y5.0 Z2.5\nG43 H2\nF10.0\nG38.2 X15.0\n",
@@ -112,7 +126,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        PROBE_TOOL_TABLE,
+        PROBE_TLC_TOOL_TABLE,
     ),
     (
         "y-probe-with-tlc",
@@ -126,7 +140,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        PROBE_TOOL_TABLE,
+        PROBE_TLC_TOOL_TABLE,
     ),
     (
         "z-probe-with-tlc",
@@ -140,7 +154,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        PROBE_TOOL_TABLE,
+        PROBE_TLC_TOOL_TABLE,
     ),
     (
         "x-probe-g91-g21-incremental-metric",
@@ -154,7 +168,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 0.0,
             PROBE_TRIP_C_PARAMETER: 0.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
     (
         "probe-accepts-stationary-rotary-words-and-reports-rotary-trip-parameters",
@@ -173,7 +187,7 @@ PROBE_SUCCESS_CASES: list[ProbeSuccessCase] = [
             PROBE_TRIP_B_PARAMETER: 20.0,
             PROBE_TRIP_C_PARAMETER: 30.0,
         },
-        None,
+        PROBE_TOOL_TABLE,
     ),
 ]
 
@@ -253,7 +267,7 @@ def test_application_stops_probe_at_trip_point(
     probe_box: ProbeBox,
     input_gcode: str,
     expected_machine_position: dict[str, float],
-    tool_table_content: str | None,
+    tool_table_content: str,
     tmp_path: Path,
 ) -> None:
     completed, payload = run_rs274(

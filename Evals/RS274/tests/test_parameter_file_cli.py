@@ -24,7 +24,9 @@ from rs274_support import (
 )
 
 CLI_CASES: list[tuple[str, str | None, bool]] = [
-    ("parameter-input-only", build_parameter_file(), False),
+    # Section 3.2.1 includes both endpoints of the optional-parameter range.
+    # This valid file is also a control for the out-of-range rejection below.
+    ("parameter-input-only", build_parameter_file({1: 4.25, 5400: 7.5}), False),
     ("parameter-output-only", None, True),
     ("parameter-input-and-output", build_parameter_file(), True),
 ]
@@ -120,25 +122,44 @@ def test_application_initializes_startup_state_from_parameter_input_file(
 PARAMETER_FILE_ERROR_CASES: list[tuple[str, str]] = [
     (
         "parameter-file-rejects-non-ascending-indices",
-        "RS274 parameter file\n\n5162 0.0\n5161 0.0\n",
+        build_parameter_file().replace("5161 0.0\n5162 0.0\n", "5162 0.0\n5161 0.0\n"),
     ),
-    # In preliminary testing, no model passes this test.
     # Section 3.2.1: "A parameter file may include any other parameter, as
     # long as its number is in the range 1 to 5400." Changed in v1.0.1 from
     # 5400 to 5401 because 5400 is the inclusive upper bound per the spec.
     (
         "parameter-file-rejects-out-of-range-index",
-        "RS274 parameter file\n\n5401 1.0\n",
+        build_parameter_file({5401: 1.0}),
+    ),
+    (
+        "parameter-file-rejects-index-below-one",
+        build_parameter_file({0: 1.0}),
     ),
     (
         "parameter-file-rejects-invalid-5220",
         build_parameter_file({SELECTED_COORDINATE_SYSTEM_PARAMETER: 10.0}),
+    ),
+    (
+        "parameter-file-rejects-fractional-5220",
+        build_parameter_file({SELECTED_COORDINATE_SYSTEM_PARAMETER: 1.5}),
+    ),
+    (
+        "parameter-file-rejects-missing-required-linear-entry",
+        build_parameter_file().replace("5161 0.0\n", ""),
+    ),
+    (
+        "parameter-file-rejects-missing-required-rotary-entry",
+        build_parameter_file().replace("5164 0.0\n", ""),
     ),
 ]
 
 
 # RS274 section 3.2.1 requires ascending parameter numbers in range, and
 # section 3.2.2 says startup parameter 5220 must be a whole number from 1 to 9.
+# Start with the same complete valid file accepted above, then alter only the
+# named condition. Otherwise a missing required parameter could make a broken
+# sorting or range check pass for an unrelated reason. The corpus does not
+# prescribe diagnostic text, so the error helper checks only the error contract.
 @pytest.mark.parametrize(
     "parameter_input_content",
     [parameter_input_content for _, parameter_input_content in PARAMETER_FILE_ERROR_CASES],

@@ -10,9 +10,11 @@ G53ErrorCase = tuple[str, str]
 
 G53_ERROR_CASES: list[G53ErrorCase] = [
     # RS274 section 3.5.12: G53 is an error unless G0 or G1 is active.
+    # G80 explicitly cancels motion; G17 alone would leave the unspecified
+    # startup motion mode active and could legitimately allow this G53 move.
     (
         "g53-without-g0-or-g1-active",
-        "G17\nG53 X1.0\n",
+        "G17\nG80\nG53 X1.0\n",
     ),
     # RS274 section 3.5.12: at least one axis word must be used on a G53 line.
     (

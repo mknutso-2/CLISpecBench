@@ -4,11 +4,13 @@ from pathlib import Path
 
 import pytest
 
-from rs274_support import run_rs274, with_default_rotary_axes
+from rs274_support import assert_numeric_mapping_close, run_rs274, with_default_rotary_axes
 
 PositionTrackingCase = tuple[str, str, dict[str, float]]
 
-ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\nG94\n"
+# Sections 3.5.2/3.5.3 move at the current feed rate, which has no usable
+# startup value specified by the corpus. Establish it before testing geometry.
+ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\nG94 F60\n"
 
 POSITION_TRACKING_CASES: list[PositionTrackingCase] = [
     (
@@ -243,8 +245,8 @@ POSITION_TRACKING_PARAMS = [
 # the controller always has a current position, but the spec does not assign a
 # fixed startup machine location or startup work-offset values. These cases
 # therefore explicitly activate coordinate system 1 with zero offsets and
-# explicitly select G94 so the assertions isolate motion tracking rather than
-# work-offset behavior or an assumed startup feed-rate mode.
+# explicitly select G94 and F60 so the assertions isolate motion tracking
+# rather than work-offset behavior or assumed startup feed-rate state.
 # See sections 3.5.1 and 3.5.2 for linear motion with axis words, section
 # 3.5.3 for G2/G3 arc endpoint programming in the selected plane, section
 # 3.5.3.1 for radius-format arcs, and section 3.5.17 for how G90/G91 control
@@ -281,4 +283,9 @@ def test_application_tracks_machine_position(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert payload.get("machine_position") == with_default_rotary_axes(expected_machine_position)
+    # Unit conversion and geometric arithmetic may introduce roundoff; the
+    # contract does not require exact decimal rounding of numeric coordinates.
+    # Mapping comparison still requires all six axis keys and correct values.
+    assert_numeric_mapping_close(
+        payload.get("machine_position"), with_default_rotary_axes(expected_machine_position)
+    )

@@ -76,6 +76,7 @@ def run_hidden_tests(
     language: str,
     timeout_seconds: float = _DEFAULT_HIDDEN_TEST_TIMEOUT_SECONDS,
     use_docker: bool = True,
+    docker_image: str | None = None,
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run the hidden test suite against an agent's submission.
 
@@ -87,6 +88,7 @@ def run_hidden_tests(
 
     When *use_docker* is True (the default), tests run inside a Linux
     container so the build environment matches what the agent targeted.
+    ``docker_image`` can pin an existing immutable image ID for a regrade.
 
     Uses ``pytest --json-report`` to capture per-test results.
     Returns the test outcomes and summary.
@@ -98,6 +100,7 @@ def run_hidden_tests(
             report_path,
             timeout_seconds,
             language,
+            image=docker_image or TEST_RUNNER_IMAGE,
         )
     return _run_hidden_tests_local(
         test_dir,
@@ -158,6 +161,8 @@ def _run_hidden_tests_docker(
     report_path: Path,
     timeout_seconds: float,
     language: str,
+    *,
+    image: str = TEST_RUNNER_IMAGE,
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run tests inside a Docker container for cross-platform compatibility.
 
@@ -188,7 +193,7 @@ def _run_hidden_tests_docker(
         " -q"
     )
     config = ContainerConfig(
-        image=TEST_RUNNER_IMAGE,
+        image=image,
         environment={"PYTHONPATH": str(_CONTAINER_SRC)},
         command=["bash", "-c", cmd_str],
         network_mode="none",
@@ -197,7 +202,9 @@ def _run_hidden_tests_docker(
     # Build the base image once if needed (cheap to re-check across attempts).
     sandbox_probe = DockerSandbox()
     try:
-        if not sandbox_probe.image_exists(TEST_RUNNER_IMAGE):
+        if not sandbox_probe.image_exists(image):
+            if image != TEST_RUNNER_IMAGE:
+                raise ScoringError(f"Pinned grader image is unavailable: {image}")
             base_dockerfile = (
                 Path(__file__).resolve().parent.parent.parent.parent / "docker" / "base.Dockerfile"
             )

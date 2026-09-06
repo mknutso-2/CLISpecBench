@@ -697,6 +697,29 @@ def _cmd_validate(args: argparse.Namespace) -> None:
     print("\nValidation passed.")
 
 
+def _cmd_regrade(args: argparse.Namespace) -> None:
+    from clispecbench.harness.regrade import RegradeError, regrade_submission
+
+    try:
+        result = regrade_submission(
+            args.source, args.output_dir, repo_root=_find_repo_root(), use_docker=not args.local
+        )
+    except (RegradeError, OSError) as exc:
+        print(f"Regrade failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+    summary = result["test_summary"]
+    grading = result["grading"]
+    original = result["original"]
+    print(
+        f"Regraded {grading['task']} ({original['run_uid']}): "
+        f"{summary['passed']}/{summary['total']} passed "
+        f"({result['scores']['correctness']:.2%}) against eval {grading['eval_version']} "
+        f"using {grading['environment']['mode']}."
+    )
+    print(f"Audit: {(args.output_dir / 'regrade.json').resolve()}")
+    print("Original generation metadata and published scores are unchanged.")
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
@@ -755,6 +778,20 @@ def main(argv: list[str] | None = None) -> None:
         ),
     )
     run_parser.add_argument("--api-key-env", action="append", help="VAR=value pairs for API keys")
+
+    # --- regrade ---
+    regrade_parser = subparsers.add_parser(
+        "regrade", help="Rejudge saved source with current tests without model inference"
+    )
+    regrade_parser.add_argument(
+        "source", type=Path, help="Original result.json with saved artifacts"
+    )
+    regrade_parser.add_argument(
+        "--output-dir", type=Path, required=True, help="New or empty audit dir"
+    )
+    regrade_parser.add_argument(
+        "--local", action="store_true", help="Use the host for diagnostics instead of Docker"
+    )
 
     # --- results ---
     results_parser = subparsers.add_parser("results", help="View evaluation results")
@@ -893,6 +930,8 @@ def main(argv: list[str] | None = None) -> None:
 
     if args.command == "run":
         _cmd_run(args)
+    elif args.command == "regrade":
+        _cmd_regrade(args)
     elif args.command == "results":
         _cmd_results(args)
     elif args.command == "backfill-telemetry":

@@ -36,7 +36,8 @@ AXIS_LETTERS = ("x", "y", "z", "a", "b", "c")
 LINEAR_AXES = ("x", "y", "z")
 ROTARY_AXES = ("a", "b", "c")
 
-# Required parameter indices that must be present in every parameter output file
+# RS274 3.2.1, Table 2: required for both parameter input and output.
+# This interpreter supports all six axes, including A/B/C.
 G28_HOME_PARAMS = (5161, 5162, 5163, 5164, 5165, 5166)
 G30_HOME_PARAMS = (5181, 5182, 5183, 5184, 5185, 5186)
 G92_OFFSET_PARAMS = (5211, 5212, 5213, 5214, 5215, 5216)
@@ -1298,6 +1299,7 @@ class Interpreter:
             raise NgcError("parameter file has no blank separator line")
         data_lines = lines[blank_index + 1:]
         last_index = 0
+        loaded_indices: set[int] = set()
         for line in data_lines:
             stripped = line.strip()
             if not stripped:
@@ -1316,6 +1318,12 @@ class Interpreter:
                 raise NgcError("parameter file indices must be ascending")
             last_index = idx
             self.state.parameters[idx] = val
+            loaded_indices.add(idx)
+
+        # Validate entries actually read, not defaults already in machine state.
+        for idx in REQUIRED_OUTPUT_PARAMETERS:
+            if idx not in loaded_indices:
+                raise NgcError(f"parameter file missing required parameter {idx}")
 
         # Validate selected coordinate system parameter.
         sel = self.state.parameters.get(SELECTED_CS_PARAM, 1.0)
@@ -2679,17 +2687,42 @@ class Interpreter:
                 sm_end.set(depth_axis, clear)
                 self._cycle_sub_motion(sm_end, "rapid")
             elif motion == "G87":
-                # Back boring: rapid to Z, feed to R, rapid retract.
-                sm_end = self.state.programmed.copy()
-                sm_end.set(depth_axis, z_val)
-                self._cycle_sub_motion(sm_end, "rapid")
-                sm_end = self.state.programmed.copy()
-                sm_end.set(depth_axis, r_val)
-                self._cycle_sub_motion(sm_end, "feed")
-                if abs(clear - r_val) > 1e-12:
-                    sm_end = self.state.programmed.copy()
-                    sm_end.set(depth_axis, clear)
-                    self._cycle_sub_motion(sm_end, "rapid")
+                # RS274 3.5.16.8: insert/remove at the I/J clearance
+                # offset, bore upward to K, then feed back down to Z.
+                # Clarifications.md supplies zero for omitted I/J/K.
+                hole = self.state.programmed.copy()
+                offset = hole.copy()
+                for axis, word in zip(plane_axes, ("i", "j")):
+                    offset.set(axis, hole.get(axis) + to_inches(
+                        word_dict.get(word, 0.0), self.state.units,
+                    ))
+                top = to_inches(word_dict.get("k", 0.0), self.state.units)
+                if self.state.distance_mode == "G91":
+                    top += z_val
+                spindle_before = self.state.spindle_direction
+                spindle_code_before = self.state.active_m_codes.get("7", "M5")
+                self._cycle_sub_motion(offset, "rapid")
+                self.state.spindle_direction = "OFF"
+                self.state.active_m_codes["7"] = "M5"
+                offset.set(depth_axis, z_val)
+                self._cycle_sub_motion(offset, "rapid")
+                hole.set(depth_axis, z_val)
+                self._cycle_sub_motion(hole, "rapid")
+                self.state.spindle_direction = spindle_before
+                self.state.active_m_codes["7"] = spindle_code_before
+                hole.set(depth_axis, top)
+                self._cycle_sub_motion(hole, "feed")
+                hole.set(depth_axis, z_val)
+                self._cycle_sub_motion(hole, "feed")
+                self.state.spindle_direction = "OFF"
+                self.state.active_m_codes["7"] = "M5"
+                self._cycle_sub_motion(offset, "rapid")
+                offset.set(depth_axis, clear)
+                self._cycle_sub_motion(offset, "rapid")
+                hole.set(depth_axis, clear)
+                self._cycle_sub_motion(hole, "rapid")
+                self.state.spindle_direction = spindle_before
+                self.state.active_m_codes["7"] = spindle_code_before
             elif motion == "G89":
                 # Boring: feed to Z, (dwell), feed retract.
                 sm_end = self.state.programmed.copy()

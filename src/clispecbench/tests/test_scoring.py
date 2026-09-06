@@ -451,3 +451,37 @@ def test_local_scorer_rejects_incomplete_run(tmp_path: Path, exit_code: int) -> 
                 tmp_path, tmp_path, tmp_path / "report.json", language="py", use_docker=False
             )
     assert (tmp_path / "test-container.attempt1.log").is_file()
+
+
+def test_docker_scorer_uses_requested_immutable_image(tmp_path: Path) -> None:
+    from clispecbench.harness.docker import ContainerConfig
+
+    def attempt(**kwargs: object) -> tuple[int, bool, str]:
+        config = kwargs["config"]
+        assert isinstance(config, ContainerConfig)
+        assert config.image == "sha256:immutable-regrade-image"
+        report = kwargs["report_path"]
+        assert isinstance(report, Path)
+        report.write_text(
+            json.dumps(
+                {
+                    "exitcode": 0,
+                    "summary": {"total": 1},
+                    "tests": [{"nodeid": "test_a", "outcome": "passed"}],
+                }
+            )
+        )
+        return 0, True, ""
+
+    with (
+        patch("clispecbench.harness.docker.DockerSandbox"),
+        patch("clispecbench.harness.scoring._run_scorer_attempt", side_effect=attempt),
+    ):
+        _, summary = run_hidden_tests(
+            tmp_path,
+            tmp_path,
+            tmp_path / "report.json",
+            language="py",
+            docker_image="sha256:immutable-regrade-image",
+        )
+    assert summary.passed == 1

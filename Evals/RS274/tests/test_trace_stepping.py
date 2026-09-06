@@ -8,7 +8,13 @@ from pathlib import Path
 
 import pytest
 
-from rs274_support import reconstruct_state, run_rs274_trace, trace_entries, trace_initial_state
+from rs274_support import (
+    input_line,
+    reconstruct_state,
+    run_rs274_trace,
+    trace_entries,
+    trace_initial_state,
+)
 
 pytestmark = pytest.mark.trace
 
@@ -224,8 +230,8 @@ def test_time_resets_per_line(
     )
     entries = trace_entries(trace)
     # Line 1: final at 1.0s, Line 2: final at 1.0s (not 2.0).
-    line1_entries = [e for e in entries if e["line_number"] == 1]
-    line2_entries = [e for e in entries if e["line_number"] == 2]
+    line1_entries = [e for e in entries if e["line_number"] == input_line(1)]
+    line2_entries = [e for e in entries if e["line_number"] == input_line(2)]
     assert len(line1_entries) == 1
     assert len(line2_entries) == 1
     assert line1_entries[0]["time"] == pytest.approx(1.0)
@@ -248,7 +254,7 @@ def test_arc_g2_produces_entries(
         trace_time_step=0.1,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(arc_entries) >= 2  # At least one interior + final.
     # Final position should be at (1, 0).
     last = arc_entries[-1]
@@ -284,7 +290,7 @@ def test_arc_positions_stay_on_circle(
                 cur_x = mp["x"]
             if "y" in mp:
                 cur_y = mp["y"]
-        if e["line_number"] == 3:
+        if e["line_number"] == input_line(3):
             dist = math.sqrt((cur_x - cx) ** 2 + (cur_y - cy) ** 2)
             assert dist == pytest.approx(r, abs=0.01), (
                 f"Point ({cur_x}, {cur_y}) is {dist} from center, expected {r}"
@@ -308,7 +314,7 @@ def test_canned_cycle_sub_motions_stepped_independently(
         trace_time_step=0.1,
         tmp_path=tmp_path,
     )
-    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(g81_entries) > 4  # Multiple stepped entries per sub-motion.
 
     # Verify times are monotonically increasing.
@@ -333,7 +339,7 @@ def test_canned_cycle_motion_kind_only_on_first_entry_per_sm(
         trace_time_step=0.01,  # Lots of entries.
         tmp_path=tmp_path,
     )
-    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     # Count entries with motion_kind set.
     mk_entries = [e for e in g81_entries if "motion_kind" in e]
     # Should be exactly 4 (one per sub-motion): rapid, rapid, feed, rapid.
@@ -368,7 +374,7 @@ def test_canned_cycle_zero_duration_sm_skipped(
         trace_distance_step=1000.0,  # Only final entries.
         tmp_path=tmp_path,
     )
-    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     # Only 3 sub-motions produce entries (SM1 skipped).
     assert len(g81_entries) == 3
     # First entry should be SM2 (rapid), at time=0.12.
@@ -402,7 +408,7 @@ def test_dwell_entry_at_time_p(
     entries = trace_entries(trace)
     assert len(entries) == 1
     assert entries[0]["time"] == pytest.approx(2.0)
-    assert entries[0]["line_number"] == 1
+    assert entries[0]["line_number"] == input_line(1)
 
 
 def test_dwell_p_zero_no_entry(
@@ -410,12 +416,15 @@ def test_dwell_p_zero_no_entry(
     tmp_path: Path,
 ) -> None:
     """G4 P0 produces no entry."""
-    _, _, trace = run_rs274_trace(
+    completed, _, trace = run_rs274_trace(
         submission_command,
         input_gcode="G4 P0\n",
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
+    assert completed.returncode == 0
+    # An absent trace cannot establish that an error field or entry is absent.
+    assert trace, "The interpreter must produce an observable trace object"
     entries = trace_entries(trace)
     # G4 P0 is a no-change block -> no entry.
     assert len(entries) == 0
@@ -440,7 +449,7 @@ def test_g93_inverse_time_duration(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g1_entries) == 1
     assert g1_entries[0]["time"] == pytest.approx(0.5, abs=1e-6)
     assert g1_entries[0]["machine_position"]["x"] == pytest.approx(2.0, abs=1e-6)
@@ -466,7 +475,7 @@ def test_g21_mm_mode_trace_coordinates(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(g1_entries) == 1
     assert g1_entries[0]["machine_position"]["x"] == pytest.approx(25.4, abs=0.01)
 
@@ -493,12 +502,12 @@ def test_canned_cycle_l2_produces_double_sub_motions(
         tmp_path=tmp_path,
     )
     # Line 4 (G81 L2): should produce sub-motions for 2 repeats.
-    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g81_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     # 2 repeats x 4 sub-motions each = 8 entries (some may be zero-length).
     assert len(g81_entries) >= 6  # At least 3 non-zero SMs per repeat.
 
     # The second repeat (line 5: X10) is a separate G-code line.
-    repeat2_entries = [e for e in trace_entries(trace) if e["line_number"] == 5]
+    repeat2_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(5)]
     assert len(repeat2_entries) >= 3  # At least rapid-XY + rapid-R + feed-Z.
 
 
@@ -524,7 +533,7 @@ def test_helical_arc_duration_includes_axial(
         trace_time_step=1.0,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     expected_path = math.sqrt(math.pi**2 + 1.0**2)  # ≈ 3.297
     expected_duration = expected_path  # F60 = 1 inch/s
     # Final entry's time == total duration.
@@ -544,7 +553,7 @@ def test_helical_arc_z_varies_during_arc(
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     # Z should increase through the arc entries (from 0 → 2).
     z_values: list[float] = []
     z = 0.0  # initial Z
@@ -580,7 +589,7 @@ def test_full_circle_arc_duration(
         trace_time_step=2.0,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     expected_duration = 2.0 * math.pi  # ≈ 6.283 s
     assert arc_entries[-1]["time"] == pytest.approx(expected_duration, rel=1e-3)
     # 3 interior (at 2.0, 4.0, 6.0) + 1 final (at 6.283) = 4.
@@ -603,7 +612,7 @@ def test_full_circle_arc_with_explicit_axis_words_returns_to_start(
         trace_time_step=2.0,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     expected_duration = 2.0 * math.pi  # ≈ 6.283 s
     assert arc_entries[-1]["time"] == pytest.approx(expected_duration, rel=1e-3)
     assert len(arc_entries) == 4
@@ -654,7 +663,7 @@ def test_tolerance_stepping_arc_produces_intermediate_samples(
         trace_position_tolerance=0.01,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     # Must have multiple interior samples to stay within 0.01" of the arc.
     assert len(arc_entries) >= 5
     # Final entry returns to start: x≈1, y≈0.
@@ -685,7 +694,8 @@ def test_tolerance_stepping_arc_deviation_within_tolerance(
         trace_position_tolerance=0.1,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
+    assert arc_entries, "The programmed half-circle must produce arc samples"
     # Reconstruct XY positions through the arc.
     positions: list[tuple[float, float]] = [(2.0, 0.0)]  # start
     x, y = 2.0, 0.0
@@ -696,6 +706,9 @@ def test_tolerance_stepping_arc_deviation_within_tolerance(
             if "y" in e["machine_position"]:
                 y = e["machine_position"]["y"]
         positions.append((x, y))
+    # Require the complete arc; a partial or unchanged point sequence could
+    # otherwise satisfy every tested chord while omitting the actual motion.
+    assert positions[-1] == pytest.approx((-2.0, 0.0), abs=1e-6)
     # For each consecutive pair, check that the midpoint is near the arc
     # (center at origin, radius=2).
     for i in range(len(positions) - 1):
@@ -731,7 +744,7 @@ def test_probe_trip_point_in_trace(
         probe_box=(2.0, 3.0, -1.0, 1.0, -1.0, 1.0),
         probe_tool=1,
     )
-    probe_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    probe_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(probe_entries) == 1
     # Trip point: X=2 (left edge of probe box).
     assert probe_entries[0]["machine_position"]["x"] == pytest.approx(2.0, abs=0.01)
@@ -760,7 +773,7 @@ def test_g84_tap_spindle_reversal_in_trace(
         trace_distance_step=1000.0,  # Large step → 1 entry per SM.
         tmp_path=tmp_path,
     )
-    g84_entries = [e for e in trace_entries(trace) if e["line_number"] == 5]
+    g84_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(5)]
     # Should have at least 3 entries (rapid-XY may be zero if already at 0,0):
     # rapid-to-R, feed-to-Z, feed-retract, maybe rapid-retract.
     assert len(g84_entries) >= 2
@@ -795,7 +808,7 @@ def test_g84_g99_spindle_reversal_visible(
         trace_distance_step=1000.0,  # Large step → 1 entry per SM.
         tmp_path=tmp_path,
     )
-    g84_entries = [e for e in trace_entries(trace) if e["line_number"] == 5]
+    g84_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(5)]
 
     # Both spindle transitions must be visible in the entries.
     found_ccw = any(e.get("spindle_direction") == "CCW" for e in g84_entries)
@@ -845,7 +858,7 @@ def test_g83_peck_drill_decomposition(
         trace_distance_step=1000.0,
         tmp_path=tmp_path,
     )
-    g83_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g83_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     # SM1: rapid XY (zero — already at 0,0)
     # SM2: rapid to R (0→0 — may be zero if already at Z=0... actually Z=2→0)
     # Peck 1: feed 0→-0.5, rapid -0.5→0, rapid 0→-0.5
@@ -882,8 +895,8 @@ def test_g93_inverse_time_multi_line(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    line1 = [e for e in trace_entries(trace) if e["line_number"] == 1]
-    line2 = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    line1 = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
+    line2 = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(line1) == 1
     assert len(line2) == 1
     assert line1[0]["time"] == pytest.approx(0.5, rel=1e-3)
@@ -910,7 +923,7 @@ def test_distance_step_in_inches_under_g21(
         trace_distance_step=0.5,
         tmp_path=tmp_path,
     )
-    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    g1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     # 1 inch path, 0.5 inch step → 1 interior (at 0.5") + 1 final (at 1") = 2.
     assert len(g1_entries) == 2
     # Positions should be in mm (active units).
@@ -939,7 +952,7 @@ def test_pending_modal_deltas_ride_first_entry(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    line2_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    line2_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(line2_entries) == 1  # Large step → only final.
     e = line2_entries[0]
     # The feed rate change should ride this entry.
@@ -969,7 +982,7 @@ def test_g93_inverse_time_arc_duration(
         trace_time_step=100.0,  # Large step → only final entry.
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(arc_entries) >= 1
     # G93 F120 → duration = 60/F = 0.5 seconds, regardless of arc geometry.
     # "time" is per-line (seconds since start of the source line).
@@ -995,11 +1008,13 @@ def test_tolerance_stepping_helical_arc(
         trace_position_tolerance=0.001,  # Tight tolerance → many samples.
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(arc_entries) >= 3, "Tight tolerance should produce multiple arc samples"
     # Verify Z progresses monotonically from 0 toward -1.
     states = [reconstruct_state(trace, i) for i in range(len(trace_entries(trace)))]
-    arc_states = [s for i, s in enumerate(states) if trace_entries(trace)[i]["line_number"] == 2]
+    arc_states = [
+        s for i, s in enumerate(states) if trace_entries(trace)[i]["line_number"] == input_line(2)
+    ]
     z_values = [s["machine_position"]["z"] for s in arc_states]
     for i in range(1, len(z_values)):
         assert z_values[i] <= z_values[i - 1] + 1e-9, (
@@ -1027,7 +1042,7 @@ def test_g18_xz_plane_arc_trace(
         trace_time_step=100.0,  # Only final entry.
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(arc_entries) >= 1
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
     assert final["machine_position"]["x"] == pytest.approx(0.0, abs=1e-6)
@@ -1049,7 +1064,7 @@ def test_g19_yz_plane_arc_trace(
         trace_time_step=100.0,  # Only final entry.
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(arc_entries) >= 1
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
     assert final["machine_position"]["y"] == pytest.approx(0.0, abs=1e-6)
@@ -1079,7 +1094,7 @@ def test_g82_drill_with_dwell_trace(
         trace_distance_step=1000.0,  # Only final entries per SM.
         tmp_path=tmp_path,
     )
-    g82_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    g82_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     # SM1: rapid X0→X1 (1 inch)
     # SM2: rapid Z1→Z0 (R height)
     # SM3: feed Z0→Z-1 (1 inch)
@@ -1116,7 +1131,7 @@ def test_g85_boring_feed_retract(
         trace_distance_step=1000.0,
         tmp_path=tmp_path,
     )
-    g85_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    g85_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(g85_entries) >= 3  # rapid-XY, rapid-to-R, feed-to-Z, feed-retract
 
     kinds = [e.get("motion_kind") for e in g85_entries if "motion_kind" in e]
@@ -1145,7 +1160,7 @@ def test_g86_boring_rapid_retract(
         trace_distance_step=1000.0,
         tmp_path=tmp_path,
     )
-    g86_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g86_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(g86_entries) >= 3
 
     kinds = [e.get("motion_kind") for e in g86_entries if "motion_kind" in e]
@@ -1172,20 +1187,32 @@ def test_g87_back_boring_sub_motions(
     from Z-1 to Z0 is observable. G98 then retracts to the pre-cycle Z
     value.
     """
-    setup = "G90\nG98\nG0 X0 Y0 Z2\n"
+    # Section 3.5.16.8 restarts the spindle in its prior direction. Establish
+    # that direction so this test only measures the defaulted I/J/K path.
+    setup = "G90 M3 S100\nG98\nG0 X0 Y0 Z2\n"
     _, _, trace = run_rs274_trace(
         submission_command,
         input_gcode=setup + "G87 X1 Z-1 R0 F60\n",
         trace_distance_step=1000.0,
         tmp_path=tmp_path,
     )
-    g87_entries = [e for e in trace_entries(trace) if e["line_number"] == 4]
+    g87_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(4)]
     assert len(g87_entries) >= 3
 
     kinds = [e.get("motion_kind") for e in g87_entries if "motion_kind" in e]
-    # G87: first depth move is rapid, then feed up to R.
+    # G87: first depth move is rapid, then feed up to defaulted K0.
     assert kinds[0] == "rapid" or kinds[1] == "rapid", "G87 should have rapid move to depth"
-    assert "feed" in kinds, "G87 should have feed move up to R"
+    assert "feed" in kinds, "G87 should have a feed move to K"
+
+    # Section 3.5.16.8 steps 6 and 7 feed to K and back to Z. With omitted
+    # K in G90, Clarifications.md resolves K to absolute Z0, not retract R
+    # in general. The separate explicit-I/J/K test distinguishes those levels.
+    feed_z = [
+        reconstruct_state(trace, i)["machine_position"]["z"]
+        for i, entry in enumerate(trace_entries(trace))
+        if entry["line_number"] == input_line(4) and entry.get("motion_kind") == "feed"
+    ]
+    assert feed_z == pytest.approx([0.0, -1.0], abs=1e-6)
 
     final = reconstruct_state(trace, len(trace_entries(trace)) - 1)
     assert final["machine_position"]["z"] == pytest.approx(2.0, abs=1e-6)
@@ -1212,7 +1239,7 @@ def test_g89_boring_dwell_feed_retract(
         trace_distance_step=1000.0,
         tmp_path=tmp_path,
     )
-    g89_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    g89_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(g89_entries) >= 3
 
     kinds = [e.get("motion_kind") for e in g89_entries if "motion_kind" in e]
@@ -1248,12 +1275,12 @@ def test_unit_switch_mid_program_trace_coordinates(
         tmp_path=tmp_path,
     )
     # Line 1 (inches): final position X = 1.0 inch
-    l1_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    l1_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(l1_entries) == 1
     assert l1_entries[0]["machine_position"]["x"] == pytest.approx(1.0, abs=0.01)
 
     # Line 3 (mm): final position X = 50.8 mm
-    l3_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    l3_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     assert len(l3_entries) == 1
     assert l3_entries[0]["machine_position"]["x"] == pytest.approx(50.8, abs=0.1)
 
@@ -1276,7 +1303,7 @@ def test_g21_arc_distance_stepping(
         trace_distance_step=2.0,
         tmp_path=tmp_path,
     )
-    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == 3]
+    arc_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(3)]
     # Circumference ~= 6.283 inches / 2.0 step -> 3 interior + 1 final = 4.
     assert len(arc_entries) >= 3, (
         f"Expected >=3 arc entries for full circle with 2-inch step, got {len(arc_entries)}"
@@ -1318,7 +1345,7 @@ def test_linear_plus_rotary_duration_uses_xyz_path_only(
         trace_time_step=100.0,
         tmp_path=tmp_path,
     )
-    entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(1)]
     assert len(entries) == 1
     # Duration should be ~1.0 s (1 inch at 60 ipm), NOT ~90 s.
     assert entries[0]["time"] == pytest.approx(1.0, abs=0.05)
@@ -1339,7 +1366,7 @@ def test_rotary_only_g21_feed_rate_not_converted(
         trace_time_step=1000.0,
         tmp_path=tmp_path,
     )
-    entries = [e for e in trace_entries(trace) if e["line_number"] == 2]
+    entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     assert len(entries) == 1
     # 90 degrees at 90 deg/min = 60 seconds, NOT ~1524 seconds.
     assert entries[0]["time"] == pytest.approx(60.0, abs=0.5)
@@ -1369,7 +1396,7 @@ def test_g88_boring_rapid_retract(
         tool_table_content=tool_table,
         tmp_path=tmp_path,
     )
-    g88_entries = [e for e in trace_entries(trace) if e["line_number"] == 7]
+    g88_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(7)]
     assert len(g88_entries) >= 3
 
     kinds = [e.get("motion_kind") for e in g88_entries if "motion_kind" in e]
@@ -1397,24 +1424,20 @@ def test_g28_stepping_applied_per_sub_motion(
     With --trace-distance-step 2.0: each SM gets 1 interior + 1 final = 2 entries.
     Total G28 entries = 4 (not 3, which would mean stepping across the whole move).
     """
-    from rs274_support import build_parameter_file
-
-    params = build_parameter_file({5161: 6.0, 5162: 0.0, 5163: 0.0})
+    # Section 3.5.8 uses the home parameters; file parsing is tested elsewhere.
     _, _, trace = run_rs274_trace(
         submission_command,
-        input_gcode="G28 X3\n",
+        input_gcode="#5161=6 #5162=0 #5163=0\nG28 X3\n",
         trace_distance_step=2.0,
-        parameter_input_content=params,
         tmp_path=tmp_path,
     )
-    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == 1]
+    g28_entries = [e for e in trace_entries(trace) if e["line_number"] == input_line(2)]
     # Per-SM stepping: each 3-inch SM with 2-inch step → 1 interior + 1 final = 2.
-    # Total = 4 entries. If stepping were applied across the whole 6-inch move,
-    # we'd get 3 interior + 1 final = 4 — same count but different time resets.
+    # Total = 4 entries. Treating the whole six-inch move as one would instead
+    # emit samples at X2, X4, X6 and miss the mandatory X3 sub-motion endpoint.
     assert len(g28_entries) == 4
 
-    # Verify time resets at SM boundary: SM2's first entry should have a time
-    # that includes SM1's total duration, not restart from zero.
+    # Times accumulate across sub-motions within the same source block.
     sm1_final_time = g28_entries[1]["time"]
     sm2_first_time = g28_entries[2]["time"]
     assert sm2_first_time > sm1_final_time, (

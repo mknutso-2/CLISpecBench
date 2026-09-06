@@ -1,5 +1,76 @@
 # RS274 Changelog
 
+## v3.2.1 — 2026-09-06
+
+- Corrected motion fixtures to establish feed rates explicitly, including the
+  position and CRC arc cases missed by the v3.1.2 cleanup. Continuation CRC
+  cases use a tangent straight entry to isolate continuation geometry from
+  the more complex first-arc construction.
+- Wrapped behavioral program bodies in the balanced percent delimiters already
+  required by RS274 section 3.1. This removes the EOF-acceptance dependency
+  without changing model inputs or applying M2/M30 reset effects. Trace tests
+  assert the submitted file's physical line numbers explicitly; submission
+  outputs are never normalized. Raw delimiter cases cover the framing parser.
+- Completed parameter-file fixtures for all six supported axes. Invalid-file
+  cases now start from otherwise valid files so range, ordering, required
+  parameters, and selector validation are not masked by unrelated omissions.
+- Supplied occupied tool/probe slots where tests require them, removed
+  out-of-range tool-table entries from the bounded-carousel fixture, and
+  isolated invalid probe conditions from missing-tool and missed-box errors.
+- Replaced exact position/offset comparisons affected by unit-conversion
+  roundoff with tight numeric tolerances. Keys and modal/index fields retain
+  their exact contract checks.
+- Made the G53 invalid-mode test explicitly select G80, and made the
+  missing-axis canned-cycle test explicitly invoke G81. Neither test now
+  depends on an undocumented startup state or an inferred bare-R trigger.
+- Finished the v3.1.7 home-motion independence cleanup: G28/G30 trace tests
+  initialize home parameters in-program instead of through parameter files.
+- Corrected G87 trace setup to establish spindle direction, checked both
+  mandated feed legs, and added focused explicit-I/J/K and incremental-K
+  coverage. Fixed the Python/Rust reference trace sequences and the C++
+  reference's obsolete requirement for explicit I/J/K, completing the
+  previously documented v3.1.4 zero-default clarification.
+- Removed the ambiguous implicit-D metadata cross-check from omitted-D
+  geometry cases. They still verify the actual compensated path; dedicated
+  tooling tests retain explicit D, D0, and G40 serialization checks. Resolving
+  the contradictory implicit-D wording in the public contract is deferred.
+- Removed repeated error-field schema assertions from the shared invalid-input
+  helper. Negative behavioral tests own the rejection exit code; the central
+  error-output schema gate owns the required nonempty error string. A single
+  missing-field bug no longer fails every invalid-input behavior test. A
+  nonempty JSON result remains necessary to distinguish observable rejection
+  from a process that merely crashes with exit code 1.
+- Scoped tooling-state rows to the fields each case tests, retaining explicitly
+  named integration cases. Unrelated default/null field checks no longer
+  cascade into D/H state assertions.
+- Added focused observability checks to ten trace tests that could pass
+  vacuously when a crashed submission produced no trace. Required motion/state
+  checks now require their entries; intentional no-entry checks require an
+  actual trace result. Detailed schema validation stays in its dedicated gate.
+- Fixed reference defects exposed by the corrected tests: all four references
+  enforce the 73 required parameters; C++ writes those entries and accepts the
+  inclusive file index 5400; JavaScript rejects fractional selector 5220; C++
+  handles percent delimiters. These repairs follow the existing specification.
+- Completed the v3.1.0/v3.1.1 CRC reference parity work in JavaScript and Rust:
+  path-radius R and tool-tip-relative I/J now apply uniformly to entry and
+  continuation arcs. JavaScript also uses the actual compensated incoming
+  tangent for subsequent straight/corner moves. Concave and gouging rejection
+  tests remain enforced.
+- Corrected the README's claims about reference coverage: C++ and JavaScript
+  references implement the snapshot interface, while Python and Rust also
+  implement motion traces.
+- Added a reproducible `clispecbench regrade` workflow that saves separate
+  grading artifacts, complete reports, source/test provenance, and the
+  byte-identical original result. Regrading never invokes a model or changes
+  an original submission/result. Docker grading pins the grader image digest.
+
+This is the test/scoring revision: all model-visible prompt, language, variant,
+and documentation bytes are unchanged. Only the grading test hash changes.
+Regrades preserve the original generation metadata and original scores, and
+compare unchanged submissions under this corrected rubric. Public contract
+changes, including the plain-EOF proposal in `TODO.md`, belong to a subsequent
+version and must not be combined with this revision.
+
 ## v3.2.0 — 2026-07-02
 
 - Added an optional `fable-steered` prompt variant
