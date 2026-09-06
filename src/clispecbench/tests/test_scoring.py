@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,12 +12,27 @@ import pytest
 
 from clispecbench.harness.results import TestOutcome, TestSummary
 from clispecbench.harness.scoring import (
+    ScoringError,
     compute_correctness,
     compute_subscores,
     compute_task_score,
     parse_json_report,
     run_hidden_tests,
 )
+
+
+def _successful_local_grader(cmd: list[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+    path = Path(next(arg.split("=", 1)[1] for arg in cmd if arg.startswith("--json-report-file=")))
+    path.write_text(
+        json.dumps(
+            {
+                "exitcode": 0,
+                "summary": {"total": 1},
+                "tests": [{"nodeid": "test_a", "outcome": "passed"}],
+            }
+        )
+    )
+    return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
 
 
 def _outcome(node_id: str, outcome: str) -> TestOutcome:
@@ -118,7 +134,7 @@ class TestRunHiddenTests:
         report_path.write_text(json.dumps({"tests": []}))
 
         with patch("clispecbench.harness.scoring.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
+            mock_run.side_effect = _successful_local_grader
             run_hidden_tests(
                 test_dir=test_dir,
                 submission_dir=submission_dir,
@@ -144,7 +160,7 @@ class TestRunHiddenTests:
         report_path.write_text(json.dumps({"tests": []}))
 
         with patch("clispecbench.harness.scoring.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
+            mock_run.side_effect = _successful_local_grader
             run_hidden_tests(
                 test_dir=test_dir,
                 submission_dir=submission_dir,
@@ -165,7 +181,7 @@ class TestRunHiddenTests:
         report_path.write_text(json.dumps({"tests": []}))
 
         with patch("clispecbench.harness.scoring.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
+            mock_run.side_effect = _successful_local_grader
             run_hidden_tests(
                 test_dir=test_dir,
                 submission_dir=submission_dir,
@@ -186,7 +202,7 @@ class TestRunHiddenTests:
         report_path.write_text(json.dumps({"tests": []}))
 
         with patch("clispecbench.harness.scoring.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
+            mock_run.side_effect = _successful_local_grader
             run_hidden_tests(
                 test_dir=test_dir,
                 submission_dir=submission_dir,
@@ -207,7 +223,7 @@ class TestRunHiddenTests:
         report_path.write_text(json.dumps({"tests": []}))
 
         with patch("clispecbench.harness.scoring.subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 0
+            mock_run.side_effect = _successful_local_grader
             run_hidden_tests(
                 test_dir=test_dir,
                 submission_dir=submission_dir,
@@ -345,3 +361,93 @@ class TestComputeTaskScore:
         scores = compute_task_score(0.8)
         assert scores.correctness == pytest.approx(0.8)
         assert scores.task_score == pytest.approx(0.8)
+
+
+@pytest.mark.parametrize("failure", ["interrupted", "missing", "malformed", "partial"])
+def test_docker_scorer_exhaustion_rejects_reports_and_preserves_evidence(
+    tmp_path: Path, failure: str
+) -> None:
+    report = tmp_path / "test-report.json"
+    report.write_text('{"stale": true}')
+    seen: list[Path] = []
+
+    def attempt(**kwargs: object) -> tuple[int, bool, str]:
+        path = kwargs["report_path"]
+        assert isinstance(path, Path)
+        assert not path.exists()
+        seen.append(path)
+        if failure == "missing" and len(seen) == 2:
+            return 0, False, "no report"
+        if failure == "malformed":
+            path.write_text("{broken")
+        else:
+            path.write_text(
+                json.dumps(
+                    {
+                        "exitcode": 2 if failure == "interrupted" else 0,
+                        "summary": {"total": 546},
+                        "tests": [{"nodeid": "test_a", "outcome": "passed"}],
+                    }
+                )
+            )
+        return (2 if failure == "interrupted" else 0), True, "grader output"
+
+    with (
+        patch("clispecbench.harness.docker.DockerSandbox"),
+        patch("clispecbench.harness.scoring._run_scorer_attempt", side_effect=attempt),
+    ):
+        with pytest.raises(ScoringError, match="after 2 attempts"):
+            run_hidden_tests(tmp_path, tmp_path, report, language="cpp")
+    assert len(seen) == 2 and seen[0] != seen[1]
+    assert not report.exists()
+    assert (tmp_path / "test-container.attempt2.log").is_file()
+    assert (tmp_path / "test-report.attempt1.json").is_file()
+
+
+@pytest.mark.parametrize("exit_code", [0, 1])
+def test_docker_scorer_retry_accepts_completed_test_failures(
+    tmp_path: Path, exit_code: int
+) -> None:
+    calls = 0
+
+    def attempt(**kwargs: object) -> tuple[int, bool, str]:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("temporary Docker failure")
+        path = kwargs["report_path"]
+        assert isinstance(path, Path)
+        path.write_text(
+            json.dumps(
+                {
+                    "exitcode": exit_code,
+                    "summary": {"total": 1},
+                    "tests": [
+                        {"nodeid": "test_a", "outcome": "passed" if exit_code == 0 else "failed"},
+                    ],
+                }
+            )
+        )
+        return exit_code, True, ""
+
+    with (
+        patch("clispecbench.harness.docker.DockerSandbox"),
+        patch("clispecbench.harness.scoring._run_scorer_attempt", side_effect=attempt),
+    ):
+        _, summary = run_hidden_tests(
+            tmp_path, tmp_path, tmp_path / "test-report.json", language="py"
+        )
+    assert calls == 2
+    assert summary.total == 1
+    assert summary.failed == exit_code
+
+
+@pytest.mark.parametrize("exit_code", [2, 3, 4, 5])
+def test_local_scorer_rejects_incomplete_run(tmp_path: Path, exit_code: int) -> None:
+    with patch("clispecbench.harness.scoring.subprocess.run") as run:
+        run.return_value = subprocess.CompletedProcess([], exit_code, stdout="failed", stderr="")
+        with pytest.raises(ScoringError):
+            run_hidden_tests(
+                tmp_path, tmp_path, tmp_path / "report.json", language="py", use_docker=False
+            )
+    assert (tmp_path / "test-container.attempt1.log").is_file()

@@ -239,6 +239,9 @@ def publish_result(
     result = load_result(source)
     meta = result.metadata
 
+    if meta.grading_status not in (None, "completed"):
+        raise PublishError(f"{source}: grading is {meta.grading_status}; no valid benchmark score")
+
     if not meta.run_uid:
         raise PublishError(
             f"{source}: result has no run_uid. "

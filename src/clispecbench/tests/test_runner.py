@@ -10,7 +10,7 @@ from docker import errors as docker_errors
 from requests import exceptions as requests_exceptions
 
 from clispecbench.agents.base import AgentAdapter
-from clispecbench.harness.results import TestOutcome, TestSummary, load_result
+from clispecbench.harness.results import TestOutcome, TestSummary, TokenUsage, load_result
 from clispecbench.harness.runner import run_evaluation
 from clispecbench.harness.task import TaskDefinition
 
@@ -50,7 +50,7 @@ class _StubAdapter(AgentAdapter):
     def invoke_command(self, prompt_path: PurePosixPath, work_dir: PurePosixPath) -> list[str]:
         return ["codex", "exec"]
 
-    def parse_token_usage(self, container_fs: Path, container_logs: str = "") -> None:
+    def parse_token_usage(self, container_fs: Path, container_logs: str = "") -> TokenUsage | None:
         return None
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
@@ -413,14 +413,22 @@ def test_request_exception_uses_specific_infrastructure_failure_note(
     )
 
 
+@pytest.mark.parametrize("grading_failure", [False, True])
 def test_runner_uses_adapter_refined_exit_reason(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, grading_failure: bool
 ) -> None:
     task = _stub_task(tmp_path)
     workspace = tmp_path / "workspace"
     workspace.mkdir()
 
     class _RefiningAdapter(_StubAdapter):
+        @property
+        def telemetry_paths(self) -> list[str]:
+            return ["/root/.codex/sessions", "/tmp/codex-events.jsonl"]
+
+        def parse_token_usage(self, container_fs: Path, container_logs: str = "") -> TokenUsage:
+            return TokenUsage(100, 50, reasoning_output_tokens=20)
+
         def extract_last_agent_message(self, container_logs: str) -> str:
             del container_logs
             return "completed"
@@ -434,7 +442,7 @@ def test_runner_uses_adapter_refined_exit_reason(
             assert container_fs.is_dir()
             assert container_logs == "agent logs"
             assert current_exit_reason == "completed"
-            return "error"
+            return "completed" if grading_failure else "error"
 
     class _ContainerRun:
         exit_code = 0
@@ -461,6 +469,13 @@ def test_runner_uses_adapter_refined_exit_reason(
             return "agent logs"
 
         def copy_out(self, container_path: object, extract_dir: Path) -> None:
+            if str(container_path) == "/root/.codex/sessions":
+                sessions = extract_dir / "sessions" / "2026" / "09" / "06"
+                sessions.mkdir(parents=True)
+                (sessions / "one.jsonl").write_text('{"session": 1}\n')
+                (sessions / "two.jsonl").write_text('{"session": 2}\n')
+            if str(container_path) == "/tmp/codex-events.jsonl":
+                (extract_dir / "codex-events.jsonl").write_text("events\n")
             if str(container_path) == "/workspace/output":
                 output = extract_dir / "output"
                 output.mkdir(parents=True, exist_ok=True)
@@ -473,6 +488,11 @@ def test_runner_uses_adapter_refined_exit_reason(
         return _fake_workspace(task, prompt_variant, workspace)
 
     def _run_hidden_tests(**kwargs: object) -> tuple[list[TestOutcome], TestSummary]:
+        if grading_failure:
+            report = kwargs["report_path"]
+            assert isinstance(report, Path)
+            (report.parent / "test-container.attempt1.log").write_text("Interrupted\n")
+            raise RuntimeError("Grader interrupted")
         return (
             [TestOutcome(node_id="test_build", outcome="passed", duration_seconds=0.1)],
             TestSummary(passed=1),
@@ -504,3 +524,20 @@ def test_runner_uses_adapter_refined_exit_reason(
     )
 
     assert result.metadata.exit_reason == "error"
+    assert result.metadata.agent_exit_reason == ("completed" if grading_failure else "error")
+    assert result.metadata.grading_status == ("failed" if grading_failure else "completed")
+    assert result.token_usage is not None and result.token_usage.total_tokens == 150
+    result_path = next(tmp_path.rglob("result.json"))
+    assert len(list((result_path.parent / "sessions").rglob("*.jsonl"))) == 2
+    assert "sessions" in result.artifacts.telemetry
+    assert (result_path.parent / "source" / "main.cpp").is_file()
+    assert (result_path.parent / "transcript.jsonl").is_file()
+    assert not workspace.exists()
+    if grading_failure:
+        assert result.metadata.exit_class == "infra_scoring"
+        assert result.scores.task_score is None
+        assert result.scores.correctness is None
+        assert result.test_summary.total == 0
+        assert (result_path.parent / "test-container.attempt1.log").is_file()
+    else:
+        assert result.scores.task_score == 1.0

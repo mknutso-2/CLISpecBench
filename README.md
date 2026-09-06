@@ -175,7 +175,7 @@ Pyright, pytest, and Docker validation workflow.
 #### 1. Install Python dependencies
 
 ```bash
-uv sync          # or: pip install -e ".[dev]"
+uv sync --locked
 ```
 
 #### 2. Install Docker (Windows, one-time)
@@ -195,6 +195,20 @@ sudo usermod -aG docker $USER
 exit
 wsl --shutdown
 ```
+
+On native Ubuntu Linux, install Docker with the distribution packages instead
+of the WSL script:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io
+sudo systemctl enable --now docker
+sudo usermod -aG docker "$USER"
+```
+
+Log out and back in for the group change to take effect, or use `newgrp docker`
+in a terminal before running the commands below. Native Linux uses Docker's
+Unix socket; it does not need the WSL TCP listener.
 
 #### 3. Build Docker images
 
@@ -449,6 +463,16 @@ Each eval task follows a standard pipeline:
 clispecbench run --task wordcount-cpp --agent claude-code
 clispecbench run --task rs274-cpp --agent codex-cli
 clispecbench run --task iges-cpp --agent copilot-cli
+```
+
+For one GPT-6 Astra C++ run at `max` effort, build the base and Codex images,
+check authentication, and launch the benchmark:
+
+```bash
+bash scripts/build-docker-images.sh base
+bash scripts/build-docker-images.sh codex-cli
+bash scripts/smoke-test-codex.sh gpt-6-astra max
+uv run clispecbench run --task rs274-cpp --agent codex-cli --model gpt-6-astra --effort max --runs 1
 ```
 
 View results:

@@ -226,6 +226,47 @@ class TestRustBackend:
 
 
 class TestCMakeBackend:
+    def test_discovery_keeps_application_registered_as_smoke_test(self, tmp_path: Path) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "main.cpp").write_text("int main() { return 42; }\n", encoding="utf-8")
+        (source / "CMakeLists.txt").write_text(
+            "cmake_minimum_required(VERSION 3.16)\n"
+            "project(discovery LANGUAGES CXX)\n"
+            "enable_testing()\n"
+            "add_executable(simulator main.cpp)\n"
+            "add_test(NAME smoke COMMAND simulator --help)\n",
+            encoding="utf-8",
+        )
+        target = LanguageTarget(root=source, language="cpp", origin="test", explicit=True)
+        prepared = CMakeBackend().prepare(target, build_dir=tmp_path / "build")
+        assert Path(prepared.command[0]).stem == "simulator"
+        result = subprocess.run(prepared.command, capture_output=True, timeout=10)
+        assert result.returncode == 42
+
+    def test_discovery_ignores_registered_test_driver_built_last(self, tmp_path: Path) -> None:
+        source = tmp_path / "source"
+        source.mkdir()
+        (source / "main.cpp").write_text("int main() { return 42; }\n", encoding="utf-8")
+        (source / "check.cpp").write_text("int main() { return 13; }\n", encoding="utf-8")
+        (source / "CMakeLists.txt").write_text(
+            "cmake_minimum_required(VERSION 3.16)\n"
+            "project(discovery LANGUAGES CXX)\n"
+            "enable_testing()\n"
+            "add_executable(simulator main.cpp)\n"
+            "add_executable(verification check.cpp)\n"
+            "add_dependencies(verification simulator)\n"
+            "add_test(NAME regression COMMAND verification)\n",
+            encoding="utf-8",
+        )
+        target = LanguageTarget(root=source, language="cpp", origin="test", explicit=True)
+        # Even a preferred-name match must not select a registered test driver.
+        backend = CMakeBackend(preferred_executable_name="verification")
+        prepared = backend.prepare(target, build_dir=tmp_path / "build")
+        assert Path(prepared.command[0]).stem == "simulator"
+        result = subprocess.run(prepared.command, capture_output=True, timeout=10)
+        assert result.returncode == 42
+
     def test_prepare_returns_runnable_executable(self, tmp_path: Path) -> None:
         repo_root = Path(__file__).resolve().parents[3]
         reference_impl = repo_root / "Evals" / "WordCount" / "reference-implementation-cpp"

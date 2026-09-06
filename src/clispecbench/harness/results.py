@@ -15,7 +15,7 @@ from typing import Any, cast
 
 log = logging.getLogger(__name__)
 
-SCHEMA_VERSION = "2.2"
+SCHEMA_VERSION = "2.3"
 _VALID_BENCHMARK_COST_PREFERENCES = frozenset({"reported", "estimated"})
 _UNSAFE_MODEL_SLUG_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
 
@@ -50,7 +50,7 @@ class TokenUsage:
       (Claude: ``cache_read_input_tokens``, Codex: ``cached_input_tokens``,
       Gemini: ``cached``)
     - ``cache_creation_input_tokens``: input tokens written to cache
-      (Claude only — Codex and Gemini don't report this)
+    - ``reasoning_output_tokens``: reasoning subset of output_tokens, never additive
     """
 
     input_tokens: int
@@ -58,6 +58,8 @@ class TokenUsage:
     cache_read_input_tokens: int | None = None
     cache_creation_input_tokens: int | None = None
     tool_calls: int | None = None
+    tool_calls_definition: str | None = None
+    reasoning_output_tokens: int | None = None
     reported_cost_usd: float | None = None  # Raw CLI-reported cost; may itself be a local estimate
     estimated_cost_usd: float | None = None  # Calculated from token counts + published pricing
     # Why a generic model-level estimate should not be attempted even when
@@ -167,6 +169,7 @@ class RunArtifacts:
     transcript: str | None = None  # e.g. "transcript.jsonl"
     source_dir: str | None = None  # e.g. "source/"
     network_audit: str | None = None  # e.g. "network-audit.jsonl"
+    telemetry: list[str] = field(default_factory=list[str])
 
 
 @dataclass
@@ -217,6 +220,9 @@ class RunMetadata:
     # Machine-readable completion classification derived from exit_reason,
     # adapter errors, and transcript signals. Older result files omit it.
     exit_class: str | None = None
+    agent_exit_reason: str | None = None
+    grading_status: str | None = None  # completed | failed | not_started; None = historical unknown
+    grading_error: str | None = None
 
 
 @dataclass
@@ -602,6 +608,8 @@ def load_result(path: Path) -> RunResult:
             cache_read_input_tokens=data["token_usage"].get("cache_read_input_tokens"),
             cache_creation_input_tokens=data["token_usage"].get("cache_creation_input_tokens"),
             tool_calls=data["token_usage"].get("tool_calls"),
+            tool_calls_definition=data["token_usage"].get("tool_calls_definition"),
+            reasoning_output_tokens=data["token_usage"].get("reasoning_output_tokens"),
             reported_cost_usd=data["token_usage"].get("reported_cost_usd"),
             estimated_cost_usd=data["token_usage"].get("estimated_cost_usd"),
             cost_estimate_blocked_reason=data["token_usage"].get("cost_estimate_blocked_reason"),
@@ -631,6 +639,7 @@ def load_result(path: Path) -> RunResult:
         transcript=artifacts_data.get("transcript"),
         source_dir=artifacts_data.get("source_dir"),
         network_audit=artifacts_data.get("network_audit"),
+        telemetry=artifacts_data.get("telemetry", []),
     )
     ss_data = data.get("source_stats", {})
     source_stats = SourceStats(

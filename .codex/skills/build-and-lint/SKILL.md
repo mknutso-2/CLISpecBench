@@ -9,7 +9,7 @@ Meta: This file is a breathing document. If you read it and find that any of the
 
 - Start with the narrowest validation that covers the changed files, then expand only if needed.
 - After editing Python, run Ruff and Pyright explicitly; editor save hooks do not fire on agent-written changes.
-- Use `python`, not `python3`, for shell commands on this Windows host.
+- Use `uv run python` for repo commands across platforms. On native Linux, system Python may be named `python3`; do not assume an unversioned `python` exists outside the virtual environment.
 - Pyright is strict for both `src/` and the eval test directories; `pyproject.toml` enables that scope, so Python test edits need Pyright too, not just Ruff and pytest.
 
 ## Core commands

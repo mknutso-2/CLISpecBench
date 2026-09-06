@@ -101,6 +101,7 @@ def _cmd_run(args: argparse.Namespace) -> None:
         )
         log = logging.getLogger(__name__)
         log.info("Writing results to eval%d (runs 1-%d)", eval_num, num_runs)
+        grading_failed = False
 
         for run_number in range(1, num_runs + 1):
             print(f"\n{'=' * 60}")
@@ -121,6 +122,9 @@ def _cmd_run(args: argparse.Namespace) -> None:
             )
 
             print(f"\nResult: {result.metadata.exit_reason}")
+            if result.metadata.grading_status == "failed":
+                grading_failed = True
+                print(f"Grading failed: {result.metadata.grading_error}")
             print(f"Tests: {result.test_summary.passed}/{result.test_summary.total} passed")
             if result.scores.task_score is not None:
                 print(f"Task score: {result.scores.task_score:.3f}")
@@ -144,11 +148,13 @@ def _cmd_run(args: argparse.Namespace) -> None:
                 / "progress.txt"
             )
             progress_path.write_text(
-                f"run {run_number}/{num_runs} completed\n"
+                f"run {run_number}/{num_runs} finished\n"
                 f"last: {result.test_summary.passed}/{result.test_summary.total} "
                 f"({result.metadata.exit_reason})\n",
                 encoding="utf-8",
             )
+        if grading_failed:
+            sys.exit(1)
     finally:
         lock.release()
 
@@ -769,6 +775,15 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     # --- backfill-subscores ---
+    telemetry_parser = subparsers.add_parser(
+        "backfill-telemetry", help="Preview or apply Codex telemetry corrections from saved logs"
+    )
+    telemetry_parser.add_argument("--runs-root", type=Path, default=Path("transient_results"))
+    telemetry_parser.add_argument("--published-root", type=Path)
+    telemetry_parser.add_argument(
+        "--apply", action="store_true", help="Write corrections (default: preview)"
+    )
+    telemetry_parser.add_argument("--report", type=Path, help="Save the old/new audit as JSON")
     bf_parser = subparsers.add_parser(
         "backfill-subscores",
         help="Recompute per-capability subscores for existing result.json files",
@@ -880,6 +895,15 @@ def main(argv: list[str] | None = None) -> None:
         _cmd_run(args)
     elif args.command == "results":
         _cmd_results(args)
+    elif args.command == "backfill-telemetry":
+        from clispecbench.harness.backfill import backfill_telemetry
+
+        audit = backfill_telemetry(args.runs_root, args.published_root, apply=args.apply)
+        rendered = json.dumps(audit, indent=2) + "\n"
+        if args.report:
+            args.report.parent.mkdir(parents=True, exist_ok=True)
+            args.report.write_text(rendered, encoding="utf-8")
+        print(rendered, end="")
     elif args.command == "backfill-subscores":
         _cmd_backfill_subscores(args)
     elif args.command == "hash":

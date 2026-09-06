@@ -108,6 +108,7 @@ def _write_infrastructure_failure_result(
         docker_image_sha=docker_image_sha,
         wall_clock_seconds=wall_clock_seconds,
         exit_reason="error",
+        grading_status="not_started",
         network_policy=adapter.network_policy,
         model=adapter.model,
         effort=adapter.effort,
@@ -307,17 +308,43 @@ def run_evaluation(
         if token_usage is not None:
             token_usage.estimated_cost_usd = adapter.estimate_cost(token_usage)
 
+        # Persist evidence before grading, which may fail independently of
+        # the successful agent run. Directories include every session shard.
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        artifacts = RunArtifacts()
+        if container_logs:
+            artifacts.transcript = save_transcript(out_path, container_logs)
+        if network_audit_logs:
+            artifacts.network_audit = save_network_audit(out_path, network_audit_logs)
+        telemetry_paths = list(adapter.telemetry_paths)
+        if canonical_src_dir is not None and canonical_src_dir not in telemetry_paths:
+            telemetry_paths.append(canonical_src_dir)
+        artifacts.telemetry = preserve_telemetry(extract_dir, out_path.parent, telemetry_paths)
+        source_stats = compute_source_stats(submission_dir, task.language)
+        if any(submission_dir.iterdir()):
+            artifacts.source_dir = save_source_dir(out_path, submission_dir)
+
         # --- 6. Run hidden tests ---
         # The eval's conftest.py handles preparing the submission (build for
         # compiled languages, no-op for interpreted) and discovering the
         # runnable command via the shared pytest plugin.
         report_path = extract_dir / "test-report.json"
-        tests, test_summary = run_hidden_tests(
-            test_dir=task.test_dir,
-            submission_dir=submission_dir,
-            report_path=report_path,
-            language=task.language,
-        )
+        grading_error: str | None = None
+        try:
+            tests, test_summary = run_hidden_tests(
+                test_dir=task.test_dir,
+                submission_dir=submission_dir,
+                report_path=report_path,
+                language=task.language,
+            )
+        except Exception as exc:
+            grading_error = f"{type(exc).__name__}: {exc}"
+            log.exception("Grading failed; preserving agent result without a score")
+            tests, test_summary = [], TestSummary()
+        for grader_file in sorted(extract_dir.glob("test-*")):
+            if grader_file.is_file():
+                shutil.copy2(grader_file, out_path.parent / grader_file.name)
+                artifacts.telemetry.append(grader_file.name)
 
         # --- 7. Derive build result from test outcomes ---
         build_test = next(
@@ -327,6 +354,7 @@ def run_evaluation(
         build_result = BuildResult(
             success=build_test.outcome == "passed" if build_test else test_summary.total > 0,
             duration_seconds=build_test.duration_seconds if build_test else 0.0,
+            diagnostics=grading_error or "",
         )
 
         # --- 8. Score ---
@@ -336,6 +364,8 @@ def run_evaluation(
         # extension_scores so it rides along without changing the Scores
         # schema. Surface with `clispecbench results --breakdown`.
         scores.extension_scores.update(compute_subscores(tests))
+        if grading_error is not None:
+            scores = Scores()
 
         # --- 9. Assemble result ---
         # Extract last agent message for completeness assessment. Pulled up
@@ -418,6 +448,11 @@ def run_evaluation(
                 adapter.model,
             )
 
+        agent_exit_reason = exit_reason
+        if grading_error is not None:
+            exit_reason = "error"
+            run_notes = f"{run_notes}\n{grading_error}" if run_notes else grading_error
+
         metadata = RunMetadata(
             run_uid=run_uid,
             task=task.task_id,
@@ -432,6 +467,10 @@ def run_evaluation(
             docker_image_sha=docker_image_sha,
             wall_clock_seconds=container_run.wall_clock_seconds,
             exit_reason=exit_reason,
+            agent_exit_reason=agent_exit_reason,
+            grading_status="failed" if grading_error else "completed",
+            grading_error=grading_error,
+            exit_class="infra_scoring" if grading_error else None,
             network_policy=adapter.network_policy,
             model=adapter.model,
             served_model=served_model,
@@ -445,22 +484,6 @@ def run_evaluation(
 
         # --- 10. Save artifacts ---
         out_path.parent.mkdir(parents=True, exist_ok=True)
-        artifacts = RunArtifacts()
-
-        # Save agent transcript (container stdout/stderr)
-        if container_logs:
-            artifacts.transcript = save_transcript(out_path, container_logs)
-        if network_audit_logs:
-            artifacts.network_audit = save_network_audit(out_path, network_audit_logs)
-
-        # Save extracted telemetry files alongside results
-        for tpath in adapter.telemetry_paths:
-            tfile = extract_dir / PurePosixPath(tpath).name
-            if tfile.is_file():
-                dest = out_path.parent / tfile.name
-                shutil.copy2(tfile, dest)
-                log.debug("Saved telemetry file %s", dest)
-
         # Save the agent CLI's on-disk canonical session transcript (if we
         # extracted one).  Two destinations:
         #   1. <run-dir>/transcript.canonical.jsonl — alongside the
@@ -515,11 +538,6 @@ def run_evaluation(
                     canonical_root,
                 )
 
-        # Save agent source code and compute stats
-        source_stats = compute_source_stats(submission_dir, task.language)
-        if submission_dir.exists() and any(submission_dir.iterdir()):
-            artifacts.source_dir = save_source_dir(out_path, submission_dir)
-
         result = RunResult(
             metadata=metadata,
             token_usage=token_usage,
@@ -567,3 +585,20 @@ def run_evaluation(
             shutil.rmtree(workspace, ignore_errors=True)
         if extract_dir is not None:
             shutil.rmtree(extract_dir, ignore_errors=True)
+
+
+def preserve_telemetry(extract_dir: Path, run_dir: Path, paths: list[str]) -> list[str]:
+    """Persist extracted telemetry files and directory trees in the run bundle."""
+    saved: list[str] = []
+    for path in paths:
+        name = PurePosixPath(path).name
+        source = extract_dir / name
+        dest = run_dir / name
+        if source.is_dir():
+            shutil.copytree(source, dest, dirs_exist_ok=True)
+        elif source.is_file():
+            shutil.copy2(source, dest)
+        else:
+            continue
+        saved.append(name)
+    return saved

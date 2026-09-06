@@ -77,6 +77,15 @@ def _write_codex_event_log(source: Path, message: str, *, completed: bool = Fals
     (source.parent / "codex-events.jsonl").write_text(json.dumps(event) + "\n", encoding="utf-8")
 
 
+def test_publish_rejects_failed_grading_even_with_completed_agent(tmp_path: Path) -> None:
+    source = tmp_path / "result.json"
+    result = _make_result_file(source, run_uid="grading-failed")
+    result.metadata.grading_status = "failed"
+    result.write(source)
+    with pytest.raises(PublishError, match="grading is failed"):
+        publish_result(source, tmp_path / "published", status="Complete", last_message="Done")
+
+
 def test_published_runs_dir_includes_model_effort(tmp_path: Path) -> None:
     d = published_runs_dir(tmp_path, "rs274-cpp", "claude-code", "claude-opus-4-7", "max")
     assert d == tmp_path / "rs274-cpp" / "claude-code" / "claude-opus-4-7_max"

@@ -197,7 +197,7 @@ class TestBenchmarkCostPolicy:
         result.write(path)
         loaded = load_result(path)
 
-        assert loaded.schema_version == "2.2"
+        assert loaded.schema_version == "2.3"
         assert loaded.metadata.network_policy == "api-only"
 
     def test_network_audit_artifact_round_trips(self, tmp_path: Path) -> None:

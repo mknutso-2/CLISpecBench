@@ -105,16 +105,18 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 
 # OpenAI GPT / Codex
 # https://developers.openai.com/api/docs/models/compare
-# Cache writes for GPT-5.6 are billed at 1.25x uncached input. Codex CLI does
+# Cache writes for GPT-6 Astra and GPT-5.6 are billed at 1.25x uncached input. Codex CLI does
 # not currently report cache-creation tokens, but retain the published rate
 # for telemetry that does expose them.
-# GPT-5.6 requests with prompts over 272K input tokens are billed at 2x input
+# GPT-6 Astra and GPT-5.6 requests with prompts over 272K input tokens are billed at 2x input
 # and 1.5x output for the full request. Codex CLI reports session aggregates,
 # not the per-request prompt sizes needed to apply that surcharge reliably, so
 # these rows contain the standard rates.
 # OpenAI describes the current Sol rate as promotional through at least
 # 2026-11-21; verify it again before using the table after that date.
 OPENAI_PRICING: dict[str, ModelPricing] = {
+    # Verified 2026-09-05: https://developers.openai.com/api/docs/models/gpt-6-astra
+    "gpt-6-astra": ModelPricing(input=10.00, output=50.00, cached_input=1.00, cache_write=12.50),
     "gpt-5.6-sol": ModelPricing(input=4.00, output=20.00, cached_input=0.40, cache_write=5.00),  # noqa: E501
     "gpt-5.6-terra": ModelPricing(input=2.00, output=12.00, cached_input=0.20, cache_write=2.50),
     "gpt-5.6-luna": ModelPricing(input=0.20, output=1.20, cached_input=0.02, cache_write=0.25),  # noqa: E501

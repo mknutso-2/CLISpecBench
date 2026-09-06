@@ -356,15 +356,48 @@ class CMakeBackend:
         )
 
     def _discover_executable(self, build_dir: Path) -> Path:
+        test_executables = _ctest_executables(build_dir)
         candidates = [
             path for path in build_dir.rglob("*") if _is_executable_candidate(path, build_dir)
         ]
         if not candidates:
             raise AssertionError(f"Could not find a built executable under {build_dir}")
+        # Some projects register their application itself as a smoke test.
+        # Preserve discovery when every executable is registered with CTest.
+        applications = [path for path in candidates if path.resolve() not in test_executables]
         return min(
-            candidates,
+            applications or candidates,
             key=lambda path: _executable_sort_key(path, build_dir, self._preferred_name),
         )
+
+
+def _ctest_executables(build_dir: Path) -> set[Path]:
+    """Identify registered test drivers without executing submission tests.
+
+    Test drivers often link last, so modification time cannot distinguish
+    them from the application. Use CTest's generated metadata instead of
+    guessing from filenames such as ``test`` or ``simulator_tests``.
+    """
+    if not (build_dir / "CTestTestfile.cmake").is_file():
+        return set()
+    result = subprocess.run(
+        ["ctest", "--show-only=json-v1"],
+        cwd=build_dir,
+        capture_output=True,
+        text=True,
+        check=True,
+        timeout=30,
+    )
+    metadata = cast(dict[str, Any], json.loads(result.stdout))
+    executables: set[Path] = set()
+    for test in metadata.get("tests", []):
+        command = test.get("command", [])
+        if command:
+            executable = Path(command[0])
+            if not executable.is_absolute():
+                executable = build_dir / executable
+            executables.add(executable.resolve())
+    return executables
 
 
 def _is_executable_candidate(path: Path, build_dir: Path) -> bool:

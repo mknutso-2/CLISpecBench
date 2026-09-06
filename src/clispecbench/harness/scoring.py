@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 import subprocess
+import sys
+import tempfile
 from pathlib import Path, PurePosixPath
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from clispecbench.harness.results import Scores, TestOutcome, TestSummary
 
@@ -29,6 +32,35 @@ _CONTAINER_SUBMISSION = PurePosixPath("/tmp/submission/output")
 _CONTAINER_SRC = PurePosixPath("/tmp/src")
 _CONTAINER_REPORT = PurePosixPath("/tmp/report.json")
 _DEFAULT_HIDDEN_TEST_TIMEOUT_SECONDS = 1200.0
+
+
+class ScoringError(RuntimeError):
+    """The grader did not produce a complete, usable test run."""
+
+
+def _validated_report(
+    report_path: Path, exit_code: int | None
+) -> tuple[list[TestOutcome], TestSummary]:
+    if exit_code not in (0, 1):
+        raise ScoringError(f"Grader exited {exit_code}; expected pytest 0 or 1")
+    try:
+        data = json.loads(report_path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("report is not an object")
+        data = cast(dict[str, Any], data)
+        if data.get("exitcode") != exit_code:
+            raise ValueError("report exitcode does not match grader exit")
+        tests, summary = parse_json_report(report_path)
+        if not tests or summary.total != data.get("summary", {}).get("total"):
+            raise ValueError("empty or incomplete test report")
+        if any(
+            t.outcome not in {"passed", "failed", "skipped", "error", "xfailed", "xpassed"}
+            for t in tests
+        ):
+            raise ValueError("unknown test outcome")
+        return tests, summary
+    except (OSError, ValueError, TypeError, AttributeError, KeyError) as exc:
+        raise ScoringError(f"Invalid grader report: {exc}") from exc
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +117,7 @@ def _run_hidden_tests_local(
 ) -> tuple[list[TestOutcome], TestSummary]:
     """Run tests on the host (fallback for when Docker is unavailable)."""
     cmd = [
-        "python",
+        sys.executable,
         "-m",
         "pytest",
         str(test_dir),
@@ -97,15 +129,27 @@ def _run_hidden_tests_local(
     ]
     log.info("Running hidden tests (local): %s", " ".join(cmd))
 
-    result = subprocess.run(
-        cmd,
-        capture_output=True,
-        text=True,
-        timeout=timeout_seconds,
-    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.unlink(missing_ok=True)
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired as exc:
+        _persist_failed_scorer_logs(report_path.parent, 1, None, str(exc))
+        raise ScoringError("Local grader timed out") from exc
     log.info("pytest exited with code %d", result.returncode)
 
-    return parse_json_report(report_path)
+    try:
+        return _validated_report(report_path, result.returncode)
+    except ScoringError:
+        _persist_failed_scorer_logs(
+            report_path.parent, 1, result.returncode, result.stdout + result.stderr
+        )
+        raise
 
 
 def _run_hidden_tests_docker(
@@ -162,20 +206,39 @@ def _run_hidden_tests_docker(
         sandbox_probe.cleanup()
 
     max_attempts = 2
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.unlink(missing_ok=True)
+    last_error = "no scorer attempt completed"
     for attempt in range(1, max_attempts + 1):
-        exit_code, report_extracted, logs = _run_scorer_attempt(
-            config=config,
-            test_dir=test_dir,
-            submission_dir=submission_dir,
-            src_dir=src_dir,
-            report_path=report_path,
-            timeout_seconds=timeout_seconds,
-        )
-        # Success envelope: pytest 0 (all passed) or 1 (some failed) means
-        # it ran end-to-end and wrote the report. Anything else is an
-        # infrastructure-level failure worth retrying.
-        if report_extracted and exit_code in (0, 1):
-            break
+        exit_code = None
+        report_extracted = False
+        logs = ""
+        # Each attempt gets a fresh directory, so a failed extraction cannot
+        # reuse a previous attempt's partial (or apparently successful) report.
+        with tempfile.TemporaryDirectory(dir=report_path.parent) as attempt_dir:
+            attempt_report = Path(attempt_dir) / "test-report.json"
+            try:
+                exit_code, report_extracted, logs = _run_scorer_attempt(
+                    config=config,
+                    test_dir=test_dir,
+                    submission_dir=submission_dir,
+                    src_dir=src_dir,
+                    report_path=attempt_report,
+                    timeout_seconds=timeout_seconds,
+                )
+                if not report_extracted:
+                    raise ScoringError("Grader report was not extracted")
+                parsed = _validated_report(attempt_report, exit_code)
+                shutil.copy2(attempt_report, report_path)
+                return parsed
+            except Exception as exc:
+                last_error = str(exc)
+                logs += f"\n{type(exc).__name__}: {exc}"
+                if attempt_report.is_file():
+                    shutil.copy2(
+                        attempt_report,
+                        report_path.parent / f"test-report.attempt{attempt}.json",
+                    )
         _persist_failed_scorer_logs(report_path.parent, attempt, exit_code, logs)
         if attempt < max_attempts:
             log.warning(
@@ -192,7 +255,7 @@ def _run_hidden_tests_docker(
                 "present" if report_extracted else "missing",
             )
 
-    return parse_json_report(report_path)
+    raise ScoringError(f"Grading failed after {max_attempts} attempts: {last_error}")
 
 
 def _run_scorer_attempt(
@@ -222,7 +285,7 @@ def _run_scorer_attempt(
         sandbox.copy_in(src_dir, _CONTAINER_SRC)
 
         run = sandbox.start_and_wait(timeout_seconds)
-        exit_code = run.exit_code
+        exit_code = None if run.timed_out else run.exit_code
         log.info(
             "Test container finished: exit_code=%s wall=%.1fs",
             run.exit_code,

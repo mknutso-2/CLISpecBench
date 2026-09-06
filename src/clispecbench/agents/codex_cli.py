@@ -26,6 +26,19 @@ EVENT_LOG_PATH = "/tmp/codex-events.jsonl"
 # Codex persists normal session rollout JSONL here. Those files contain
 # EventMsg::TokenCount snapshots that survive a later turn.failed event.
 SESSION_ROLLOUT_DIR = "/root/.codex/sessions"
+TOOL_CALLS_DEFINITION = "underlying_tool_invocations_v2"
+_TOOL_ITEMS = frozenset(
+    {
+        "command_execution",
+        "file_change",
+        "web_search",
+        "mcp_tool_call",
+        "collab_tool_call",
+        "image_view",
+        "image_generation",
+    }
+)
+_NON_TOOL_ITEMS = frozenset({"agent_message", "reasoning", "error"})
 
 
 class CodexCLIAdapter(AgentAdapter):
@@ -112,10 +125,21 @@ class CodexCLIAdapter(AgentAdapter):
         if event_log.is_file():
             sources.append(event_log.read_text(encoding="utf-8"))
 
-        tool_calls = _count_tool_calls(container_logs)
+        tool_calls = count_tool_calls(sources)
         if sources:
             usage = _parse_exec_event_usage(sources, tool_calls)
             if usage is not None:
+                # Older exec streams omit detail available in the session. Only
+                # enrich from a snapshot whose core totals match this turn.
+                rollout = _parse_session_rollout_usage(container_fs, tool_calls)
+                if rollout is not None and (
+                    rollout.input_tokens == usage.input_tokens
+                    and rollout.output_tokens == usage.output_tokens
+                    and rollout.cache_read_input_tokens == usage.cache_read_input_tokens
+                ):
+                    for name in ("reasoning_output_tokens", "cache_creation_input_tokens"):
+                        if getattr(usage, name) is None:
+                            setattr(usage, name, getattr(rollout, name))
                 return usage
         else:
             log.info("No Codex event data found")
@@ -260,33 +284,88 @@ def _token_usage_from_codex_usage(
 ) -> TokenUsage | None:
     input_tokens = int(usage.get("input_tokens", 0) or 0)
     output_tokens = int(usage.get("output_tokens", 0) or 0)
-    cached_input_tokens = int(
-        usage.get("cached_input_tokens", usage.get("cache_read_input_tokens", 0)) or 0
-    )
     if input_tokens == 0 and output_tokens == 0:
         return None
     return TokenUsage(
         input_tokens=input_tokens,
         output_tokens=output_tokens,
-        cache_read_input_tokens=cached_input_tokens or None,
+        cache_read_input_tokens=_optional_token_count(
+            usage, "cached_input_tokens", "cache_read_input_tokens"
+        ),
+        cache_creation_input_tokens=_optional_token_count(
+            usage, "cache_write_input_tokens", "cache_creation_input_tokens"
+        ),
+        reasoning_output_tokens=_optional_token_count(usage, "reasoning_output_tokens"),
         tool_calls=tool_calls,
+        tool_calls_definition=TOOL_CALLS_DEFINITION if tool_calls is not None else None,
         source=source,
         is_partial=is_partial,
     )
 
 
-def _count_tool_calls(container_logs: str) -> int:
-    """Count command_execution items in Codex JSONL event stream."""
-    count = 0
-    for event in _iter_dict_events(container_logs):
-        if event.get("type") != "item.completed":
-            continue
-        item = event.get("item")
-        if isinstance(item, dict):
-            item_d = cast(dict[str, Any], item)
-            if item_d.get("type") == "command_execution":
-                count += 1
-    return count
+def _optional_token_count(usage: dict[str, Any], *names: str) -> int | None:
+    for name in names:
+        value = usage.get(name)
+        if value is not None:
+            return int(value)
+    return None
+
+
+def count_tool_calls(sources: list[str]) -> int | None:
+    """Count underlying calls once, including failed and unfinished calls.
+
+    Exec's item stream describes the underlying operations, not code-mode
+    wrappers. A multi-file patch is one file_change item. stdout and its tee
+    are alternative copies: use the most complete, never sum them. Unknown
+    item types or unidentifiable unfinished calls make the count unavailable.
+    """
+    counts: list[int] = []
+    for source in sources:
+        ids: set[str] = set()
+        anonymous = 0
+        plan_calls = 0
+        plan_seen = False
+        seen = False
+        unsupported = False
+        for event in _iter_dict_events(source):
+            event_type = event.get("type", "")
+            if event_type in {"thread.started", "turn.started", "turn.completed", "turn.failed"}:
+                seen = True
+            if event_type not in {"item.started", "item.updated", "item.completed"}:
+                continue
+            seen = True
+            item = event.get("item")
+            if not isinstance(item, dict):
+                unsupported = True
+                continue
+            item = cast(dict[str, Any], item)
+            kind = item.get("type")
+            if kind == "todo_list":
+                # The CLI reuses one todo item for the entire turn. Each
+                # start/update represents update_plan; completion is emitted
+                # automatically at turn end and is not another invocation.
+                plan_seen = True
+                if event_type in {"item.started", "item.updated"}:
+                    plan_calls += 1
+                continue
+            if kind in _NON_TOOL_ITEMS:
+                continue
+            if kind not in _TOOL_ITEMS:
+                unsupported = True
+                continue
+            item_id = item.get("id")
+            if isinstance(item_id, str) and item_id:
+                ids.add(item_id)
+            elif event_type == "item.completed":
+                anonymous += 1
+            else:
+                unsupported = True
+        if unsupported or (plan_seen and not plan_calls):
+            log.warning("Unsupported Codex item telemetry; tool count is unavailable")
+            return None
+        if seen:
+            counts.append(len(ids) + anonymous + plan_calls)
+    return max(counts) if counts else None
 
 
 def _event_sources(container_fs: Path, container_logs: str = "") -> list[str]:

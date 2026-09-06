@@ -4,6 +4,28 @@ This file records cross-agent operational findings that affect how CLISpecBench
 runs should be interpreted. Eval-specific prompt, test, and version changes
 still belong in each eval's `CHANGELOG.md`.
 
+## GPT-6 Astra on Native Ubuntu Linux
+
+The 2026-09-05 setup check found that Codex CLI 0.151.0 cannot run
+`gpt-6-astra`: OpenAI returns HTTP 400 requesting a newer CLI. The Codex image
+is now pinned to 0.153.4. An isolated `gpt-6-astra` / `max` authentication
+smoke test passed with that version and audited `chatgpt.com` connections.
+Runs record the changed CLI version in their metadata.
+
+On native Ubuntu, install `docker.io` and use the Unix socket; the WSL
+installation script's TCP listener is unnecessary. After adding the user to
+the Docker group, an existing session can use `sg docker -c 'command'` until
+the next login activates the new supplementary group membership.
+
+The first Astra RS274 C++ grading attempt exposed an executable-discovery
+bug: the submission built both `simulator` and a CTest driver named
+`simulator_tests`, and the harness selected the newer test driver. CMake
+discovery now reads CTest's JSON metadata without running tests and prefers
+non-test executables when available. If every executable is registered with
+CTest, discovery retains the existing fallback for applications registered
+as smoke tests. The unchanged Astra source was rescored after this harness
+repair; the invalid interrupted grading attempts do not measure model quality.
+
 ## Claude Code Authentication for Unattended Runs
 
 Claude Desktop being open and signed in is not sufficient evidence that
@@ -184,3 +206,10 @@ All pre-change results remain `web-enabled`. New results record `api-only` in
 `metadata.network_policy`. Publish and compare results only within the same
 network condition; never combine the earlier web-enabled runs with this
 restart series in Best/Mean calculations.
+
+## Telemetry correction
+
+See [Telemetry accounting and historical backfills](Telemetry-Accounting.md)
+for schema 2.3 reasoning/cache accounting, the corrected Codex tool-call
+definition, complete session retention, grading validity, and the command to
+backfill saved runs on their original machine.

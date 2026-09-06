@@ -298,6 +298,9 @@ def build_row(path: Path, web_dir: Path) -> dict:
     passed = summary.get("passed", 0) or 0
     total = summary.get("total", 0) or 0
     score_pct = round((passed / total) * 100, 3) if total else None
+    grading_status = metadata.get("grading_status")
+    if grading_status not in (None, "completed"):
+        score_pct = None
     input_tokens = usage.get("input_tokens") or 0
     output_tokens = usage.get("output_tokens") or 0
     total_tokens = usage.get("total_tokens")
@@ -319,6 +322,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "eval_instance": f"run{run_id}" if run_id else "",
         "eval_version": metadata.get("eval_version") or "",
         "exit_reason": exit_reason,
+        "grading_status": grading_status,
         "status": status,
         **stop_info,
         "notes": metadata.get("notes") or editorial.get("commentary") or "",
@@ -328,9 +332,11 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "wall_min": round((metadata.get("wall_clock_seconds") or 0) / 60, 3),
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
+        "reasoning_output_tokens": usage.get("reasoning_output_tokens"),
         "total_tokens": total_tokens,
         "cost_usd": cost_usd(metadata.get("model") or "", usage),
         "tools": usage.get("tool_calls"),
+        "tool_calls_definition": usage.get("tool_calls_definition"),
         "files": stats.get("file_count"),
         "loc": stats.get("lines_of_code"),
         "result_link": result_link(web_dir, path),
@@ -366,6 +372,9 @@ def main() -> None:
         if "web" in path.relative_to(published_root).parts:
             continue
         row = build_row(path, web_dir)
+        if row["grading_status"] not in (None, "completed"):
+            invariant_violations.append((path, "grading failed", row.get("status") or ""))
+            continue
         if row.get("agent_stop_reason") in OMIT_AGENT_STOP_REASONS:
             omitted.append(row)
             continue
