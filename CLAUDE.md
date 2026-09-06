@@ -22,6 +22,8 @@ CLISpecBench is a benchmark for evaluating AI coding agents on doc-driven implem
 - `docs/design/Eval-Design.md` — benchmark-level design
 - `docs/design/Harness-Design.md` — harness architecture
 - `docs/operations/Agent-Run-Notes.md` — cross-agent operational findings, including network-access audit and study-consistency notes
+- `docs/operations/Regrading.md` — rejudging saved source with current tests, and the cohort rules that constrain any official score migration
+- `docs/validation/` — per-release audit records; `RS274-3.2.2.md` is the scoring-fixture audit and `RS274-3.2.2-Cross-Cohort.md` the cross-cohort regrade check of it
 - `Evals/RS274/README.md` — RS274 task design
 - `Evals/RS274/tests/` — RS274 tests run against submissions and reference implementations
 - `Evals/RS274/prompt/base-prompt.md` — non-technical prompt shown to the coding agent

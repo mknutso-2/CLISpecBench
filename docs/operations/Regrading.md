@@ -57,3 +57,32 @@ Regrades are kept separate from ordinary run discovery and publication. The
 regrade to `result.json`, overwrite generation metadata, or silently replace a
 historical score. Present regrade comparisons with their provenance in an audit
 report, and decide any official result migration explicitly.
+
+## Cohort rules for any official migration
+
+A regrade of one model is not a new benchmark result for that model. Promoting
+regraded scores into the published record is a cohort-level operation, and these
+rules constrain it:
+
+- **No partial promotion.** Do not migrate one model's regrades into the
+  published record while comparable models remain at an older grading version.
+  A single migrated cohort scored under a corrected rubric, sitting beside
+  cohorts scored under the rubric it corrected, manufactures a difference that
+  no model earned. Either every cohort you intend to compare moves to the same
+  grading version, or none does.
+- **Match generation conditions, not just grading.** Cohort membership requires
+  the same grading version, test hash and grader environment *and* comparable
+  generation provenance. Check `metadata.network_policy` explicitly: saved runs
+  with no policy marker are not interchangeable with `api-only` runs, and a
+  label such as `<model>_<effort>` may cover several saved runs of which only
+  one was published. Select by published run UID, never by score.
+- **Do not select runs by score.** When a label has multiple saved runs, picking
+  the best, the worst, or the first sorted by score biases the cohort. Resolve
+  the intended run through its published UID.
+- **State the grader image.** Regrades that used different Docker image IDs are
+  not a shared grader, even at the same test hash. Record the image ID per
+  cohort and say so when they differ.
+- **The published record is not homogeneous.** RS274 rows already span more than
+  one grading version. Do not assume the current dashboard is internally
+  consistent; check `eval_version` per row before drawing any cross-model
+  comparison from it.
