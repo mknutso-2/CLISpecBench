@@ -16,8 +16,6 @@ from rs274_parameters import (
 )
 from rs274_support import (
     build_parameter_file,
-    get_parameter_value,
-    mapping_field,
     run_rs274,
     run_rs274_invalid_input,
     with_default_rotary_axes,
@@ -109,11 +107,9 @@ def test_application_initializes_startup_state_from_parameter_input_file(
     active_modal_g_codes = payload.get("active_modal_g_codes")
     assert isinstance(active_modal_g_codes, dict)
     assert active_modal_g_codes["12"] == "G55"
-    assert get_parameter_value(payload, 1) == 4.25
-    assert get_parameter_value(payload, SELECTED_COORDINATE_SYSTEM_PARAMETER) == 2.0
-    assert mapping_field(payload, "coordinate_system_offsets").get("2") == with_default_rotary_axes(
-        {"x": 10.0, "y": 20.0, "z": 30.0, "a": 40.0, "b": 50.0, "c": 60.0}
-    )
+    # Required position proves loaded #1, selected G55, and restored G92.
+    # Snapshot parameters may be sparse; raw-G10 versus G10+G92 offset-map
+    # serialization is unspecified, so neither representation is required.
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 15.25, "y": 24.0, "z": 36.0, "a": 48.0, "b": 60.0, "c": 72.0}
     )

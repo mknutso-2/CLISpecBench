@@ -8,9 +8,7 @@ from modal_groups import (
     GCODE_MODAL_GROUP_MOTION,
     GCODE_MODAL_GROUP_RETURN_MODE_IN_CANNED_CYCLES,
 )
-from rs274_parameters import G92_X_OFFSET_PARAMETER
 from rs274_support import (
-    get_parameter_value,
     mapping_field,
     run_rs274,
     with_default_rotary_axes,
@@ -19,6 +17,9 @@ from rs274_support import (
 CannedCycleCase = tuple[str, str, str, str, dict[str, float], str]
 RepeatedCannedCycleCase = tuple[str, str, str, dict[str, float], str]
 
+# Sections 3.6.2 and 3.7.2 permit M3/M4 at S0 without actual rotation.
+# Cases below that require or restore a turning spindle set S100 explicitly;
+# the other cycle cases keep their intentionally stopped spindle state.
 ZERO_OFFSET_P1_SETUP = "G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\nG54\nG17\nG94\n"
 
 CANNED_CYCLE_CASES: list[CannedCycleCase] = [
@@ -154,7 +155,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
         "G84",
@@ -179,7 +180,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M4\n"
+        + "S100 M4\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G86 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
         "G86",
@@ -192,7 +193,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G99\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 K2.25 F7.0\n",
         "G87",
@@ -205,7 +206,7 @@ CANNED_CYCLE_CASES: list[CannedCycleCase] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M4\n"
+        + "S100 M4\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G87 X4.0 Y5.0 Z1.5 R2.8 I-0.5 J-0.5 K2.25 F7.0\n",
         "G87",
@@ -246,7 +247,7 @@ REPEATED_CANNED_CYCLE_CASES: list[RepeatedCannedCycleCase] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n"
         + "X6.0 Y7.0\n",
@@ -286,13 +287,10 @@ REPEATED_CANNED_CYCLE_CASES: list[RepeatedCannedCycleCase] = [
 # - G98/G99 remain modal while a cycle stays active, so changing return mode on
 #   a later line changes that later line's clear-Z result
 #
-# PASS-RATE NOTE (2026-04-19): the g84/g86/g87 "restores the prior spindle
-# direction" parametrizations each pass at ~20–24%, and so do the two
-# `test_g88_restores_the_prior_spindle_direction_after_the_cycle` cases.
-# These are five test IDs for one underlying behavior: "track the
-# pre-cycle spindle direction and restore it after the cycle." The tests stay
-# separated by cycle because the observable end state still depends on each
-# cycle's own motion and spindle semantics.
+# An earlier low-pass-rate audit grouped the spindle-restoration cases by
+# their shared behavior, but omitted S setup also allowed an already-stopped
+# spindle. Positive speed now establishes an actual direction to restore.
+# Cases stay separate because each cycle has its own motion/spindle sequence.
 @pytest.mark.parametrize(
     (
         "input_gcode",
@@ -428,7 +426,7 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
             ZERO_OFFSET_P1_SETUP
             + "G90\n"
             + "G98\n"
-            + "M3\n"
+            + "S100 M3\n"
             + "G0 X1.0 Y2.0 Z3.0\n"
             + "G88 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
             "CW",
@@ -437,7 +435,7 @@ def test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines(
             ZERO_OFFSET_P1_SETUP
             + "G90\n"
             + "G99\n"
-            + "M4\n"
+            + "S100 M4\n"
             + "G0 X1.0 Y2.0 Z3.0\n"
             + "G88 X4.0 Y5.0 Z1.5 R2.8 P0.5 F7.0\n",
             "CCW",
@@ -482,10 +480,10 @@ def test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert mapping_field(payload, "coordinate_system_offsets").get("2") == with_default_rotary_axes(
-        {"x": 4.0, "y": 5.0, "z": 6.0}
-    )
-    assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == -7.0
+    # This case owns group-zero acceptance while G80 remains active. Numeric
+    # G10/G92 behavior has dedicated cases; the public offset-map contract
+    # does not choose between raw G10 and effective G10+G92 serialization.
+    assert mapping_field(payload, "active_modal_g_codes").get(GCODE_MODAL_GROUP_MOTION) == "G80"
 
 
 # RS274 section 3.5.16 says the clear-Z height at the end of each repeat is

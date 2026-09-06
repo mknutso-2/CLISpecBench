@@ -1,5 +1,42 @@
 # RS274 Changelog
 
+## v3.2.2 — 2026-09-06
+
+- The historical-submission audit of v3.2.1 exposed additional shared fixture
+  prerequisites. Spindle-motion tests now set a positive S value before M3/M4,
+  following sections 3.6.2 and 3.7.2: a zero-speed spindle does not turn.
+  This isolates canned-cycle behavior, spindle restoration, expression
+  acceptance, and program-end trace deltas from startup spindle speed. Negative
+  cycle fixtures likewise establish a turning spindle when testing another
+  rejection reason. Modal-only and intentionally stopped-spindle cases retain
+  their own setup.
+- CRC unit-change rejection cases establish the opposite units before enabling
+  compensation. Appendix B.5 prohibits changing units; a repeated G20 at an
+  inch-mode startup is not an unambiguous unit change.
+
+- M6 acceptance and modal tests explicitly select T0 before changing tools.
+  Section 3.6.3 operates on the most recently selected tool; these cases no
+  longer assume a default tool selection or require a populated tool table.
+- Removed the test that required sparse snapshot parameters, which the public
+  contract only permits. Startup selection is observed through required G54
+  modal state. Parameter semantics use required machine positions or parameter
+  files; optional snapshot membership no longer cascades across 36 cases.
+  Required trace initial-state and parameter-delta assertions remain intact.
+- Parameter-file value readers accept the zero-header and comment-column forms
+  permitted by section 3.2.1. Ordering, exact blank separator, finite values,
+  ranges, and required-entry checks live in the dedicated file-format gate.
+  Persistence tests check their own values instead of repeating that gate.
+- G80/group-zero acceptance and parameter-file startup tests no longer require
+  raw-G10-only coordinate-system offset maps while G92 is active. The existing
+  output contract does not distinguish that representation from effective
+  G10+G92 maps. Required motion/modal observations retain behavioral coverage.
+- Fixed C++ reference startup modal serialization for a program with no blocks;
+  its default active groups are reported before any block executes.
+
+This follow-up is still test/scoring-only. Model-visible inputs remain identical
+for fair historical regrading. Final score records use this version's committed
+tests; the preliminary v3.2.1 audit is not published as a new model run.
+
 ## v3.2.1 — 2026-09-06
 
 - Corrected motion fixtures to establish feed rates explicitly, including the

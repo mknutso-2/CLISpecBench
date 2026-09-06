@@ -20,9 +20,10 @@ from rs274_parameters import (
     G92_Z_OFFSET_PARAMETER,
 )
 from rs274_support import (
-    get_parameter_value,
     mapping_field,
+    parameter_output_entries,
     run_rs274,
+    run_rs274_with_parameter_output,
     with_default_rotary_axes,
 )
 
@@ -150,15 +151,15 @@ def test_application_turns_cutter_compensation_off_on_m2_and_m30(
 
 # RS274 section 3.6.1 says axis offsets are set to zero like G92.2, which
 # cancels the active offsets without resetting parameters 5211..5216. The
-# current payload exposes the parameter-preservation half of that behavior
-# directly, even though it does not expose the canceled active offset layer.
+# file-output contract requires those persisted parameters. Snapshot JSON may
+# be sparse, and no new motion can be run after the program-end command.
 @pytest.mark.parametrize("program_end_code", PROGRAM_END_CODES)
 def test_application_preserves_g92_parameters_on_m2_and_m30_like_g92_2(
     submission_command: tuple[str, ...],
     program_end_code: str,
     tmp_path: Path,
 ) -> None:
-    completed, payload = run_rs274(
+    completed, payload, parameter_output = run_rs274_with_parameter_output(
         submission_command,
         input_gcode=(
             "G10 L2 P1 X0.0 Y0.0 Z0.0\n"
@@ -173,6 +174,7 @@ def test_application_preserves_g92_parameters_on_m2_and_m30_like_g92_2(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert get_parameter_value(payload, G92_X_OFFSET_PARAMETER) == 9.0
-    assert get_parameter_value(payload, G92_Y_OFFSET_PARAMETER) == 18.0
-    assert get_parameter_value(payload, G92_Z_OFFSET_PARAMETER) == 27.0
+    persisted = dict(parameter_output_entries(parameter_output))
+    assert persisted[G92_X_OFFSET_PARAMETER] == 9.0
+    assert persisted[G92_Y_OFFSET_PARAMETER] == 18.0
+    assert persisted[G92_Z_OFFSET_PARAMETER] == 27.0

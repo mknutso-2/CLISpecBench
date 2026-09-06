@@ -175,7 +175,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M4\n"
+        + "S100 M4\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G84 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
     ),
@@ -192,7 +192,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G86 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
     ),
@@ -201,7 +201,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G86 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
     ),
@@ -242,7 +242,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G88 X4.0 Y5.0 Z1.5 R2.8 F7.0\n",
     ),
@@ -251,7 +251,7 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
         ZERO_OFFSET_P1_SETUP
         + "G90\n"
         + "G98\n"
-        + "M3\n"
+        + "S100 M3\n"
         + "G0 X1.0 Y2.0 Z3.0\n"
         + "G88 X4.0 Y5.0 Z1.5 R2.8 P-0.5 F7.0\n",
     ),
@@ -293,6 +293,9 @@ CANNNED_CYCLE_ERROR_CASES: list[tuple[str, str]] = [
 # zero defaults, so no missing-I/J/K error is asserted. Sections 3.5.16.7,
 # 3.5.16.9, and 3.5.16.10 define G86, G88, and G89 as P-using cycles, so the
 # same explicit non-negative-P requirement applies.
+# Establish S100 with M3/M4: sections 3.6.2/3.7.2 permit a nonturning spindle
+# at S0. Otherwise the wrong-direction and invalid-P cases could pass because
+# the spindle was stopped, without testing their named rejection condition.
 @pytest.mark.parametrize(
     "input_gcode",
     [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],

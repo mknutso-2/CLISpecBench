@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from pathlib import Path
 
 from rs274_parameters import (
@@ -16,30 +17,9 @@ from rs274_parameters import (
 )
 from rs274_support import (
     build_parameter_file,
+    parameter_output_entries,
     run_rs274_with_parameter_output,
 )
-
-
-def parse_parameter_output_file(parameter_output: str) -> dict[int, float]:
-    lines = parameter_output.splitlines()
-    blank_line_indices = [index for index, line in enumerate(lines) if line == ""]
-    assert len(blank_line_indices) == 1
-    blank_line_index = blank_line_indices[0]
-    assert blank_line_index >= 1
-
-    data_lines = lines[blank_line_index + 1 :]
-    assert data_lines
-
-    parsed_entries: list[tuple[int, float]] = []
-    for line in data_lines:
-        parts = line.split()
-        assert len(parts) == 2
-        parsed_entries.append((int(parts[0]), float(parts[1])))
-
-    indices = [parameter_index for parameter_index, _ in parsed_entries]
-    assert indices == sorted(indices)
-    assert len(indices) == len(set(indices))
-    return dict(parsed_entries)
 
 
 # RS274 section 3.2.1 says the interpreter writes a parameter file when it
@@ -58,7 +38,20 @@ def test_application_writes_required_parameter_output_file_entries(
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
 
-    parsed_entries = parse_parameter_output_file(parameter_output)
+    # Section 3.2.1: zero or more header lines, one blank separator,
+    # ordered unique indices in 1..5400, and optional comment columns.
+    lines = parameter_output.splitlines()
+    separators = [index for index, line in enumerate(lines) if not line.strip()]
+    assert len(separators) == 1
+    assert lines[separators[0]] == ""  # Section 3.2.1 excludes spaces/tabs here.
+    data_lines = lines[separators[0] + 1 :]
+    assert data_lines and all(len(line.split()) >= 2 for line in data_lines)
+    entries = parameter_output_entries(parameter_output)
+    indices = [index for index, _ in entries]
+    assert indices == sorted(set(indices))
+    assert all(1 <= index <= 5400 for index in indices)
+    assert all(math.isfinite(value) for _, value in entries)
+    parsed_entries = dict(entries)
     assert set(REQUIRED_PARAMETER_INDICES) <= set(parsed_entries)
     assert parsed_entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] == 1.0
 
@@ -79,7 +72,7 @@ def test_application_preserves_input_parameters_in_output_file(
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
 
-    parsed_entries = parse_parameter_output_file(parameter_output)
+    parsed_entries = dict(parameter_output_entries(parameter_output))
     assert parsed_entries[1] == 4.25
     assert parsed_entries[150] == 7.5
 
@@ -112,7 +105,7 @@ def test_application_writes_execution_updates_to_output_parameter_file(
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
 
-    parsed_entries = parse_parameter_output_file(parameter_output)
+    parsed_entries = dict(parameter_output_entries(parameter_output))
     assert parsed_entries[1] == 5.5
     assert parsed_entries[SELECTED_COORDINATE_SYSTEM_PARAMETER] == 2.0
     assert parsed_entries[cs2_x_parameter] == 10.0

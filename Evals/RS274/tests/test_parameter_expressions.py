@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 
 from rs274_support import (
-    get_parameter_value,
     mapping_field,
     run_rs274,
     with_default_rotary_axes,
@@ -108,6 +107,9 @@ def test_application_evaluates_unary_operation_values(
     assert_close(mapping_field(payload, "machine_position").get("x"), expected_x, abs_tol=1e-5)
 
 
+# The technical requirements allow any final parameter value to be omitted.
+# Observe expression-based writes through the required machine position after
+# the existing G0 read, rather than depending on optional parameter reporting.
 def test_application_supports_expression_based_parameter_indices(
     submission_command: tuple[str, ...],
     tmp_path: Path,
@@ -122,7 +124,7 @@ def test_application_supports_expression_based_parameter_indices(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert get_parameter_value(payload, 3) == 7.0
+    assert mapping_field(payload, "machine_position").get("x") == 7.0
 
 
 def test_application_supports_expression_valued_parameter_settings(
@@ -139,7 +141,7 @@ def test_application_supports_expression_valued_parameter_settings(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert get_parameter_value(payload, 1) == 5.0
+    assert mapping_field(payload, "machine_position").get("x") == 5.0
 
 
 def test_application_supports_bracketed_parameter_reads(
@@ -173,7 +175,7 @@ def test_application_supports_repeated_parameter_indirection(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert get_parameter_value(payload, 2) == 0.375
+    assert mapping_field(payload, "machine_position").get("x") == 0.375
 
 
 def test_application_evaluates_expressions_before_parameter_settings_take_effect(
@@ -194,7 +196,6 @@ def test_application_evaluates_expressions_before_parameter_settings_take_effect
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 16.0, "y": 6.0, "z": 0.0}
     )
-    assert get_parameter_value(payload, 3) == 6.0
 
 
 def test_application_accepts_close_to_integer_parameter_indices(
@@ -211,7 +212,7 @@ def test_application_accepts_close_to_integer_parameter_indices(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    assert get_parameter_value(payload, 1) == 5.0
+    assert mapping_field(payload, "machine_position").get("x") == 5.0
 
 
 def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
@@ -220,9 +221,11 @@ def test_application_accepts_close_to_integer_g_and_m_codes_from_expressions(
 ) -> None:
     # RS274 section 3.3.2.1 says M codes and G codes multiplied by ten are
     # considered close enough if within 0.0001 of an integer.
+    # Set positive speed on the M-code line so the CW assertion tests the
+    # parsed M3, not an unspecified startup S (sections 3.6.2 and 3.7.2).
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=("G10 L2 P2 X3.0 Y0.0 Z0.0\nG[54.999995]\nG90\nM[2.99995]\nG0 X1.0\n"),
+        input_gcode=("G10 L2 P2 X3.0 Y0.0 Z0.0\nG[54.999995]\nG90\nS100 M[2.99995]\nG0 X1.0\n"),
         tmp_path=tmp_path,
     )
 

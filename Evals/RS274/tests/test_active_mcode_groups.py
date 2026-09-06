@@ -37,7 +37,7 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
         "M1",
     ),
     (
-        "M6\n",
+        "T0 M6\n",
         MCODE_MODAL_GROUP_TOOL_CHANGE,
         "M6",
     ),
@@ -87,7 +87,10 @@ ACTIVE_MCODE_GROUP_CASES: list[ActiveMcodeGroupCase] = [
 # Table 4 M-code remains the active member of its modal group after it
 # executes, including stopping codes and M6, until replaced by another member
 # of the same group or by the M2/M30 reset effects. That clarification is the
-# intended fix for the low-pass group 4 and group 6 cases.
+# intended fix for modal serialization, but did not repair M6's missing tool
+# selection. Section 3.6.3 changes to the most recently selected tool; T0
+# explicitly selects the empty spindle (section 3.7.3) without a tool table.
+# This keeps the group-6 case independent of unspecified startup selection.
 @pytest.mark.parametrize(
     ("input_gcode", "group_number", "expected_active_mcode"),
     ACTIVE_MCODE_GROUP_CASES,

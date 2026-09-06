@@ -10,9 +10,10 @@ from rs274_parameters import (
 )
 from rs274_support import (
     assert_numeric_mapping_close,
-    get_parameter_value,
     mapping_field,
+    parameter_output_entries,
     run_rs274,
+    run_rs274_with_parameter_output,
     with_default_rotary_axes,
 )
 
@@ -160,7 +161,7 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
     # The harness contract in technical-requirements-prompt.md serializes
     # coordinate_system_offsets in the currently active length units, while the
     # backing parameters remain at their raw stored values from RS274.
-    completed, payload = run_rs274(
+    completed, payload, parameter_output = run_rs274_with_parameter_output(
         submission_command,
         input_gcode=input_gcode,
         tmp_path=tmp_path,
@@ -181,9 +182,12 @@ def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(
         mapping_field(payload, "coordinate_system_offsets").get("1"),
         with_default_rotary_axes(expected_offset),
     )
-    assert get_parameter_value(payload, cs1_x_parameter) == expected_parameter_values["x"]
-    assert get_parameter_value(payload, cs1_y_parameter) == expected_parameter_values["y"]
-    assert get_parameter_value(payload, cs1_z_parameter) == expected_parameter_values["z"]
-    assert get_parameter_value(payload, cs1_a_parameter) == expected_parameter_values["a"]
-    assert get_parameter_value(payload, cs1_b_parameter) == expected_parameter_values["b"]
-    assert get_parameter_value(payload, cs1_c_parameter) == expected_parameter_values["c"]
+    # Snapshot parameters may be sparse; the optional file-output contract
+    # explicitly requires the loaded/set values, including these raw offsets.
+    persisted = dict(parameter_output_entries(parameter_output))
+    assert persisted[cs1_x_parameter] == expected_parameter_values["x"]
+    assert persisted[cs1_y_parameter] == expected_parameter_values["y"]
+    assert persisted[cs1_z_parameter] == expected_parameter_values["z"]
+    assert persisted[cs1_a_parameter] == expected_parameter_values["a"]
+    assert persisted[cs1_b_parameter] == expected_parameter_values["b"]
+    assert persisted[cs1_c_parameter] == expected_parameter_values["c"]

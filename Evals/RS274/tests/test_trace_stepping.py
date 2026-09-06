@@ -752,6 +752,8 @@ def test_probe_trip_point_in_trace(
 
 # ---------------------------------------------------------------------------
 # G84 tapping: spindle_direction flips twice on one source line
+# Sections 3.6.2/3.7.2: M3 at S0 need not turn the spindle, so establish
+# positive speed before checking actual CW/CCW transitions.
 # ---------------------------------------------------------------------------
 
 
@@ -761,12 +763,12 @@ def test_g84_tap_spindle_reversal_in_trace(
 ) -> None:
     """G84 tapping cycle flips spindle_direction CW→CCW→CW within one line.
 
-    Setup: M3 (spindle CW), then G84 cycle.
+    Setup: S100 M3 (spindle turning CW), then G84 cycle.
     Feed-to-Z sub-motion: spindle CW.
     Feed-retract sub-motion: spindle CCW (reversal).
     After cycle: spindle restored to CW.
     """
-    setup = "M3\nG90\nG98\nG0 X0 Y0 Z2\n"
+    setup = "S100 M3\nG90\nG98\nG0 X0 Y0 Z2\n"
     _, _, trace = run_rs274_trace(
         submission_command,
         input_gcode=setup + "G84 X0 Y0 Z-1 R0 F60\n",
@@ -801,7 +803,7 @@ def test_g84_g99_spindle_reversal_visible(
     retract.  The CW→CCW flip (for retract) and the CCW→CW restore must
     both appear in the trace even when the retract SM has only one entry.
     """
-    setup = "M3\nG90\nG99\nG0 X0 Y0 Z2\n"
+    setup = "S100 M3\nG90\nG99\nG0 X0 Y0 Z2\n"
     _, _, trace = run_rs274_trace(
         submission_command,
         input_gcode=setup + "G84 X0 Y0 Z-1 R0 F60\n",
@@ -1145,6 +1147,7 @@ def test_g85_boring_feed_retract(
 
 # ---------------------------------------------------------------------------
 # G86 boring cycle: feed to Z, rapid retract (spindle must be on)
+# Positive S makes the section 3.5.16.7 turning-spindle precondition explicit.
 # ---------------------------------------------------------------------------
 
 
@@ -1153,7 +1156,7 @@ def test_g86_boring_rapid_retract(
     tmp_path: Path,
 ) -> None:
     """G86 boring: feed to Z, rapid retract.  Requires spindle on."""
-    setup = "M3\nG90\nG0 X0 Y0 Z1\n"
+    setup = "S100 M3\nG90\nG0 X0 Y0 Z1\n"
     _, _, trace = run_rs274_trace(
         submission_command,
         input_gcode=setup + "G86 X1 Z-1 R0 P0.5 F60\n",
@@ -1387,8 +1390,9 @@ def test_g88_boring_rapid_retract(
     rapid retract to the canned-cycle clear level. Under G98 here, clear
     Z is the pre-cycle Z value because it is above R0.
     """
+    # Start an actually turning spindle before the cycle stops/restarts it.
     tool_table = "POCKET FMS TLO DIAMETER\n\n1 1 0.0 0.0\n"
-    setup = "T1\nM6\nM3\nG90\nG98\nG0 X0 Y0 Z1\n"
+    setup = "T1\nM6\nS100 M3\nG90\nG98\nG0 X0 Y0 Z1\n"
     _, _, trace = run_rs274_trace(
         submission_command,
         input_gcode=setup + "G88 X1 Z-1 R0 P0.5 F60\n",

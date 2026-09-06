@@ -17,7 +17,6 @@ from rs274_parameters import (
     G30_HOME_Z_PARAMETER,
 )
 from rs274_support import (
-    get_parameter_value,
     run_rs274,
     with_default_rotary_axes,
 )
@@ -34,6 +33,9 @@ def parameter_assignment_lines(values: dict[int, float]) -> str:
 # these tests do not depend on the parameter-file parser. The payload exposes
 # only the final controlled-point position, so these tests assert the final home
 # endpoint rather than the intermediate traverse segment.
+# Final snapshot parameters may be sparse (technical requirements). Observe
+# backing values through parameter reads and required machine positions,
+# rather than requiring optional JSON entries in every behavioral case.
 def test_application_returns_to_g28_home_set_by_parameters(
     submission_command: tuple[str, ...],
     tmp_path: Path,
@@ -62,9 +64,6 @@ def test_application_returns_to_g28_home_set_by_parameters(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 40.0, "y": 50.0, "z": 60.0}
     )
-    assert get_parameter_value(payload, G28_HOME_X_PARAMETER) == 40.0
-    assert get_parameter_value(payload, G28_HOME_Y_PARAMETER) == 50.0
-    assert get_parameter_value(payload, G28_HOME_Z_PARAMETER) == 60.0
 
 
 def test_application_returns_to_g28_home_after_intermediate_programmed_position(
@@ -95,9 +94,6 @@ def test_application_returns_to_g28_home_after_intermediate_programmed_position(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 40.0, "y": 50.0, "z": 60.0}
     )
-    assert get_parameter_value(payload, G28_HOME_X_PARAMETER) == 40.0
-    assert get_parameter_value(payload, G28_HOME_Y_PARAMETER) == 50.0
-    assert get_parameter_value(payload, G28_HOME_Z_PARAMETER) == 60.0
 
 
 def test_application_returns_to_g30_secondary_home_set_by_parameters(
@@ -128,9 +124,6 @@ def test_application_returns_to_g30_secondary_home_set_by_parameters(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 70.0, "y": 80.0, "z": 90.0}
     )
-    assert get_parameter_value(payload, G30_HOME_X_PARAMETER) == 70.0
-    assert get_parameter_value(payload, G30_HOME_Y_PARAMETER) == 80.0
-    assert get_parameter_value(payload, G30_HOME_Z_PARAMETER) == 90.0
 
 
 def test_application_returns_to_g30_secondary_home_without_axis_words(
@@ -161,9 +154,6 @@ def test_application_returns_to_g30_secondary_home_without_axis_words(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 70.0, "y": 80.0, "z": 90.0}
     )
-    assert get_parameter_value(payload, G30_HOME_X_PARAMETER) == 70.0
-    assert get_parameter_value(payload, G30_HOME_Y_PARAMETER) == 80.0
-    assert get_parameter_value(payload, G30_HOME_Z_PARAMETER) == 90.0
 
 
 def test_application_returns_to_g28_rotary_home_set_by_parameters(
@@ -192,9 +182,6 @@ def test_application_returns_to_g28_rotary_home_set_by_parameters(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 40.0, "b": 50.0, "c": 60.0}
     )
-    assert get_parameter_value(payload, G28_HOME_A_PARAMETER) == 40.0
-    assert get_parameter_value(payload, G28_HOME_B_PARAMETER) == 50.0
-    assert get_parameter_value(payload, G28_HOME_C_PARAMETER) == 60.0
 
 
 def test_application_returns_to_g28_rotary_home_without_axis_words(
@@ -223,9 +210,6 @@ def test_application_returns_to_g28_rotary_home_without_axis_words(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 40.0, "b": 50.0, "c": 60.0}
     )
-    assert get_parameter_value(payload, G28_HOME_A_PARAMETER) == 40.0
-    assert get_parameter_value(payload, G28_HOME_B_PARAMETER) == 50.0
-    assert get_parameter_value(payload, G28_HOME_C_PARAMETER) == 60.0
 
 
 def test_application_returns_to_g30_rotary_home_without_axis_words(
@@ -254,9 +238,6 @@ def test_application_returns_to_g30_rotary_home_without_axis_words(
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 70.0, "b": 80.0, "c": 90.0}
     )
-    assert get_parameter_value(payload, G30_HOME_A_PARAMETER) == 70.0
-    assert get_parameter_value(payload, G30_HOME_B_PARAMETER) == 80.0
-    assert get_parameter_value(payload, G30_HOME_C_PARAMETER) == 90.0
 
 
 def test_application_returns_to_g30_rotary_home_after_intermediate_programmed_position(
@@ -285,6 +266,3 @@ def test_application_returns_to_g30_rotary_home_after_intermediate_programmed_po
     assert payload.get("machine_position") == with_default_rotary_axes(
         {"x": 0.0, "y": 0.0, "z": 0.0, "a": 70.0, "b": 80.0, "c": 90.0}
     )
-    assert get_parameter_value(payload, G30_HOME_A_PARAMETER) == 70.0
-    assert get_parameter_value(payload, G30_HOME_B_PARAMETER) == 80.0
-    assert get_parameter_value(payload, G30_HOME_C_PARAMETER) == 90.0

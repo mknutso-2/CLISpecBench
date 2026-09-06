@@ -326,9 +326,12 @@ def test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_i
     Governing sections: RS274 Appendix B.5 and sections 3.5.10, 3.5.12,
     3.5.13, and 3.5.16.
     """
+    # Appendix B.5 prohibits a units *change*. Establish the opposite unit
+    # before enabling CRC so G20/G21 cannot be a no-op at the startup unit.
+    unit_setup = {"G20\n": "G21\n", "G21\n": "G20\n"}.get(invalid_gcode_body, "")
     run_rs274_invalid_input(
         submission_command,
-        input_gcode=CRC_ACTIVE_PREFIX + invalid_gcode_body,
+        input_gcode=unit_setup + CRC_ACTIVE_PREFIX + invalid_gcode_body,
         tool_table_content=TOOL_TABLE,
         tmp_path=tmp_path,
     )

@@ -12,7 +12,7 @@ from rs274_parameters import (
     PROBE_TRIP_Y_PARAMETER,
     PROBE_TRIP_Z_PARAMETER,
 )
-from rs274_support import ProbeBox, get_parameter_value, run_rs274, with_default_rotary_axes
+from rs274_support import ProbeBox, run_rs274, with_default_rotary_axes
 
 PROBE_TOOL = 2
 PROBE_TLC_TOOL_TABLE = """POCKET FMS TLO DIAMETER COMMENT
@@ -224,7 +224,9 @@ def test_application_reports_probe_trip_parameters(
     )
     completed, payload = run_rs274(
         submission_command,
-        input_gcode=input_gcode,
+        # Section 3.5.9 requires #5061..#5066 writes, but the snapshot map
+        # may omit entries. Read all six through a required G53 endpoint.
+        input_gcode=input_gcode + "G90 G53 G0 X#5061 Y#5062 Z#5063 A#5064 B#5065 C#5066\n",
         probe_box=probe_box,
         probe_tool=PROBE_TOOL,
         tool_table_content=tool_table_content,
@@ -233,8 +235,9 @@ def test_application_reports_probe_trip_parameters(
 
     assert completed.returncode == 0, completed.stderr
     assert payload.get("error") is None
-    for parameter_index, expected_value in expected_trip_parameters.items():
-        assert get_parameter_value(payload, parameter_index) == expected_value
+    assert payload.get("machine_position") == trip_parameters_to_machine_position(
+        expected_trip_parameters
+    )
 
 
 # The technical requirements prompt defines the eval-specific probing

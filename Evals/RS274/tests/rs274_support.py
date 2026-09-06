@@ -46,6 +46,20 @@ def build_parameter_file(overrides: dict[int, float] | None = None) -> str:
     return "\n".join(lines) + "\n"
 
 
+def parameter_output_entries(parameter_output: str) -> list[tuple[int, float]]:
+    """Read persisted values; the dedicated file-format gate owns schema checks."""
+    # Section 3.2.1 permits zero header lines and optional comment columns.
+    # Do not repeat header-count, ordering, or required-set assertions in
+    # behavior tests that need only particular persisted parameter values.
+    lines = parameter_output.splitlines()
+    separator = next(index for index, line in enumerate(lines) if not line.strip())
+    return [
+        (int(parts[0]), float(parts[1]))
+        for line in lines[separator + 1 :]
+        if len(parts := line.split()) >= 2
+    ]
+
+
 def _build_rs274_command(
     submission_command: Sequence[str],
     *,
@@ -269,14 +283,6 @@ def run_rs274_with_parameter_output(
     )
     assert parameter_output is not None
     return completed, payload, parameter_output
-
-
-def get_parameter_value(payload: dict[str, Any], parameter_index: int) -> float:
-    typed_parameters = mapping_field(payload, "parameters")
-
-    value = typed_parameters.get(str(parameter_index))
-    assert isinstance(value, int | float)
-    return float(value)
 
 
 def with_default_rotary_axes(values: Mapping[str, float]) -> dict[str, float]:

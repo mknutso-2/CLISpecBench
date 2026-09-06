@@ -95,7 +95,7 @@ To judge an archived submission without a new agent session, use
 `uv run clispecbench regrade path/to/result.json --output-dir path/to/new-grade`.
 The [regrading workflow](../../docs/operations/Regrading.md) preserves the
 original result and records the generation contract separately from the new
-grading contract. RS274 v3.2.1 keeps every model-input byte unchanged while
+grading contract. RS274 v3.2.2 keeps every model-input byte unchanged while
 correcting the grading tests. Compare submissions rescored under the same test
 hash; retain the original v3.2.0 scores as historical observations.
 

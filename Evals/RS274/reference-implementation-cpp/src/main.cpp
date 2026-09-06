@@ -141,8 +141,17 @@ std::vector<std::optional<LengthUnit>> make_default_parameter_length_units() {
 }
 
 struct MachineState {
-    std::map<std::string, std::string> active_modal_g_codes;
-    std::map<std::string, std::string> active_modal_m_codes;
+    // RS274 section 3.4 makes startup modal settings effective before the
+    // first block. Publish the interpreter's chosen defaults alongside the
+    // matching state fields below, including Table 2's default 5220=1 (G54).
+    // An empty percent-delimited program must report those active modes too.
+    std::map<std::string, std::string> active_modal_g_codes{
+        {"1", "G0"}, {"2", "G17"}, {"3", "G90"}, {"5", "G94"}, {"6", "G20"},
+        {"7", "G40"}, {"8", "G49"}, {"10", "G98"}, {"12", "G54"}, {"13", "G64"},
+    };
+    std::map<std::string, std::string> active_modal_m_codes{
+        {"7", "M5"}, {"8", "M9"}, {"9", "M48"},
+    };
     std::map<std::string, Position> coordinate_system_offsets = make_default_coordinate_system_offsets();
     std::map<int, ToolTableEntry> tool_table;
     std::vector<double> parameters = make_default_parameters();

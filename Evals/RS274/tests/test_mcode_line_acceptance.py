@@ -17,7 +17,7 @@ McodeLineAcceptanceCase = tuple[str, str, dict[str, str]]
 MCODE_LINE_ACCEPTANCE_CASES: list[McodeLineAcceptanceCase] = [
     (
         "one-m-word",
-        "M6\n",
+        "T0 M6\n",
         {
             MCODE_MODAL_GROUP_TOOL_CHANGE: "M6",
         },
@@ -32,7 +32,7 @@ MCODE_LINE_ACCEPTANCE_CASES: list[McodeLineAcceptanceCase] = [
     ),
     (
         "three-m-words",
-        "M1 M6 M3\n",
+        "T0 M1 M6 M3\n",
         {
             MCODE_MODAL_GROUP_STOPPING: "M1",
             MCODE_MODAL_GROUP_TOOL_CHANGE: "M6",
@@ -41,7 +41,7 @@ MCODE_LINE_ACCEPTANCE_CASES: list[McodeLineAcceptanceCase] = [
     ),
     (
         "four-m-words",
-        "M1 M6 M3 M7\n",
+        "T0 M1 M6 M3 M7\n",
         {
             MCODE_MODAL_GROUP_STOPPING: "M1",
             MCODE_MODAL_GROUP_TOOL_CHANGE: "M6",
@@ -64,6 +64,9 @@ MCODE_LINE_ACCEPTANCE_CASES: list[McodeLineAcceptanceCase] = [
 # M1) as persistent modal state after the action has executed. The prompt
 # now states that expected serialization rule explicitly for every Table 4
 # M-code, including stopping codes and M6.
+# That historical attribution was incomplete: the three M6 cases also lacked
+# a selected tool. Sections 3.6.3/3.7.3 allow an explicit T0 M6 empty-spindle
+# change, so supply T0 without altering the M-word count or requiring a table.
 @pytest.mark.parametrize(
     ("input_gcode", "expected_active_m_codes"),
     [

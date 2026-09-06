@@ -780,12 +780,14 @@ def test_m2_resets_produce_correct_delta(
 ) -> None:
     """M2 after modal/spindle changes produces a delta reverting that state.
 
-    Set spindle on (M3), non-default plane (G18), then M2 resets both.
+    Set a turning spindle (S100 M3), non-default plane (G18), then M2 resets both.
+    Sections 3.6.2/3.7.2 allow M3 at S0 without turning: that would already
+    serialize OFF, so M2 would correctly omit the unchanged direction delta.
     The M2 entry should carry deltas for the modal resets.
     """
     _, _, trace = run_rs274_trace(
         submission_command,
-        input_gcode="M3\nG18\nM2\n",
+        input_gcode="S100 M3\nG18\nM2\n",
         trace_time_step=0.5,
         tmp_path=tmp_path,
     )
