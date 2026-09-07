@@ -72,10 +72,17 @@ accordingly. Two failure modes follow, both visible as tight score clusters:
 Conversely, submissions that correctly required delimiters and were penalised by the old
 undelimited fixtures gain enormously — up to +67.5 points.
 
-**This matters for publication.** `Evals/RS274/TODO.md` proposes a normative clarification that
-would permit plain-EOF termination, explicitly overriding the section 3.2 requirement these
-fixtures now enforce. Adopting that clarification would move this same axis again. Treat this
-cohort as a measurement under the current rubric, not as a settled ranking.
+These are legitimate grades, not artifacts. Section 3.2 is part of the model-visible corpus every
+one of these submissions received, so a submission that rejects a framed program, or treats the
+opening `%` as end of program, is failing a documented requirement. The old undelimited fixtures
+were the defective part: they fed non-conforming files and penalised implementations that followed
+the specification, which is the contradiction `Evals/RS274/TODO.md` records.
+
+That TODO proposes a normative clarification permitting plain-EOF termination. It would go in
+`prompt/docs/Clarifications.md` and is therefore **model-visible**, so it cannot be applied
+retroactively to these runs under any circumstances — it would govern newly generated submissions
+only. It does not supersede this cohort. The ordinary rule applies instead: do not compare rows
+graded here against future runs generated under a clarified prompt.
 
 ## Provenance
 
