@@ -53,7 +53,9 @@ def pair_id(row: dict[str, Any]) -> str:
     model = str(row.get("model", "unknown"))
     effort = str(row.get("effort") or "").strip()
     model_label = f"{model} ({effort})" if effort else model
-    return f"{row.get('agent', 'unknown')} / {model_label}"
+    cohort = row.get("comparison_cohort")
+    suffix = f" [{cohort}]" if cohort else ""
+    return f"{row.get('agent', 'unknown')} / {model_label}{suffix}"
 
 
 def eval_language(row: dict[str, Any]) -> str:

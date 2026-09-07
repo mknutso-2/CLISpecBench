@@ -58,6 +58,44 @@ regrade to `result.json`, overwrite generation metadata, or silently replace a
 historical score. Present regrade comparisons with their provenance in an audit
 report, and decide any official result migration explicitly.
 
+### Explicit RS274 3.2.2 publication (2026-09-07)
+
+The repository owner approved promotion of the 385 audited RS274 regrades into
+their existing `published_results/**/run*.json` records. This is a grading
+replacement, not another model trial. The dashboard still reads only its normal
+dataset built from `published_results`; it never reads `regraded_results`.
+
+`scripts/promote_rs274_regrades.py` performs the one-time migration (`--apply` to
+write; default is preflight only). It validates the complete UID cohort, original
+publication hashes, test hashes, unique outcomes, counts, scores and prompt
+conditions before writing. An interrupted migration can resume only when every
+already-promoted record exactly matches the intended replacement reconstructed
+from its original Git JSON. Initial promotion verifies raw file digests; resume
+compares full JSON values because Git normalizes checkout line endings. Writes
+are atomic per file. Regrades replace
+only `tests`, `test_summary`, and `scores`; original generation metadata, costs,
+tokens, timing, build observations and source statistics remain unchanged.
+
+Each promoted record has a `regrade` block containing its grading version/image,
+audit-record digest, source digest, prior scores/summary/editorial, and the Git
+revision holding the original published content (Git may normalize line endings).
+Historical audit manifests still refer to the original checkout bytes, not the
+promoted file. Original editorial messages
+are explicitly labelled historical alongside the new pass count. `build` remains
+the original build observation, not a newly measured build duration.
+
+The normal dashboard builder exports `eval_version` from the promoted grading
+block and `generation_eval_version` from unchanged metadata. The run table shows
+both. The two sourceless rows retain their historical version and a separate
+cohort label. The 51 older-prompt Rust rows are separately labelled and grouped
+in graph, table and local per-test aggregates. Different grader images remain
+recorded provenance, not evidence that toolchains have been proved equivalent.
+
+After promotion, run `clispecbench rebuild-dashboard`, verify the generated data,
+and commit/push the published files and normal tracked dashboard dataset. GitHub
+Pages deploys that dataset through the existing workflow. No audit-archive reader
+or additional dashboard data source is introduced.
+
 ## Cohort rules for any official migration
 
 A regrade of one model is not a new benchmark result for that model. Promoting

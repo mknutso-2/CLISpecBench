@@ -289,6 +289,8 @@ def build_row(path: Path, web_dir: Path) -> dict:
     usage = payload.get("token_usage") or {}
     stats = payload.get("source_stats") or {}
     editorial = payload.get("editorial") or {}
+    regrade = payload.get("regrade") or {}
+    grading = regrade.get("grading") or {}
     exit_reason = metadata.get("exit_reason") or ""
     status = editorial.get("status") or ("Complete" if exit_reason == "completed" else exit_reason)
 
@@ -298,7 +300,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
     passed = summary.get("passed", 0) or 0
     total = summary.get("total", 0) or 0
     score_pct = round((passed / total) * 100, 3) if total else None
-    grading_status = metadata.get("grading_status")
+    grading_status = grading.get("status", metadata.get("grading_status"))
     if grading_status not in (None, "completed"):
         score_pct = None
     input_tokens = usage.get("input_tokens") or 0
@@ -320,7 +322,15 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "run_id": run_id,
         "eval": eval_name,
         "eval_instance": f"run{run_id}" if run_id else "",
-        "eval_version": metadata.get("eval_version") or "",
+        "eval_version": grading.get("eval_version") or metadata.get("eval_version") or "",
+        "generation_eval_version": metadata.get("eval_version") or "",
+        "comparison_cohort": regrade.get("comparison_cohort")
+        or editorial.get("comparison_cohort")
+        or "",
+        "grading_image_sha": (grading.get("environment") or {}).get("docker_image_sha")
+        or metadata.get("docker_image_sha")
+        or "",
+        "regrade_uid": regrade.get("regrade_uid") or "",
         "exit_reason": exit_reason,
         "grading_status": grading_status,
         "status": status,

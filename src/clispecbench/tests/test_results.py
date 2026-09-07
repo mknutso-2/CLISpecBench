@@ -50,6 +50,21 @@ def _make_run_result(agent: str, token_usage: TokenUsage | None) -> RunResult:
     )
 
 
+def test_regrade_provenance_survives_load_write(tmp_path: Path) -> None:
+    result = _make_run_result("codex-cli", None)
+    result.regrade = {
+        "regrade_uid": "audit-uid",
+        "grading": {"eval_version": "3.2.2", "status": "completed"},
+        "original_scores": {"correctness": 0.5},
+    }
+    path = tmp_path / "run1.json"
+    result.write(path)
+    loaded = load_result(path)
+    assert loaded.regrade == result.regrade
+    assert loaded.metadata.eval_version == "2.1.1"
+    assert loaded.to_dict()["regrade"] == result.regrade
+
+
 class TestBenchmarkCostPolicy:
     def test_claude_code_prefers_estimated_cost_via_registry_fallback(self) -> None:
         result = _make_run_result(

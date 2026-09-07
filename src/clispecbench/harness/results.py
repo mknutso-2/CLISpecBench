@@ -238,6 +238,9 @@ class RunResult:
     artifacts: RunArtifacts = field(default_factory=RunArtifacts)
     source_stats: SourceStats = field(default_factory=SourceStats)
     surgery: str | None = None  # Description of post-hoc fix applied to get code to compile
+    # Explicit publication-time grading replacement. Generation metadata remains
+    # unchanged; this block preserves the grading environment and prior scores.
+    regrade: dict[str, Any] | None = None
 
     @property
     def schema_version(self) -> str:
@@ -296,6 +299,8 @@ class RunResult:
         d["source_stats"] = asdict(self.source_stats)
         if self.surgery:
             d["surgery"] = self.surgery
+        if self.regrade is not None:
+            d["regrade"] = self.regrade
         return d
 
     def write(self, path: Path) -> None:
@@ -656,4 +661,5 @@ def load_result(path: Path) -> RunResult:
         artifacts=artifacts,
         source_stats=source_stats,
         surgery=data.get("surgery"),
+        regrade=data.get("regrade"),
     )

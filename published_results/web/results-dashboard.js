@@ -1435,7 +1435,8 @@ function getRunTableColumns() {
       title: (row) => pairTitleWithVersion(rowPairId(row)),
     },
     { key: 'run', label: 'Run', numeric: true, render: (row) => row.run_id || 'n/a' },
-    { key: 'version', label: 'Version', render: (row) => row.eval_version || 'n/a' },
+    { key: 'version', label: 'Graded', render: (row) => row.eval_version || 'n/a' },
+    { key: 'generation_version', label: 'Generated', render: (row) => row.generation_eval_version || row.eval_version || 'n/a' },
     {
       key: 'status',
       label: 'Agent Stop',
@@ -1715,6 +1716,8 @@ function abbreviateAgent(agent) {
 }
 
 function abbreviateModel(model) {
+  const cohortLabel = String(model || '').match(/^(.*)( \[[^\]]+\])$/);
+  if (cohortLabel) return `${abbreviateModel(cohortLabel[1])}${cohortLabel[2]}`;
   const { baseModel, effort } = splitModelEffortLabel(model);
   const normalized = String(baseModel || '').toLowerCase();
   const withEffort = (label) => (effort ? `${label} (${abbreviateEffort(effort)})` : label);
@@ -3640,7 +3643,8 @@ function rowPairId(rowOrPair) {
   const model = String(rowOrPair.model || 'default');
   const effort = String(rowOrPair.effort || '').trim();
   const modelLabel = effort ? `${model} (${effort})` : model;
-  return `${rowOrPair.agent} / ${modelLabel}`;
+  const cohort = rowOrPair.comparison_cohort;
+  return `${rowOrPair.agent} / ${modelLabel}${cohort ? ` [${cohort}]` : ''}`;
 }
 
 function splitPairId(pairId) {
@@ -3921,6 +3925,8 @@ function coerceRow(raw) {
     eval: normalizedEval,
     eval_instance: firstPresent(raw.eval_instance, ''),
     eval_version: firstPresent(raw.eval_version, ''),
+    generation_eval_version: firstPresent(raw.generation_eval_version, raw.eval_version, ''),
+    comparison_cohort: firstPresent(raw.comparison_cohort, ''),
     exit_reason: firstPresent(raw.exit_reason, 'completed'),
     status: firstPresent(raw.status, ''),
     agent_stop_reason: firstPresent(raw.agent_stop_reason, ''),
