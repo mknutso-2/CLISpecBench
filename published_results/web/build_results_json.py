@@ -5,9 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterator
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from clispecbench.harness.pricing import estimate_cost
 from clispecbench.harness.status import INCLUDED_NON_COMPLETED_STATUSES
@@ -62,19 +63,19 @@ def task_eval_language(task: str) -> tuple[str, str]:
     return EVAL_NAMES.get(eval_id, eval_id), language.upper()
 
 
-def number(value) -> float | int | None:
+def number(value: object) -> float | int | None:
     if isinstance(value, (int, float)):
         return value
     return None
 
 
-def integer(value) -> int | None:
+def integer(value: object) -> int | None:
     if isinstance(value, int):
         return value
     return None
 
 
-def cost_usd(model: str, usage: dict) -> float | int | None:
+def cost_usd(model: str, usage: dict[str, Any]) -> float | int | None:
     reported = number(usage.get("reported_cost_usd"))
     if reported is not None:
         return reported
@@ -97,7 +98,7 @@ def cost_usd(model: str, usage: dict) -> float | int | None:
     )
 
 
-def run_number(path: Path, metadata: dict) -> str:
+def run_number(path: Path, metadata: dict[str, Any]) -> str:
     stem = path.stem
     if stem.startswith("run") and stem[3:].isdigit():
         return stem[3:]
@@ -109,7 +110,7 @@ def result_link(web_dir: Path, path: Path) -> str:
     return "../" + path.resolve().relative_to(web_dir.parent.resolve()).as_posix()
 
 
-def iter_jsonl_dicts(path: Path):
+def iter_jsonl_dicts(path: Path) -> Iterator[dict[str, Any]]:
     try:
         lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
     except OSError:
@@ -122,7 +123,7 @@ def iter_jsonl_dicts(path: Path):
         except json.JSONDecodeError:
             continue
         if isinstance(event, dict):
-            yield event
+            yield cast(dict[str, Any], event)
 
 
 def classify_agent_stop_message(message: str) -> tuple[str, str] | None:
@@ -183,7 +184,7 @@ def transient_event_log_for(
                 result_payload = json.loads(result_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 continue
-            result_metadata = result_payload.get("metadata") or {}
+            result_metadata: dict[str, Any] = result_payload.get("metadata") or {}
             if result_metadata.get("run_uid") == run_uid:
                 return candidate
 
@@ -220,7 +221,7 @@ def codex_agent_stop(
     error = final_turn.get("error")
     message = ""
     if isinstance(error, dict):
-        message = str(error.get("message") or "")
+        message = str(cast(dict[str, Any], error).get("message") or "")
     elif isinstance(error, str):
         message = error
     classified = classify_agent_stop_message(message)
@@ -236,8 +237,8 @@ def codex_agent_stop(
 
 
 def agent_stop_info(path: Path, web_dir: Path, payload: dict[str, Any]) -> dict[str, str]:
-    metadata = payload.get("metadata") or {}
-    editorial = payload.get("editorial") or {}
+    metadata: dict[str, Any] = payload.get("metadata") or {}
+    editorial: dict[str, Any] = payload.get("editorial") or {}
     published_root = web_dir.parent.resolve()
     exit_reason = metadata.get("exit_reason") or ""
 
@@ -282,15 +283,16 @@ def agent_stop_info(path: Path, web_dir: Path, payload: dict[str, Any]) -> dict[
     }
 
 
-def build_row(path: Path, web_dir: Path) -> dict:
+def build_row(path: Path, web_dir: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
-    metadata = payload.get("metadata") or {}
-    summary = payload.get("test_summary") or {}
-    usage = payload.get("token_usage") or {}
-    stats = payload.get("source_stats") or {}
-    editorial = payload.get("editorial") or {}
-    regrade = payload.get("regrade") or {}
-    grading = regrade.get("grading") or {}
+    metadata: dict[str, Any] = payload.get("metadata") or {}
+    summary: dict[str, Any] = payload.get("test_summary") or {}
+    usage: dict[str, Any] = payload.get("token_usage") or {}
+    stats: dict[str, Any] = payload.get("source_stats") or {}
+    editorial: dict[str, Any] = payload.get("editorial") or {}
+    regrade: dict[str, Any] = payload.get("regrade") or {}
+    grading: dict[str, Any] = regrade.get("grading") or {}
+    grading_environment: dict[str, Any] = grading.get("environment") or {}
     exit_reason = metadata.get("exit_reason") or ""
     status = editorial.get("status") or ("Complete" if exit_reason == "completed" else exit_reason)
 
@@ -327,7 +329,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "comparison_cohort": regrade.get("comparison_cohort")
         or editorial.get("comparison_cohort")
         or "",
-        "grading_image_sha": (grading.get("environment") or {}).get("docker_image_sha")
+        "grading_image_sha": grading_environment.get("docker_image_sha")
         or metadata.get("docker_image_sha")
         or "",
         "regrade_uid": regrade.get("regrade_uid") or "",
@@ -335,7 +337,9 @@ def build_row(path: Path, web_dir: Path) -> dict:
         "grading_status": grading_status,
         "status": status,
         **stop_info,
-        "notes": metadata.get("notes") or editorial.get("commentary") or "",
+        "notes": (
+            editorial.get("notes") or metadata.get("notes") or editorial.get("commentary") or ""
+        ),
         "score_count": passed,
         "score_total": total,
         "score_pct": score_pct,
@@ -355,7 +359,7 @@ def build_row(path: Path, web_dir: Path) -> dict:
     }
 
 
-def sort_key(row: dict) -> tuple:
+def sort_key(row: dict[str, Any]) -> tuple[str, str, str, str, int]:
     effort = row["effort"] or ""
     run_id = int(row["run_id"]) if str(row["run_id"]).isdigit() else 0
     return (row["task"], row["agent"], row["model"], effort, run_id)
@@ -365,8 +369,8 @@ def main() -> None:
     args = parse_args()
     published_root = args.published_root.resolve()
     web_dir = args.output.resolve().parent
-    rows = []
-    omitted = []
+    rows: list[dict[str, Any]] = []
+    omitted: list[dict[str, Any]] = []
     invariant_violations: list[tuple[Path, str, str]] = []
 
     # Every published row must be either exit_reason="completed" or carry an
