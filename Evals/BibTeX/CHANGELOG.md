@@ -1,5 +1,21 @@
 # BibTeX Eval Changelog
 
+## v1.2.4 — 2026-09-12
+
+- Correct the existing positive past-end `format.name$` probe: the supplied
+  authoritative `bibtex.web` retains the last scanned name and warns when the
+  requested index exceeds the list length. The previous empty-string
+  expectation contradicted that algorithm. Observe the selected name without
+  adding an unsupported JSON warning-kind requirement; retain 386 scored cases.
+- Correct the C++ reference's positive past-end selection, keeping
+  nonpositive/empty-list results unchanged and checking before integer narrowing.
+  Preserve its prior JSON warning behavior because the public catalog does not
+  define a kind for this correctly typed, out-of-range argument.
+- All model-visible inputs and all unrelated tests remain unchanged. Independent
+  BibTeX oracle probes, reference validation, an old-reference negative control,
+  and exact per-submission score deltas are recorded in
+  `docs/validation/BibTeX-1.2.4.md`.
+
 ## v1.2.3 — 2026-09-12
 
 - Correct positive BST fixtures that redeclared built-in `crossref` or

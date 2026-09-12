@@ -858,10 +858,21 @@ struct Interpreter {
             auto idx = pop_int();
             auto names = pop_str();
             auto parsed = parse_name_list(names.str);
-            int i = static_cast<int>(idx.integer) - 1;
-            if (i < 0 || i >= static_cast<int>(parsed.size())) {
+            // bibtex.web's "Isolate the desired name" stops scanning at
+            // the list end and formats the last name even when N is larger.
+            // The public JSON warning catalog has no matching kind; retain
+            // the prior wrapper reporting behavior instead of inventing one.
+            // Nonpositive indices still select no name. Check before the
+            // subtraction/narrowing so extreme integer inputs remain safe.
+            if (idx.integer <= 0 || parsed.empty()) {
                 push(BstValue::make_string(""));
                 return;
+            }
+            std::size_t i;
+            if (static_cast<uint64_t>(idx.integer) > parsed.size()) {
+                i = parsed.size() - 1;
+            } else {
+                i = static_cast<std::size_t>(idx.integer - 1);
             }
             push(BstValue::make_string(format_single_name(parsed[i], fmt.str)));
         };

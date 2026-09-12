@@ -537,7 +537,11 @@ def test_format_name_first_initial(submission_command: tuple[str, ...], tmp_path
 
 
 def test_format_name_out_of_range(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """Index beyond the list length returns empty string (spec §3.5)."""
+    """A positive past-end index retains the final name scanned by BibTeX."""
+    # bibtex.web, "Isolate the desired name": scanning stops at the end
+    # of the list, leaving the last name selected, and emits a warning.
+    # Only the selected name is observed here: the public JSON warning
+    # catalog does not prescribe a distinct kind for this condition.
     bib = '@article{a, author = "John Smith"}\n'
     bbl, _ = _iterate(
         submission_command,
@@ -546,7 +550,7 @@ def test_format_name_out_of_range(submission_command: tuple[str, ...], tmp_path:
         bib=bib,
         entry_fields="author",
     )
-    assert bbl.strip() == "|"
+    assert bbl.strip() == "Smith|"
 
 
 # ---------------------------------------------------------------------------
