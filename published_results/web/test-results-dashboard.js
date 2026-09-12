@@ -1028,14 +1028,6 @@ function compareVersions(a, b) {
   });
 }
 
-function versionMajorKey(version) {
-  const parts = parseVersionParts(version);
-  if (parts.length) {
-    return String(parts[0]);
-  }
-  return versionKey(version) || "__unversioned__";
-}
-
 function getEvals() {
   return uniqueSorted(state.rows.map((row) => row.eval));
 }
@@ -1058,11 +1050,9 @@ function getDefaultEvalVersionSelections() {
       selections.set(evalName, new Set());
       return;
     }
-    const newestMajor = versionMajorKey(versions[0]);
-    selections.set(
-      evalName,
-      new Set(versions.filter((version) => versionMajorKey(version) === newestMajor)),
-    );
+    // Even a patch can change scored assertions or repair invalid fixtures.
+    // Default to one rubric; historical comparisons require an explicit choice.
+    selections.set(evalName, new Set([versions[0]]));
   });
   return selections;
 }
@@ -1082,27 +1072,12 @@ function isRunVersionSelected(run) {
 
 function formatVersionSummary(evalName) {
   const versions = getEvalVersions(evalName);
-  if (versions.length <= 1) {
-    return `Version: ${formatVersionLabel(versions[0])}`;
-  }
   const selectedVersions = versions.filter((version) => isEvalVersionSelected(evalName, version));
-  if (!selectedVersions.length) {
-    return "Versions: none";
+  if (!selectedVersions.length) return "Versions: none";
+  if (selectedVersions.length === 1) {
+    return `Version: ${formatVersionLabel(selectedVersions[0])}`;
   }
-  if (selectedVersions.length === versions.length) {
-    return "Versions: all";
-  }
-  const selectedMajors = new Set(selectedVersions.map(versionMajorKey));
-  const selectedMajor = Array.from(selectedMajors)[0];
-  const allMajorVersionsSelected =
-    selectedMajors.size === 1 &&
-    versions
-      .filter((version) => versionMajorKey(version) === selectedMajor)
-      .every((version) => selectedVersions.includes(version));
-  if (allMajorVersionsSelected) {
-    return `Versions: ${selectedMajor}.x`;
-  }
-  return `Versions: ${selectedVersions.map(formatVersionLabel).join(", ")}`;
+  return `Mixed grading versions (${selectedVersions.length})`;
 }
 
 function formatPairShort(row) {
