@@ -45,7 +45,7 @@ _TOP_LEVEL_RECORD_TAGS = {
 }
 
 
-_XREF_REQUIRED_TOP_LEVEL_TAGS = {
+_XREF_ELIGIBLE_TOP_LEVEL_TAGS = {
     "FAM",
     "INDI",
     "OBJE",
@@ -208,6 +208,31 @@ def validate_dataset(dataset: GedcomDataset, *, request_code: str = "invalid_doc
             parent=None,
             top_level=True,
         )
+    _validate_family_backlinks(dataset, request_code=request_code)
+
+
+def _validate_family_backlinks(dataset: GedcomDataset, *, request_code: str) -> None:
+    # §3.2.2 FAMILY_RECORD requires FAM→INDI links to have matching direct
+    # INDI→FAM links. Event-level FAMC has different semantics and is untouched.
+    records = {record.xref: record for record in dataset.records if record.xref is not None}
+    for family in dataset.records:
+        if family.tag != "FAM":
+            continue
+        for relation in family.children:
+            if relation.tag not in {"HUSB", "WIFE", "CHIL"} or relation.payload == "@VOID@":
+                continue
+            individual = records.get(relation.payload)
+            if individual is None:
+                # Earlier pointer validation supplies the detailed closure error.
+                continue
+            required = "FAMC" if relation.tag == "CHIL" else "FAMS"
+            if family.xref is None or not any(
+                child.tag == required and child.payload == family.xref
+                for child in individual.children
+            ):
+                raise GedcomError(
+                    request_code, f"FAM.{relation.tag} requires reciprocal INDI.{required}"
+                )
 
 
 def _parse_records(text: str) -> list[GedcomNode]:
@@ -441,9 +466,9 @@ def _validate_contextual_rules(
             raise GedcomError(request_code, f"Unsupported top-level record tag {node.tag}")
         if node.tag.startswith("_"):
             return
-        if node.tag in _XREF_REQUIRED_TOP_LEVEL_TAGS and node.xref is None:
-            raise GedcomError(request_code, f"Top-level {node.tag} record requires an xref")
-        if node.tag not in _XREF_REQUIRED_TOP_LEVEL_TAGS and node.xref is not None:
+        # §§1.3 and 3.1: an xref slot marks eligibility, not a mandatory ID.
+        # Pointer closure is validated separately.
+        if node.tag not in _XREF_ELIGIBLE_TOP_LEVEL_TAGS and node.xref is not None:
             raise GedcomError(request_code, f"Top-level {node.tag} record may not define an xref")
         if node.tag == "HEAD":
             if node.payload is not None:

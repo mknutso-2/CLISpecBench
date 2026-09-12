@@ -516,7 +516,16 @@ def _append_stub_records(lines: list[str]) -> str:
     defined_xrefs: set[str] = set()
     referenced_xrefs: list[tuple[str, str]] = []
 
+    family_xref: str | None = None
+    backlinks: dict[str, set[tuple[str, str]]] = {}
     for line in lines:
+        if line.startswith("0 "):
+            root_match = _POINTER_LINE_RE.match(line)
+            family_xref = (
+                root_match.group(1)
+                if root_match is not None and root_match.group(2) == "FAM"
+                else None
+            )
         defined_match = _DEFINED_XREF_RE.match(line)
         if defined_match is not None:
             defined_xrefs.add(defined_match.group(1))
@@ -527,6 +536,17 @@ def _append_stub_records(lines: list[str]) -> str:
         payload_xref = match.group(3)
         if payload_xref is not None:
             referenced_xrefs.append((tag, payload_xref))
+            if (
+                family_xref is not None
+                and line.startswith("1 ")
+                and tag in {"HUSB", "WIFE", "CHIL"}
+                and payload_xref != "@VOID@"
+            ):
+                # §3.2.2: complete generated INDI targets with their required
+                # reciprocal family link; never demand rejection of the example
+                # merely because its external supporting record was incomplete.
+                backlink_tag = "FAMC" if tag == "CHIL" else "FAMS"
+                backlinks.setdefault(payload_xref, set()).add((backlink_tag, family_xref))
 
     stub_lines: list[str] = []
     for tag, xref in referenced_xrefs:
@@ -544,6 +564,10 @@ def _append_stub_records(lines: list[str]) -> str:
                 stub_lines.extend(["1 FILE fixture.jpg", "2 FORM image/jpeg"])
             else:
                 stub_lines.append("1 NOTE Fixture record")
+        if record_tag == "INDI":
+            stub_lines.extend(
+                f"1 {tag} {family}" for tag, family in sorted(backlinks.get(xref, set()))
+            )
         defined_xrefs.add(xref)
 
     return "\n".join([*lines, *stub_lines, "0 TRLR"]) + "\n"

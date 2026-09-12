@@ -156,9 +156,10 @@ def test_age_duration_forms_are_accepted(
     tmp_path: Path,
     age_payload: str,
 ) -> None:
+    # §3.2.2 family reciprocity is supporting context, not the age behavior.
     text = document_text(
-        individual_record_block(xref="@I1@"),
-        individual_record_block(xref="@I2@"),
+        individual_record_block(xref="@I1@", extra_lines=["1 FAMS @F1@"]),
+        individual_record_block(xref="@I2@", extra_lines=["1 FAMS @F1@"]),
         [
             "0 @F1@ FAM",
             "1 HUSB @I1@",
@@ -185,8 +186,8 @@ def test_age_rejects_legacy_phrase_payload(
         submission_command,
         tmp_path,
         document_text(
-            individual_record_block(xref="@I1@"),
-            individual_record_block(xref="@I2@"),
+            individual_record_block(xref="@I1@", extra_lines=["1 FAMS @F1@"]),
+            individual_record_block(xref="@I2@", extra_lines=["1 FAMS @F1@"]),
             [
                 "0 @F1@ FAM",
                 "1 HUSB @I1@",

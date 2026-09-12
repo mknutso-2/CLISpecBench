@@ -21,12 +21,12 @@ from gedcom_support import (
 )
 
 _RECORD_ROOT_SPECS = record_root_specs()
-_XREF_REQUIRED_RECORD_TAGS = sorted(
+_XREF_ELIGIBLE_RECORD_TAGS = sorted(
     entry.tag for entry in _RECORD_ROOT_SPECS if entry.xref_token is not None
 )
 _Y_OR_NULL_EVENT_CASES = y_or_null_event_cases()
 
-_XREF_REQUIRED_RECORD_BLOCKS: dict[str, list[str]] = {
+_UNREFERENCED_RECORD_BLOCKS: dict[str, list[str]] = {
     "FAM": ["0 FAM", "1 NOTE Family"],
     "INDI": ["0 INDI", "1 NAME Example /Person/"],
     "OBJE": ["0 OBJE", "1 FILE photo.jpg", "2 FORM image/jpeg"],
@@ -321,19 +321,28 @@ def test_unknown_top_level_record_tag_is_invalid(
     assert not _unexpected_result(result.returncode, payload, "invalid_document")
 
 
-@pytest.mark.parametrize("record_tag", _XREF_REQUIRED_RECORD_TAGS)
-def test_top_level_record_type_from_official_grammar_requires_xref(
+@pytest.mark.parametrize("record_tag", _XREF_ELIGIBLE_RECORD_TAGS)
+def test_unreferenced_record_type_from_official_grammar_allows_omitted_xref(
     submission_command: tuple[str, ...], tmp_path: Path, record_tag: str
 ) -> None:
+    # Public §§1.3 and 3.1 explicitly make the grammar xref template optional
+    # when no structure points to this record. This fixture has no such pointers.
     result, payload = run_gedcom(
         submission_command,
         {
             "action": "inspect",
-            "gedcom_text": document_text(_XREF_REQUIRED_RECORD_BLOCKS[record_tag]),
+            "gedcom_text": document_text(_UNREFERENCED_RECORD_BLOCKS[record_tag]),
         },
         tmp_path,
     )
-    assert not _unexpected_result(result.returncode, payload, "invalid_document")
+    assert result.returncode == 0
+    assert payload is not None
+    result_data = cast(dict[str, object], payload["result"])
+    dataset = cast(dict[str, object], result_data["dataset"])
+    records = cast(list[dict[str, object]], dataset["records"])
+    matches = [record for record in records if record["tag"] == record_tag]
+    assert len(matches) == 1
+    assert matches[0].get("xref") is None
 
 
 @pytest.mark.parametrize(
@@ -581,8 +590,8 @@ def test_family_event_husb_requires_age(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     text = document_text(
-        individual_record_block(xref="@I1@"),
-        individual_record_block(xref="@I2@"),
+        individual_record_block(xref="@I1@", extra_lines=["1 FAMS @F1@"]),
+        individual_record_block(xref="@I2@", extra_lines=["1 FAMS @F1@"]),
         [
             "0 @F1@ FAM",
             "1 HUSB @I1@",
@@ -833,3 +842,50 @@ def test_render_rejects_empty_individual_structure(
         submission_command, {"action": "render", "dataset": dataset}, tmp_path
     )
     assert not _unexpected_result(result.returncode, payload, "invalid_request")
+
+
+@pytest.mark.parametrize(
+    ("family_role", "individual_role"), [("HUSB", "FAMS"), ("WIFE", "FAMS"), ("CHIL", "FAMC")]
+)
+@pytest.mark.parametrize("action", ["inspect", "render"])
+def test_family_members_require_matching_individual_backlinks(
+    submission_command: tuple[str, ...],
+    tmp_path: Path,
+    family_role: str,
+    individual_role: str,
+    action: str,
+) -> None:
+    # §3.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start
+    # with the same valid pair, then remove only the named backlink: a failure
+    # to implement families at all cannot earn this rejection point.
+    records = [
+        node("HEAD", children=[node("GEDC", children=[node("VERS", "7.0")])]),
+        node(
+            "INDI",
+            xref="@I1@",
+            children=[node("NAME", "Example /Person/"), node(individual_role, "@F1@")],
+        ),
+        node("FAM", xref="@F1@", children=[node(family_role, "@I1@")]),
+        node("TRLR"),
+    ]
+    valid_text = document_text(
+        ["0 @I1@ INDI", "1 NAME Example /Person/", f"1 {individual_role} @F1@"],
+        ["0 @F1@ FAM", f"1 {family_role} @I1@"],
+    )
+    valid_request = (
+        {"action": "inspect", "gedcom_text": valid_text}
+        if action == "inspect"
+        else {"action": "render", "dataset": {"records": records}}
+    )
+    result, payload = run_gedcom(submission_command, valid_request, tmp_path)
+    assert result.returncode == 0
+    assert payload is not None and payload.get("result") is not None
+    records[1]["children"].pop()
+    bad_request = (
+        {"action": "inspect", "gedcom_text": valid_text.replace(f"1 {individual_role} @F1@\n", "")}
+        if action == "inspect"
+        else {"action": "render", "dataset": {"records": records}}
+    )
+    result, payload = run_gedcom(submission_command, bad_request, tmp_path)
+    code = "invalid_document" if action == "inspect" else "invalid_request"
+    assert not _unexpected_result(result.returncode, payload, code)

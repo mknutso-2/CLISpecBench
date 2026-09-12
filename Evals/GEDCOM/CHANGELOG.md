@@ -1,5 +1,18 @@
 # Changelog
 
+## v4.0.2 — 2026-09-12
+
+- Correct seven xref tests: §§1.3 and3.1 permit unreferenced records to omit
+  identifiers, even when their grammar template has an xref slot. The reference
+  now permits these records while retaining pointer uniqueness/closure checks.
+- Complete synthetic INDI family-link context in official fragment and age
+  fixtures per §3.2.2. Unrelated missing backlinks no longer obscure age or
+  fragment behavior, including the dedicated malformed-age negatives.
+- Add paired inspect/render rejection controls for absent reciprocal HUSB/WIFE/
+  CHIL backlinks and enforce the explicit requirement in the reference.
+- Public model inputs are unchanged. See docs/validation/GEDCOM-4.0.2.md for
+  reference, retained-submission, and regression controls.
+
 ## v4.0.1 — 2026-09-11
 
 - Complete official fragment pointer targets and supporting records with legal
