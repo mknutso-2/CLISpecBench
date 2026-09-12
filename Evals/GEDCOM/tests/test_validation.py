@@ -157,7 +157,10 @@ def test_dangling_pointer_is_invalid(submission_command: tuple[str, ...], tmp_pa
 
 
 def test_void_pointer_is_allowed(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    text = sample_gedcom_text().replace("1 WIFE @I2@", "1 WIFE @VOID@")
+    # §1.3 defines voidPtr; §3.1 explicitly permits @VOID@ in pointer slots.
+    # Keep this separate from §3.2.2 family reciprocity: the former full-family
+    # fixture replaced WIFE but retained the former partner's FAMS link.
+    text = document_text(["0 @F1@ FAM", "1 WIFE @VOID@"])
     result, payload = run_gedcom(
         submission_command,
         {"action": "inspect", "gedcom_text": text},
@@ -165,6 +168,11 @@ def test_void_pointer_is_allowed(submission_command: tuple[str, ...], tmp_path: 
     )
     assert result.returncode == 0
     assert payload is not None
+    family = next(
+        record for record in payload["result"]["dataset"]["records"] if record["tag"] == "FAM"
+    )
+    wife = next(child for child in family["children"] if child["tag"] == "WIFE")
+    assert wife["payload"] == "@VOID@"
 
 
 def test_unescaped_leading_at_in_non_pointer_payload_is_invalid(

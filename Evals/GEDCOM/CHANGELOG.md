@@ -1,5 +1,14 @@
 # Changelog
 
+## v4.0.3 — 2026-09-12
+
+- Isolate the positive VOID pointer fixture from unrelated partner-link state.
+  Use a minimal family containing WIFE @VOID@ and observe that exact payload;
+  empty or discarded output cannot pass. Public §§1.3 and 3.1 permit this form.
+- Preserve all 212 scored cases and all model-visible inputs. Existing explicit
+  family backlink validation remains covered separately. See
+  docs/validation/GEDCOM-4.0.3.md for retained-source comparisons and controls.
+
 ## v4.0.2 — 2026-09-12
 
 - Correct seven xref tests: §§1.3 and3.1 permit unreferenced records to omit
