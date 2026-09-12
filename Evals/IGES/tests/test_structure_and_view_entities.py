@@ -72,7 +72,7 @@ def test_drawing_form_one_roundtrips_angles_and_annotations(
         },
     )
     assert data["views"][1]["view"] == 3
-    assert data["views"][1]["angle"] == pytest.approx(1.5708)
+    assert data["views"][1]["angle"] == pytest.approx(1.5708, rel=1e-12, abs=1e-15)
     assert data["annotations"] == [9]
 
 
@@ -105,9 +105,9 @@ def test_view_form_one_roundtrips_perspective_fields(
         },
     )
     assert data["view_number"] == 2
-    assert data["center_of_projection"][2] == pytest.approx(100.0)
-    assert data["view_plane_distance"] == pytest.approx(50.0)
-    assert data["wmax"] == pytest.approx(200.0)
+    assert data["center_of_projection"][2] == pytest.approx(100.0, rel=1e-12, abs=1e-15)
+    assert data["view_plane_distance"] == pytest.approx(50.0, rel=1e-12, abs=1e-15)
+    assert data["wmax"] == pytest.approx(200.0, rel=1e-12, abs=1e-15)
 
 
 def test_rectangular_array_roundtrips_do_dont_list(

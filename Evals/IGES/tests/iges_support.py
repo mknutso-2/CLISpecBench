@@ -1,9 +1,9 @@
 """Test helpers for the IGES eval.
 
-These helpers drive the `iges` CLI end-to-end: tests typically build
-canonical IGES-JSON in Python, shell out to ``iges write`` to produce a
-.iges file, then exercise ``iges parse``/``query``/``eval``/``roundtrip``
-and assert on the JSON output.
+Reader and geometry probes use reviewed, frozen physical IGES fixtures so
+``parse``/``query``/``eval`` do not depend on the submitted writer. Separate
+writer and integration probes build canonical IGES-JSON and exercise
+``write`` or semantic ``write``/``parse``/``roundtrip`` behavior.
 
 The CLI contract (five subcommands, exit codes 0/1/2, envelope shape) is
 specified in ``Evals/IGES/prompt/technical-requirements-prompt.md``.
@@ -11,17 +11,48 @@ specified in ``Evals/IGES/prompt/technical-requirements-prompt.md``.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import subprocess
 from collections.abc import Mapping, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 # ---------------------------------------------------------------------------
 # Canonical IGES-JSON builders
 # ---------------------------------------------------------------------------
 
 Vec3 = tuple[float, float, float]
+
+
+def assert_semantic_equal(actual: Any, expected: Any, *, path: str = "value") -> None:
+    """TR §3: exact structure/discrete fields; bounded error for JSON reals.
+
+    Expected floating leaves identify real fields. An integer JSON spelling of
+    a real is valid, but bool is not a number. Integer/pointer expectations do
+    not receive a numerical tolerance; strings, bool and null remain exact.
+    """
+    if isinstance(expected, float):
+        assert isinstance(actual, (int, float)) and not isinstance(actual, bool), path
+        assert math.isclose(actual, expected, rel_tol=1e-12, abs_tol=1e-15), (
+            f"{path}: {actual!r} != {expected!r} within public real tolerance"
+        )
+    elif isinstance(expected, dict):
+        assert isinstance(actual, dict) and actual.keys() == expected.keys(), path
+        for key, value in cast(dict[str, Any], expected).items():
+            assert_semantic_equal(actual[key], value, path=f"{path}.{key}")
+    elif isinstance(expected, list):
+        assert isinstance(actual, list), path
+        actual_list = cast(list[Any], actual)
+        expected_list = cast(list[Any], expected)
+        assert len(actual_list) == len(expected_list), path
+        for index, (value, wanted) in enumerate(zip(actual_list, expected_list, strict=True)):
+            assert_semantic_equal(value, wanted, path=f"{path}[{index}]")
+    elif isinstance(expected, bool) or expected is None:
+        assert actual is expected, path
+    else:
+        assert not isinstance(actual, bool) and actual == expected, path
 
 
 def default_global() -> dict[str, Any]:
@@ -92,7 +123,7 @@ def default_directory_entry(
         "label_display": 0,
         "status": {
             "blank": "visible",
-            "subordinate": "independent",
+            "subordinate": "physically_dependent" if entity_type == 123 else "independent",
             "entity_use": "geometry",
             "hierarchy": "global_top_down",
         },
@@ -127,6 +158,8 @@ def make_entity(
     directory_entry_overrides: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build one ``entities[]`` record with matching DE + data payload."""
+    # §4.20: Direction entities are always physically dependent; callers must
+    # also provide a legitimate referencing parent in their positive fixture.
     de = default_directory_entry(entity_type, form=form)
     if directory_entry_overrides is not None:
         de.update(directory_entry_overrides)
@@ -139,6 +172,25 @@ def make_entity(
             "data": dict(data),
         },
     }
+
+
+def direction_document(data: Mapping[str, Any]) -> dict[str, Any]:
+    """Put a §4.20 dependent Direction in a valid unparametrized Plane190.
+
+    A standalone Direction cannot be independent. Form0 uses only the point
+    and normal, so arbitrary nonzero ratios need no manufactured tangent axis.
+    """
+    return wrap_entities(
+        [
+            make_entity(de_index=1, entity_type=123, data=data),
+            make_entity(
+                de_index=3, entity_type=116, data={"coords": [0.0, 0.0, 0.0], "display_symbol": 0}
+            ),
+            make_entity(
+                de_index=5, entity_type=190, form=0, data={"deloc": 3, "denrml": 1, "derefd": 0}
+            ),
+        ]
+    )
 
 
 def single_line_document(start: Vec3, terminate: Vec3) -> dict[str, Any]:
@@ -194,6 +246,7 @@ def write_iges_from_json(
     json_path = tmp_path / f"{name}.json"
     iges_path = tmp_path / f"{name}.iges"
     json_path.write_text(json.dumps(document), encoding="utf-8")
+    iges_path.unlink(missing_ok=True)
     _run_cli(
         submission_command,
         "write",
@@ -206,6 +259,47 @@ def write_iges_from_json(
     return iges_path
 
 
+def is_input_rejection(payload: Mapping[str, Any]) -> bool:
+    """Observe rejection without repeating the precise error-envelope schema.
+
+    The caller separately checks the invalid-input exit code. Either explicit
+    ok:false or a nonempty diagnostic suffices here; dedicated schema tests
+    own the mandatory presence of both fields. Empty output cannot earn credit.
+    """
+    error = payload.get("error")
+    return payload.get("ok") is False or isinstance(error, str) and bool(error)
+
+
+def fixture_iges_from_json(
+    submission_command: Sequence[str],
+    document: Mapping[str, Any],
+    tmp_path: Path,
+    *,
+    name: str = "fixture",
+) -> Path:
+    """Copy a frozen input fixture; never invoke the submission's writer.
+
+    Reader/evaluator checks must not require successful JSON-to-IGES writing:
+    otherwise one writer defect prevents dozens of unrelated observations.
+    Inputs are keyed by their exact semantic fixture document, with both JSON
+    and physical records retained in data/reader-fixtures.json for review.
+    Missing fixtures are evaluator maintenance errors, never fallback writes.
+    Actual writer and semantic-roundtrip tests still use write_iges_from_json.
+    """
+    del submission_command  # Same call shape as the writer helper, no invocation.
+    key = hashlib.sha256(
+        json.dumps(document, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    fixtures = json.loads(
+        (Path(__file__).parent / "data" / "reader-fixtures.json").read_text(encoding="utf-8")
+    )
+    fixture = fixtures[key]
+    assert fixture["document"] == dict(document), "fixture content/key disagreement"
+    path = tmp_path / f"{name}.iges"
+    path.write_bytes(fixture["iges"].encode("latin-1"))
+    return path
+
+
 def parse_iges_to_json(
     submission_command: Sequence[str],
     iges_path: Path,
@@ -214,6 +308,7 @@ def parse_iges_to_json(
     name: str = "parsed",
 ) -> dict[str, Any]:
     out = tmp_path / f"{name}.json"
+    out.unlink(missing_ok=True)
     _run_cli(
         submission_command,
         "parse",
@@ -222,7 +317,9 @@ def parse_iges_to_json(
         "--output",
         str(out),
     )
-    return json.loads(out.read_text(encoding="utf-8"))
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict), "expected a JSON object"
+    return cast(dict[str, Any], payload)
 
 
 def query_entity(
@@ -234,6 +331,7 @@ def query_entity(
     name: str = "query",
 ) -> dict[str, Any]:
     out = tmp_path / f"{name}.json"
+    out.unlink(missing_ok=True)
     _run_cli(
         submission_command,
         "query",
@@ -244,7 +342,9 @@ def query_entity(
         "--output",
         str(out),
     )
-    return json.loads(out.read_text(encoding="utf-8"))
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert isinstance(payload, dict), "expected a JSON object"
+    return cast(dict[str, Any], payload)
 
 
 def evaluate_entity(
@@ -259,6 +359,7 @@ def evaluate_entity(
     check: bool = True,
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:
     out = tmp_path / f"{name}.json"
+    out.unlink(missing_ok=True)
     args = [
         "eval",
         "--input",
@@ -274,7 +375,8 @@ def evaluate_entity(
         args.extend(["--s", repr(s)])
     completed = _run_cli(submission_command, *args, check=check)
     payload = json.loads(out.read_text(encoding="utf-8"))
-    return completed, payload
+    assert isinstance(payload, dict), "expected a JSON object"
+    return completed, cast(dict[str, Any], payload)
 
 
 def roundtrip_iges(
@@ -285,6 +387,7 @@ def roundtrip_iges(
     name: str = "rt",
 ) -> Path:
     out = tmp_path / f"{name}.iges"
+    out.unlink(missing_ok=True)
     _run_cli(
         submission_command,
         "roundtrip",

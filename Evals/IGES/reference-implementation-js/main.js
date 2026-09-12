@@ -1123,13 +1123,19 @@ registerEntity(114,
     const tv = [];
     for (let i = 0; i <= N; i++) tv.push(tok.nextReal(0));
     const patches = [];
-    for (let i = 0; i < M * N; i++) {
-      const cx = [], cy = [], cz = [];
-      for (let j = 0; j < 16; j++) cx.push(tok.nextReal(0));
-      for (let j = 0; j < 16; j++) cy.push(tok.nextReal(0));
-      for (let j = 0; j < 16; j++) cz.push(tok.nextReal(0));
-      patches.push({ coeff_x: cx, coeff_y: cy, coeff_z: cz });
+    // IGES §4.15 interleaves one ignored 48-coefficient boundary block
+    // after every real patch row, then a complete final boundary row.
+    for (let row = 0; row < M; row++) {
+      for (let column = 0; column < N; column++) {
+        const cx = [], cy = [], cz = [];
+        for (let j = 0; j < 16; j++) cx.push(tok.nextReal(0));
+        for (let j = 0; j < 16; j++) cy.push(tok.nextReal(0));
+        for (let j = 0; j < 16; j++) cz.push(tok.nextReal(0));
+        patches.push({ coeff_x: cx, coeff_y: cy, coeff_z: cz });
+      }
+      for (let j = 0; j < 48; j++) tok.nextReal(0);
     }
+    for (let j = 0; j < (N + 1) * 48; j++) tok.nextReal(0);
     return { ctype, ptype, M, N, tu, tv, patches };
   },
   (d, pw) => {
@@ -1137,11 +1143,17 @@ registerEntity(114,
     pw.writeInteger(d.M); pw.writeInteger(d.N);
     for (const v of d.tu) pw.writeReal(v);
     for (const v of d.tv) pw.writeReal(v);
-    for (const p of d.patches) {
-      for (const v of p.coeff_x) pw.writeReal(v);
-      for (const v of p.coeff_y) pw.writeReal(v);
-      for (const v of p.coeff_z) pw.writeReal(v);
+    // Write the mandatory placeholder columns and final row (§4.15).
+    for (let row = 0; row < d.M; row++) {
+      for (let column = 0; column < d.N; column++) {
+        const p = d.patches[row * d.N + column];
+        for (const v of p.coeff_x) pw.writeReal(v);
+        for (const v of p.coeff_y) pw.writeReal(v);
+        for (const v of p.coeff_z) pw.writeReal(v);
+      }
+      for (let j = 0; j < 48; j++) pw.writeReal(0.0);
     }
+    for (let j = 0; j < (d.N + 1) * 48; j++) pw.writeReal(0.0);
   }
 );
 

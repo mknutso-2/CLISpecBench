@@ -66,8 +66,8 @@ def test_angular_dimension_roundtrip(
     )
     assert data["denote"] == 1
     assert data["dewit2"] == 5
-    assert data["xt"] == pytest.approx(10.0)
-    assert data["radius"] == pytest.approx(15.0)
+    assert data["xt"] == pytest.approx(10.0, rel=1e-12, abs=1e-15)
+    assert data["radius"] == pytest.approx(15.0, rel=1e-12, abs=1e-15)
     assert data["dearrw2"] == 9
 
 
@@ -117,8 +117,8 @@ def test_diameter_dimension_allows_single_leader(
         },
     )
     assert data["dearrw2"] == 0
-    assert data["xt"] == pytest.approx(5.0)
-    assert data["yt"] == pytest.approx(5.0)
+    assert data["xt"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
+    assert data["yt"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
 
 
 def test_flag_note_zero_leaders_roundtrip(
@@ -139,7 +139,7 @@ def test_flag_note_zero_leaders_roundtrip(
             "leaders": [],
         },
     )
-    assert data["angle"] == pytest.approx(3.14159265358979)
+    assert data["angle"] == pytest.approx(3.14159265358979, rel=1e-12, abs=1e-15)
     assert data["n"] == 0
     assert data["leaders"] == []
 
@@ -197,7 +197,7 @@ def test_general_note_multiple_strings_roundtrip(
     )
     assert data["ns"] == 2
     assert data["strings"][0]["text"] == "Hi"
-    assert data["strings"][1]["start"] == pytest.approx([5.0, 0.0, 0.0])
+    assert data["strings"][1]["start"] == pytest.approx([5.0, 0.0, 0.0], rel=1e-12, abs=1e-15)
     assert data["strings"][1]["text"] == "Bye"
 
 
@@ -301,8 +301,8 @@ def test_leader_arrow_multiple_segments_roundtrip(
         },
     )
     assert data["n"] == 3
-    assert data["ad1"] == pytest.approx(0.8)
-    assert data["segments"][2] == pytest.approx({"x": 8.0, "y": 15.0})
+    assert data["ad1"] == pytest.approx(0.8, rel=1e-12, abs=1e-15)
+    assert data["segments"][2] == pytest.approx({"x": 8.0, "y": 15.0}, rel=1e-12, abs=1e-15)
 
 
 def test_linear_dimension_allows_null_witness_lines(
@@ -405,8 +405,8 @@ def test_radius_dimension_form_one_roundtrip(
         },
     )
     assert data["form"] == 1
-    assert data["xt"] == pytest.approx(10.0)
-    assert data["yt"] == pytest.approx(20.0)
+    assert data["xt"] == pytest.approx(10.0, rel=1e-12, abs=1e-15)
+    assert data["yt"] == pytest.approx(20.0, rel=1e-12, abs=1e-15)
     assert data["dearrw2"] == 7
 
 
@@ -454,6 +454,6 @@ def test_sectioned_area_multiple_islands_roundtrip(
     )
     assert data["bndp"] == 21
     assert data["patrn"] == 5
-    assert data["dist"] == pytest.approx(3.5)
-    assert data["angle"] == pytest.approx(1.047)
+    assert data["dist"] == pytest.approx(3.5, rel=1e-12, abs=1e-15)
+    assert data["angle"] == pytest.approx(1.047, rel=1e-12, abs=1e-15)
     assert data["islands"] == [23, 25]

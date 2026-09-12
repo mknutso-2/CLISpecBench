@@ -169,17 +169,24 @@ def install_entities(registerEntity, obj, IgesError, makeDiag, SECTION, readAttr
         for i in range(0, (N) + 1):
             tv.append(tok.nextReal(0))
         patches = []
-        for i in range(0, M * N):
-            cx = []
-            cy = []
-            cz = []
-            for j in range(0, 16):
-                cx.append(tok.nextReal(0))
-            for j in range(0, 16):
-                cy.append(tok.nextReal(0))
-            for j in range(0, 16):
-                cz.append(tok.nextReal(0))
-            patches.append(obj({"coeff_x": cx, "coeff_y": cy, "coeff_z": cz}))
+        # IGES §4.15: each real patch row is followed by 48 arbitrary
+        # boundary coefficients. They are not another geometric patch.
+        for row in range(M):
+            for column in range(N):
+                cx = []
+                cy = []
+                cz = []
+                for j in range(0, 16):
+                    cx.append(tok.nextReal(0))
+                for j in range(0, 16):
+                    cy.append(tok.nextReal(0))
+                for j in range(0, 16):
+                    cz.append(tok.nextReal(0))
+                patches.append(obj({"coeff_x": cx, "coeff_y": cy, "coeff_z": cz}))
+            for boundary in range(48):
+                tok.nextReal(0)
+        for boundary in range((N + 1) * 48):
+            tok.nextReal(0)
         return obj({"ctype": ctype, "ptype": ptype, "M": M, "N": N, "tu": tu, "tv": tv, "patches": patches})
     def _write_114(d, pw, form):
         pw.writeInteger(d.ctype)
@@ -190,13 +197,20 @@ def install_entities(registerEntity, obj, IgesError, makeDiag, SECTION, readAttr
             pw.writeReal(v)
         for v in d.tv:
             pw.writeReal(v)
-        for p in d.patches:
-            for v in p.coeff_x:
-                pw.writeReal(v)
-            for v in p.coeff_y:
-                pw.writeReal(v)
-            for v in p.coeff_z:
-                pw.writeReal(v)
+        # §4.15 requires placeholder columns and the final placeholder row.
+        for row in range(d.M):
+            for column in range(d.N):
+                p = d.patches[row * d.N + column]
+                for v in p.coeff_x:
+                    pw.writeReal(v)
+                for v in p.coeff_y:
+                    pw.writeReal(v)
+                for v in p.coeff_z:
+                    pw.writeReal(v)
+            for boundary in range(48):
+                pw.writeReal(0.0)
+        for boundary in range((d.N + 1) * 48):
+            pw.writeReal(0.0)
     registerEntity(114, _parse_114, _write_114)
 
     def _parse_116(tok, form):

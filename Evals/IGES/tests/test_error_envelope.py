@@ -28,10 +28,10 @@ from pathlib import Path
 from typing import Any
 
 from iges_support import (
+    fixture_iges_from_json,
     make_entity,
     single_line_document,
     wrap_entities,
-    write_iges_from_json,
 )
 
 
@@ -99,7 +99,7 @@ def test_query_error_envelope_has_all_required_fields(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = single_line_document((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     out = tmp_path / "err.json"
     completed = subprocess.run(
         [
@@ -135,7 +135,7 @@ def test_eval_error_envelope_has_all_required_fields(
             ),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     out = tmp_path / "err.json"
     completed = subprocess.run(
         [

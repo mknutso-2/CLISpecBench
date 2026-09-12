@@ -8,7 +8,12 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
-from iges_support import parse_iges_to_json, wrap_entities, write_iges_from_json
+from iges_support import (
+    assert_semantic_equal,
+    parse_iges_to_json,
+    wrap_entities,
+    write_iges_from_json,
+)
 
 
 def test_write_and_parse_preserve_all_26_global_fields(
@@ -65,7 +70,7 @@ def test_write_and_parse_preserve_all_26_global_fields(
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name="global-full")
 
     assert parsed["entities"] == []
-    assert parsed["global"] == global_section
+    assert_semantic_equal(parsed["global"], global_section)
 
 
 def test_write_empty_document_roundtrips_default_global_values(
@@ -80,6 +85,6 @@ def test_write_empty_document_roundtrips_default_global_values(
     assert global_section["product_id_sender"] == "TEST"
     assert global_section["product_id_receiver"] == "TEST"
     assert global_section["units"] == "inches"
-    assert global_section["model_space_scale"] == 1.0
+    assert_semantic_equal(global_section["model_space_scale"], 1.0)
     assert global_section["model_timestamp"] is None
     assert global_section["app_protocol"] == ""

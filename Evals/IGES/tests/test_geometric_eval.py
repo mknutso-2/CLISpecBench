@@ -16,6 +16,9 @@ using each entity's **native** parameter domain (not a normalized
 # pyright: reportUnknownMemberType=none
 # pyright: reportUnknownVariableType=none
 # pyright: reportUnknownArgumentType=none
+# Success-envelope metadata is tested in test_output_schema.py. Geometric
+# cases require their point/tangent/normal observation, so omitting ok:true
+# does not repeat the same schema failure across every entity parameter.
 from __future__ import annotations
 
 import math
@@ -24,12 +27,14 @@ from pathlib import Path
 
 import pytest
 
+from analytic_support import analytic_surface_document
 from iges_support import (
     evaluate_entity,
+    fixture_iges_from_json,
+    is_input_rejection,
     make_entity,
     single_line_document,
     wrap_entities,
-    write_iges_from_json,
 )
 
 
@@ -73,29 +78,26 @@ def test_arc_eval_at_start_angle_gives_start_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _single_arc_document(0.0, (0.0, 0.0), (5.0, 0.0), (0.0, 5.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([5.0, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([5.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_arc_eval_at_end_angle_gives_end_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _single_arc_document(0.0, (0.0, 0.0), (5.0, 0.0), (0.0, 5.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, math.pi / 2, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 5.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.0, 5.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_arc_eval_at_midangle_is_on_arc(submission_command: Sequence[str], tmp_path: Path) -> None:
     doc = _single_arc_document(0.0, (0.0, 0.0), (5.0, 0.0), (0.0, 5.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, math.pi / 4, tmp_path)
-    assert payload.get("ok") is True
     expected = 5.0 * math.cos(math.pi / 4)
-    assert payload.get("point") == pytest.approx([expected, expected, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([expected, expected, 0.0], rel=1e-9, abs=1e-12)
 
 
 # §4.3: arc with a non-zero start angle.
@@ -116,7 +118,7 @@ def test_arc_eval_at_nonzero_start_angle_returns_start_point(
     start = (r * math.cos(start_angle), r * math.sin(start_angle))
     end = (r * math.cos(end_angle), r * math.sin(end_angle))
     doc = _single_arc_document(0.0, (0.0, 0.0), start, end)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -124,11 +126,7 @@ def test_arc_eval_at_nonzero_start_angle_returns_start_point(
         start_angle,
         tmp_path,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx(
-        [start[0], start[1], 0.0],
-        abs=1e-9,
-    )
+    assert payload.get("point") == pytest.approx([start[0], start[1], 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_arc_eval_at_nonzero_end_angle_returns_end_point(
@@ -140,7 +138,7 @@ def test_arc_eval_at_nonzero_end_angle_returns_end_point(
     start = (r * math.cos(start_angle), r * math.sin(start_angle))
     end = (r * math.cos(end_angle), r * math.sin(end_angle))
     doc = _single_arc_document(0.0, (0.0, 0.0), start, end)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -148,11 +146,7 @@ def test_arc_eval_at_nonzero_end_angle_returns_end_point(
         end_angle,
         tmp_path,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx(
-        [end[0], end[1], 0.0],
-        abs=1e-9,
-    )
+    assert payload.get("point") == pytest.approx([end[0], end[1], 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_arc_eval_offcenter_arc_midangle_on_circle(
@@ -166,7 +160,7 @@ def test_arc_eval_offcenter_arc_midangle_on_circle(
     start = (cx + r * math.cos(start_angle), cy + r * math.sin(start_angle))
     end = (cx + r * math.cos(end_angle), cy + r * math.sin(end_angle))
     doc = _single_arc_document(0.0, (cx, cy), start, end)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # Mid-arc angle must land on the circle centered at (cx, cy).
     mid = (start_angle + end_angle) / 2.0
     _, payload = evaluate_entity(
@@ -176,23 +170,23 @@ def test_arc_eval_offcenter_arc_midangle_on_circle(
         mid,
         tmp_path,
     )
-    assert payload.get("ok") is True
     point = payload.get("point")
     assert point is not None, "eval success must carry `point`"
-    px, py, pz = point
-    assert (px - cx) ** 2 + (py - cy) ** 2 == pytest.approx(r * r, abs=1e-9)
-    assert pz == pytest.approx(0.0, abs=1e-9)
+    # Compare coordinates directly: squaring residuals amplifies allowed
+    # coordinate error and radial membership alone misses a wrong arc angle.
+    assert point == pytest.approx(
+        [cx + r * math.cos(mid), cy + r * math.sin(mid), 0.0], rel=1e-9, abs=1e-12
+    )
 
 
 def test_arc_eval_respects_z_plane(submission_command: Sequence[str], tmp_path: Path) -> None:
     # Arc parallel to XY but at z = 2.5.
     doc = _single_arc_document(2.5, (0.0, 0.0), (1.0, 0.0), (0.0, 1.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
-    assert payload.get("ok") is True
     point = payload.get("point")
     assert point is not None, "eval success must carry `point`"
-    assert point[2] == pytest.approx(2.5)
+    assert point[2] == pytest.approx(2.5, rel=1e-9, abs=1e-12)
 
 
 # §4.5: Conic Arc parameterization.
@@ -317,22 +311,19 @@ def test_parabolic_conic_eval_reaches_vertex_at_midparameter(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _parabolic_conic_document()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 0.0, 2.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.0, 0.0, 2.0], rel=1e-9, abs=1e-12)
 
 
 def test_elliptic_conic_eval_midangle_matches_semiaxes(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _elliptic_conic_document()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, math.pi / 4, tmp_path)
-    assert payload.get("ok") is True
     assert payload.get("point") == pytest.approx(
-        [math.sqrt(2.0), 3.0 / math.sqrt(2.0), 1.5],
-        abs=1e-9,
+        [math.sqrt(2.0), 3.0 / math.sqrt(2.0), 1.5], rel=1e-9, abs=1e-12
     )
 
 
@@ -340,20 +331,18 @@ def test_hyperbolic_conic_eval_branch_midparameter_matches_vertex(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _hyperbolic_conic_document()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.0, 0.0, -1.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.0, 0.0, -1.0], rel=1e-9, abs=1e-12)
 
 
 def test_transformed_elliptic_conic_applies_entity_matrix_after_eval(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _transformed_elliptic_conic_document()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 3, math.pi / 2, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([7.0, -5.0, 3.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([7.0, -5.0, 3.0], rel=1e-9, abs=1e-12)
 
 
 # §4.6 + §1.6: Copious Data polyline parameterization.
@@ -402,22 +391,20 @@ def test_copious_data_form11_at_vertex_returns_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _copious_data_form11_document(2.5, [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)])
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 1, 1.0, tmp_path)
-    assert payload.get("ok") is True
     # Tuple index 1 with zt=2.5 supplying z.
-    assert payload.get("point") == pytest.approx([1.0, 0.0, 2.5], abs=1e-9)
+    assert payload.get("point") == pytest.approx([1.0, 0.0, 2.5], rel=1e-9, abs=1e-12)
 
 
 def test_copious_data_form11_midpoint_interpolates(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _copious_data_form11_document(0.0, [(0.0, 0.0), (2.0, 0.0), (2.0, 4.0)])
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t = 1.5: halfway between tuples 1 (2,0) and 2 (2,4).
     _, payload = evaluate_entity(submission_command, iges_path, 1, 1.5, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.0, 2.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.0, 2.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_copious_data_form12_3d_path_at_fractional_t(
@@ -430,11 +417,10 @@ def test_copious_data_form12_3d_path_at_fractional_t(
             (3.0, 0.0, 6.0),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t = 0.25: 25% between tuples 0 and 1 → (0.75, 0, 0).
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.25, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.75, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.75, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 # §4.11 Form 63 (Simple Closed Planar Curve): parameterization is the
@@ -468,12 +454,11 @@ def test_copious_data_form63_midpoint_interpolates(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _copious_data_form63_document(1.5, [(0.0, 0.0), (4.0, 0.0), (4.0, 4.0), (0.0, 4.0)])
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t = 0.5: halfway along first edge (0,0) → (4,0), so point is
     # (2.0, 0.0, zt=1.5).
     _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.0, 0.0, 1.5], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.0, 0.0, 1.5], rel=1e-9, abs=1e-12)
 
 
 # §4.4: Composite Curve default parameterization.
@@ -501,10 +486,9 @@ def test_composite_curve_eval_at_start_returns_first_constituent_start(
             make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 0.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_composite_curve_eval_inside_first_constituent(
@@ -525,11 +509,10 @@ def test_composite_curve_eval_inside_first_constituent(
             make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t = 0.5 → halfway along first Line (native [0,1]) → (1.5, 0, 0)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 0.5, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([1.5, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([1.5, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint(
@@ -550,11 +533,10 @@ def test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint(
             make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t = 1.0 is the junction; both legs pass through (3, 0, 0).
     _, payload = evaluate_entity(submission_command, iges_path, 5, 1.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([3.0, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([3.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_composite_curve_eval_inside_second_constituent(
@@ -575,11 +557,10 @@ def test_composite_curve_eval_inside_second_constituent(
             make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t = 1.5 → halfway along second Line, local t = 0.5 → (3, 2, 0)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 1.5, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([3.0, 2.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([3.0, 2.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_composite_curve_eval_at_terminus_returns_second_constituent_end(
@@ -600,10 +581,9 @@ def test_composite_curve_eval_at_terminus_returns_second_constituent_end(
             make_entity(de_index=5, entity_type=102, data={"constituents": [1, 3]}),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 5, 2.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([3.0, 4.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([3.0, 4.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 # §4.25: Offset Curve (FLAG=1 uniform offset).
@@ -628,7 +608,7 @@ def _offset_curve_over_line_doc(d1: float) -> dict[str, object]:
                     "flag": 1,  # uniform offset
                     "de2": 0,
                     "ndim": 0,
-                    "ptype": 2,  # parameter
+                    "ptype": 0,  # §4.25: unused unless FLAG is 2 or 3
                     "d1": d1,
                     "td1": 0.0,
                     "d2": 0.0,
@@ -648,20 +628,18 @@ def test_offset_curve_eval_at_start_is_displaced_base_start(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _offset_curve_over_line_doc(d1=2.0)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 3, 0.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 2.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.0, 2.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_offset_curve_eval_at_midparam_follows_base(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _offset_curve_over_line_doc(d1=2.0)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 3, 0.5, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([5.0, 2.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([5.0, 2.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_offset_curve_eval_nonzero_offset_follows_base(
@@ -669,10 +647,9 @@ def test_offset_curve_eval_nonzero_offset_follows_base(
 ) -> None:
     # Ensure the offset displacement actually scales with d1.
     doc = _offset_curve_over_line_doc(d1=5.0)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(submission_command, iges_path, 3, 0.25, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.5, 5.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.5, 5.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 # §4.17: Ruled Surface (Type 118).
@@ -709,7 +686,7 @@ def test_ruled_surface_eval_interior_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _ruled_surface_two_lines_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -718,15 +695,14 @@ def test_ruled_surface_eval_interior_point(
         tmp_path,
         s=0.4,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([3.0, 2.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([3.0, 2.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_ruled_surface_eval_on_first_curve_returns_curve1_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _ruled_surface_two_lines_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -735,16 +711,15 @@ def test_ruled_surface_eval_on_first_curve_returns_curve1_point(
         tmp_path,
         s=0.0,
     )
-    assert payload.get("ok") is True
     # s=0 is on curve 1 at u=0.5 → (5, 0, 0)
-    assert payload.get("point") == pytest.approx([5.0, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([5.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_ruled_surface_eval_on_second_curve_returns_curve2_point(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _ruled_surface_two_lines_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -753,9 +728,8 @@ def test_ruled_surface_eval_on_second_curve_returns_curve2_point(
         tmp_path,
         s=1.0,
     )
-    assert payload.get("ok") is True
     # s=1 is on curve 2 at u=0.5 → (5, 5, 0)
-    assert payload.get("point") == pytest.approx([5.0, 5.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([5.0, 5.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_ruled_surface_eval_dirflg_reverses_second_curve(
@@ -764,7 +738,7 @@ def test_ruled_surface_eval_dirflg_reverses_second_curve(
     # dirflg=1 matches curve 1 start to curve 2 end. At t=0, s=1 we end
     # up at the *end* of curve 2, which is (10, 5, 0).
     doc = _ruled_surface_two_lines_doc(dirflg=1)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -773,8 +747,7 @@ def test_ruled_surface_eval_dirflg_reverses_second_curve(
         tmp_path,
         s=1.0,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([10.0, 5.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([10.0, 5.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 # §4.18: Surface of Revolution (Type 120).
@@ -814,7 +787,7 @@ def test_surface_of_revolution_eval_at_start_angle(
     # use %.15g and round the last bit of π, which would put s=π
     # epsilon-past ta=π. The geometric assertion is unaffected.
     doc = _cylinder_via_surface_of_revolution(sa=-0.1, ta=math.pi + 0.1)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t=0 → generatrix start (2, 0, 0); s=0 → no rotation.
     _, payload = evaluate_entity(
         submission_command,
@@ -824,15 +797,14 @@ def test_surface_of_revolution_eval_at_start_angle(
         tmp_path,
         s=0.0,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.0, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_surface_of_revolution_eval_quarter_rotation(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _cylinder_via_surface_of_revolution(sa=-0.1, ta=math.pi + 0.1)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t=0.5 → generatrix point (2, 0, 1.5); s=π/2 → rotate 90° about Z
     # → (0, 2, 1.5).
     _, payload = evaluate_entity(
@@ -843,15 +815,14 @@ def test_surface_of_revolution_eval_quarter_rotation(
         tmp_path,
         s=math.pi / 2,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 2.0, 1.5], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.0, 2.0, 1.5], rel=1e-9, abs=1e-12)
 
 
 def test_surface_of_revolution_eval_half_rotation(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _cylinder_via_surface_of_revolution(sa=-0.1, ta=math.pi + 0.1)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     # t=1 → generatrix end (2, 0, 3); s=π → rotate 180° → (−2, 0, 3).
     _, payload = evaluate_entity(
         submission_command,
@@ -861,8 +832,7 @@ def test_surface_of_revolution_eval_half_rotation(
         tmp_path,
         s=math.pi,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([-2.0, 0.0, 3.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([-2.0, 0.0, 3.0], rel=1e-9, abs=1e-12)
 
 
 # §4.19: Tabulated Cylinder (Type 122).
@@ -913,7 +883,7 @@ def test_tabulated_cylinder_over_line_interpolates_along_generatrix(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _tabulated_cylinder_over_line_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -922,15 +892,14 @@ def test_tabulated_cylinder_over_line_interpolates_along_generatrix(
         tmp_path,
         s=0.5,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.0, 2.0, 5.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.0, 2.0, 5.0], rel=1e-9, abs=1e-12)
 
 
 def test_tabulated_cylinder_over_arc_keeps_generatrix_parallel(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _tabulated_cylinder_over_arc_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -939,16 +908,147 @@ def test_tabulated_cylinder_over_arc_keeps_generatrix_parallel(
         tmp_path,
         s=1.0,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([1.0, 2.0, 4.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([1.0, 2.0, 4.0], rel=1e-9, abs=1e-12)
 
 
-# §4.30: Offset Surface (Type 140).
-#
-# The base surface provides both the point and the oriented unit normal
-# field. The entity's indicator vector selects which global orientation
-# is treated as positive, but the final point is always
-# `S(u, v) + d*N(u, v)`.
+# Analytic-surface/topology conflicts are deferred; see
+# docs/validation/IGES-1.0.16.md for public anchors and retired node IDs.
+
+
+# §1 eval contract: non-parametric entity types must be rejected.
+def test_eval_on_non_parametric_entity_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=406,  # Property — not geometrically parametric
+                data={
+                    "np": 1,
+                    "values": [{"kind": "real", "value": 1.0}],
+                },
+            ),
+        ]
+    )
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command,
+        iges_path,
+        1,
+        0.0,
+        tmp_path,
+        check=False,
+    )
+    assert is_input_rejection(payload)
+    assert "error" in payload
+
+
+# TR §1.5 eval CLI-shape rules:
+# - curves: --t required, --s is invalid input
+# - surfaces: both --t and --s required
+# - curve success: normal is null
+# - surface success: tangent is null
+def test_curve_eval_with_s_is_rejected(submission_command: Sequence[str], tmp_path: Path) -> None:
+    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    completed, payload = evaluate_entity(
+        submission_command,
+        iges_path,
+        1,
+        0.5,
+        tmp_path,
+        s=0.5,
+        check=False,
+    )
+    assert completed.returncode == 1
+    assert is_input_rejection(payload)
+
+
+def test_surface_eval_without_s_is_rejected(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    completed, payload = evaluate_entity(
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        check=False,
+    )
+    assert completed.returncode == 1
+    assert is_input_rejection(payload)
+
+
+def test_curve_eval_success_has_null_normal(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 2.0, 3.0))
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
+    assert payload["normal"] is None
+
+
+def test_surface_eval_success_has_null_tangent(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _ruled_surface_two_lines_doc()
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command,
+        iges_path,
+        5,
+        0.5,
+        tmp_path,
+        s=0.5,
+    )
+    assert payload["tangent"] is None
+
+
+# §4.13 Form 1 / Form 2 extended domains (TR §1.6). Form 0 clamps at
+# [0, 1]; Form 1 extends to [0, ∞); Form 2 extends to (−∞, ∞). The
+# evaluation formula is the same in all three — `P1 + t*(P2 - P1)` —
+# so t > 1 and t < 0 should linearly extrapolate past the endpoints.
+def test_line_form1_eval_beyond_terminate(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                form=1,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, 3.0, tmp_path)
+    assert payload.get("point") == pytest.approx([3.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
+
+
+def test_line_form2_eval_before_start(submission_command: Sequence[str], tmp_path: Path) -> None:
+    doc = wrap_entities(
+        [
+            make_entity(
+                de_index=1,
+                entity_type=110,
+                form=2,
+                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
+            ),
+        ]
+    )
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(submission_command, iges_path, 1, -2.0, tmp_path)
+    assert payload.get("point") == pytest.approx([-2.0, 0.0, 0.0], rel=1e-9, abs=1e-12)
+
+
+# §4.50 explicitly permits independent infinite Plane Surfaces; unlike
+# §§4.51–4.54, no Face-only restriction applies to Type 190.
+
+
 def _offset_surface_over_base_doc(
     base_entity: dict[str, object], indicator: list[float], distance: float
 ) -> dict[str, object]:
@@ -985,63 +1085,11 @@ def _offset_surface_over_plane_doc(indicator: list[float], distance: float) -> d
     )
 
 
-def _offset_surface_over_cylinder_doc(indicator: list[float], distance: float) -> dict[str, object]:
-    return _offset_surface_over_base_doc(
-        make_entity(
-            de_index=7,
-            entity_type=192,
-            form=1,
-            data={"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5},
-        ),
-        indicator,
-        distance,
-    )
-
-
-def _offset_surface_over_cone_doc(indicator: list[float], distance: float) -> dict[str, object]:
-    return _offset_surface_over_base_doc(
-        make_entity(
-            de_index=7,
-            entity_type=194,
-            form=1,
-            data={"deloc": 1, "deaxis": 3, "radius": 2.0, "sangle": 45.0, "derefd": 5},
-        ),
-        indicator,
-        distance,
-    )
-
-
-def _offset_surface_over_sphere_doc(indicator: list[float], distance: float) -> dict[str, object]:
-    return _offset_surface_over_base_doc(
-        make_entity(
-            de_index=7,
-            entity_type=196,
-            form=1,
-            data={"deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5},
-        ),
-        indicator,
-        distance,
-    )
-
-
-def _offset_surface_over_torus_doc(indicator: list[float], distance: float) -> dict[str, object]:
-    return _offset_surface_over_base_doc(
-        make_entity(
-            de_index=7,
-            entity_type=198,
-            form=1,
-            data={"deloc": 1, "deaxis": 3, "majrad": 5.0, "minrad": 1.0, "derefd": 5},
-        ),
-        indicator,
-        distance,
-    )
-
-
 def test_offset_surface_over_plane_offsets_along_plane_normal(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _offset_surface_over_plane_doc([0.0, 0.0, 1.0], 2.5)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -1050,104 +1098,9 @@ def test_offset_surface_over_plane_offsets_along_plane_normal(
         tmp_path,
         s=-1.0,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([3.0, -1.0, 2.5], abs=1e-9)
+    assert payload.get("point") == pytest.approx([3.0, -1.0, 2.5], rel=1e-9, abs=1e-12)
 
 
-def test_offset_surface_over_cylinder_expands_radius_on_indicator_side(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = _offset_surface_over_cylinder_doc([1.0, 0.0, 0.0], 0.5)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        9,
-        90.0,
-        tmp_path,
-        s=1.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 2.5, 1.0], abs=1e-9)
-
-
-def test_offset_surface_indicator_flips_global_normal_orientation(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = _offset_surface_over_cylinder_doc([-1.0, 0.0, 0.0], 0.5)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        9,
-        90.0,
-        tmp_path,
-        s=1.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 1.5, 1.0], abs=1e-9)
-
-
-def test_offset_surface_over_cone_uses_conical_reference_parameters(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = _offset_surface_over_cone_doc([1.0, 0.0, -1.0], 0.5)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        9,
-        90.0,
-        tmp_path,
-        s=1.0,
-    )
-    assert payload.get("ok") is True
-    delta = 0.5 / math.sqrt(2.0)
-    assert payload.get("point") == pytest.approx([0.0, 3.0 + delta, 1.0 - delta], abs=1e-9)
-
-
-def test_offset_surface_over_sphere_extends_radius_along_spherical_normal(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = _offset_surface_over_sphere_doc([0.0, math.sqrt(3.0), 1.0], 0.5)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        9,
-        90.0,
-        tmp_path,
-        s=30.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx(
-        [0.0, 1.25 * math.sqrt(3.0), 1.25],
-        abs=1e-9,
-    )
-
-
-def test_offset_surface_over_torus_offsets_along_minor_circle_normal(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = _offset_surface_over_torus_doc([0.0, 0.0, 1.0], 0.5)
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        9,
-        90.0,
-        tmp_path,
-        s=180.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([-5.0, 0.0, 1.5], abs=1e-9)
-
-
-# §§4.50–4.54: Analytic surfaces.
-#
-# These surface types use the spec's native parameterizations directly.
-# For the right circular / spherical / toroidal families the CLI uses
-# degrees for angular parameters, matching the contract.
 def _analytic_surface_frame() -> list[dict[str, object]]:
     return [
         make_entity(
@@ -1169,7 +1122,7 @@ def test_plane_surface_eval_uses_reference_direction_basis(
             ),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -1178,119 +1131,7 @@ def test_plane_surface_eval_uses_reference_direction_basis(
         tmp_path,
         s=-1.0,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([2.0, -1.0, 0.0], abs=1e-9)
-
-
-def test_cylindrical_surface_eval_matches_spec_angles_and_axis(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = wrap_entities(
-        _analytic_surface_frame()
-        + [
-            make_entity(
-                de_index=7,
-                entity_type=192,
-                form=1,
-                data={"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5},
-            ),
-        ]
-    )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        7,
-        90.0,
-        tmp_path,
-        s=1.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 2.0, 1.0], abs=1e-9)
-
-
-def test_conical_surface_eval_expands_radius_by_v_tan_angle(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = wrap_entities(
-        _analytic_surface_frame()
-        + [
-            make_entity(
-                de_index=7,
-                entity_type=194,
-                form=1,
-                data={"deloc": 1, "deaxis": 3, "radius": 2.0, "sangle": 45.0, "derefd": 5},
-            ),
-        ]
-    )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        7,
-        90.0,
-        tmp_path,
-        s=1.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.0, 3.0, 1.0], abs=1e-9)
-
-
-def test_spherical_surface_eval_uses_latitude_and_longitude_degrees(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = wrap_entities(
-        _analytic_surface_frame()
-        + [
-            make_entity(
-                de_index=7,
-                entity_type=196,
-                form=1,
-                data={"deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5},
-            ),
-        ]
-    )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        7,
-        90.0,
-        tmp_path,
-        s=30.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx(
-        [0.0, math.sqrt(3.0), 1.0],
-        abs=1e-9,
-    )
-
-
-def test_toroidal_surface_eval_matches_major_and_minor_radii(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = wrap_entities(
-        _analytic_surface_frame()
-        + [
-            make_entity(
-                de_index=7,
-                entity_type=198,
-                form=1,
-                data={"deloc": 1, "deaxis": 3, "majrad": 5.0, "minrad": 1.0, "derefd": 5},
-            ),
-        ]
-    )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        7,
-        90.0,
-        tmp_path,
-        s=180.0,
-    )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([-5.0, 0.0, 1.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([2.0, -1.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_transformed_plane_surface_applies_entity_matrix_after_eval(
@@ -1324,7 +1165,7 @@ def test_transformed_plane_surface_applies_entity_matrix_after_eval(
             ),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
@@ -1333,139 +1174,77 @@ def test_transformed_plane_surface_applies_entity_matrix_after_eval(
         tmp_path,
         s=-1.0,
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([11.0, -3.0, 2.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([11.0, -3.0, 2.0], rel=1e-9, abs=1e-12)
 
 
-# §1 eval contract: non-parametric entity types must be rejected.
-def test_eval_on_non_parametric_entity_is_rejected(
+# §§4.51–4.54: analytic targets have real finite Face/OpenShell parents.
+def test_cylindrical_surface_eval_matches_spec_angles_and_axis(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(
-        [
-            make_entity(
-                de_index=1,
-                entity_type=406,  # Property — not geometrically parametric
-                data={
-                    "np": 1,
-                    "values": [{"kind": "real", "value": 1.0}],
-                },
-            ),
-        ]
+    doc, surface_de = analytic_surface_document(
+        192, 1, {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
-        1,
-        0.0,
+        surface_de,
+        90.0,
         tmp_path,
-        check=False,
+        s=1.0,
     )
-    assert payload.get("ok") is False
-    assert "error" in payload
+    assert payload.get("point") == pytest.approx([0.0, 2.0, 1.0], rel=1e-9, abs=1e-12)
 
 
-# TR §1.5 eval CLI-shape rules:
-# - curves: --t required, --s is invalid input
-# - surfaces: both --t and --s required
-# - curve success: normal is null
-# - surface success: tangent is null
-def test_curve_eval_with_s_is_rejected(submission_command: Sequence[str], tmp_path: Path) -> None:
-    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 0.0, 0.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    completed, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        1,
-        0.5,
-        tmp_path,
-        s=0.5,
-        check=False,
-    )
-    assert completed.returncode == 1
-    assert payload.get("ok") is False
-
-
-def test_surface_eval_without_s_is_rejected(
+def test_conical_surface_eval_expands_radius_by_v_tan_angle(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = _ruled_surface_two_lines_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    completed, payload = evaluate_entity(
-        submission_command,
-        iges_path,
-        5,
-        0.5,
-        tmp_path,
-        check=False,
+    doc, surface_de = analytic_surface_document(
+        194, 1, {"deloc": 1, "deaxis": 3, "radius": 2.0, "sangle": 45.0, "derefd": 5}
     )
-    assert completed.returncode == 1
-    assert payload.get("ok") is False
-
-
-def test_curve_eval_success_has_null_normal(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = single_line_document((0.0, 0.0, 0.0), (1.0, 2.0, 3.0))
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(submission_command, iges_path, 1, 0.5, tmp_path)
-    assert payload.get("ok") is True
-    assert payload["normal"] is None
-
-
-def test_surface_eval_success_has_null_tangent(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    doc = _ruled_surface_two_lines_doc()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
     _, payload = evaluate_entity(
         submission_command,
         iges_path,
-        5,
-        0.5,
+        surface_de,
+        90.0,
         tmp_path,
-        s=0.5,
+        s=1.0,
     )
-    assert payload.get("ok") is True
-    assert payload["tangent"] is None
+    assert payload.get("point") == pytest.approx([0.0, 3.0, 1.0], rel=1e-9, abs=1e-12)
 
 
-# §4.13 Form 1 / Form 2 extended domains (TR §1.6). Form 0 clamps at
-# [0, 1]; Form 1 extends to [0, ∞); Form 2 extends to (−∞, ∞). The
-# evaluation formula is the same in all three — `P1 + t*(P2 - P1)` —
-# so t > 1 and t < 0 should linearly extrapolate past the endpoints.
-def test_line_form1_eval_beyond_terminate(
+def test_spherical_surface_eval_uses_latitude_and_longitude_degrees(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(
-        [
-            make_entity(
-                de_index=1,
-                entity_type=110,
-                form=1,
-                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-            ),
-        ]
+    doc, surface_de = analytic_surface_document(
+        196, 1, {"deloc": 1, "radius": 2.0, "deaxis": 3, "derefd": 5}
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(submission_command, iges_path, 1, 3.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([3.0, 0.0, 0.0], abs=1e-9)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command,
+        iges_path,
+        surface_de,
+        90.0,
+        tmp_path,
+        s=30.0,
+    )
+    assert payload.get("point") == pytest.approx([0.0, math.sqrt(3.0), 1.0], rel=1e-9, abs=1e-12)
 
 
-def test_line_form2_eval_before_start(submission_command: Sequence[str], tmp_path: Path) -> None:
-    doc = wrap_entities(
-        [
-            make_entity(
-                de_index=1,
-                entity_type=110,
-                form=2,
-                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-            ),
-        ]
+def test_toroidal_surface_eval_matches_major_and_minor_radii(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc, surface_de = analytic_surface_document(
+        198, 1, {"deloc": 1, "deaxis": 3, "majrad": 5.0, "minrad": 1.0, "derefd": 5}
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path)
-    _, payload = evaluate_entity(submission_command, iges_path, 1, -2.0, tmp_path)
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([-2.0, 0.0, 0.0], abs=1e-9)
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path)
+    _, payload = evaluate_entity(
+        submission_command,
+        iges_path,
+        surface_de,
+        90.0,
+        tmp_path,
+        s=180.0,
+    )
+    assert payload.get("point") == pytest.approx([-5.0, 0.0, 1.0], rel=1e-9, abs=1e-12)

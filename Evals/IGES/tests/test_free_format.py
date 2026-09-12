@@ -11,6 +11,9 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iges_support import (
+    assert_semantic_equal,
+    fixture_iges_from_json,
+    is_input_rejection,
     parse_iges_to_json,
     single_line_document,
     write_iges_from_json,
@@ -49,8 +52,8 @@ def test_custom_parameter_delimiter_is_honored_in_written_and_parsed_files(
 
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name="pipe")
     data = parsed["entities"][0]["entity"]["data"]
-    assert data["start"] == [0.0, 0.0, 0.0]
-    assert data["terminate"] == [1.0, 1.0, 1.0]
+    assert_semantic_equal(data["start"], [0.0, 0.0, 0.0])
+    assert_semantic_equal(data["terminate"], [1.0, 1.0, 1.0])
 
 
 def test_custom_record_delimiter_is_honored_in_written_and_parsed_files(
@@ -66,7 +69,7 @@ def test_custom_record_delimiter_is_honored_in_written_and_parsed_files(
 
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name="hash")
     data = parsed["entities"][0]["entity"]["data"]
-    assert data["terminate"] == [1.0, 1.0, 1.0]
+    assert_semantic_equal(data["terminate"], [1.0, 1.0, 1.0])
 
 
 def test_consecutive_delimiters_default_global_fields(
@@ -108,7 +111,7 @@ def test_consecutive_delimiters_default_global_fields(
     global_section = parsed["global"]
     assert isinstance(global_section, dict)
     assert global_section["product_id_receiver"] == "product"
-    assert global_section["model_space_scale"] == 1.0
+    assert_semantic_equal(global_section["model_space_scale"], 1.0)
     assert global_section["drafting_std"] == "none"
     assert global_section["model_timestamp"] is None
     assert global_section["app_protocol"] == ""
@@ -192,13 +195,13 @@ def test_prohibited_parameter_delimiter_is_rejected(
     )
     assert completed.returncode == 1
     payload_out = json.loads(out.read_text(encoding="utf-8"))
-    assert payload_out["ok"] is False
+    assert is_input_rejection(payload_out)
 
 
 def test_comment_after_parameter_record_delimiter_is_ignored(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         single_line_document((0.0, 0.0, 0.0), (1.0, 1.0, 1.0)),
         tmp_path,
@@ -213,5 +216,5 @@ def test_comment_after_parameter_record_delimiter_is_ignored(
 
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name="commented")
     data = parsed["entities"][0]["entity"]["data"]
-    assert data["start"] == [0.0, 0.0, 0.0]
-    assert data["terminate"] == [1.0, 1.0, 1.0]
+    assert_semantic_equal(data["start"], [0.0, 0.0, 0.0])
+    assert_semantic_equal(data["terminate"], [1.0, 1.0, 1.0])

@@ -56,10 +56,10 @@ def test_block_roundtrip(
             "z_axis": [0.0, 0.0, 1.0],
         },
     )
-    assert data["lx"] == pytest.approx(10.0)
-    assert data["ly"] == pytest.approx(20.0)
-    assert data["lz"] == pytest.approx(30.0)
-    assert data["corner"] == pytest.approx([1.0, 2.0, 3.0])
+    assert data["lx"] == pytest.approx(10.0, rel=1e-12, abs=1e-15)
+    assert data["ly"] == pytest.approx(20.0, rel=1e-12, abs=1e-15)
+    assert data["lz"] == pytest.approx(30.0, rel=1e-12, abs=1e-15)
+    assert data["corner"] == pytest.approx([1.0, 2.0, 3.0], rel=1e-12, abs=1e-15)
 
 
 def test_wedge_roundtrip(
@@ -80,10 +80,10 @@ def test_wedge_roundtrip(
             "z_axis": [0.0, 0.0, 1.0],
         },
     )
-    assert data["ly"] == pytest.approx(5.0)
-    assert data["lz"] == pytest.approx(3.0)
-    assert data["ltx"] == pytest.approx(4.0)
-    assert data["corner"][0] == pytest.approx(1.0)
+    assert data["ly"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
+    assert data["lz"] == pytest.approx(3.0, rel=1e-12, abs=1e-15)
+    assert data["ltx"] == pytest.approx(4.0, rel=1e-12, abs=1e-15)
+    assert data["corner"][0] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
 
 
 def test_right_circular_cylinder_roundtrip(
@@ -101,8 +101,8 @@ def test_right_circular_cylinder_roundtrip(
             "axis": [0.0, 0.0, 1.0],
         },
     )
-    assert data["h"] == pytest.approx(10.0)
-    assert data["axis"] == pytest.approx([0.0, 0.0, 1.0])
+    assert data["h"] == pytest.approx(10.0, rel=1e-12, abs=1e-15)
+    assert data["axis"] == pytest.approx([0.0, 0.0, 1.0], rel=1e-12, abs=1e-15)
 
 
 def test_cone_frustum_roundtrip(
@@ -121,8 +121,8 @@ def test_cone_frustum_roundtrip(
             "axis": [0.0, 0.0, 1.0],
         },
     )
-    assert data["r1"] == pytest.approx(5.0)
-    assert data["r2"] == pytest.approx(2.0)
+    assert data["r1"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
+    assert data["r2"] == pytest.approx(2.0, rel=1e-12, abs=1e-15)
 
 
 def test_sphere_roundtrip(
@@ -135,8 +135,8 @@ def test_sphere_roundtrip(
         entity_type=158,
         data={"radius": 5.0, "center": [1.0, 2.0, 3.0]},
     )
-    assert data["radius"] == pytest.approx(5.0)
-    assert data["center"] == pytest.approx([1.0, 2.0, 3.0])
+    assert data["radius"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
+    assert data["center"] == pytest.approx([1.0, 2.0, 3.0], rel=1e-12, abs=1e-15)
 
 
 def test_torus_roundtrip(
@@ -154,8 +154,8 @@ def test_torus_roundtrip(
             "axis": [0.0, 0.0, 1.0],
         },
     )
-    assert data["r1"] == pytest.approx(10.0)
-    assert data["axis"][2] == pytest.approx(1.0)
+    assert data["r1"] == pytest.approx(10.0, rel=1e-12, abs=1e-15)
+    assert data["axis"][2] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
 
 
 def test_solid_of_revolution_roundtrip(
@@ -174,8 +174,8 @@ def test_solid_of_revolution_roundtrip(
         },
     )
     assert data["ptr"] == 3
-    assert data["f"] == pytest.approx(0.5)
-    assert data["axis_dir"] == pytest.approx([0.0, 0.0, 1.0])
+    assert data["f"] == pytest.approx(0.5, rel=1e-12, abs=1e-15)
+    assert data["axis_dir"] == pytest.approx([0.0, 0.0, 1.0], rel=1e-12, abs=1e-15)
 
 
 def test_solid_of_linear_extrusion_roundtrip(
@@ -189,8 +189,8 @@ def test_solid_of_linear_extrusion_roundtrip(
         data={"ptr": 3, "length": 10.0, "direction": [0.0, 0.0, 1.0]},
     )
     assert data["ptr"] == 3
-    assert data["length"] == pytest.approx(10.0)
-    assert data["direction"] == pytest.approx([0.0, 0.0, 1.0])
+    assert data["length"] == pytest.approx(10.0, rel=1e-12, abs=1e-15)
+    assert data["direction"] == pytest.approx([0.0, 0.0, 1.0], rel=1e-12, abs=1e-15)
 
 
 def test_ellipsoid_roundtrip(
@@ -210,9 +210,9 @@ def test_ellipsoid_roundtrip(
             "z_axis": [0.0, 0.0, 1.0],
         },
     )
-    assert data["center"] == pytest.approx([1.0, 2.0, 3.0])
-    assert data["ly"] == pytest.approx(8.0)
-    assert data["lz"] == pytest.approx(5.0)
+    assert data["center"] == pytest.approx([1.0, 2.0, 3.0], rel=1e-12, abs=1e-15)
+    assert data["ly"] == pytest.approx(8.0, rel=1e-12, abs=1e-15)
+    assert data["lz"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
 
 
 def test_boolean_tree_roundtrip(
@@ -239,7 +239,7 @@ def test_selected_component_roundtrip(
         data={"btree": 5, "sel_point": [1.0, 2.0, 3.0]},
     )
     assert data["btree"] == 5
-    assert data["sel_point"] == pytest.approx([1.0, 2.0, 3.0])
+    assert data["sel_point"] == pytest.approx([1.0, 2.0, 3.0], rel=1e-12, abs=1e-15)
 
 
 def test_solid_assembly_roundtrip(

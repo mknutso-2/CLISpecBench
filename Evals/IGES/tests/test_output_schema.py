@@ -22,11 +22,11 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iges_support import (
+    fixture_iges_from_json,
     make_entity,
     parse_iges_to_json,
     query_entity,
     wrap_entities,
-    write_iges_from_json,
 )
 
 
@@ -86,7 +86,7 @@ def test_parse_success_envelope_has_required_top_level_keys(
     `directory_entry`, `entity`, and `de_index`. Downstream behavioral
     tests assume this shape.
     """
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         _simple_line_document(),
         tmp_path,
@@ -114,7 +114,7 @@ def test_parse_global_section_has_required_keys(
     tmp_path: Path,
 ) -> None:
     """§2.3: Global section has the 26 required fields (spot-check a few)."""
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         _simple_line_document(),
         tmp_path,
@@ -199,7 +199,7 @@ def test_eval_success_envelope_has_required_top_level_keys(
     """§1.5: eval success output has `ok` (true), `point`, `tangent`,
     `normal`, `error`.
     """
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         _simple_line_document(),
         tmp_path,
@@ -229,7 +229,7 @@ def test_query_success_envelope_has_entity_keys(
     """§2.5: query returns a single EntityRecord with `directory_entry`,
     `entity`, and `de_index`.
     """
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         _simple_line_document(),
         tmp_path,

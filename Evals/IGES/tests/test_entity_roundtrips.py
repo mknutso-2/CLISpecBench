@@ -1,7 +1,8 @@
 """Semantic round-trip tests for a breadth of entity types.
 
-Each test builds a minimal canonical IGES-JSON document containing one
-entity, runs ``iges write`` → ``iges parse``, and asserts the reparsed
+Each test builds a minimal canonical IGES-JSON document containing a target
+entity and any required supporting geometry, runs ``iges write`` → ``iges parse``,
+and asserts the reparsed
 ``entity.data`` block matches the input field-for-field.
 
 These are the CLI-observable equivalent of the SDK's Catch2 round-trip
@@ -31,12 +32,16 @@ from typing import Any
 
 import pytest
 
+from analytic_support import analytic_surface_document
 from iges_support import (
+    assert_semantic_equal,
+    direction_document,
     make_entity,
     semantic_roundtrip_json,
     wrap_entities,
     write_iges_from_json,
 )
+from topology_support import open_triangle_document, solid_with_void_document
 
 
 def _roundtrip_single(
@@ -64,6 +69,26 @@ def _roundtrip_single(
     return record["entity"]["data"]
 
 
+def _roundtrip_supported(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    *,
+    entity_type: int,
+    data: Mapping[str, Any],
+    supporting: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    """Observe the target while satisfying its public pointer preconditions."""
+    target = make_entity(de_index=2 * len(supporting) + 1, entity_type=entity_type, data=data)
+    result = semantic_roundtrip_json(
+        submission_command, wrap_entities([*supporting, target]), tmp_path
+    )
+    return result["entities"][-1]["entity"]["data"]
+
+
+def _line(de_index: int, start: list[float], end: list[float]) -> dict[str, Any]:
+    return make_entity(de_index=de_index, entity_type=110, data={"start": start, "terminate": end})
+
+
 # §4.1 Null Entity (Type 0) — empty data block
 def test_null_entity_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     data = _roundtrip_single(
@@ -83,8 +108,8 @@ def test_circular_arc_roundtrip(submission_command: Sequence[str], tmp_path: Pat
         "y1": 2.0,  # center
         "x2": 3.0,
         "y2": 4.0,  # start
-        "x3": 5.0,
-        "y3": 6.0,  # end
+        "x3": -1.0,
+        "y3": 4.0,  # end: same radius as start, as §4.3 requires
     }
     data = _roundtrip_single(
         submission_command,
@@ -92,7 +117,7 @@ def test_circular_arc_roundtrip(submission_command: Sequence[str], tmp_path: Pat
         entity_type=100,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.4 Composite Curve (Type 102) — DE-pointer list
@@ -139,7 +164,7 @@ def test_plane_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> N
         entity_type=108,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.16 Point (Type 116)
@@ -154,20 +179,16 @@ def test_point_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> N
         entity_type=116,
         data=payload,
     )
-    assert data["coords"] == pytest.approx([1.5, 2.5, 3.5])
+    assert data["coords"] == pytest.approx([1.5, 2.5, 3.5], rel=1e-12, abs=1e-15)
     assert data["display_symbol"] == 0
 
 
 # §4.20 Direction (Type 123) — unit vector
 def test_direction_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     payload = {"x": 1.0, "y": 0.0, "z": 0.0}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=123,
-        data=payload,
-    )
-    assert data == payload
+    result = semantic_roundtrip_json(submission_command, direction_document(payload), tmp_path)
+    data = result["entities"][0]["entity"]["data"]
+    assert_semantic_equal(data, payload)
 
 
 # §4.21 Transformation Matrix (Type 124) — 3x3 rotation + translation
@@ -186,8 +207,8 @@ def test_transformation_matrix_roundtrip(submission_command: Sequence[str], tmp_
         entity_type=124,
         data=payload,
     )
-    assert data["rotation"] == payload["rotation"]
-    assert data["translation"] == pytest.approx([10.0, 20.0, 30.0])
+    assert_semantic_equal(data["rotation"], payload["rotation"])
+    assert data["translation"] == pytest.approx([10.0, 20.0, 30.0], rel=1e-12, abs=1e-15)
 
 
 # §4.21 — Non-identity rotation preserves off-diagonal terms.
@@ -209,8 +230,8 @@ def test_transformation_matrix_non_identity(
         entity_type=124,
         data=payload,
     )
-    assert data["rotation"][0][1] == pytest.approx(-1.0)
-    assert data["rotation"][1][0] == pytest.approx(1.0)
+    assert data["rotation"][0][1] == pytest.approx(-1.0, rel=1e-12, abs=1e-15)
+    assert data["rotation"][1][0] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
 
 
 # §4.5 Conic Arc (Type 104, form 1 = ellipse)
@@ -237,7 +258,7 @@ def test_conic_arc_roundtrip(submission_command: Sequence[str], tmp_path: Path) 
     )
     for key, value in payload.items():
         if isinstance(value, float):
-            assert data[key] == pytest.approx(value)
+            assert data[key] == pytest.approx(value, rel=1e-12, abs=1e-15)
         else:
             assert data[key] == value
 
@@ -257,17 +278,21 @@ def test_copious_data_roundtrip(submission_command: Sequence[str], tmp_path: Pat
         form=12,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.17 Ruled Surface (Type 118)
 def test_ruled_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     payload = {"de1": 1, "de2": 3, "dirflg": 0, "devflg": 1}
-    data = _roundtrip_single(
+    data = _roundtrip_supported(
         submission_command,
         tmp_path,
         entity_type=118,
         data=payload,
+        supporting=[
+            _line(1, [0.0, 0.0, 0.0], [1.0, 0.0, 0.0]),
+            _line(3, [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]),
+        ],
     )
     assert data == payload
 
@@ -275,29 +300,34 @@ def test_ruled_surface_roundtrip(submission_command: Sequence[str], tmp_path: Pa
 # §4.18 Surface of Revolution (Type 120)
 def test_surface_of_revolution_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     payload = {"l": 1, "c": 3, "sa": -0.1, "ta": 3.241592653589793}
-    data = _roundtrip_single(
+    data = _roundtrip_supported(
         submission_command,
         tmp_path,
         entity_type=120,
         data=payload,
+        supporting=[
+            _line(1, [0.0, 0.0, 0.0], [0.0, 0.0, 1.0]),
+            _line(3, [2.0, 0.0, 0.0], [2.0, 0.0, 1.0]),
+        ],
     )
     assert data["l"] == 1
     assert data["c"] == 3
-    assert data["sa"] == pytest.approx(-0.1)
-    assert data["ta"] == pytest.approx(payload["ta"])
+    assert data["sa"] == pytest.approx(-0.1, rel=1e-12, abs=1e-15)
+    assert data["ta"] == pytest.approx(payload["ta"], rel=1e-12, abs=1e-15)
 
 
 # §4.19 Tabulated Cylinder (Type 122)
 def test_tabulated_cylinder_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     payload = {"de": 1, "terminate_point": [0.0, 0.0, 5.0]}
-    data = _roundtrip_single(
+    data = _roundtrip_supported(
         submission_command,
         tmp_path,
         entity_type=122,
         data=payload,
+        supporting=[_line(1, [0.0, 0.0, 0.0], [1.0, 0.0, 0.0])],
     )
     assert data["de"] == 1
-    assert data["terminate_point"] == pytest.approx([0.0, 0.0, 5.0])
+    assert data["terminate_point"] == pytest.approx([0.0, 0.0, 5.0], rel=1e-12, abs=1e-15)
 
 
 # §4.22 Flash (Type 125)
@@ -316,7 +346,7 @@ def test_flash_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> N
         entity_type=125,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.25 Offset Curve (Type 130)
@@ -325,8 +355,8 @@ def test_offset_curve_roundtrip(submission_command: Sequence[str], tmp_path: Pat
         "de1": 1,
         "flag": 1,
         "de2": 0,
-        "ndim": 3,
-        "ptype": 1,
+        "ndim": 0,  # §4.25: unused DE2/NDIM must be zero for FLAG=1.
+        "ptype": 0,  # §4.25: unused for the uniform-offset FLAG=1 case.
         "d1": 2.0,
         "td1": 0.0,
         "d2": 0.0,
@@ -335,202 +365,34 @@ def test_offset_curve_roundtrip(submission_command: Sequence[str], tmp_path: Pat
         "vy": 0.0,
         "vz": 1.0,
         "tt1": 0.0,
-        "tt2": 10.0,
+        "tt2": 1.0,  # §4.13 line parameter domain is [0,1].
     }
-    data = _roundtrip_single(
+    data = _roundtrip_supported(
         submission_command,
         tmp_path,
         entity_type=130,
         data=payload,
+        supporting=[_line(1, [0.0, 0.0, 0.0], [10.0, 0.0, 0.0])],
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.30 Offset Surface (Type 140)
 def test_offset_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     payload = {"nx": 0.0, "ny": 0.0, "nz": 1.0, "d": 2.5, "de": 7}
-    data = _roundtrip_single(
+    data = _roundtrip_supported(
         submission_command,
         tmp_path,
         entity_type=140,
         data=payload,
+        supporting=_plane_surface_document(1)["entities"],
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
-# §4.50 Plane Surface (Type 190, form 1)
-def test_plane_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {"deloc": 1, "denrml": 3, "derefd": 5}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=190,
-        form=1,
-        data=payload,
-    )
-    assert data == payload
+# Analytic surface roundtrips below provide the topology required by §§4.51–4.54.
 
 
-# §4.50 Plane Surface (Type 190, form 0) — no reference direction
-def test_plane_surface_form_zero_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    payload = {"deloc": 1, "denrml": 3, "derefd": 0}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=190,
-        form=0,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.51 Cylindrical Surface (Type 192, form 1)
-def test_cylindrical_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=192,
-        form=1,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.51 Cylindrical Surface (Type 192, form 0) — no reference direction
-def test_cylindrical_surface_form_zero_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 0}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=192,
-        form=0,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.52 Conical Surface (Type 194, form 1)
-def test_conical_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {
-        "deloc": 1,
-        "deaxis": 3,
-        "radius": 2.0,
-        "sangle": 0.5235987755982988,
-        "derefd": 5,
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=194,
-        form=1,
-        data=payload,
-    )
-    assert data["deloc"] == 1
-    assert data["deaxis"] == 3
-    assert data["radius"] == pytest.approx(2.0)
-    assert data["sangle"] == pytest.approx(payload["sangle"])
-    assert data["derefd"] == 5
-
-
-# §4.52 Conical Surface (Type 194, form 0) — no reference direction
-def test_conical_surface_form_zero_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    payload = {
-        "deloc": 1,
-        "deaxis": 3,
-        "radius": 2.0,
-        "sangle": 0.5235987755982988,
-        "derefd": 0,
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=194,
-        form=0,
-        data=payload,
-    )
-    assert data["deloc"] == 1
-    assert data["deaxis"] == 3
-    assert data["radius"] == pytest.approx(2.0)
-    assert data["sangle"] == pytest.approx(payload["sangle"])
-    assert data["derefd"] == 0
-
-
-# §4.53 Spherical Surface (Type 196, form 1)
-def test_spherical_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {"deloc": 1, "radius": 3.5, "deaxis": 3, "derefd": 5}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=196,
-        form=1,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.53 Spherical Surface (Type 196, form 0) — no axis or reference direction
-def test_spherical_surface_form_zero_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    payload = {"deloc": 1, "radius": 3.5, "deaxis": 0, "derefd": 0}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=196,
-        form=0,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.54 Toroidal Surface (Type 198, form 1)
-def test_toroidal_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {
-        "deloc": 1,
-        "deaxis": 3,
-        "majrad": 6.0,
-        "minrad": 1.5,
-        "derefd": 5,
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=198,
-        form=1,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.54 Toroidal Surface (Type 198, form 0) — no reference direction
-def test_toroidal_surface_form_zero_roundtrip(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    payload = {
-        "deloc": 1,
-        "deaxis": 3,
-        "majrad": 6.0,
-        "minrad": 1.5,
-        "derefd": 0,
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=198,
-        form=0,
-        data=payload,
-    )
-    assert data == payload
-
-
-# §4.92 Subfigure Definition (Type 308)
 def test_subfigure_definition_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     doc = wrap_entities(
         [
@@ -588,8 +450,8 @@ def test_subfigure_instance_roundtrip(submission_command: Sequence[str], tmp_pat
     inst = reparsed["entities"][2]["entity"]
     assert inst["type"] == 408
     assert inst["data"]["de"] == 3
-    assert inst["data"]["translation"] == pytest.approx([5.0, 5.0, 0.0])
-    assert inst["data"]["scale"] == pytest.approx(2.0)
+    assert inst["data"]["translation"] == pytest.approx([5.0, 5.0, 0.0], rel=1e-12, abs=1e-15)
+    assert inst["data"]["scale"] == pytest.approx(2.0, rel=1e-12, abs=1e-15)
 
 
 # §4.137 Circular Array (Type 414)
@@ -620,7 +482,7 @@ def test_circular_array_roundtrip(submission_command: Sequence[str], tmp_path: P
     arr = reparsed["entities"][1]["entity"]
     assert arr["type"] == 414
     assert arr["data"]["ne"] == 6
-    assert arr["data"]["r"] == pytest.approx(5.0)
+    assert arr["data"]["r"] == pytest.approx(5.0, rel=1e-12, abs=1e-15)
 
 
 # §4.97 Property (Type 406) — FieldValue variant serialization
@@ -769,104 +631,70 @@ def test_view_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> No
         data=payload,
     )
     assert data["view_number"] == 7
-    assert data["scale"] == pytest.approx(2.5)
+    assert data["scale"] == pytest.approx(2.5, rel=1e-12, abs=1e-15)
     assert data["clip_planes"] == [0, 0, 0, 0, 0, 0]
 
 
-# §4.143 Vertex List (Type 502)
+# §§4.143–4.147 require actual parent topology and Form 1 records. A
+# bounded triangular face in an independent Open Shell (514/2) provides a
+# valid context. Compare only the named subject, not every supporting entity.
+def _roundtrip_topology_subject(
+    submission_command: Sequence[str],
+    tmp_path: Path,
+    subject: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    document, indices = open_triangle_document()
+    target = indices[subject]
+    expected = next(row["entity"] for row in document["entities"] if row["de_index"] == target)
+    actual_doc = semantic_roundtrip_json(submission_command, document, tmp_path)
+    actual = next(row["entity"] for row in actual_doc["entities"] if row["de_index"] == target)
+    assert actual["type"] == expected["type"]
+    assert actual["form"] == expected["form"]
+    return actual["data"], expected["data"]
+
+
+# §4.143.1: nonempty vertex coordinates in model space.
 def test_vertex_list_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {
-        "n": 2,
-        "vertices": [[0.0, 0.0, 0.0], [1.0, 2.0, 3.0]],
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=502,
-        data=payload,
-    )
-    assert data["n"] == 2
-    assert data["vertices"][1] == pytest.approx([1.0, 2.0, 3.0])
+    actual, expected = _roundtrip_topology_subject(submission_command, tmp_path, "vertex_list")
+    assert actual["n"] == expected["n"]
+    assert len(actual["vertices"]) == len(expected["vertices"])
+    # Technical requirements §3 allows real-valued roundtrip tolerances.
+    for point, wanted in zip(actual["vertices"], expected["vertices"], strict=True):
+        assert point == pytest.approx(wanted, rel=1e-12, abs=1e-15)
 
 
-# §4.144 Edge List (Type 504)
+# §4.144.1: curve pointers and start/terminate vertex-list indices.
 def test_edge_list_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {
-        "n": 1,
-        "edges": [{"curve": 1, "svp": 3, "sv": 1, "tvp": 3, "tv": 2}],
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=504,
-        data=payload,
-    )
-    assert data == payload
+    actual, expected = _roundtrip_topology_subject(submission_command, tmp_path, "edge_list")
+    assert actual == expected
 
 
-# §4.145 Loop (Type 508)
+# §4.145: a closed loop, including reversed orientation and a parameter curve.
 def test_loop_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {
-        "n": 1,
-        "edge_uses": [
-            {
-                "type": 0,
-                "edge": 1,
-                "ndx": 1,
-                "orientation": True,
-                "k": 1,
-                "param_curves": [{"isoparametric": False, "curve": 0}],
-            }
-        ],
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=508,
-        data=payload,
-    )
-    assert data == payload
+    actual, expected = _roundtrip_topology_subject(submission_command, tmp_path, "loop")
+    assert actual == expected
 
 
-# §4.146 Face (Type 510)
+# §4.146: finite-area surface region bounded by a real loop and parented by a shell.
 def test_face_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {"surf": 1, "n": 1, "outer_loop_flag": True, "loops": [3]}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=510,
-        data=payload,
-    )
-    assert data == payload
+    actual, expected = _roundtrip_topology_subject(submission_command, tmp_path, "face")
+    assert actual == expected
 
 
-# §4.147 Shell (Type 514)
+# §4.147 explicitly permits an independent Open Shell, Form 2.
 def test_shell_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {"n": 1, "faces": [{"face": 1, "orientation": True}]}
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=514,
-        data=payload,
-    )
-    assert data == payload
+    actual, expected = _roundtrip_topology_subject(submission_command, tmp_path, "shell")
+    assert actual == expected
 
 
-# §4.49 MSBO (Type 186)
+# §4.49: a closed, finite volume with one fully enclosed disjoint void shell.
 def test_msbo_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
-    payload = {
-        "shell": 1,
-        "sof": True,
-        "n": 1,
-        "voids": [{"shell": 3, "orientation": False}],
-    }
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=186,
-        data=payload,
-    )
-    assert data == payload
+    document, target = solid_with_void_document()
+    expected = next(row["entity"] for row in document["entities"] if row["de_index"] == target)
+    actual_doc = semantic_roundtrip_json(submission_command, document, tmp_path)
+    actual = next(row["entity"] for row in actual_doc["entities"] if row["de_index"] == target)
+    assert actual["type"] == 186
+    assert actual["data"] == expected["data"]
 
 
 # §4.13 Line Entity Forms 1 (semi-bounded) and 2 (unbounded). The PD
@@ -885,7 +713,7 @@ def test_line_form1_semi_bounded_roundtrip(
         form=1,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 def test_line_form2_unbounded_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
@@ -897,7 +725,7 @@ def test_line_form2_unbounded_roundtrip(submission_command: Sequence[str], tmp_p
         form=2,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.7 Copious Data Form 11 (2D planar linear path). Existing coverage
@@ -917,7 +745,7 @@ def test_copious_data_form11_roundtrip(submission_command: Sequence[str], tmp_pa
         form=11,
         data=payload,
     )
-    assert data == payload
+    assert_semantic_equal(data, payload)
 
 
 # §4.79 Attribute Table Definition Form 0 (definitions only — no values,
@@ -974,5 +802,180 @@ def test_attribute_table_definition_form_one_roundtrip(
         },
     )
     assert data["name"] == "F1TBL"
-    assert data["attributes"][0]["values"][0] == {"kind": "real", "value": 1.5}
+    assert_semantic_equal(data["attributes"][0]["values"][0], {"kind": "real", "value": 1.5})
     assert data["attributes"][0]["display_ptrs"] == []
+
+
+# §4.50 permits independent planes. Supply real Point/Direction records;
+# self/dangling pointers in the former one-entity fixture were not legal.
+def _plane_surface_document(form: int) -> dict[str, Any]:
+    records = [
+        make_entity(
+            de_index=1, entity_type=116, data={"coords": [0.0, 0.0, 0.0], "display_symbol": 0}
+        ),
+        make_entity(de_index=3, entity_type=123, data={"x": 0.0, "y": 0.0, "z": 1.0}),
+    ]
+    if form:
+        records.append(
+            make_entity(de_index=5, entity_type=123, data={"x": 1.0, "y": 0.0, "z": 0.0})
+        )
+    records.append(
+        make_entity(
+            de_index=2 * len(records) + 1,
+            entity_type=190,
+            form=form,
+            data={"deloc": 1, "denrml": 3, "derefd": 5 if form else 0},
+        )
+    )
+    return wrap_entities(records)
+
+
+def test_plane_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
+    doc = _plane_surface_document(1)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    assert result["entities"][-1]["entity"]["data"] == doc["entities"][-1]["entity"]["data"]
+
+
+def test_plane_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    doc = _plane_surface_document(0)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    assert result["entities"][-1]["entity"]["data"] == doc["entities"][-1]["entity"]["data"]
+
+
+# §§4.51–4.54: analytic targets have real finite Face/OpenShell parents.
+def test_cylindrical_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
+    payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 5}
+    doc, surface_de = analytic_surface_document(192, 1, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert_semantic_equal(data, payload)
+
+
+def test_cylindrical_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "deaxis": 3, "radius": 2.0, "derefd": 0}
+    doc, surface_de = analytic_surface_document(192, 0, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert_semantic_equal(data, payload)
+
+
+def test_conical_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "radius": 2.0,
+        "sangle": 0.5235987755982988,
+        "derefd": 5,
+    }
+    doc, surface_de = analytic_surface_document(194, 1, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert data["deloc"] == 1
+    assert data["deaxis"] == 3
+    assert data["radius"] == pytest.approx(2.0, rel=1e-12, abs=1e-15)
+    assert data["sangle"] == pytest.approx(payload["sangle"], rel=1e-12, abs=1e-15)
+    assert data["derefd"] == 5
+
+
+def test_conical_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "radius": 2.0,
+        "sangle": 0.5235987755982988,
+        "derefd": 0,
+    }
+    doc, surface_de = analytic_surface_document(194, 0, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert data["deloc"] == 1
+    assert data["deaxis"] == 3
+    assert data["radius"] == pytest.approx(2.0, rel=1e-12, abs=1e-15)
+    assert data["sangle"] == pytest.approx(payload["sangle"], rel=1e-12, abs=1e-15)
+    assert data["derefd"] == 0
+
+
+def test_spherical_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
+    payload = {"deloc": 1, "radius": 3.5, "deaxis": 3, "derefd": 5}
+    doc, surface_de = analytic_surface_document(196, 1, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert_semantic_equal(data, payload)
+
+
+def test_spherical_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {"deloc": 1, "radius": 3.5, "deaxis": 0, "derefd": 0}
+    doc, surface_de = analytic_surface_document(196, 0, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert_semantic_equal(data, payload)
+
+
+def test_toroidal_surface_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "majrad": 6.0,
+        "minrad": 1.5,
+        "derefd": 5,
+    }
+    doc, surface_de = analytic_surface_document(198, 1, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert_semantic_equal(data, payload)
+
+
+def test_toroidal_surface_form_zero_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    payload = {
+        "deloc": 1,
+        "deaxis": 3,
+        "majrad": 6.0,
+        "minrad": 1.5,
+        "derefd": 0,
+    }
+    doc, surface_de = analytic_surface_document(198, 0, payload)
+    result = semantic_roundtrip_json(submission_command, doc, tmp_path)
+    data = next(
+        record["entity"]["data"]
+        for record in result["entities"]
+        if record["de_index"] == surface_de
+    )
+    assert_semantic_equal(data, payload)

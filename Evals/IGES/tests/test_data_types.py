@@ -16,6 +16,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iges_support import (
+    assert_semantic_equal,
+    is_input_rejection,
     make_entity,
     parse_iges_to_json,
     semantic_roundtrip_json,
@@ -77,11 +79,11 @@ def test_integer_real_and_timestamp_fields_accept_spec_forms(
     assert global_section["integer_bits"] == 32
     assert global_section["sp_magnitude"] == 38
     assert global_section["product_id_receiver"] == "product"
-    assert global_section["model_space_scale"] == 0.125
+    assert_semantic_equal(global_section["model_space_scale"], 0.125)
     assert global_section["units"] == "millimeters"
-    assert global_section["max_line_weight_width"] == 0.01
-    assert global_section["min_resolution"] == 0.0001
-    assert global_section["max_coordinate"] == 1459876.3
+    assert_semantic_equal(global_section["max_line_weight_width"], 0.01)
+    assert_semantic_equal(global_section["min_resolution"], 0.0001)
+    assert_semantic_equal(global_section["max_coordinate"], 1459876.3)
     timestamp = global_section["file_timestamp"]
     assert isinstance(timestamp, dict)
     assert timestamp["year"] == 1990
@@ -189,7 +191,7 @@ def test_control_character_in_start_section_is_rejected(
     )
     assert completed.returncode == 1
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
 
 
 def test_control_character_in_hollerith_string_is_rejected(
@@ -242,7 +244,7 @@ def test_control_character_in_hollerith_string_is_rejected(
 
     assert completed.returncode != 0
     payload = json.loads(out_path.read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
     assert "error" in payload
 
 

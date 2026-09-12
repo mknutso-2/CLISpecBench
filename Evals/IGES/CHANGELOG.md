@@ -1,5 +1,42 @@
 # IGES Changelog
 
+## v1.0.16 — 2026-09-12
+
+- Use frozen IGES inputs for reader, query, evaluation and reader-error probes;
+  submission writer failures no longer prevent those observations. Writer tests
+  and explicit semantic roundtrips continue exercising the writer.
+- Finish the v1.0.14 cascade correction: geometric/error behavior no longer
+  repeats exact `ok` metadata assertions. Existing schema gates retain them;
+  absent or corrupt observations still fail. Clear output paths before each CLI
+  invocation so repeated probes cannot read stale successful files.
+- Repair positive fixture preconditions: equal-radius arc endpoints, real
+  supporting curves/surfaces, zero unused Offset Curve fields, dependent
+  Directions with actual parents, finite analytic Face/OpenShell contexts,
+  valid boundary/trimmed-surface/group records, and closed topology including a
+  solid with a disjoint internal void. Preserve the existing observations and
+  case counts for those repairs rather than requiring acceptance of invalid files.
+- Repair pointer-field and metadata positives with actual FE nodes, coordinate
+  systems, notes/elements, network owners/templates, subfigures/fonts and solid
+  references. Use bounded Plane108 for a nonzero curve pointer, legal definition
+  flags/forms/fallbacks and listed Type316 units. Compare target fields only;
+  document remaining appendix/mirror ambiguities in the validation notes.
+- Apply the published relative/absolute tolerances consistently: 1e-12/1e-15
+  for semantic real fields and 1e-9/1e-12 for evaluated coordinates. Replace
+  exact floating equality and implicit pytest defaults. Compare circle midpoint
+  coordinates directly so derived residuals do not amplify allowed error.
+- Add independent 2×1 Type 114 reader/eval and writer-layout regressions. Fix
+  Python/JavaScript references to skip/emit interleaved boundary slots (§4.15);
+  C++ already does. Honor §2.2.3 trailing defaults in the writer assertion.
+- Exclude five direct OffsetSurface140-over-192/194/196/198 cases because the
+  technical contract supports those bases while their full-spec definitions
+  permit references only from Face510. All other analytic tests remain with
+  legal supporting topology. Exact anchors and excluded node IDs appear in
+  `docs/validation/IGES-1.0.16.md`; no skipped cases inflate the denominator.
+- Preserve paired semantic JSON and physical reader records with independent,
+  unscored physical/geometry validators. The suite has 260 cases (263 − 5 + 2).
+- All model-visible prompts and documentation are unchanged. Historical model
+  sources can be fairly regraded against the repaired hidden suite.
+
 ## v1.0.15 — 2026-04-19
 
 ### Added

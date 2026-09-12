@@ -28,7 +28,7 @@ import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
-from iges_support import make_entity, wrap_entities, write_iges_from_json
+from iges_support import fixture_iges_from_json, is_input_rejection, make_entity, wrap_entities
 
 
 def _run_parse_expecting_failure(
@@ -101,7 +101,7 @@ def test_file_without_start_section_is_rejected(
     completed = _run_parse_expecting_failure(submission_command, iges, tmp_path / "out.json")
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
     assert "error" in payload
 
 
@@ -112,7 +112,7 @@ def test_empty_file_is_rejected(submission_command: Sequence[str], tmp_path: Pat
     completed = _run_parse_expecting_failure(submission_command, iges, tmp_path / "out.json")
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
 
 
 # MAL-12: truncated file — no T section
@@ -132,7 +132,7 @@ def test_truncated_file_is_rejected(submission_command: Sequence[str], tmp_path:
     # TR §1.2: missing Terminate section is invalid input → exit 1.
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
     assert "error" in payload
 
 
@@ -177,7 +177,7 @@ def test_query_with_nonexistent_de_is_rejected(
     # TR §1.2: out-of-range DE is invalid input → exit 1.
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
 
 
 # TR §1.2: "query --de <n> on an out-of-range or even DE index is invalid
@@ -200,7 +200,7 @@ def test_query_with_even_de_is_rejected(submission_command: Sequence[str], tmp_p
             ),
         ]
     )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="even-de")
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path, name="even-de")
     out = tmp_path / "query-even.json"
     cmd = [
         *submission_command,
@@ -221,7 +221,7 @@ def test_query_with_even_de_is_rejected(submission_command: Sequence[str], tmp_p
     )
     assert completed.returncode == 1
     payload = json.loads(out.read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)
 
 
 # MAL: garbage file (not IGES at all)
@@ -231,4 +231,4 @@ def test_random_bytes_are_rejected(submission_command: Sequence[str], tmp_path: 
     completed = _run_parse_expecting_failure(submission_command, iges, tmp_path / "out.json")
     assert completed.returncode == 1
     payload = json.loads((tmp_path / "out.json").read_text(encoding="utf-8"))
-    assert payload.get("ok") is False
+    assert is_input_rejection(payload)

@@ -12,11 +12,13 @@ from typing import Any
 import pytest
 
 from iges_support import (
+    assert_semantic_equal,
+    direction_document,
     evaluate_entity,
+    fixture_iges_from_json,
     make_entity,
     semantic_roundtrip_json,
     wrap_entities,
-    write_iges_from_json,
 )
 
 
@@ -45,7 +47,7 @@ def _roundtrip_single(
     return entity["data"]
 
 
-def test_circular_arc_eval_full_circle_lands_in_zt_plane(
+def test_circular_arc_eval_start_point_lands_in_zt_plane(
     submission_command: Sequence[str],
     tmp_path: Path,
 ) -> None:
@@ -58,7 +60,7 @@ def test_circular_arc_eval_full_circle_lands_in_zt_plane(
         "x3": 0.0,
         "y3": 1.0,
     }
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         wrap_entities([make_entity(de_index=1, entity_type=100, data=data)]),
         tmp_path,
@@ -72,21 +74,18 @@ def test_circular_arc_eval_full_circle_lands_in_zt_plane(
         tmp_path,
         name="circular-arc-eval",
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([1.0, 0.0, 7.5], abs=1e-9)
+    assert payload.get("point") == pytest.approx([1.0, 0.0, 7.5], rel=1e-9, abs=1e-12)
 
 
 def test_direction_roundtrips_non_unit_ratios_without_normalizing(
     submission_command: Sequence[str],
     tmp_path: Path,
 ) -> None:
-    data = _roundtrip_single(
-        submission_command,
-        tmp_path,
-        entity_type=123,
-        data={"x": 1.0, "y": 2.0, "z": 3.0},
+    result = semantic_roundtrip_json(
+        submission_command, direction_document({"x": 1.0, "y": 2.0, "z": 3.0}), tmp_path
     )
-    assert data == {"x": 1.0, "y": 2.0, "z": 3.0}
+    data = result["entities"][0]["entity"]["data"]
+    assert_semantic_equal(data, {"x": 1.0, "y": 2.0, "z": 3.0})
 
 
 def test_transformation_matrix_roundtrips_rotation_and_translation(
@@ -106,6 +105,6 @@ def test_transformation_matrix_roundtrips_rotation_and_translation(
             "translation": [10.0, 20.0, 30.0],
         },
     )
-    assert data["rotation"][0][2] == pytest.approx(1.0)
-    assert data["rotation"][2][0] == pytest.approx(-1.0)
-    assert data["translation"] == pytest.approx([10.0, 20.0, 30.0])
+    assert data["rotation"][0][2] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
+    assert data["rotation"][2][0] == pytest.approx(-1.0, rel=1e-12, abs=1e-15)
+    assert data["translation"] == pytest.approx([10.0, 20.0, 30.0], rel=1e-12, abs=1e-15)

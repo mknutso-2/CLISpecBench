@@ -23,7 +23,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
-from iges_support import make_entity, semantic_roundtrip_json, wrap_entities
+from iges_support import assert_semantic_equal, make_entity, semantic_roundtrip_json, wrap_entities
 
 
 def test_connect_point_with_defaulted_cid_and_cfn_roundtrips(
@@ -56,7 +56,7 @@ def test_connect_point_with_defaulted_cid_and_cfn_roundtrips(
     data = reparsed["entities"][0]["entity"]["data"]
     assert data["cid"] == ""
     assert data["cfn"] == ""
-    assert data["location"] == [0.0, 0.0, 0.0]
+    assert_semantic_equal(data["location"], [0.0, 0.0, 0.0])
 
 
 def test_network_subfigure_definition_with_defaulted_prd_roundtrips(

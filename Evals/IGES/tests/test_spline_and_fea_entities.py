@@ -13,11 +13,12 @@ from typing import Any
 import pytest
 
 from iges_support import (
+    assert_semantic_equal,
     evaluate_entity,
+    fixture_iges_from_json,
     make_entity,
     semantic_roundtrip_json,
     wrap_entities,
-    write_iges_from_json,
 )
 
 
@@ -104,11 +105,11 @@ def test_parametric_spline_curve_roundtrips_and_evaluates(
         entity_type=112,
         data=data,
     )
-    assert roundtripped["breakpoints"] == [0.0, 1.0, 2.0]
-    assert roundtripped["segments"][1]["cx"] == pytest.approx(3.0)
-    assert roundtripped["tpx1"] == pytest.approx(12.0)
+    assert_semantic_equal(roundtripped["breakpoints"], [0.0, 1.0, 2.0])
+    assert roundtripped["segments"][1]["cx"] == pytest.approx(3.0, rel=1e-12, abs=1e-15)
+    assert roundtripped["tpx1"] == pytest.approx(12.0, rel=1e-12, abs=1e-15)
 
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         wrap_entities([make_entity(de_index=1, entity_type=112, data=data)]),
         tmp_path,
@@ -122,8 +123,7 @@ def test_parametric_spline_curve_roundtrips_and_evaluates(
         tmp_path,
         name="spline-curve-eval",
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.125, 0.0, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.125, 0.0, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_parametric_spline_surface_roundtrips_and_evaluates(
@@ -157,11 +157,11 @@ def test_parametric_spline_surface_roundtrips_and_evaluates(
         entity_type=114,
         data=data,
     )
-    assert roundtripped["patches"][0]["coeff_x"][1] == pytest.approx(1.0)
-    assert roundtripped["patches"][0]["coeff_y"][4] == pytest.approx(1.0)
-    assert roundtripped["patches"][0]["coeff_z"][2] == pytest.approx(1.0)
+    assert roundtripped["patches"][0]["coeff_x"][1] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
+    assert roundtripped["patches"][0]["coeff_y"][4] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
+    assert roundtripped["patches"][0]["coeff_z"][2] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
 
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         wrap_entities([make_entity(de_index=1, entity_type=114, data=data)]),
         tmp_path,
@@ -176,8 +176,7 @@ def test_parametric_spline_surface_roundtrips_and_evaluates(
         s=0.5,
         name="spline-surface-eval",
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.5, 0.5, 0.25], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.5, 0.5, 0.25], rel=1e-9, abs=1e-12)
 
 
 def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
@@ -208,11 +207,11 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
         entity_type=126,
         data=data,
     )
-    assert roundtripped["plane_normal"] == pytest.approx([0.0, 0.0, 1.0])
-    assert roundtripped["weights"][1] == pytest.approx(math.sqrt(0.5))
-    assert roundtripped["control_points"][2] == pytest.approx([0.0, 1.0, 0.0])
+    assert roundtripped["plane_normal"] == pytest.approx([0.0, 0.0, 1.0], rel=1e-12, abs=1e-15)
+    assert roundtripped["weights"][1] == pytest.approx(math.sqrt(0.5), rel=1e-12, abs=1e-15)
+    assert roundtripped["control_points"][2] == pytest.approx([0.0, 1.0, 0.0], rel=1e-12, abs=1e-15)
 
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         wrap_entities([make_entity(de_index=1, entity_type=126, data=data)]),
         tmp_path,
@@ -226,13 +225,14 @@ def test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates(
         tmp_path,
         name="bspline-curve-eval",
     )
-    assert payload.get("ok") is True
     point = payload.get("point")
     assert point is not None, "eval success must carry `point`"
-    x, y, z = point
-    assert z == pytest.approx(0.0, abs=1e-9)
-    assert x == pytest.approx(y, abs=1e-9)
-    assert x * x + y * y == pytest.approx(1.0, abs=1e-9)
+    # The rational quadratic quarter circle reaches 45 degrees at t=0.5.
+    # Direct coordinates use the public tolerance without error amplification
+    # from derived squared-radius or x-y comparisons.
+    assert payload.get("point") == pytest.approx(
+        [math.sqrt(0.5), math.sqrt(0.5), 0.0], rel=1e-9, abs=1e-12
+    )
 
 
 def test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field(
@@ -259,7 +259,7 @@ def test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field(
         },
     )
     assert data["prop1"] == 0
-    assert data["plane_normal"] == pytest.approx([0.0, 0.0, 0.0])
+    assert data["plane_normal"] == pytest.approx([0.0, 0.0, 0.0], rel=1e-12, abs=1e-15)
 
 
 def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
@@ -296,11 +296,11 @@ def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
         entity_type=128,
         data=data,
     )
-    assert roundtripped["u1"] == pytest.approx(1.0)
-    assert roundtripped["v1"] == pytest.approx(1.0)
-    assert roundtripped["control_points"][3] == pytest.approx([1.0, 1.0, 0.0])
+    assert roundtripped["u1"] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
+    assert roundtripped["v1"] == pytest.approx(1.0, rel=1e-12, abs=1e-15)
+    assert roundtripped["control_points"][3] == pytest.approx([1.0, 1.0, 0.0], rel=1e-12, abs=1e-15)
 
-    iges_path = write_iges_from_json(
+    iges_path = fixture_iges_from_json(
         submission_command,
         wrap_entities([make_entity(de_index=1, entity_type=128, data=data)]),
         tmp_path,
@@ -315,8 +315,7 @@ def test_rational_bspline_surface_roundtrips_ranges_and_evaluates(
         s=0.5,
         name="bspline-surface-eval",
     )
-    assert payload.get("ok") is True
-    assert payload.get("point") == pytest.approx([0.5, 0.5, 0.0], abs=1e-9)
+    assert payload.get("point") == pytest.approx([0.5, 0.5, 0.0], rel=1e-9, abs=1e-12)
 
 
 def test_connect_point_roundtrips_full_metadata_fields(
@@ -342,7 +341,7 @@ def test_connect_point_roundtrips_full_metadata_fields(
             "psfi": 9,
         },
     )
-    assert data["location"] == pytest.approx([10.0, 20.0, 30.0])
+    assert data["location"] == pytest.approx([10.0, 20.0, 30.0], rel=1e-12, abs=1e-15)
     assert data["display_symbol"] == 3
     assert data["pttcid"] == 5
     assert data["cfn"] == "INPUT"

@@ -9,6 +9,8 @@ from collections.abc import Sequence
 from pathlib import Path
 
 from iges_support import (
+    assert_semantic_equal,
+    fixture_iges_from_json,
     make_entity,
     parse_iges_to_json,
     query_entity,
@@ -109,7 +111,7 @@ def test_directory_section_uses_two_lines_per_entity_and_odd_de_indices(
     second = query_entity(submission_command, iges_path, 3, tmp_path, name="de3")
     assert first["de_index"] == 1
     assert second["de_index"] == 3
-    assert second["entity"]["data"]["start"] == [1.0, 0.0, 0.0]
+    assert_semantic_equal(second["entity"]["data"]["start"], [1.0, 0.0, 0.0])
 
 
 def test_parameter_line_uses_column_65_space_and_de_back_pointer(
@@ -152,7 +154,7 @@ def test_parameter_data_spanning_multiple_physical_lines_is_concatenated(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
     doc = _copious_data_document()
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="multiline")
+    iges_path = fixture_iges_from_json(submission_command, doc, tmp_path, name="multiline")
 
     grouped = physical_lines_by_section(iges_path)
     assert len(grouped["P"]) > 1
