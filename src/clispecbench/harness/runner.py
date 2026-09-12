@@ -43,9 +43,11 @@ from clispecbench.harness.results import (
     save_transcript,
 )
 from clispecbench.harness.scoring import (
+    TEST_RUNNER_IMAGE,
     compute_correctness,
     compute_subscores,
     compute_task_score,
+    resolve_grader_image,
     run_hidden_tests,
 )
 from clispecbench.harness.task import TaskDefinition
@@ -330,12 +332,22 @@ def run_evaluation(
         # runnable command via the shared pytest plugin.
         report_path = extract_dir / "test-report.json"
         grading_error: str | None = None
+        grading_environment: dict[str, str] | None = None
         try:
+            # Resolve once and use that exact immutable image for every scorer
+            # attempt. The agent image remains separate generation metadata.
+            grader_image = resolve_grader_image()
+            grading_environment = {
+                "mode": "docker",
+                "docker_image_tag": TEST_RUNNER_IMAGE,
+                "docker_image_sha": grader_image,
+            }
             tests, test_summary = run_hidden_tests(
                 test_dir=task.test_dir,
                 submission_dir=submission_dir,
                 report_path=report_path,
                 language=task.language,
+                docker_image=grader_image,
             )
         except Exception as exc:
             grading_error = f"{type(exc).__name__}: {exc}"
@@ -547,6 +559,7 @@ def run_evaluation(
             scores=scores,
             artifacts=artifacts,
             source_stats=source_stats,
+            grading_environment=grading_environment,
         )
 
         # --- 11. Write result ---

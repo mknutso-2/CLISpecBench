@@ -241,6 +241,9 @@ class RunResult:
     # Explicit publication-time grading replacement. Generation metadata remains
     # unchanged; this block preserves the grading environment and prior scores.
     regrade: dict[str, Any] | None = None
+    # The normal grader is separate from metadata.docker_image_sha (the agent
+    # image). Omit this block when historical provenance was not recorded.
+    grading_environment: dict[str, str] | None = None
 
     @property
     def schema_version(self) -> str:
@@ -301,6 +304,8 @@ class RunResult:
             d["surgery"] = self.surgery
         if self.regrade is not None:
             d["regrade"] = self.regrade
+        if self.grading_environment is not None:
+            d["grading_environment"] = self.grading_environment
         return d
 
     def write(self, path: Path) -> None:
@@ -662,4 +667,5 @@ def load_result(path: Path) -> RunResult:
         source_stats=source_stats,
         surgery=data.get("surgery"),
         regrade=data.get("regrade"),
+        grading_environment=data.get("grading_environment"),
     )

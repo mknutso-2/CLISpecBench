@@ -20,8 +20,17 @@ DEFAULT_STOP_ARCHIVE = Path(__file__).with_name("agent-stop-archive.v1.json")
 # These describe the original generation, so regrading or editorial changes
 # cannot transfer a historical stop message to a different submission.
 GENERATION_IDENTITY_FIELDS = (
-    "task", "agent", "agent_version", "model", "effort", "prompt_variant",
-    "run_number", "timestamp", "eval_version", "prompt_content_sha", "docker_image_sha",
+    "task",
+    "agent",
+    "agent_version",
+    "model",
+    "effort",
+    "prompt_variant",
+    "run_number",
+    "timestamp",
+    "eval_version",
+    "prompt_content_sha",
+    "docker_image_sha",
 )
 
 EVAL_NAMES = {
@@ -361,7 +370,13 @@ def build_row(path: Path, web_dir: Path) -> dict[str, Any]:
     editorial: dict[str, Any] = payload.get("editorial") or {}
     regrade: dict[str, Any] = payload.get("regrade") or {}
     grading: dict[str, Any] = regrade.get("grading") or {}
-    grading_environment: dict[str, Any] = grading.get("environment") or {}
+    # A replacement grade must not inherit an original or agent image when
+    # its own grader provenance is missing. Historical absence stays unknown.
+    grading_environment: dict[str, Any] = (
+        grading.get("environment")
+        if payload.get("regrade") is not None
+        else payload.get("grading_environment")
+    ) or {}
     exit_reason = metadata.get("exit_reason") or ""
     status = editorial.get("status") or ("Complete" if exit_reason == "completed" else exit_reason)
 
@@ -398,9 +413,7 @@ def build_row(path: Path, web_dir: Path) -> dict[str, Any]:
         "comparison_cohort": regrade.get("comparison_cohort")
         or editorial.get("comparison_cohort")
         or "",
-        "grading_image_sha": grading_environment.get("docker_image_sha")
-        or metadata.get("docker_image_sha")
-        or "",
+        "grading_image_sha": grading_environment.get("docker_image_sha") or "",
         "regrade_uid": regrade.get("regrade_uid") or "",
         "exit_reason": exit_reason,
         "grading_status": grading_status,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import shutil
 import subprocess
 import sys
@@ -66,6 +67,28 @@ def _validated_report(
 # ---------------------------------------------------------------------------
 # Correctness scoring — run hidden test suite via pytest
 # ---------------------------------------------------------------------------
+
+
+def resolve_grader_image() -> str:
+    """Resolve the normal grader tag before running, never record a guessed ID.
+
+    Callers must pass the returned immutable ID to ``run_hidden_tests`` and
+    persist that same value. A later tag rebuild cannot change the grader or
+    a retry. Failure belongs to grading, after generation evidence is saved.
+    """
+    from clispecbench.harness.docker import DockerSandbox
+
+    sandbox = DockerSandbox()
+    try:
+        if not sandbox.image_exists(TEST_RUNNER_IMAGE):
+            dockerfile = Path(__file__).resolve().parents[3] / "docker" / "base.Dockerfile"
+            sandbox.build_image(dockerfile, TEST_RUNNER_IMAGE)
+        image_sha = sandbox.get_image_sha(TEST_RUNNER_IMAGE)
+        if re.fullmatch(r"sha256:[0-9a-f]{64}", image_sha) is None:
+            raise ScoringError("Could not resolve an immutable grader image ID")
+        return image_sha
+    finally:
+        sandbox.cleanup()
 
 
 def run_hidden_tests(

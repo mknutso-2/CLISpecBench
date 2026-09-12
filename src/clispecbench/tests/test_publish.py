@@ -476,3 +476,28 @@ def test_publish_allows_missing_served_model(tmp_path: Path) -> None:
     _make_result_file(source, run_uid="uid-legacy", model="claude-opus-4-7", served_model=None)
     target = publish_result(source, published_root, status="Complete", last_message="x")
     assert target.exists()
+
+
+@pytest.mark.parametrize("recorded", [False, True])
+def test_publish_preserves_normal_grader_provenance_and_raw_generation(
+    tmp_path: Path, recorded: bool
+) -> None:
+    source = tmp_path / "result.json"
+    result = _make_result_file(source, run_uid="grader-provenance")
+    if recorded:
+        result.grading_environment = {
+            "mode": "docker",
+            "docker_image_tag": "clispecbench-base",
+            "docker_image_sha": "sha256:" + "a" * 64,
+        }
+    result.metadata.exit_class = "completed"
+    result.write(source)
+    original_bytes = source.read_bytes()
+    original = json.loads(original_bytes)
+    target = publish_result(source, tmp_path / "published", status="Complete", last_message="Done")
+    published = json.loads(target.read_text())
+    assert source.read_bytes() == original_bytes
+    assert published["metadata"] == original["metadata"]
+    assert published["token_usage"] == original["token_usage"]
+    assert published.get("grading_environment") == result.grading_environment
+    assert ("grading_environment" in published) is recorded

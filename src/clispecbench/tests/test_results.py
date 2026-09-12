@@ -382,3 +382,24 @@ def test_detect_served_model_ignores_synthetic_and_returns_none_without_signal()
     # A synthetic assistant model must not be treated as the served model.
     logs = json.dumps({"type": "assistant", "message": {"model": "<synthetic>", "content": []}})
     assert adapter.detect_served_model(logs) is None
+
+
+@pytest.mark.parametrize("recorded", [False, True])
+def test_normal_grader_provenance_preserves_generation_on_roundtrip(
+    tmp_path: Path, recorded: bool
+) -> None:
+    result = _make_run_result("codex-cli", TokenUsage(100, 20))
+    original_metadata = result.to_dict()["metadata"]
+    if recorded:
+        result.grading_environment = {
+            "mode": "docker",
+            "docker_image_tag": "clispecbench-base",
+            "docker_image_sha": "sha256:" + "a" * 64,
+        }
+    path = tmp_path / "result.json"
+    result.write(path)
+    loaded = load_result(path)
+    assert loaded.grading_environment == result.grading_environment
+    assert ("grading_environment" in loaded.to_dict()) is recorded
+    assert loaded.to_dict()["metadata"] == original_metadata
+    assert loaded.to_dict()["token_usage"] == result.to_dict()["token_usage"]

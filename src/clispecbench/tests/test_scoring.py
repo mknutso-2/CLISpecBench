@@ -17,6 +17,7 @@ from clispecbench.harness.scoring import (
     compute_subscores,
     compute_task_score,
     parse_json_report,
+    resolve_grader_image,
     run_hidden_tests,
 )
 
@@ -485,3 +486,101 @@ def test_docker_scorer_uses_requested_immutable_image(tmp_path: Path) -> None:
             docker_image="sha256:immutable-regrade-image",
         )
     assert summary.passed == 1
+
+
+@pytest.mark.parametrize("already_exists", [False, True])
+def test_resolves_immutable_normal_grader_image(already_exists: bool) -> None:
+    image_sha = "sha256:" + "a" * 64
+    with patch("clispecbench.harness.docker.DockerSandbox") as sandbox_type:
+        sandbox = sandbox_type.return_value
+        sandbox.image_exists.return_value = already_exists
+        sandbox.get_image_sha.return_value = image_sha
+        assert resolve_grader_image() == image_sha
+        sandbox.image_exists.assert_called_once_with("clispecbench-base")
+        sandbox.get_image_sha.assert_called_once_with("clispecbench-base")
+        assert sandbox.build_image.call_count == (0 if already_exists else 1)
+        sandbox.cleanup.assert_called_once()
+
+
+@pytest.mark.parametrize("resolved", ["unknown", "clispecbench-base", "sha256:", "sha256:abc"])
+def test_invalid_grader_identity_is_never_used_or_guessed(resolved: str) -> None:
+    with patch("clispecbench.harness.docker.DockerSandbox") as sandbox_type:
+        sandbox = sandbox_type.return_value
+        sandbox.image_exists.return_value = True
+        sandbox.get_image_sha.return_value = resolved
+        with pytest.raises(ScoringError, match="immutable grader image ID"):
+            resolve_grader_image()
+        sandbox.cleanup.assert_called_once()
+
+
+def test_grader_identity_lookup_failure_cleans_up() -> None:
+    with patch("clispecbench.harness.docker.DockerSandbox") as sandbox_type:
+        sandbox = sandbox_type.return_value
+        sandbox.image_exists.return_value = True
+        sandbox.get_image_sha.side_effect = RuntimeError("daemon unavailable")
+        with pytest.raises(RuntimeError, match="daemon unavailable"):
+            resolve_grader_image()
+        sandbox.cleanup.assert_called_once()
+
+
+def test_normal_grader_and_retry_use_resolved_id_after_tag_changes(tmp_path: Path) -> None:
+    from clispecbench.harness.docker import ContainerConfig
+
+    pinned = "sha256:" + "a" * 64
+    seen: list[str] = []
+
+    def attempt(**kwargs: object) -> tuple[int, bool, str]:
+        config = kwargs["config"]
+        assert isinstance(config, ContainerConfig)
+        seen.append(config.image)
+        if len(seen) == 1:
+            raise RuntimeError("transient copy failure after tag was rebuilt")
+        report = kwargs["report_path"]
+        assert isinstance(report, Path)
+        report.write_text(
+            json.dumps(
+                {
+                    "exitcode": 0,
+                    "summary": {"total": 1},
+                    "tests": [{"nodeid": "test_a", "outcome": "passed"}],
+                }
+            )
+        )
+        return 0, True, ""
+
+    with (
+        patch("clispecbench.harness.docker.DockerSandbox") as sandbox_type,
+        patch("clispecbench.harness.scoring._run_scorer_attempt", side_effect=attempt),
+    ):
+        sandbox = sandbox_type.return_value
+        sandbox.image_exists.return_value = True
+        sandbox.get_image_sha.return_value = pinned
+        resolved = resolve_grader_image()
+        # The mutable tag now names a different image. Both scorer attempts
+        # must still use the immutable identity recorded before grading.
+        sandbox.get_image_sha.return_value = "sha256:" + "b" * 64
+        _, summary = run_hidden_tests(
+            tmp_path, tmp_path, tmp_path / "report.json", language="py", docker_image=resolved
+        )
+    assert summary.passed == 1
+    assert seen == [pinned, pinned]
+
+
+def test_missing_pinned_grader_never_falls_back_to_mutable_tag(tmp_path: Path) -> None:
+    with (
+        patch("clispecbench.harness.docker.DockerSandbox") as sandbox_type,
+        patch("clispecbench.harness.scoring._run_scorer_attempt") as attempt,
+    ):
+        sandbox = sandbox_type.return_value
+        sandbox.image_exists.return_value = False
+        with pytest.raises(ScoringError, match="Pinned grader image is unavailable"):
+            run_hidden_tests(
+                tmp_path,
+                tmp_path,
+                tmp_path / "report.json",
+                language="py",
+                docker_image="sha256:" + "a" * 64,
+            )
+        sandbox.build_image.assert_not_called()
+        attempt.assert_not_called()
+        sandbox.cleanup.assert_called_once()

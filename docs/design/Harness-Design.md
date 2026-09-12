@@ -598,6 +598,23 @@ inspection and programmatic aggregation.
 }
 ```
 
+`metadata.docker_image_sha` identifies the **agent** image. Normal Docker
+runs separately record an optional top-level `grading_environment` object:
+`mode`, `docker_image_tag`, and `docker_image_sha`. The grader tag is resolved
+before grading; the recorded immutable SHA is passed to every scoring attempt.
+If that resolution fails, no environment is invented: generation source,
+transcript, usage and completion are preserved, grading fails, and scores are
+unavailable. If a later grading step fails, the environment identifies the
+selected image and `metadata.grading_status` remains `failed`; it does not imply
+a successful execution or score.
+
+Historical results without this block retain unknown grader provenance. No
+reader should infer their grader from the agent image or a currently installed
+tag. For a regraded publication, only `regrade.grading.environment` describes
+the current score, even when that environment is absent; the original normal
+grader must not substitute for missing replacement provenance. Publication
+preserves generation metadata and the optional grading block separately.
+
 ### 8.1 Result Directory Structure
 
 Each run produces a result JSON file plus the full agent transcript, complete

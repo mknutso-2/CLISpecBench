@@ -12,6 +12,7 @@ from requests import exceptions as requests_exceptions
 from clispecbench.agents.base import AgentAdapter
 from clispecbench.harness.results import TestOutcome, TestSummary, TokenUsage, load_result
 from clispecbench.harness.runner import run_evaluation
+from clispecbench.harness.scoring import ScoringError
 from clispecbench.harness.task import TaskDefinition
 
 
@@ -413,9 +414,11 @@ def test_request_exception_uses_specific_infrastructure_failure_note(
     )
 
 
-@pytest.mark.parametrize("grading_failure", [False, True])
+@pytest.mark.parametrize(
+    ("grading_failure", "image_failure"), [(False, False), (True, False), (True, True)]
+)
 def test_runner_uses_adapter_refined_exit_reason(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, grading_failure: bool
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, grading_failure: bool, image_failure: bool
 ) -> None:
     task = _stub_task(tmp_path)
     workspace = tmp_path / "workspace"
@@ -487,7 +490,18 @@ def test_runner_uses_adapter_refined_exit_reason(
     def _prepare_workspace(task: TaskDefinition, prompt_variant: str | None) -> Path:
         return _fake_workspace(task, prompt_variant, workspace)
 
+    grader_calls = 0
+    grader_sha = "sha256:" + "a" * 64
+
+    def _resolve_grader_image() -> str:
+        if image_failure:
+            raise ScoringError("Could not resolve an immutable grader image ID")
+        return grader_sha
+
     def _run_hidden_tests(**kwargs: object) -> tuple[list[TestOutcome], TestSummary]:
+        nonlocal grader_calls
+        grader_calls += 1
+        assert kwargs["docker_image"] == grader_sha
         if grading_failure:
             report = kwargs["report_path"]
             assert isinstance(report, Path)
@@ -514,6 +528,7 @@ def test_runner_uses_adapter_refined_exit_reason(
         _prepare_workspace,
     )
     monkeypatch.setattr("clispecbench.harness.runner.run_hidden_tests", _run_hidden_tests)
+    monkeypatch.setattr("clispecbench.harness.runner.resolve_grader_image", _resolve_grader_image)
 
     result = run_evaluation(
         task=task,
@@ -523,6 +538,18 @@ def test_runner_uses_adapter_refined_exit_reason(
         output_dir=tmp_path,
     )
 
+    assert grader_calls == (0 if image_failure else 1)
+    assert result.metadata.docker_image_sha == "sha256:test-image"
+    assert result.grading_environment == (
+        None
+        if image_failure
+        else {
+            "mode": "docker",
+            "docker_image_tag": "clispecbench-base",
+            "docker_image_sha": grader_sha,
+        }
+    )
+    assert ("grading_environment" in result.to_dict()) is not image_failure
     assert result.metadata.exit_reason == "error"
     assert result.metadata.agent_exit_reason == ("completed" if grading_failure else "error")
     assert result.metadata.grading_status == ("failed" if grading_failure else "completed")
@@ -538,6 +565,9 @@ def test_runner_uses_adapter_refined_exit_reason(
         assert result.scores.task_score is None
         assert result.scores.correctness is None
         assert result.test_summary.total == 0
-        assert (result_path.parent / "test-container.attempt1.log").is_file()
+        if not image_failure:
+            assert (result_path.parent / "test-container.attempt1.log").is_file()
+        else:
+            assert "immutable grader image ID" in (result.metadata.grading_error or "")
     else:
         assert result.scores.task_score == 1.0

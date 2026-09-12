@@ -144,3 +144,36 @@ def test_unregraded_row_keeps_historical_version(tmp_path: Path) -> None:
     row = module("published_results/web/build_results_json.py").build_row(path, tmp_path / "web")
     assert row["eval_version"] == "3.2.0"
     assert row["comparison_cohort"] == "historical grading; no saved source"
+
+
+@pytest.mark.parametrize(
+    ("recorded", "regrade_mode", "expected"),
+    [
+        (False, "none", ""),
+        (True, "none", "original-grader"),
+        (True, "recorded", "replacement-grader"),
+        (True, "missing", ""),
+        (True, "empty", ""),
+    ],
+)
+def test_dashboard_never_substitutes_agent_or_old_grader_image(
+    tmp_path: Path, recorded: bool, regrade_mode: str, expected: str
+) -> None:
+    payload, _ = fixture()
+    if recorded:
+        payload["grading_environment"] = {"mode": "docker", "docker_image_sha": "original-grader"}
+    if regrade_mode == "recorded":
+        payload["regrade"] = {
+            "grading": {"environment": {"docker_image_sha": "replacement-grader"}}
+        }
+    elif regrade_mode == "missing":
+        payload["regrade"] = {"grading": {"status": "completed"}}
+    elif regrade_mode == "empty":
+        payload["regrade"] = {}
+    path = tmp_path / "rs274-cpp/codex-cli/test/run1.json"
+    path.parent.mkdir(parents=True)
+    path.write_text(json.dumps(payload))
+    original_bytes = path.read_bytes()
+    row = module("published_results/web/build_results_json.py").build_row(path, tmp_path / "web")
+    assert row["grading_image_sha"] == expected
+    assert path.read_bytes() == original_bytes
