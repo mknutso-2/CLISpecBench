@@ -348,7 +348,7 @@ class TestModelAndEffort:
         assert '--model "o3"' in bash_script
         assert 'model_reasoning_effort="high"' in bash_script
 
-    def test_codex_uses_external_sandbox_and_disables_hosted_web_search(self) -> None:
+    def test_codex_uses_external_sandbox_and_disables_hosted_network_tools(self) -> None:
         adapter = CodexCLIAdapter(model="gpt-5.6-luna", effort="max")
         cmd = adapter.invoke_command(
             PurePosixPath("/workspace/prompt.md"),
@@ -361,6 +361,7 @@ class TestModelAndEffort:
         assert "--skip-git-repo-check" in bash_script
         assert 'web_search="disabled"' in bash_script
         assert "tools.web_search=false" in bash_script
+        assert "--disable apps" in bash_script
 
     def test_gemini_model_in_command(self) -> None:
         adapter = GeminiCLIAdapter(model="gemini-2.5-pro")

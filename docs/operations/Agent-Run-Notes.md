@@ -207,6 +207,42 @@ All pre-change results remain `web-enabled`. New results record `api-only` in
 network condition; never combine the earlier web-enabled runs with this
 restart series in Best/Mean calculations.
 
+## September 2026 hosted-app isolation correction
+
+The non-RS274 audit on September 12 found that Codex CLI 0.153.4 enables
+app connectors by default. Its hosted connector traffic travels through the
+allowed API and is not constrained by the Docker command-network proxy.
+Disabling hosted web search alone therefore did not establish the intended
+API-only condition. The pinned CLI's `features list` reports `apps` enabled;
+`--disable apps features list` reports it disabled. The official
+[configuration reference](https://developers.openai.com/codex/config-reference/)
+documents this separate traffic surface.
+
+The corrected invocation explicitly passes `--disable apps` as well as the
+existing hosted-search flags. The isolated candidate passed all 77 adapter tests
+and all 3 live Luna/Max probes: shell access to example.com denied, hosted web
+search unavailable, and GitHub/app connector access unavailable. The agent
+image remains Codex CLI 0.153.4; record the harness revision with the invocation
+change rather than implying the image itself changed.
+
+The triggering Astra BibTeX Python run
+`951672ad-92f0-442d-87cf-6b4235a6418d` completed 17 GitHub MCP invocation events,
+including successful retrieval of external reference implementation and
+fixture source. Its original generation artifacts and usage are retained for
+diagnostics; it is excluded from the intended API-only comparison and requires
+a new attempt after the invocation correction. Rescoring its saved source can
+validate a rubric, but cannot remove that generation-condition difference.
+
+For earlier runs, `metadata.network_policy="api-only"` records the configured
+Docker egress policy; it is not by itself proof that hosted tools were absent.
+Review actual canonical tool events and session response-item invocations,
+including nested tool calls, rather than searching tool-definition text or
+relying on the proxy log alone. The reviewed September runs without external
+invocations carry the explicit comparison cohort
+`api-proxy-apps-available-unused`. They must remain distinct from future runs
+with apps disabled. Retain original metadata; corrections to the interpretation
+belong in editorial/audit records and the dashboard comparison cohort.
+
 ## Telemetry correction
 
 See [Telemetry accounting and historical backfills](Telemetry-Accounting.md)

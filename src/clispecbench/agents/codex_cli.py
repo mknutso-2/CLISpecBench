@@ -79,12 +79,15 @@ class CodexCLIAdapter(AgentAdapter):
         # Docker supplies the trust boundary: the whole agent container is on
         # an internal network and can egress only through an allowlisting
         # proxy. Codex therefore runs in its documented external-sandbox mode,
-        # while hosted web search is disabled separately.
+        # while hosted web search and app connectors are disabled separately.
+        # Connector traffic is served through the API and bypasses the Docker
+        # proxy; its domain allowlist alone cannot enforce this restriction.
         flags = (
             f'--json --dangerously-bypass-approvals-and-sandbox --cd "{work_dir}"'
             " --skip-git-repo-check"
             ' -c web_search="disabled"'
             " -c tools.web_search=false"
+            " --disable apps"
         )
         if self._model:
             flags += f' --model "{self._model}"'

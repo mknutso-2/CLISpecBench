@@ -5,10 +5,8 @@ tools like Bash, cmake, and g++ work correctly, and each agent CLI is
 installed and runnable.  They require Docker to be running and the base
 image (and, per test, the relevant agent image) to be built.
 
-None of the tests in this file prompt an AI coding agent, so none consume
-API credentials or tokens — they are all safe to run in CI.  A separate
-``prompts_agent`` marker is reserved for tests that actually invoke an
-agent with a real prompt.
+Tests marked ``prompts_agent`` invoke an AI coding agent and consume
+credentials/tokens. Exclude that marker for ordinary CI smoke runs.
 
 Markers used here:
 
@@ -347,7 +345,7 @@ wait
 @pytest.mark.prompts_agent
 @skip_no_codex_image
 class TestCodexNetworkIsolation:
-    """Live probes for the two Codex internet-access surfaces.
+    """Live probes for shell, hosted search, and app internet-access surfaces.
 
     These tests consume a small number of model tokens and are therefore
     excluded from ordinary Docker smoke runs. Run them explicitly when the
@@ -421,6 +419,27 @@ If no hosted web search tool is available, respond exactly WEB_SEARCH_UNAVAILABL
         assert '"type": "web_search"' not in serialized_events
         assert '"type": "web_search_call"' not in serialized_events
         assert "WEB_SEARCH_UNAVAILABLE" in logs
+        assert '"event": "allowed"' in network_audit
+        assert '"host": "chatgpt.com"' in network_audit
+
+    def test_hosted_app_connectors_are_unavailable(self, tmp_path: Path) -> None:
+        logs, network_audit = self._run_probe(
+            tmp_path,
+            """Try to use an app connector (for example the GitHub app) to fetch
+https://github.com/openai/codex/blob/main/README.md. Check your available tools.
+Do not use the shell, web search, or answer from memory. If no app connector tool
+is available, respond exactly APP_CONNECTORS_UNAVAILABLE.
+""",
+        )
+
+        for line in logs.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            item = event.get("item", {})
+            assert item.get("type") not in {"mcp_tool_call", "web_search"}, line
+        assert "APP_CONNECTORS_UNAVAILABLE" in logs
         assert '"event": "allowed"' in network_audit
         assert '"host": "chatgpt.com"' in network_audit
 
