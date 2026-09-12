@@ -11,6 +11,8 @@ from clispecbench.agents.codex_cli import (
     CodexCLIAdapter,
     count_tool_calls,
 )
+from clispecbench.agents.codex_rejected_tools import supplement
+from clispecbench.agents.codex_tool_evidence import scan
 
 
 def _read(path: Path) -> dict[str, Any]:
@@ -77,9 +79,12 @@ def backfill_telemetry(
                     raise ValueError("Transcript path leaves the run directory")
                 if candidate.is_file():
                     texts.append(candidate.read_text(encoding="utf-8"))
-            calls = count_tool_calls(texts)
+            evidence = scan(path.parent / "sessions", path.parent / "codex-events.jsonl")
+            counter = supplement(evidence, count_tool_calls(texts))
+            entry["tool_count_audit"] = counter
+            calls = counter["corrected_tool_calls"]
             if calls is None:
-                raise ValueError("Missing or unsupported Codex event transcript")
+                raise ValueError("Missing, unsupported, or ambiguous Codex tool evidence")
             usage = data.get("token_usage")
             if not isinstance(usage, dict):
                 raise ValueError("No stored token_usage object; retain original unknown usage")

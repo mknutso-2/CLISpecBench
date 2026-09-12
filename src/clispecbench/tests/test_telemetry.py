@@ -172,6 +172,11 @@ def test_backfill_preview_apply_idempotence_and_publication_matching(tmp_path: P
             },
         )
     )
+    (path.parent / "codex-events.jsonl").write_bytes(
+        (path.parent / "transcript.jsonl").read_bytes()
+    )
+    (path.parent / "sessions").mkdir()
+    (path.parent / "sessions/rollout.jsonl").write_text('{"type":"session_meta"}\n')
     original = path.read_bytes()
     preview = backfill_telemetry(runs, published)
     assert preview[0]["status"] == "would_update"

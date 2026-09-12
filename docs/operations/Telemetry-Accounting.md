@@ -89,9 +89,36 @@ migration. Run it again to verify `unchanged` entries.
 
 Missing transcripts, unsupported items, duplicate identities, and mismatched
 results are reported as skipped. The command does not guess counts from
-generated source files. For Codex command/file/search counts, the ordinary
-`transcript.jsonl` or `codex-events.jsonl` is sufficient. The richer session
-is useful for older streams missing token breakdowns.
+generated source files. Exact Codex tool counts require the canonical event log and preserved sessions.
+The session records can expose rejected requests omitted from canonical items;
+an event log alone supplies only the canonical baseline.
 
 Reference: [Codex non-interactive JSON events](https://developers.openai.com/codex/noninteractive)
 and the official [JSONL event processor](https://github.com/openai/codex/blob/main/codex-rs/exec/src/event_processor_with_jsonl_output.rs).
+
+## September 12, 2026: requests rejected before canonical items
+
+CLI 0.153.4 can emit a runtime `exec_command` rejection inside `functions.exec`
+without creating a `command_execution` item. Such attempts already belong to
+`underlying_tool_invocations_v2`; this corrects its implementation, not its meaning.
+The adapter now pairs preserved session requests and runtime outputs by call ID,
+deduplicates identical evidence, and supplements only a single proven attempted
+call absent from canonical command items. It never counts JavaScript call sites
+as runtime invocations. Printed error text from successful scripts is not evidence.
+
+The bundled syntax inspector parses a narrow direct-awaited-call form with Node's
+Acorn parser; it never evaluates generated JavaScript. Node with its bundled Acorn
+(currently verified with Node 22) must be available on the **host** for these rare
+failed-wrapper checks. The inspector is included in the Python package, has a
+five-second timeout, and degrades to unavailable if missing or unsupported.
+Unpaired requests, conflicting duplicates, ambiguous failed wrappers, missing
+sessions, and possible canonical overlap yield null `tool_calls` and null
+`tool_calls_definition`. Token totals, reasoning counts, cost, and `is_partial`
+remain independent. A syntax rejection counts zero only when parsing independently
+confirms that the whole script could not start.
+
+The backfill command reports uncertain cases as skipped instead of assigning an
+exact count. For the September non-RS274 cohort, separate publication audits retain
+original result hashes, original usage, complete prior publication bytes, and
+per-request evidence; raw generation results and prior regrade records remain
+unchanged. Unknown tool metrics do not invalidate a completed correctness score.

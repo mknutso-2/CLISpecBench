@@ -9,6 +9,8 @@ from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
 from clispecbench.agents.base import AgentAdapter, read_dockerfile_arg
+from clispecbench.agents.codex_rejected_tools import supplement
+from clispecbench.agents.codex_tool_evidence import scan
 from clispecbench.harness.results import TokenUsage
 
 log = logging.getLogger(__name__)
@@ -128,7 +130,11 @@ class CodexCLIAdapter(AgentAdapter):
         if event_log.is_file():
             sources.append(event_log.read_text(encoding="utf-8"))
 
-        tool_calls = count_tool_calls(sources)
+        # Some nested calls are rejected before exec emits a canonical item.
+        # Supplement only proven attempts; incomplete evidence invalidates the
+        # tool metric without changing authoritative token totals or costs.
+        evidence = scan(container_fs / "sessions", event_log)
+        tool_calls = supplement(evidence, count_tool_calls(sources))["corrected_tool_calls"]
         if sources:
             usage = _parse_exec_event_usage(sources, tool_calls)
             if usage is not None:

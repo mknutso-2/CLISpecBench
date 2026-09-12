@@ -750,7 +750,7 @@ class TestCodexCLITokenUsage:
         assert usage.input_tokens == 1000
         assert usage.output_tokens == 125
         assert usage.cache_read_input_tokens == 250
-        assert usage.tool_calls == 1
+        assert usage.tool_calls is None  # Complete tool evidence is not in this fixture.
         assert usage.source == "codex_exec_turn_completed"
         assert usage.is_partial is False
 
@@ -861,7 +861,7 @@ class TestCodexCLITokenUsage:
         assert usage.input_tokens == 3000
         assert usage.output_tokens == 450
         assert usage.cache_read_input_tokens == 900
-        assert usage.tool_calls == 1
+        assert usage.tool_calls is None  # Complete tool evidence is not in this fixture.
         assert usage.source == "codex_session_rollout_token_count"
         assert usage.is_partial is True
 
