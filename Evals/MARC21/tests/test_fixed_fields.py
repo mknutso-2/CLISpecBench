@@ -7,8 +7,14 @@ from typing import Any
 
 import pytest
 
-from conftest import b64, run_marc21
-from marc21_support import encode_iso2709_record, sample_marcxml, sample_record
+from conftest import assert_rejected, b64, run_marc21, unb64
+from marc21_support import (
+    decode_iso2709_record,
+    decode_marcxml_record,
+    encode_iso2709_record,
+    sample_marcxml,
+    sample_record,
+)
 
 FIXED_RULES = json.loads(
     (Path(__file__).resolve().parent / "generated" / "marc21_fixed_field_rules.json").read_text(
@@ -56,8 +62,17 @@ CONTROL_008_INVALID_POSITION_CASES = [
 ]
 
 
+def _minimal_record() -> dict[str, Any]:
+    # Changing Leader/06 changes the interpretation of 008/18-34. A book's 008
+    # is not a valid independent precondition for every material-type case.
+    record = sample_record()
+    record["control_fields"] = [{"tag": "001", "value": "fixed-field-example"}]
+    record["data_fields"] = []
+    return record
+
+
 def _with_control_field(tag: str, value: str) -> dict[str, Any]:
-    record = deepcopy(sample_record())
+    record = _minimal_record()
     record["control_fields"] = [field for field in record["control_fields"] if field["tag"] != tag]
     record["control_fields"].append({"tag": tag, "value": value})
     record["control_fields"].sort(key=lambda field: field["tag"])
@@ -65,7 +80,7 @@ def _with_control_field(tag: str, value: str) -> dict[str, Any]:
 
 
 def _with_leader_char(position: int, value: str) -> dict[str, Any]:
-    record = deepcopy(sample_record())
+    record = _minimal_record()
     leader = list(record["leader_template"])
     leader[position] = value
     record["leader_template"] = "".join(leader)
@@ -89,15 +104,34 @@ def _assert_render_ok(
     record: dict[str, Any],
     *,
     action: str = "render_iso2709",
+    leader_position: int | None = None,
 ) -> None:
-    result, payload = run_marc21(
+    _, payload = run_marc21(
         submission_command,
         {"action": action, "record": record},
         tmp_path,
     )
-    assert result.returncode == 0
     assert payload is not None
-    assert payload["error"] is None
+    # Successful validation must produce the requested material, not merely an
+    # exit-zero envelope. Scope the observation to the fixed field under test.
+    rendered = (
+        decode_iso2709_record(unb64(payload["result"]["record_b64"]))
+        if action == "render_iso2709"
+        else decode_marcxml_record(payload["result"]["marcxml"])
+    )
+    fixed_fields = [field for field in record["control_fields"] if field["tag"] != "001"]
+    if fixed_fields:
+        tag = fixed_fields[0]["tag"]
+        assert [
+            field for field in rendered["control_fields"] if field["tag"] == tag
+        ] == fixed_fields
+    else:
+        # This case names one Leader position. The remaining positions and
+        # success envelope have their own schema/integration checks.
+        assert leader_position is not None
+        assert rendered["leader_template"][leader_position] == record["leader_template"][
+            leader_position
+        ]
 
 
 def _assert_render_error(
@@ -112,9 +146,7 @@ def _assert_render_error(
         {"action": action, "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def _assert_inspect_error(
@@ -127,9 +159,7 @@ def _assert_inspect_error(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def _control_008_with(position: int, value: str) -> str:
@@ -145,7 +175,12 @@ def test_render_accepts_all_leader_codes_from_official_tables(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    _assert_render_ok(submission_command, tmp_path, _with_leader_char(position, value))
+    _assert_render_ok(
+        submission_command,
+        tmp_path,
+        _with_leader_char(position, value),
+        leader_position=position,
+    )
 
 
 @pytest.mark.parametrize(("position", "value"), LEADER_INVALID_CASES)
@@ -171,7 +206,9 @@ def test_render_accepts_all_006_position_00_codes_from_official_table(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    _assert_render_ok(submission_command, tmp_path, _with_control_field("006", category + " " * 17))
+    # bd006.html permits fill in every position after 00; blanks are not legal
+    # defaults in every material-specific table.
+    _assert_render_ok(submission_command, tmp_path, _with_control_field("006", category + "|" * 17))
 
 
 @pytest.mark.parametrize("length", [17, 19])
@@ -229,7 +266,36 @@ def test_render_accepts_all_008_date_type_codes_from_official_table(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    record = _with_control_field("008", _control_008_with(6, date_type))
+    # bd008a.html defines Date 1/Date 2 jointly with the date-type code. Give
+    # each type compatible dates, not the old single-date 2026/blank pair.
+    dates = {
+        "b": "        ",
+        "c": "20209999",
+        "d": "20202026",
+        "e": "20260101",
+        "i": "20202026",
+        "k": "20202026",
+        "m": "20202026",
+        "n": "uuuuuuuu",
+        "p": "20262020",
+        "q": "20202026",
+        "r": "20262020",
+        "s": "2026    ",
+        "t": "20262025",
+        "u": "2020uuuu",
+        "|": "||||||||",
+    }
+    value = list(_control_008_with(6, date_type))
+    value[7:15] = dates[date_type]
+    # c/d/u describe continuing resources. Use the serial bibliographic level
+    # and permitted fill for unrelated material-specific 008 positions.
+    if date_type in {"c", "d", "u"}:
+        value[18:35] = "|" * 17
+    record = _with_control_field("008", "".join(value))
+    if date_type in {"c", "d", "u"}:
+        leader = list(record["leader_template"])
+        leader[7] = "s"
+        record["leader_template"] = "".join(leader)
     _assert_render_ok(submission_command, tmp_path, record)
 
 
@@ -294,9 +360,7 @@ def test_render_rejects_fixed_control_fields_with_wrong_official_length(
         {"action": "render_iso2709", "record": _with_control_field(tag, value)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -318,9 +382,7 @@ def test_render_rejects_fixed_control_fields_with_disallowed_fill_positions(
         {"action": "render_marcxml", "record": _with_control_field(tag, value)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -343,9 +405,7 @@ def test_inspect_rejects_fixed_control_field_codes_outside_official_tables(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_short_007_map_category(
@@ -358,16 +418,14 @@ def test_inspect_rejects_short_007_map_category(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_render_accepts_complete_007_map_category(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    record = _with_control_field("007", "aj#canzn")
+    record = _with_control_field("007", "aj canzn")
     result, payload = run_marc21(
         submission_command,
         {"action": "render_iso2709", "record": record},
@@ -375,7 +433,7 @@ def test_render_accepts_complete_007_map_category(
     )
     assert result.returncode == 0
     assert payload is not None
-    assert payload["error"] is None
+    assert payload.get("error") is None
 
 
 def test_inspect_rejects_008_cataloging_source_outside_official_table(
@@ -388,9 +446,7 @@ def test_inspect_rejects_008_cataloging_source_outside_official_table(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_render_accepts_008_modified_record_x_with_valid_cataloging_source(
@@ -405,7 +461,7 @@ def test_render_accepts_008_modified_record_x_with_valid_cataloging_source(
     )
     assert result.returncode == 0
     assert payload is not None
-    assert payload["error"] is None
+    assert payload.get("error") is None
 
 
 def test_inspect_marcxml_rejects_non_digit_008_date_entered(
@@ -417,9 +473,7 @@ def test_inspect_marcxml_rejects_non_digit_008_date_entered(
         {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -445,6 +499,4 @@ def test_render_rejects_leader_codes_outside_official_tables(
         {"action": "render_iso2709", "record": _with_leader_char(position, value)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)

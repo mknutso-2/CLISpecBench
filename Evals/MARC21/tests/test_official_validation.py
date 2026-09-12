@@ -6,7 +6,7 @@ from typing import Any, cast
 
 import pytest
 
-from conftest import b64, run_marc21
+from conftest import assert_rejected, b64, run_marc21
 from marc21_spec_support import (
     duplicate_nonrepeatable_field_record,
     fields_with_indicator_constraints,
@@ -81,9 +81,7 @@ def test_render_rejects_indicator_values_outside_official_field_definition(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _SUBFIELD_CASES, ids=_SUBFIELD_IDS)
@@ -99,9 +97,7 @@ def test_render_rejects_subfield_codes_outside_official_field_definition(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -121,9 +117,7 @@ def test_render_rejects_duplicate_nonrepeatable_subfields_from_official_rules(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -144,9 +138,7 @@ def test_render_rejects_duplicate_nonrepeatable_control_fields_from_official_rul
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -167,9 +159,7 @@ def test_render_rejects_duplicate_nonrepeatable_data_fields_from_official_rules(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -190,9 +180,7 @@ def test_inspect_marcxml_rejects_duplicate_nonrepeatable_control_fields_from_off
         {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -213,9 +201,7 @@ def test_inspect_marcxml_rejects_duplicate_nonrepeatable_data_fields_from_offici
         {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -236,9 +222,7 @@ def test_inspect_rejects_duplicate_nonrepeatable_control_fields_from_official_ru
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(
@@ -259,9 +243,7 @@ def test_inspect_rejects_duplicate_nonrepeatable_data_fields_from_official_rules
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _INDICATOR_CASES, ids=_INDICATOR_IDS)
@@ -277,9 +259,7 @@ def test_inspect_rejects_indicator_values_outside_official_field_definition(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _INDICATOR_CASES, ids=_INDICATOR_IDS)
@@ -295,9 +275,7 @@ def test_inspect_marcxml_rejects_indicator_values_outside_official_field_definit
         {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _SUBFIELD_CASES, ids=_SUBFIELD_IDS)
@@ -313,9 +291,7 @@ def test_inspect_rejects_subfield_codes_outside_official_field_definition(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _SUBFIELD_CASES, ids=_SUBFIELD_IDS)
@@ -331,9 +307,7 @@ def test_inspect_marcxml_rejects_subfield_codes_outside_official_field_definitio
         {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _NONREPEATABLE_CASES, ids=_NONREPEATABLE_IDS)
@@ -349,9 +323,7 @@ def test_inspect_rejects_duplicate_nonrepeatable_subfields_from_official_rules(
         {"action": "inspect", "record_b64": b64(encode_iso2709_record(record))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 @pytest.mark.parametrize(("tag", "rule"), _NONREPEATABLE_CASES, ids=_NONREPEATABLE_IDS)
@@ -367,6 +339,4 @@ def test_inspect_marcxml_rejects_duplicate_nonrepeatable_subfields_from_official
         {"action": "inspect_marcxml", "marcxml": sample_marcxml(record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)

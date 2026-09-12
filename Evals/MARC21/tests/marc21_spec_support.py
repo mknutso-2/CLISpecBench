@@ -93,7 +93,9 @@ def record_for_official_example(tag: str, example_text: str) -> dict[str, Any]:
     if tag <= "009":
         return {
             "leader_template": _LEADER_TEMPLATE,
-            "control_fields": [{"tag": tag, "value": example_text}],
+            # LOC's displayed examples use # for blank character positions;
+            # notably 007/02 permits blank or fill, not a literal hash character.
+            "control_fields": [{"tag": tag, "value": example_text.replace("#", " ")}],
             "data_fields": [],
         }
     return {

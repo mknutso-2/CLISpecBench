@@ -1,5 +1,29 @@
 # Changelog
 
+## v3.0.1 — 2026-09-11
+
+- Keep all model-visible prompts/docs unchanged. Remove the v2.8.2 session-wide
+  ISO `inspect` smoke skip: one unsupported interface previously suppressed
+  evidence from working render and MARCXML interfaces. Build failures remain
+  reported by the shared build fixture; CLI cases now run independently.
+- Localize error-code/envelope conformance in per-action schema tests. Negative
+  domain cases still require exit 1 and an observable error response, reject
+  explicit internal failures, and cannot pass on a bare crash. An always-reject
+  classifier can still earn negative-case points while failing positives; this
+  limitation is distinct from evidence that an action works.
+- Restrict corpus-example comparisons to the named field. Leader normalization,
+  unrelated `001` contents and whole-record integration retain dedicated checks
+  instead of being re-scored across every field example. Fixed-field acceptance
+  also verifies the requested field/leader is actually rendered.
+- Correct fixture preconditions: use repeatable `500` fields for record-size
+  overflow; decode LOC's displayed control-field `#` blanks; use permitted fill
+  after `006/00`; give `008` date types compatible date pairs; and omit unrelated
+  book-specific `008` data when exercising other Leader material types.
+- Use the contract's normalized input leader for render checks. Verify XML
+  escaping through decoded text so equivalent entity/CDATA serializations pass.
+- Clear stale responses before each invocation to prevent an earlier output
+  from satisfying a later check that wrote nothing.
+
 ## v3.0.0 — 2026-04-29
 
 **Breaking — invocation form is no longer Python-specific.**

@@ -50,7 +50,8 @@ def test_render_iso2709_recomputes_leader_length_and_base_address(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     record = sample_record()
-    record["leader_template"] = "99999nam a2299999 a 4500"
+    # The request contract always supplies a normalized template. Requiring
+    # acceptance of 99999 in its zeroed positions tested an invalid precondition.
     result, payload = run_marc21(
         submission_command,
         {"action": "render_iso2709", "record": record},
@@ -62,14 +63,14 @@ def test_render_iso2709_recomputes_leader_length_and_base_address(
     leader = record_bytes[:24].decode("ascii")
     assert leader[:5] == f"{len(record_bytes):05d}"
     assert leader[12:17].isdigit()
-    assert leader[12:17] != "99999"
+    directory_entries = len(record["control_fields"]) + len(record["data_fields"])
+    assert int(leader[12:17]) == 24 + 12 * directory_entries + 1
 
 
 def test_render_marcxml_emits_normalized_leader_template(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     record = sample_record()
-    record["leader_template"] = "99999nam a2299999 a 4500"
     result, payload = run_marc21(
         submission_command,
         {"action": "render_marcxml", "record": record},
@@ -95,6 +96,9 @@ def test_render_marcxml_escapes_special_characters(
     )
     assert result.returncode == 0
     assert payload is not None
-    marcxml = payload["result"]["marcxml"]
-    assert "&amp;" in marcxml
-    assert "&lt;Vol. 1&gt;" in marcxml
+    # XML text may use entity references, numeric references, or CDATA. Assert
+    # the decoded value, not one valid spelling of XML escaping.
+    root = ET.fromstring(payload["result"]["marcxml"])
+    subfield = root.find(f"{{{NS}}}datafield[@tag='245']/{{{NS}}}subfield[@code='a']")
+    assert subfield is not None
+    assert subfield.text == 'Fish & Chips <Vol. 1> "Special"'

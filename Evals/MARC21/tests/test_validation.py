@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from conftest import b64, run_marc21
+from conftest import assert_rejected, b64, run_marc21
 from marc21_support import encode_iso2709, sample_marcxml, sample_record, sample_record_control_only
 
 
@@ -15,9 +15,7 @@ def test_inspect_rejects_missing_record_terminator(
         {"action": "inspect", "record_b64": b64(bad_record)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_leader_record_length_mismatch(
@@ -30,9 +28,7 @@ def test_inspect_rejects_leader_record_length_mismatch(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_leader_base_address_outside_record(
@@ -45,9 +41,7 @@ def test_inspect_rejects_leader_base_address_outside_record(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_render_accepts_leader_position_09_blank_marc8_indicator(
@@ -64,7 +58,7 @@ def test_render_accepts_leader_position_09_blank_marc8_indicator(
     )
     assert result.returncode == 0
     assert payload is not None
-    assert payload["error"] is None
+    assert payload.get("error") is None
 
 
 def test_render_rejects_leader_positions_10_and_11_not_equal_22(
@@ -77,9 +71,7 @@ def test_render_rejects_leader_positions_10_and_11_not_equal_22(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_leader_positions_20_to_23_not_equal_4500(
@@ -92,9 +84,7 @@ def test_inspect_rejects_leader_positions_20_to_23_not_equal_4500(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_missing_directory_terminator(
@@ -108,9 +98,7 @@ def test_inspect_rejects_missing_directory_terminator(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_directory_length_not_divisible_by_12(
@@ -122,9 +110,7 @@ def test_inspect_rejects_directory_length_not_divisible_by_12(
         {"action": "inspect", "record_b64": b64(raw)},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_field_range_outside_record(
@@ -137,9 +123,7 @@ def test_inspect_rejects_field_range_outside_record(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_data_field_without_subfield_delimiter(
@@ -153,9 +137,7 @@ def test_inspect_rejects_data_field_without_subfield_delimiter(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_control_field_tag_outside_00x(
@@ -168,9 +150,7 @@ def test_render_rejects_control_field_tag_outside_00x(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_control_field_value_with_marc_control_character(
@@ -183,9 +163,7 @@ def test_render_rejects_control_field_value_with_marc_control_character(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_data_field_with_bad_indicator(
@@ -198,9 +176,7 @@ def test_render_rejects_data_field_with_bad_indicator(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_data_field_subfield_code_not_lowercase_or_digit(
@@ -213,9 +189,7 @@ def test_render_rejects_data_field_subfield_code_not_lowercase_or_digit(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_data_field_subfield_code_punctuation(
@@ -228,9 +202,7 @@ def test_render_rejects_data_field_subfield_code_punctuation(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_subfield_value_with_marc_control_character(
@@ -243,9 +215,7 @@ def test_render_rejects_subfield_value_with_marc_control_character(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_data_field_subfield_code_with_multiple_characters(
@@ -258,9 +228,7 @@ def test_render_rejects_data_field_subfield_code_with_multiple_characters(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_directory_entry_with_non_digit_field_length(
@@ -273,9 +241,7 @@ def test_inspect_rejects_directory_entry_with_non_digit_field_length(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_directory_entry_with_non_digit_field_start(
@@ -288,9 +254,7 @@ def test_inspect_rejects_directory_entry_with_non_digit_field_start(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_directory_entry_with_non_digit_tag(
@@ -303,9 +267,7 @@ def test_inspect_rejects_directory_entry_with_non_digit_tag(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_subfield_code_punctuation(
@@ -319,9 +281,7 @@ def test_inspect_rejects_subfield_code_punctuation(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_non_utf8_control_field_payload(
@@ -336,9 +296,7 @@ def test_inspect_rejects_non_utf8_control_field_payload(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_rejects_non_utf8_subfield_value(
@@ -352,9 +310,7 @@ def test_inspect_rejects_non_utf8_subfield_value(
         {"action": "inspect", "record_b64": b64(bytes(raw))},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_field_length_overflow(
@@ -368,9 +324,7 @@ def test_render_rejects_field_length_overflow(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_render_rejects_record_length_overflow(
@@ -378,10 +332,12 @@ def test_render_rejects_record_length_overflow(
 ) -> None:
     record = sample_record()
     record["control_fields"] = [{"tag": "001", "value": "12345"}]
+    # LOC bd500.html marks field 500 repeatable. Repeating nonrepeatable 245
+    # made this pass without ever checking the ISO 2709 record-size limit.
     record["data_fields"] = [
         {
-            "tag": "245",
-            "indicators": ["1", "0"],
+            "tag": "500",
+            "indicators": [" ", " "],
             "subfields": [{"code": "a", "value": "X" * 20}],
         }
         for _ in range(3500)
@@ -391,9 +347,7 @@ def test_render_rejects_record_length_overflow(
         {"action": "render_iso2709", "record": record},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_request"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_wrong_namespace(
@@ -405,9 +359,7 @@ def test_inspect_marcxml_rejects_wrong_namespace(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_missing_leader(
@@ -419,9 +371,7 @@ def test_inspect_marcxml_rejects_missing_leader(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_collection_with_multiple_records(
@@ -437,9 +387,7 @@ def test_inspect_marcxml_rejects_collection_with_multiple_records(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_datafield_missing_indicator_attribute(
@@ -451,9 +399,7 @@ def test_inspect_marcxml_rejects_datafield_missing_indicator_attribute(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_controlfield_tag_outside_001_to_009(
@@ -465,9 +411,7 @@ def test_inspect_marcxml_rejects_controlfield_tag_outside_001_to_009(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_datafield_tag_inside_control_range(
@@ -479,9 +423,7 @@ def test_inspect_marcxml_rejects_datafield_tag_inside_control_range(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_non_subfield_child(
@@ -493,9 +435,7 @@ def test_inspect_marcxml_rejects_non_subfield_child(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_controlfield_missing_tag_attribute(
@@ -507,9 +447,7 @@ def test_inspect_marcxml_rejects_controlfield_missing_tag_attribute(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_datafield_missing_tag_attribute(
@@ -521,9 +459,7 @@ def test_inspect_marcxml_rejects_datafield_missing_tag_attribute(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_subfield_missing_code_attribute(
@@ -535,9 +471,7 @@ def test_inspect_marcxml_rejects_subfield_missing_code_attribute(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_wrong_root_element(
@@ -549,9 +483,7 @@ def test_inspect_marcxml_rejects_wrong_root_element(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_empty_collection(
@@ -563,9 +495,7 @@ def test_inspect_marcxml_rejects_empty_collection(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_unknown_element_inside_record(
@@ -577,9 +507,7 @@ def test_inspect_marcxml_rejects_unknown_element_inside_record(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
 
 
 def test_inspect_marcxml_rejects_controlfield_after_datafield(
@@ -597,6 +525,4 @@ def test_inspect_marcxml_rejects_controlfield_after_datafield(
         {"action": "inspect_marcxml", "marcxml": marcxml},
         tmp_path,
     )
-    assert result.returncode == 1
-    assert payload is not None
-    assert payload["error"]["code"] == "invalid_record"
+    assert_rejected(result, payload)
