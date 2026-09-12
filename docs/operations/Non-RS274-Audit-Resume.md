@@ -1,0 +1,233 @@
+# Resume the non-RS274 audit and GPT collection
+
+## Stop condition and current state
+
+On 2026-09-12 the user requested winding down to conserve usage. **Do not
+launch new generations, retry excluded attempts, consume a usage reset, or
+restart the collection queue until the user explicitly asks to resume.**
+`work/non-rs274-audit/LAUNCHES_PAUSED` records this request. The four generations
+already running were allowed to finish; their latest disposition is recorded
+in [the wind-down snapshot](../validation/non-rs274-2026-09-12/wind-down.json).
+
+To avoid spending more agent usage while waiting, the review subagents were
+stopped and the four new full reviews/publications were deferred. A plain local
+Python process, `work/non-rs274-audit/finish_inflight.py`, waits only for the four
+frozen worker identities and writes `work/non-rs274-audit/final-drain-results.json`
+as each exits. **Read that file first if the documentation checkpoint still
+shows active workers.** Its launch record and output are `final-drain-launch.json`
+and `final-drain.log`. It makes no model calls, starts no evaluations, and does
+not grade, review, publish, commit, or change the original artifacts. It exits
+after those four workers exit. These processes need the workstation to remain
+running; this is not a cloud workflow or scheduled Codex follow-up.
+
+The task was to audit the seven tasks other than RS274, repair misleading
+scoring, and fill missing GPT coverage. The test audit and repairs are complete.
+The collection targets **112 cells**: Astra, Sol, Terra and Luna at Max, across
+seven tasks and four languages, with **one generation per cell**. It does not
+target three repeats or additional reasoning levels. At the pause there were
+43 reviewed local publications, four active runs, 60 untouched cells, and five
+quota retries. Check the snapshot and live ledger before acting on these counts.
+
+All work is committed locally on `main`; no push was made in this phase. The
+starting remote revision was `b7e5c1a453c4c3a5575742d624d2bf306764e022`. Preserve
+the local commits and artifacts when reconciling future remote changes.
+
+## Read first
+
+- [Audit report and score matrix](../validation/non-rs274-2026-09-12/README.md)
+- [Completed results](../validation/non-rs274-2026-09-12/completed-results.json)
+- [Remaining coverage](../validation/non-rs274-2026-09-12/remaining-coverage.json)
+- [Excluded attempts](../validation/non-rs274-2026-09-12/excluded-attempts.json)
+- [Public-input hash manifest](../validation/non-rs274-2026-09-12/public-inputs.json)
+- [29 deferred public clarifications](../validation/non-rs274-2026-09-12/public-clarifications.md)
+- [Repository instructions](../../AGENTS.md), [author-eval skill](../../.codex/skills/author-eval/SKILL.md),
+  [run-eval skill](../../.codex/skills/run-eval/SKILL.md), and
+  [build-and-lint skill](../../.codex/skills/build-and-lint/SKILL.md)
+
+Final scoring versions: WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
+MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, IGES **1.0.17**. Their
+dated changelogs and linked validation notes explain source authority,
+reference results, negative controls, permitted alternatives, and exact
+retained-submission changes. All 28 assembled model inputs remain unchanged.
+Public wording/contract changes are a separate future phase; do not impose
+new choices on these saved submissions.
+
+## Local files that Git does not preserve
+
+Repository:
+`/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench`
+
+Work ledger and helpers:
+`/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit`
+
+Original generations are under `CLISpecBench/transient_results`. Their sources,
+canonical transcripts, richer session JSONL, network logs, usage, and original
+test reports are essential. Full regrades, scratch validation, review evidence,
+and queue history are under the sibling `work` directory. **A Git clone alone
+does not recover these files.** Preserve these directories before moving or
+cleaning the workstation. Portable publication/regrade summaries are committed
+under `published_results` and `regraded_results`.
+
+Each cell has `work/non-rs274-audit/runs/<task>-<model>-max/launch.json` and
+`run.log`. Completed reviews use `review.json` and `evidence.json`; publication
+checks may add `publication-review.json`. Use `attempts.result_paths(root,
+launch)` to identify the current attempt. Do not select the first matching
+`eval*/run*/result.json`: Astra BibTeX Python's valid retry is in `eval2/run1`,
+while its excluded older generation remains in `eval1/run1`.
+
+## Read-only status
+
+Run from a normal host terminal, or use an escalated host command in Codex.
+The app's sandbox process namespace can hide live worker PIDs.
+
+```sh
+cd /home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench
+sg docker -c '.venv/bin/python3 ../work/non-rs274-audit/status.py'
+cat ../work/non-rs274-audit/LAUNCHES_PAUSED
+git status --short
+```
+
+The ledger calls a launched cell without a result `running`; check the actual
+worker before concluding it is alive or dead. `dispatch_safety.worker_is_running`
+uses PID start ticks and excludes zombies; run it in the host namespace. Result
+creation precedes container cleanup, so a result alone does not release a slot.
+Do not remove `collection-queue.lock` or kill a PID based on a stale ledger.
+
+At the pause, the four slugs were:
+
+- `gedcom-rs-gpt-6-astra-max`
+- `ical-cpp-gpt-6-astra-max`
+- `ical-js-gpt-6-astra-max`
+- `ical-rs-gpt-6-astra-max`
+
+## Finish existing reviews before generating anything
+
+For each completed but unpublished attempt, inspect its current review/evidence
+files, final canonical turn, richer session, source, every failed case, and
+network/tool-access audit. Resolve issues by source authority and distinguish
+failure clusters from independent bugs. A new ambiguity should be recorded as
+a hold before starting another rubric repair campaign.
+
+Objective evidence can be refreshed without calling a model:
+
+```sh
+.venv/bin/python3 ../work/non-rs274-audit/prepare_review.py ical-cpp gpt-6-astra > ../work/non-rs274-audit/runs/ical-cpp-gpt-6-astra-max/review-extract.txt
+```
+
+This helper does not replace substantive review. `publish_reviewed.py` accepts
+an operator-written summary and notes, rechecks telemetry and isolation, and
+publishes locally only when the original score uses the current rubric. Use
+structured subprocess arguments for summaries/notes read from `review.json`,
+not shell interpolation of model text. A stale rubric requires an explicit
+saved-source regrade using `regrade_batch.py`/`publish_regrade.py`.
+
+Never execute or import submissions on the host or in their original source
+directories. Regrades use read-only original mounts and fresh disposable
+copies inside offline Docker. Keep at most two regrade containers.
+
+## Resume with a small budget
+
+The user requested a cost pause. Prefer **one selected cell at a time** after
+new authorization, rather than restarting the entire remaining queue.
+
+1. Verify no old queue owns dispatch and no prior worker for the selected cell
+   is alive. Review completed attempts first; do not generate duplicates.
+2. Preserve the pause marker and prior queue files in a new timestamped
+   `work/non-rs274-audit/queue-history/` directory, recording their SHA256 values.
+   Existing history is an example; do not overwrite it.
+3. Only after explicit authorization, remove the active pause marker and run
+   a selected **still-pending** cell. For example, if the inventory still lists
+   Sol C++ BibTeX as pending:
+
+```sh
+sg docker -c '.venv/bin/python3 ../work/non-rs274-audit/launch_batch.py bibtex --model gpt-5.6-sol --language cpp'
+```
+
+4. Restore a pause marker after the selected launcher returns if no further
+   dispatch is authorized. Let that generation finish and review it before
+   spending more usage. A launch returning successfully means it started,
+   not that generation or grading finished.
+
+`launch_batch.py` rejects duplicates, checks committed rubric/harness and
+unchanged public input, and requires explicit apps disablement. A quota retry
+needs `--retry-excluded`; this archives the exact excluded ledger and starts a
+fresh generation. Do not reuse its partial source or change its old score.
+
+The optional `collect_remaining.py --run --max-active 4` queue would dispatch
+**all remaining inventoried cells**, pausing on generation/grading errors.
+It never publishes automatically. Do not use it merely to inspect status.
+`start_queue.py` opens `collection-queue.log` exclusively, so it cannot be rerun
+over the existing log. Before an authorized full-queue restart, archive the old
+log, launch record, status, plan, and pause marker with hashes; remove only the
+archived active log and resolved pause marker, then run:
+
+```sh
+sg docker -c '.venv/bin/python3 ../work/non-rs274-audit/start_queue.py'
+```
+
+Do not bypass its queue lock or run a second queue. Four generation slots count
+workers until cleanup and exit. If usage is exhausted, stop new dispatch and
+preserve failed attempts; no automatic reset or credit purchase is authorized.
+
+## Conditions and accounting to preserve
+
+- Agent image: `sha256:af2c19c8f457977011653519905408e861235272007daca50b92fc685f1aef73`,
+  Codex CLI **0.153.4**. Grader/reference image:
+  `sha256:9a4f1fe0219b50b94c4a7abeb8a48cedd6a9c17c1ab90d34cc4bb4d826a7c90c`.
+- New normal grades pin and record `grading_environment` separately from the
+  agent image in metadata. Old missing grader evidence stays unknown. Regrade
+  provenance takes precedence when displaying a regraded score.
+- Apps and web are disabled for current launches. The initial 35 qualifying
+  runs had apps available but no observed external invocation; their separate
+  comparison cohort remains recorded. Do not relabel them as apps-disabled.
+- Five quota attempts and one externally contaminated old Astra BibTeX Python
+  attempt are excluded, with original artifacts preserved. The old Python UID
+  is `951672ad-92f0-442d-87cf-6b4235a6418d`; the valid retry UID is
+  `6f1f4ac5-698a-4e0e-a6cb-5d005a97bbdf`.
+- Tool definition remains `underlying_tool_invocations_v2`. Preserve complete
+  input/output/cache/reasoning counts. Reasoning is a subset of output, not an
+  additional billable total. Ambiguous failed wrappers can make only the tool
+  count unknown; do not substitute zero or drop authoritative token usage.
+- `network_audit.py` recognizes one exact, source-proven relay-reset traceback
+  and retains every raw byte/hash. It otherwise rejects malformed/unknown
+  records and unexpected allowed destinations. Do not skip arbitrary non-JSON
+  lines. Hosted-tool auditing remains separately required.
+- The 43 qualifying runs at the pause have **$152.350269** in recorded
+  API-equivalent estimates; the six excluded attempts total **$54.228829**.
+  These are not subscription charges. The four in-flight runs were not yet in
+  those sums; use the final snapshot for their recorded usage.
+
+## Dashboard and publication checks
+
+Both dashboards now default to the newest exact scoring version present in
+the loaded dataset. Explicit older selections remain available; mixed selections
+are labelled. Same major version does not establish comparable tests, and even
+the same version does not independently prove identical input or test hashes.
+The main dashboard still automatically selects only combinations with three
+runs for every selected eval/language. Select one-run results manually. This
+collection intentionally does not meet that default three-repeat threshold.
+
+Earlier historical non-RS274 source artifacts were unavailable here, so those
+results retain their historical scoring versions. Do not present them as
+regraded or compare them to corrected scores without acknowledging the rubric
+difference. Recover their original sources from the other workstation for a
+future zero-inference migration, rather than silently relabelling versions.
+
+After reviewed publication, refresh the report and dashboards:
+
+```sh
+sg docker -c '.venv/bin/python3 ../work/non-rs274-audit/write_checkpoint.py'
+.venv/bin/python3 published_results/web/build_results_json.py
+.venv/bin/python3 published_results/web/build_test_results_json.py
+```
+
+The per-test aggregate is intentionally ignored by Git. Check changed numeric
+fields against actual publication records and preserve prior payload/audit
+hash chains. The 43-row checkpoint verified all 1,776 baseline rows unchanged
+except explicit provenance corrections. Full applicable harness validation was
+359 tests plus six subtests; three host-Cargo cases were skipped and 23
+Docker/model cases deselected. The final dashboard default patch passed syntax
+checks and 31 independent functional assertions. Detailed local validation is
+under `work/non-rs274-audit/`, including `dashboard-43-validation.json`,
+`dashboard-exact-version-independent-review.json`, and each final regrade's
+`promotion-validation.json`. No further broad tests are needed merely to resume.

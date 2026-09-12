@@ -1,6 +1,8 @@
 # Non-RS274 scoring audit and GPT coverage
 
-Checkpoint: 2026-09-12T15:29:23.511827+00:00. Local implementation revision `aea22eeee7dbe74564defa0bd55a6d3b0919c0cb`. Results are in the local publication tree; no push has been made for this task.
+Checkpoint: 2026-09-12T16:01:04.232313+00:00. Local implementation revision `55d7d60553639489b27ef585227d19d5bbe388a4`. Results are in the local publication tree; no push has been made for this task.
+
+Collection is paused. Do not launch more models until the user asks to resume. See the [wind-down snapshot](wind-down.json) and [resume instructions](../../operations/Non-RS274-Audit-Resume.md).
 
 All seven other tasks contained scoring weaknesses: invalid fixtures, unsupported hidden restrictions, missing focused coverage, or failure amplification. Fixes keep every assembled model input unchanged across all 28 task/language combinations. Patch versions, dated changelogs, public-spec comments and per-task validation records accompany the changes. Public prose ambiguities that cannot be resolved under its existing precedence or explicit permissions are deferred to a separate public-input revision.
 
@@ -31,9 +33,9 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |gedcom-cpp|212/212|Pending|Pending|Pending|
 |gedcom-js|212/212|Pending|Pending|Pending|
 |gedcom-py|212/212|205/212|205/212|201/212|
-|gedcom-rs|Running|Pending|Pending|Pending|
+|gedcom-rs|needs_review|Pending|Pending|Pending|
 |ical-cpp|Running|Pending|Pending|Pending|
-|ical-js|Running|Pending|Pending|Pending|
+|ical-js|needs_review|Pending|Pending|Pending|
 |ical-py|468/468|Retry: quota|448/468|Retry: quota|
 |ical-rs|Running|Pending|Pending|Pending|
 |iges-cpp|Pending|Pending|Pending|Pending|
@@ -65,8 +67,13 @@ Estimated API-equivalent generation cost for the 43 qualifying completed runs: *
 
 Agent image: `sha256:af2c19c8f457977011653519905408e861235272007daca50b92fc685f1aef73` (Codex CLI 0.153.4). Grader/reference image: `sha256:9a4f1fe0219b50b94c4a7abeb8a48cedd6a9c17c1ab90d34cc4bb4d826a7c90c`. Saved-source regrades require no new inference or model cost. Normal grading now resolves, pins and records the actual grader image separately from the agent image; failed resolution preserves the completed generation and usage without inventing a score. Historical grader identity remains unknown unless explicitly recorded or supplied by a preserved regrade. The dashboard no longer substitutes an agent image for missing grader evidence.
 
-The dashboard also preserves 19 richer historical stop summaries recovered from the tracked baseline, instead of relabeling context-limit endings as finished when original transcripts are missing. Archive entries are tied to exact generation identities and matching local events retain precedence. All 1776 baseline rows preserve every non-provenance field after rebuild. See [dashboard stop archive](../../operations/Dashboard-Stop-Archive.md).
+Both dashboards now default to the newest exact scoring version available in their dataset, retain explicit older selections, and label mixed-version selections. The main dashboard retains its three-repeat automatic-selection policy; inspect this one-run collection by manually selecting available model combinations. The dashboard also preserves 19 richer historical stop summaries recovered from the tracked baseline, instead of relabeling context-limit endings as finished when original transcripts are missing. Archive entries are tied to exact generation identities and matching local events retain precedence. All 1776 baseline rows preserve every non-provenance field after rebuild. See [dashboard stop archive](../../operations/Dashboard-Stop-Archive.md).
 
 Identified public choices and prose cleanup are listed separately in [public clarifications](public-clarifications.md). These 29 items are proposals for a later model-input revision, not new requirements applied to saved submissions.
 
 Machine-readable records: [completed results](completed-results.json), [remaining coverage](remaining-coverage.json), [excluded attempts](excluded-attempts.json), [unchanged public inputs](public-inputs.json), and [baseline inventory](coverage-inventory.json). Raw transcripts, sessions, sources, original reports and complete local regrade directories remain on this workstation.
+
+## Dispatch status
+
+New dispatch is paused: User requested winding down to conserve usage. Do not dispatch any new generations or retries until explicitly asked to resume. Allow the four already active generations to finish; preserve results and record review status.
+Active generations are allowed to finish and remain subject to full review.
