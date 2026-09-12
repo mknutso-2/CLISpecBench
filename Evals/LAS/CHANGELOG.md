@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.0.3 — 2026-09-12
+
+- Make the oversized Extra Bytes descriptor rejection input unambiguous:
+  explicitly provide a one-byte point tail while its descriptor declares two
+  bytes. The former input omitted the tail, whose render default the public
+  schema does not specify. It penalized an implementation that inferred and
+  zero-filled the tail from metadata.
+- Preserve all 223 case IDs and all model-visible inputs. No reference or
+  submission code changes; existing sources can be regraded without inference.
+  The 2.0.2 rubric is superseded for current reporting, with its historical
+  records retained. See `docs/validation/LAS-2.0.3.md`.
+
 ## v2.0.2 — 2026-09-12
 
 - Repair the shared positive waveform fixture: the byte offset is relative to

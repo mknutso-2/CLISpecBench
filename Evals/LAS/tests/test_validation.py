@@ -719,6 +719,10 @@ def test_render_rejects_extra_bytes_descriptor_longer_than_point_as_invalid_requ
 ) -> None:
     dataset = dataset_for_point_format(6)
     dataset["vlrs"].append(extra_bytes_vlr())
+    # The public schema does not define a render default for an omitted tail.
+    # Supply one explicit byte against the descriptor's two-byte dimension
+    # so the metadata contradicts actual data, regardless of omission policy.
+    dataset["points"][0]["extra_bytes_b64"] = "AQ=="
     assert _render_was_rejected(submission_command, tmp_path, dataset)
 
 
