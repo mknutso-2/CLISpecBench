@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 
+from context_support import context_line, context_matrix, context_status, text_template
 from iges_support import (
     assert_semantic_equal,
     evaluate_entity,
@@ -29,6 +30,8 @@ def _roundtrip_single(
     entity_type: int,
     form: int = 0,
     data: Mapping[str, Any],
+    supporting: Sequence[dict[str, Any]] = (),
+    directory_entry_overrides: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     doc = wrap_entities(
         [
@@ -37,11 +40,13 @@ def _roundtrip_single(
                 entity_type=entity_type,
                 form=form,
                 data=data,
+                directory_entry_overrides=directory_entry_overrides,
             ),
+            *supporting,
         ]
     )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
-    entity = reparsed["entities"][0]["entity"]
+    entity = next(record for record in reparsed["entities"] if record["de_index"] == 1)["entity"]
     assert entity["type"] == entity_type
     assert entity["form"] == form
     return entity["data"]
@@ -326,6 +331,31 @@ def test_connect_point_roundtrips_full_metadata_fields(
         submission_command,
         tmp_path,
         entity_type=132,
+        # §4.26: all symbol/template/owner pointers have actual legal targets.
+        supporting=[
+            context_line(3, use="definition", subordinate="physically_dependent"),
+            text_template(5),
+            text_template(7),
+            make_entity(
+                de_index=9,
+                entity_type=320,
+                data={
+                    "depth": 0,
+                    "name": "PIN",
+                    "na": 1,
+                    "associated": [1],
+                    "tf": 0,
+                    "prd": "PIN",
+                    "dptr": 0,
+                    "nc": 1,
+                    "connects": [1],
+                },
+                directory_entry_overrides={"status": context_status("definition")},
+            ),
+        ],
+        directory_entry_overrides={
+            "status": context_status("logical_positional", "physically_dependent")
+        },
         data={
             "location": [10.0, 20.0, 30.0],
             "display_symbol": 3,
@@ -356,14 +386,43 @@ def test_finite_element_roundtrips_connectivity_and_zero_node_pointer(
         submission_command,
         tmp_path,
         entity_type=136,
+        # §§4.27/4.28: seven actual cube-corner Nodes use a labeled Form10
+        # system. The explicit eighth null is the permitted missing-node slot.
+        supporting=[
+            context_matrix(3, form=10),
+            *[
+                make_entity(
+                    de_index=5 + 2 * i,
+                    entity_type=134,
+                    data={"x": xyz[0], "y": xyz[1], "z": xyz[2], "ndcsp": 3},
+                    directory_entry_overrides={
+                        "xform_matrix": 3,
+                        "entity_subscript": i + 1,
+                        "status": context_status("logical_positional"),
+                    },
+                )
+                for i, xyz in enumerate(
+                    [
+                        (0.0, 0.0, 0.0),
+                        (1.0, 0.0, 0.0),
+                        (1.0, 1.0, 0.0),
+                        (0.0, 1.0, 0.0),
+                        (0.0, 0.0, 1.0),
+                        (1.0, 0.0, 1.0),
+                        (1.0, 1.0, 1.0),
+                    ]
+                )
+            ],
+        ],
+        directory_entry_overrides={"entity_subscript": 1},
         data={
             "itop": 17,
             "n": 8,
-            "nodes": [1, 3, 5, 7, 9, 11, 13, 0],
+            "nodes": [5, 7, 9, 11, 13, 15, 17, 0],
             "etyp": "LSO",
         },
     )
     assert data["itop"] == 17
     assert data["n"] == 8
-    assert data["nodes"] == [1, 3, 5, 7, 9, 11, 13, 0]
+    assert data["nodes"] == [5, 7, 9, 11, 13, 15, 17, 0]
     assert data["etyp"] == "LSO"

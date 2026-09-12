@@ -89,7 +89,11 @@ def test_trigger_default_related_is_start(
     trigger_raw = alarm.get("trigger")
     assert isinstance(trigger_raw, dict)
     trigger = cast(dict[str, Any], trigger_raw)
-    assert trigger.get("related") == "START"
+    # The RFC default is START, but the public parse schema permits null
+    # for omitted optional parameters and does not require materializing it.
+    # Preserve the duration and reject a contradictory explicit END value.
+    assert trigger.get("value") == "-PT30M"
+    assert trigger.get("related") in (None, "START")
 
 
 def test_trigger_related_end_preserved(submission_command: tuple[str, ...], tmp_path: Path) -> None:

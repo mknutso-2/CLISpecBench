@@ -305,8 +305,7 @@ constexpr int kCmr10Width[128] = {
 
 // width$ per bibtex.web §13. The width is computed as if the characters were
 // typeset in cmr10, with:
-//  - unmatched right braces contributing zero (treated as the surrounding
-//    character);
+//  - ordinary braces contributing their literal table widths;
 //  - a `{\foo...}` special-character group at brace-level 1 contributing the
 //    width of its interior (with the specials `\ss`, `\ae`, `\oe`, `\AE`,
 //    `\OE` mapped to the five predefined widths 500, 722, 778, 903, 1014).
@@ -356,11 +355,13 @@ int cmr10_width(std::string_view s) {
                 continue;
             }
             depth++;
+            total += kCmr10Width[c];
             i++;
             continue;
         }
         if (c == '}') {
             if (depth > 0) depth--;
+            total += kCmr10Width[c];
             i++;
             continue;
         }
@@ -613,21 +614,10 @@ std::string format_single_name(const NamePart& np, std::string_view fmt) {
             if (t + 1 < tokens.size()) {
                 if (has_custom_sep) {
                     piece += custom_sep;
-                } else if (doubled) {
-                    // Full-form: preserve the original inter-token separator
-                    // from the source name. This keeps `-` and `~` hyphenation
-                    // intact (e.g. "Shun-Tak", "First~Last") without forcing
-                    // ties between whitespace-separated tokens — BibTeX's
-                    // long-form tie rule is subtle and the probe tests want
-                    // the raw tokens back from `{ff}` / `{vv}` / `{ll}`.
-                    char next_sep = tokens[t + 1].sep;
-                    piece.push_back((next_sep == '~' || next_sep == '-')
-                                        ? next_sep : ' ');
                 } else {
-                    // Abbreviated: append the mandatory period after the
-                    // initial, then apply bibtex.web §10270's default-sep
-                    // rule (tie for last pair or short token, else space).
-                    piece.push_back('.');
+                    // WEB's default separator applies equally to full and
+                    // abbreviated names; only abbreviated tokens add a dot.
+                    if (!doubled) piece.push_back('.');
                     char next_sep = tokens[t + 1].sep;
                     bool is_last_pair = (t + 2 == tokens.size());
                     if (next_sep == '~' || next_sep == '-') {
@@ -700,6 +690,8 @@ struct Interpreter {
     std::vector<BstValue> stack;
     std::size_t current_entry_index = 0;
     bool has_current_entry = false;
+    std::size_t operation_line = 1, operation_column = 1;
+    std::unordered_set<std::string> retained_cites;
 
     // Output.
     std::string output_buffer;
@@ -719,7 +711,8 @@ struct Interpreter {
 
     void push(BstValue v) { stack.push_back(std::move(v)); }
     BstValue pop() {
-        if (stack.empty()) return BstValue::make_missing();
+        // The CLI contract classifies underflow as a structured runtime error.
+        if (stack.empty()) throw ParseError{"runtime", operation_line, operation_column, "stack underflow"};
         BstValue v = std::move(stack.back());
         stack.pop_back();
         return v;
@@ -756,8 +749,6 @@ struct Interpreter {
     std::unordered_map<std::string, Builtin> builtins;
 
     void register_builtins() {
-        builtins[">"] = [this]{ auto b=pop_int(); auto a=pop_int(); push(BstValue::make_integer(a.integer > b.integer ? 1 : 0)); };
-        builtins["<"] = [this]{ auto b=pop_int(); auto a=pop_int(); push(BstValue::make_integer(a.integer < b.integer ? 1 : 0)); };
         builtins["="] = [this]{
             auto b = pop(); auto a = pop();
             int eq = 0;
@@ -769,9 +760,29 @@ struct Interpreter {
             }
             push(BstValue::make_integer(eq));
         };
-        builtins["+"] = [this]{ auto b=pop_int(); auto a=pop_int(); push(BstValue::make_integer(a.integer + b.integer)); };
-        builtins["-"] = [this]{ auto b=pop_int(); auto a=pop_int(); push(BstValue::make_integer(a.integer - b.integer)); };
-        builtins["*"] = [this]{ auto b=pop_str(); auto a=pop_str(); push(BstValue::make_string(a.str + b.str)); };
+        // WEB x_plus/x_minus/x_concatenate default the entire result when
+        // either operand has the wrong type, rather than coercing operands.
+        for (const std::string op : {"+", "-", ">", "<"}) {
+            builtins[op] = [this, op]{
+                auto b = pop(); auto a = pop();
+                if (a.kind != BstValueKind::Integer || b.kind != BstValueKind::Integer) {
+                    warn("bst_type_error", "expected integer operands");
+                    push(BstValue::make_integer(0));
+                } else {
+                    int64_t value = op == "+" ? a.integer + b.integer
+                        : op == "-" ? a.integer - b.integer
+                        : op == ">" ? a.integer > b.integer : a.integer < b.integer;
+                    push(BstValue::make_integer(value));
+                }
+            };
+        }
+        builtins["*"] = [this]{
+            auto b = pop(); auto a = pop();
+            if (a.kind != BstValueKind::String || b.kind != BstValueKind::String) {
+                warn("bst_type_error", "expected string operands");
+                push(BstValue::make_string(""));
+            } else push(BstValue::make_string(a.str + b.str));
+        };
         builtins[":="] = [this]{
             auto name = pop_fn();
             auto val = pop();
@@ -783,8 +794,10 @@ struct Interpreter {
             // Find last non-'}' char.
             std::size_t i = v.size();
             while (i > 0 && v[i - 1] == '}') i--;
-            if (i == 0 || (v[i - 1] != '.' && v[i - 1] != '!' && v[i - 1] != '?')) {
-                v.insert(v.begin() + i, '.');
+            // WEB scans past closing braces to inspect punctuation, but
+            // appends the period after the complete nonempty string.
+            if (!v.empty() && (i == 0 || (v[i - 1] != '.' && v[i - 1] != '!' && v[i - 1] != '?'))) {
+                v.push_back('.');
             }
             push(BstValue::make_string(std::move(v)));
         };
@@ -861,7 +874,7 @@ struct Interpreter {
             auto false_br = pop_fn();
             auto true_br = pop_fn();
             auto cond = pop_int();
-            const auto& target = (cond.integer != 0) ? true_br : false_br;
+            const auto& target = (cond.integer > 0) ? true_br : false_br;
             invoke_function(target.fn_name);
         };
         builtins["while$"] = [this]{
@@ -871,7 +884,7 @@ struct Interpreter {
             while (safety-- > 0) {
                 invoke_function(cond.fn_name);
                 auto v = pop_int();
-                if (v.integer == 0) break;
+                if (v.integer <= 0) break;
                 invoke_function(body.fn_name);
             }
         };
@@ -879,7 +892,7 @@ struct Interpreter {
         builtins["pop$"] = [this]{ (void)pop(); };
         builtins["swap$"] = [this]{ auto a = pop(); auto b = pop(); push(std::move(a)); push(std::move(b)); };
         builtins["duplicate$"] = [this]{
-            if (stack.empty()) { warn("bst_type_error", "duplicate$ on empty stack"); return; }
+            if (stack.empty()) throw ParseError{"runtime", operation_line, operation_column, "stack underflow"};
             push(stack.back());
         };
         builtins["cite$"] = [this]{
@@ -924,7 +937,7 @@ struct Interpreter {
         builtins["quote$"] = [this]{
             push(BstValue::make_string("\""));
         };
-        builtins["top$"] = []{};     // debug no-op
+        builtins["top$"] = [this]{ (void)pop(); }; // WEB: pop debug value; BBL unchanged
         builtins["stack$"] = [this]{ stack.clear(); };
         builtins["warning$"] = [this]{
             auto s = pop_str();
@@ -975,6 +988,10 @@ struct Interpreter {
         }
     }
     void flush_line(bool emit_newline) {
+        // WEB distinguishes an empty line from a nonempty all-space line.
+        bool had_text = !current_line.empty();
+        while (!current_line.empty() && std::isspace(static_cast<unsigned char>(current_line.back()))) current_line.pop_back();
+        if (had_text && current_line.empty()) return;
         output_buffer += current_line;
         if (emit_newline) output_buffer.push_back('\n');
         current_line.clear();
@@ -1010,6 +1027,13 @@ struct Interpreter {
             const auto* entry = entry_list[current_entry_index];
             for (const auto& f : entry->fields) {
                 if (f.name == name && declared_fields.count(name)) {
+                    if (name == "crossref" && entry->crossref_resolved) {
+                        std::string key = to_lower(*entry->crossref_resolved);
+                        if (db.key_index.count(key)) {
+                            if (!retained_cites.count(key)) return BstValue::make_missing();
+                            return BstValue::make_string(*entry->crossref_resolved);
+                        }
+                    }
                     return BstValue::make_string(f.value);
                 }
             }
@@ -1037,11 +1061,6 @@ struct Interpreter {
             if (it != globals.end()) return it->second;
             return global_int_vars.count(name) ? BstValue::make_integer(0) : BstValue::make_string("");
         }
-        // 4) Macro (MACRO expansion pushes the value)
-        {
-            auto it = macros.find(name);
-            if (it != macros.end()) return BstValue::make_string(it->second);
-        }
         warn("bst_undefined_function", "reference to undefined name '" + name + "'");
         return BstValue::make_missing();
     }
@@ -1050,6 +1069,7 @@ struct Interpreter {
 
     void execute_tokens(const std::vector<BstToken>& body) {
         for (const auto& t : body) {
+            operation_line = t.line; operation_column = t.column;
             switch (t.kind) {
                 case BstTokenKind::Integer: push(BstValue::make_integer(t.integer)); break;
                 case BstTokenKind::String:  push(BstValue::make_string(t.text)); break;
@@ -1082,8 +1102,7 @@ struct Interpreter {
         // (This is how BibTeX handles references to ENTRY fields / variables.)
         if (declared_fields.count(name)
             || entry_int_vars.count(name) || entry_str_vars.count(name)
-            || global_int_vars.count(name) || global_str_vars.count(name)
-            || macros.count(name)) {
+            || global_int_vars.count(name) || global_str_vars.count(name)) {
             push(load_name(name));
             return;
         }
@@ -1113,10 +1132,29 @@ struct Interpreter {
         globals["entry.max$"] = BstValue::make_integer(20000);
         globals["global.max$"] = BstValue::make_integer(20000);
 
+        bool entry_done = false;
         bool read_done = false;
+        std::unordered_set<std::string> declared_macros;
+        std::unordered_set<std::string> declared_names{"crossref", "sort.key$", "entry.max$", "global.max$"};
+        for (const auto& item : builtins) declared_names.insert(item.first);
         for (const auto& cmd : program.commands) {
+            // Fields/functions share bst_fn_ilk; MACRO uses separate macro_ilk.
+            std::vector<std::string> new_names;
+            if (cmd.kind == BstProgram::CommandKind::Entry) {
+                new_names = cmd.fields;
+                new_names.insert(new_names.end(), cmd.int_vars.begin(), cmd.int_vars.end());
+                new_names.insert(new_names.end(), cmd.str_vars.begin(), cmd.str_vars.end());
+            } else if (cmd.kind == BstProgram::CommandKind::Strings || cmd.kind == BstProgram::CommandKind::Integers) new_names = cmd.names;
+            else if (cmd.kind == BstProgram::CommandKind::Function) new_names.push_back(cmd.name);
+            for (const auto& name : new_names) {
+                if (!declared_names.insert(name).second) return ParseError{"bst", cmd.line, cmd.column, "duplicate declaration: " + name};
+            }
+            if ((cmd.kind == BstProgram::CommandKind::Execute || cmd.kind == BstProgram::CommandKind::Iterate || cmd.kind == BstProgram::CommandKind::Reverse)
+                && !declared_names.count(cmd.target)) return ParseError{"bst", cmd.line, cmd.column, "unknown function reference: " + cmd.target};
             switch (cmd.kind) {
                 case BstProgram::CommandKind::Entry:
+                    if (entry_done) return ParseError{"bst", cmd.line, cmd.column, "repeated ENTRY"};
+                    entry_done = true;
                     for (const auto& f : cmd.fields) declared_fields.insert(f);
                     for (const auto& v : cmd.int_vars) entry_int_vars.insert(v);
                     for (const auto& v : cmd.str_vars) entry_str_vars.insert(v);
@@ -1128,15 +1166,31 @@ struct Interpreter {
                 case BstProgram::CommandKind::Integers:
                     for (const auto& v : cmd.names) global_int_vars.insert(v);
                     break;
-                case BstProgram::CommandKind::Function:
+                case BstProgram::CommandKind::Function: {
+                    // WEB resolves names when the function body is loaded.
+                    std::function<std::optional<ParseError>(const std::vector<BstToken>&)> check_names;
+                    check_names = [&](const std::vector<BstToken>& body) -> std::optional<ParseError> {
+                        for (const auto& token : body) {
+                            if ((token.kind == BstTokenKind::Ident || token.kind == BstTokenKind::QuotedName) && !declared_names.count(token.text))
+                                return ParseError{"bst", token.line, token.column, "unknown function reference: " + token.text};
+                            if (token.kind == BstTokenKind::FunctionLit) if (auto error = check_names(token.body)) return error;
+                        }
+                        return std::nullopt;
+                    };
+                    if (auto error = check_names(cmd.body)) return error;
                     user_functions[cmd.name] = cmd.body;
                     result.log.functions_defined++;
                     break;
+                }
                 case BstProgram::CommandKind::Macro:
+                    if (read_done) return ParseError{"bst", cmd.line, cmd.column, "MACRO after READ"};
+                    if (!declared_macros.insert(cmd.name).second) return ParseError{"bst", cmd.line, cmd.column, "duplicate macro: " + cmd.name};
                     macros[cmd.name] = cmd.literal_value;
                     result.log.macros_defined.push_back(cmd.name);
                     break;
                 case BstProgram::CommandKind::Read: {
+                    if (!entry_done) return ParseError{"bst", cmd.line, cmd.column, "READ before ENTRY"};
+                    if (read_done) return ParseError{"bst", cmd.line, cmd.column, "repeated READ"};
                     // Filter db.entries to the cited subset in cites order.
                     std::unordered_set<std::string> seen;
                     std::unordered_map<std::string, const Entry*> by_lower;
@@ -1154,11 +1208,30 @@ struct Interpreter {
                         entry_scratch.emplace_back();
                         result.log.entries_cited_found++;
                     }
+                    // btxdoc's default min_crossrefs=2 adds an uncited parent
+                    // after two cited children. A single child keeps inherited
+                    // fields but drops its pointer to the unlisted parent.
+                    retained_cites = seen;
+                    std::unordered_map<std::string, std::size_t> crossref_counts;
+                    std::vector<std::string> parent_order;
+                    for (const auto* entry : entry_list) {
+                        if (!entry->crossref_resolved) continue;
+                        std::string key = to_lower(*entry->crossref_resolved);
+                        if (!by_lower.count(key)) continue;
+                        if (crossref_counts[key]++ == 0) parent_order.push_back(key);
+                    }
+                    for (const auto& key : parent_order) {
+                        if (crossref_counts[key] >= 2 && retained_cites.insert(key).second) {
+                            entry_list.push_back(by_lower.at(key));
+                            entry_scratch.emplace_back();
+                        }
+                    }
                     result.log.entries_read = entry_list.size();
                     read_done = true;
                     break;
                 }
                 case BstProgram::CommandKind::Execute:
+                    if (!read_done) return ParseError{"bst", cmd.line, cmd.column, "EXECUTE before READ"};
                     has_current_entry = false;
                     invoke_function(cmd.target);
                     result.log.execute_calls++;
@@ -1219,8 +1292,12 @@ std::optional<ParseError> execute_bst(
     const BstProgram& program, const Database& db,
     const std::vector<std::string>& cites, BstResult& result) {
     Interpreter interp(program, db, cites, result);
-    auto err = interp.run();
-    if (err) return err;
+    try {
+        auto err = interp.run();
+        if (err) return err;
+    } catch (const ParseError& error) {
+        return error;
+    }
     result.bbl_output = interp.output_buffer;
     return std::nullopt;
 }

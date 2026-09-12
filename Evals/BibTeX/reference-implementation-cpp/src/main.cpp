@@ -157,6 +157,18 @@ int main(int argc, char** argv) try {
     }
 
     bibtex::Database db;
+    bibtex::BstProgram prog;
+    if (auto err = bibtex::parse_bst(bst_src, prog); err) {
+        write_file(args.output, bibtex::emit_error_json(*err, db.warnings));
+        return 1;
+    }
+    // Database values are scanned at READ using preceding style macros.
+    // A later @string declaration may replace any of those bindings.
+    for (const auto& command : prog.commands) {
+        if (command.kind == bibtex::BstProgram::CommandKind::Read) break;
+        if (command.kind == bibtex::BstProgram::CommandKind::Macro)
+            db.strings[command.name] = command.literal_value;
+    }
     {
         bibtex::Parser parser(bib_src, db);
         if (auto err = parser.parse(); err) {
@@ -167,11 +179,6 @@ int main(int argc, char** argv) try {
     bibtex::resolve_crossrefs(db);
     bibtex::parse_name_fields(db);
 
-    bibtex::BstProgram prog;
-    if (auto err = bibtex::parse_bst(bst_src, prog); err) {
-        write_file(args.output, bibtex::emit_error_json(*err, db.warnings));
-        return 1;
-    }
 
     bibtex::BstResult result;
     result.warnings = db.warnings;  // carry parse warnings forward

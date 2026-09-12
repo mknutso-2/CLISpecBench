@@ -16,9 +16,9 @@ Summary of the §3.2 matrix pinned here:
                         ATTENDEE 0 (MUST NOT).
   - REQUEST (§3.2.2):  ORGANIZER 1, ATTENDEE 1+, DTSTART 1, SUMMARY 1.
   - REPLY (§3.2.3):    ORGANIZER 1, ATTENDEE 1 carrying PARTSTAT.
-  - CANCEL (§3.2.5):   ORGANIZER 1, SEQUENCE 1; STATUS (if present)
-                        MUST be CANCELLED; absent STATUS is valid per
-                        §3.2.5 prose (METHOD alone conveys cancellation).
+  - CANCEL (§3.2.5):   ORGANIZER 1, SEQUENCE 1; STATUS:CANCELLED for
+                        whole-event cancellation, no STATUS when uninviting
+                        selected ATTENDEEs. Name the affected attendees.
 
 When required iTIP properties are missing or inconsistent, the parser
 SHOULD emit an `itip_missing_property` warning. Warning `message`
@@ -187,8 +187,8 @@ def test_well_formed_reply_emits_no_itip_warning(
 
 
 # ---------------------------------------------------------------------------
-# CANCEL: must communicate cancellation (STATUS:CANCELLED or implied by
-# the CANCEL method itself). RFC 5546 §3.2.5.
+# CANCEL: STATUS:CANCELLED cancels the event; omitting STATUS uninvites
+# selected ATTENDEEs. Both fixtures name an affected attendee (§3.2.5).
 # ---------------------------------------------------------------------------
 
 
@@ -197,7 +197,7 @@ def test_cancel_with_status_cancelled_is_valid(
 ) -> None:
     """METHOD:CANCEL with explicit STATUS:CANCELLED is unambiguously a
     valid cancellation — no `itip_missing_property` warning."""
-    body = _BASE_WITH_ORGANIZER + "STATUS:CANCELLED\n"
+    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:CANCELLED\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
@@ -206,11 +206,11 @@ def test_cancel_with_status_cancelled_is_valid(
 def test_cancel_without_explicit_status_is_valid(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """RFC 5546 §3.2.5 allows the CANCEL method to imply cancellation
-    without an explicit STATUS:CANCELLED on the VEVENT. The presence of
-    METHOD:CANCEL + ORGANIZER is sufficient; absence of STATUS alone
-    must not produce an `itip_missing_property` warning."""
-    ics = _wrap_with_method("CANCEL", _BASE_WITH_ORGANIZER)
+    """RFC 5546 §3.2.5 forbids STATUS when uninviting selected attendees.
+    Name the affected ATTENDEE so this is that permitted form, without
+    inferring whole-event cancellation from an attendee-less fixture."""
+    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\n"
+    ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
 
@@ -220,9 +220,19 @@ def test_cancel_missing_organizer_emits_itip_warning(
 ) -> None:
     """RFC 5546 §3.2.5: A CANCEL must still identify the ORGANIZER of
     the event being cancelled. ORGANIZER absent -> warning."""
-    ics = _wrap_with_method("CANCEL", _BASE)  # no ORGANIZER
+    # Supply the cancellation status and affected attendee so only the
+    # named ORGANIZER rule is violated. Public warning metadata identifies it.
+    body = _BASE + "ATTENDEE:mailto:jane@example.com\nSTATUS:CANCELLED\n"
+    ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
-    assert "itip_missing_property" in _warn_kinds(out)
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    assert any(
+        warning.get("kind") == "itip_missing_property"
+        and warning.get("method") == "CANCEL"
+        and warning.get("component") == "VEVENT"
+        and warning.get("property") == "ORGANIZER"
+        for warning in warnings
+    )
 
 
 def test_cancel_status_if_present_must_be_cancelled(
@@ -233,7 +243,7 @@ def test_cancel_status_if_present_must_be_cancelled(
     other than CANCELLED (e.g. TENTATIVE or CONFIRMED) is internally
     inconsistent — the METHOD says "cancel" but the STATUS does not.
     Validator must warn."""
-    body = _BASE_WITH_ORGANIZER + "STATUS:TENTATIVE\n"
+    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:TENTATIVE\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" in _warn_kinds(out)
@@ -245,7 +255,7 @@ def test_cancel_status_cancelled_case_insensitive(
     """RFC 5545 property-value comparison for STATUS is case-insensitive
     in practice. STATUS:cancelled (lowercase) on a CANCEL should not
     trigger the "STATUS must be CANCELLED" warning."""
-    body = _BASE_WITH_ORGANIZER + "STATUS:cancelled\n"
+    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:cancelled\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)

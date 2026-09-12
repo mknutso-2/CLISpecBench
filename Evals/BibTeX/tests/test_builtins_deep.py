@@ -27,6 +27,8 @@ any reasonable implementation-defined kind) in the log, not exit=1.
 
 from __future__ import annotations
 
+# bibtex.web lines 8141–8146 predefine the per-entry sort.key$ string;
+# ENTRY must not redeclare it. These fixtures exercise its use directly.
 from pathlib import Path
 from typing import Any, cast
 
@@ -117,13 +119,10 @@ def test_width_single_lowercase_letter_is_cmr10_value(
 
 
 def test_width_space_is_cmr10_value(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """ASCII space is 278 in cmr10; summary §8.1 approximates to 250.
-    We accept either but nothing else."""
+    """The supplied char_width table and summary §8.1 require space=278."""
     bbl, _ = _exec(submission_command, tmp_path, '" " width$ int.to.str$ write$')
     value = int(bbl.strip())
-    assert value in (278, 250), (
-        f"width$ of ' ' expected cmr10=278 or approximation=250; got {value}"
-    )
+    assert value == 278
 
 
 def test_width_uppercase_letter_not_less_than_lowercase(
@@ -157,13 +156,16 @@ def test_width_three_letters_sums(submission_command: tuple[str, ...], tmp_path:
     assert three == 3 * one, f"'aaa'={three} not 3 * 'a'={one}"
 
 
-def test_width_brace_group_sums_interior(
+def test_width_plain_braces_respect_authorized_modes(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Width of {abc} equals width of abc — braces themselves count 0."""
+    """The supplied WEB counts ordinary braces; summary §8 explicitly allows
+    an approximation that ignores them. Preserve both authorized behaviors.
+    """
     bbl_braced, _ = _exec(submission_command, tmp_path, '"{abc}" width$ int.to.str$ write$')
     bbl_bare, _ = _exec(submission_command, tmp_path, '"abc" width$ int.to.str$ write$')
-    assert bbl_braced.strip() == bbl_bare.strip()
+    assert int(bbl_braced.strip()) - int(bbl_bare.strip()) in (0, 1000)
+    # The only two allowed contributions: §8 approximation0 or WEB500+500.
 
 
 def test_width_ligature_ae_is_positive(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -194,7 +196,7 @@ def test_width_used_as_sort_key_breaks_ties_by_read_order(
     """
     bib = '@article{a, author = "abc"}\n@article{b, author = "cba"}\n'
     style = (
-        "ENTRY { author } { } { sort.key$ }\n"
+        "ENTRY { author } { } { }\n"
         "FUNCTION {presort}\n"
         "{ author width$ int.to.str$ 'sort.key$ := }\n"
         "FUNCTION {emit} { cite$ write$ newline$ }\n"
@@ -339,14 +341,19 @@ def test_change_case_preserves_digits_and_punct(
 # ---------------------------------------------------------------------------
 
 
-def test_top_preserves_following_stack(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """top$ is a debug peek; the value must still be there after."""
+def test_top_preserves_documented_stack_modes(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    """Accept faithful popping or the summary's explicit no-op permission."""
     bbl, _ = _exec(
         submission_command,
         tmp_path,
-        '"X" top$ write$',
+        '"X" "debug" top$ write$',
     )
-    assert "X" in bbl
+    # btxhak top$ pops the debug value, leaving X. Summary §3.5 explicitly
+    # permits a no-op, leaving debug instead; either exact result conforms.
+    # Empty output, a whole-stack dump, or any other value does not.
+    assert bbl.rstrip("\n") in {"X", "debug"}
 
 
 def test_stack_dumps_without_affecting_output(
@@ -385,7 +392,7 @@ def test_top_after_write_still_writes(submission_command: tuple[str, ...], tmp_p
     bbl, _ = _exec(
         submission_command,
         tmp_path,
-        '"A" write$ "B" top$ write$',
+        '"A" write$ "debug" top$ "B" write$',
     )
     assert bbl.replace("\n", "") == "AB"
 

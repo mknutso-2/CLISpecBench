@@ -24,8 +24,11 @@ the ``--log`` JSON directly.
 
 from __future__ import annotations
 
+# btxdoc lines 173–178: every cross-referenced parent follows its children.
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from conftest import run_bibtex
 
@@ -38,13 +41,13 @@ ENTRY {
     organization series volume number pages month
 } { } { }
 FUNCTION {dump}
-{ "author=" author * write$ newline$
-  "title=" title * write$ newline$
-  "booktitle=" booktitle * write$ newline$
-  "editor=" editor * write$ newline$
-  "year=" year * write$ newline$
-  "publisher=" publisher * write$ newline$
-  "journal=" journal * write$ newline$
+{ "author=" write$ author write$ newline$
+  "title=" write$ title write$ newline$
+  "booktitle=" write$ booktitle write$ newline$
+  "editor=" write$ editor write$ newline$
+  "year=" write$ year write$ newline$
+  "publisher=" write$ publisher write$ newline$
+  "journal=" write$ journal write$ newline$
 }
 READ
 ITERATE {dump}
@@ -75,8 +78,8 @@ def _find_warning(log: dict[str, Any] | None, kind: str) -> list[dict[str, Any]]
 def test_child_inherits_missing_fields(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Child missing ``year`` and ``publisher`` inherits them from parent."""
     bib = """
-@proceedings{parent, title = "Proc Vol", year = "2020", publisher = "ACM"}
 @inproceedings{child, author = "Jones", title = "Paper X", crossref = "parent"}
+@proceedings{parent, title = "Proc Vol", year = "2020", publisher = "ACM"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
@@ -89,8 +92,8 @@ def test_child_own_field_overrides_inherited(
 ) -> None:
     """Child's own field wins when both child and parent define it."""
     bib = """
-@proceedings{parent, title = "Parent Title", year = "2020"}
 @inproceedings{child, title = "Child Title", crossref = "parent"}
+@proceedings{parent, title = "Parent Title", year = "2020"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
@@ -104,8 +107,8 @@ def test_child_without_inheritable_parent_field_is_missing(
 ) -> None:
     """If neither child nor parent defines a field, it stays missing (empty probe output)."""
     bib = """
-@proceedings{parent, title = "T"}
 @inproceedings{child, crossref = "parent"}
+@proceedings{parent, title = "T"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
@@ -123,8 +126,8 @@ def test_crossref_lookup_is_case_insensitive(
 ) -> None:
     """``crossref = "PARENT"`` matches ``@article{parent, ...}`` (summary §1.6)."""
     bib = """
-@article{parent, year = "1999"}
 @article{child, crossref = "PARENT"}
+@article{parent, year = "1999"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
@@ -136,8 +139,8 @@ def test_crossref_lookup_case_insensitive_other_direction(
 ) -> None:
     """``crossref = "parent"`` also matches ``@article{PARENT, ...}``."""
     bib = """
-@article{PARENT, year = "1999"}
 @article{child, crossref = "parent"}
+@article{PARENT, year = "1999"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
@@ -149,8 +152,8 @@ def test_crossref_mixed_case_parent_key(
 ) -> None:
     """Lookup is case-insensitive with MixedCase keys too."""
     bib = """
-@proceedings{MixedParent, year = "2020"}
 @inproceedings{child, crossref = "MIXEDPARENT"}
+@proceedings{MixedParent, year = "2020"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
@@ -289,9 +292,37 @@ def test_inherited_macro_field_is_expanded(
     expanded via @string resolution (spec §1.5 + §1.6 interaction)."""
     bib = """
 @string{pub = "IEEE"}
-@proceedings{parent, publisher = pub}
 @inproceedings{child, crossref = "parent"}
+@proceedings{parent, publisher = pub}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_SINGLE_ENTRY, ["child"], tmp_path)
     rec = _parse_single_dump(bbl)
     assert rec["publisher"] == "IEEE"
+
+
+@pytest.mark.parametrize("children", [1, 2])
+def test_crossref_parent_inclusion_threshold(
+    submission_command: tuple[str, ...], tmp_path: Path, children: int
+) -> None:
+    # btxdoc lines 163–175 and bibtex.web min_crossrefs=2: an uncited
+    # parent is included only after two cited children refer to it. For a
+    # single child, inheritance survives but its crossref pointer is removed.
+    # Canonical parity corpora use explicit fields so this one rule cannot
+    # mask eight independent style executions.
+    bib = "".join(f'@misc{{c{i}, crossref = "p"}}\n' for i in range(children))
+    bib += '@misc{p, year = "2020"}\n'
+    style = r"""
+ENTRY { year } { } { }
+FUNCTION {emit}
+{ cite$ write$ ":" write$
+  crossref missing$ { "none" } { crossref } if$ write$
+  ":" write$ year write$ newline$
+}
+READ
+ITERATE {emit}
+"""
+    bbl, _ = run_bibtex(
+        submission_command, bib, style, [f"c{i}" for i in range(children)], tmp_path
+    )
+    expected = ["c0:none:2020"] if children == 1 else ["c0:p:2020", "c1:p:2020", "p:none:2020"]
+    assert bbl.splitlines() == expected

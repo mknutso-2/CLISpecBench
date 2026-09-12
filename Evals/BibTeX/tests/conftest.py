@@ -49,13 +49,17 @@ EVAL_CONFIG = EvalConfig(
 
 # Field probe: emits key=value lines per entry, one field per line. Depends
 # only on `write$`, `newline$`, `cite$`, `type$`, `empty$`, `if$`, `*`, and
-# field-name lookups.
+# field-name lookups. bibtex.web predefines crossref (lines 8135–8140),
+# so a valid ENTRY must not redeclare it.
 PROBE_STYLE_FIELDS = r"""
 ENTRY { address author booktitle chapter edition editor howpublished
         institution journal key month note number organization pages
-        publisher school series title type volume year crossref }
+        publisher school series title type volume year }
   { }
   { }
+
+FUNCTION {article} { skip$ }
+FUNCTION {book} { skip$ }
 
 FUNCTION {dump.entry}
 { "key=" cite$ * write$

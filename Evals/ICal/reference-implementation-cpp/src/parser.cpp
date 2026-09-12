@@ -697,19 +697,18 @@ void validate_itip(Calendar& cal) {
             }
         } else if (m == "ADD") {
             // §3.2.4: DTSTAMP 1, DTSTART 1, ORGANIZER 1, SEQUENCE 1 (>0),
-            // SUMMARY 1, UID 1.
+            // SUMMARY 1, UID 1; RECURRENCE-ID is explicitly forbidden (0).
+            if (e.recurrence_id) emit(e.uid, "ADD forbids RECURRENCE-ID", "VEVENT", "RECURRENCE-ID");
             if (!e.dtstart) emit(e.uid, "ADD requires DTSTART", "VEVENT", "DTSTART");
             if (!e.organizer) emit(e.uid, "ADD requires ORGANIZER", "VEVENT", "ORGANIZER");
             if (!e.summary) emit(e.uid, "ADD requires SUMMARY", "VEVENT", "SUMMARY");
             if (!e.sequence) emit(e.uid, "ADD requires SEQUENCE", "VEVENT", "SEQUENCE");
             else if (*e.sequence == 0) emit(e.uid, "ADD requires SEQUENCE greater than 0", "VEVENT", "SEQUENCE");
         } else if (m == "CANCEL") {
-            // §3.2.5: ATTENDEE 0+ (the Organizer may target Attendees to
-            // uninvite but it is not required), DTSTAMP 1, ORGANIZER 1,
-            // SEQUENCE 1, UID 1. STATUS is 0 or 1; when present on a
-            // whole-event cancel, MUST be CANCELLED. The prose of §3.2.5
-            // allows METHOD:CANCEL alone to convey cancellation, so we
-            // do not warn on STATUS absence.
+            // §3.2.5: DTSTAMP 1, ORGANIZER 1, SEQUENCE 1, UID 1.
+            // STATUS:CANCELLED identifies whole-event cancellation; STATUS
+            // is absent when uninviting selected ATTENDEEs. Its omission alone
+            // does not prove an invalid whole-event cancellation intent.
             if (!e.organizer) emit(e.uid, "CANCEL requires ORGANIZER", "VEVENT", "ORGANIZER");
             if (!e.sequence) emit(e.uid, "CANCEL requires SEQUENCE", "VEVENT", "SEQUENCE");
             if (e.status) {

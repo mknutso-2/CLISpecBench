@@ -7,8 +7,10 @@ import subprocess
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
 
-def _run_for_exit1(
+
+def run_for_exit1(
     command: tuple[str, ...], bib: str, style: str, cites: str, tmp_path: Path
 ) -> dict[str, Any]:
     bib_file = tmp_path / "refs.bib"
@@ -50,14 +52,14 @@ ITERATE {f}
 
 
 def test_malformed_bib_exits_1(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    out = _run_for_exit1(
+    out = run_for_exit1(
         submission_command, "@article{k, title = {unclosed", MINIMAL_STYLE, "k\n", tmp_path
     )
     assert out["error"]["source"] == "bib"
 
 
 def test_malformed_bst_exits_1(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    out = _run_for_exit1(
+    out = run_for_exit1(
         submission_command,
         '@article{k, title = "x"}\n',
         'FUNCTION {broken} { "unterminated',  # unterminated string in .bst
@@ -68,7 +70,7 @@ def test_malformed_bst_exits_1(submission_command: tuple[str, ...], tmp_path: Pa
 
 
 def test_bst_unknown_command_exits_1(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    out = _run_for_exit1(
+    out = run_for_exit1(
         submission_command,
         '@article{k, title = "x"}\n',
         "NOTACOMMAND { foo }\nREAD\n",
@@ -79,7 +81,7 @@ def test_bst_unknown_command_exits_1(submission_command: tuple[str, ...], tmp_pa
 
 
 def test_error_object_has_line_column(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    out = _run_for_exit1(
+    out = run_for_exit1(
         submission_command, "@article{k, title = {unclosed\n\nmore", MINIMAL_STYLE, "k\n", tmp_path
     )
     err = out["error"]
@@ -93,3 +95,32 @@ def test_unknown_cli_flag_nonzero(submission_command: tuple[str, ...], tmp_path:
         timeout=10,
     )
     assert result.returncode != 0
+
+
+@pytest.mark.parametrize(
+    "style",
+    [
+        "ENTRY {crossref} {} {}\nREAD\n",
+        "ENTRY {} {} {sort.key$}\nREAD\n",
+        "ENTRY {} {} {}\nENTRY {} {} {}\nREAD\n",
+        "ENTRY {} {} {}\nREAD\nREAD\n",
+    ],
+    ids=["crossref-redeclared", "sort-key-redeclared", "entry-repeated", "read-repeated"],
+)
+def test_invalid_bst_declarations_are_rejected(
+    submission_command: tuple[str, ...], tmp_path: Path, style: str
+) -> None:
+    # bibtex.web bst_entry_command / bst_read_command and predefined-fields
+    # initialization. Each fixture contains one independent declaration fault.
+    out = run_for_exit1(submission_command, "@misc{a,}\n", style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)
+
+
+def test_runtime_stack_underflow_is_structured_error(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # Technical requirements explicitly classify runtime stack underflow as
+    # exit 1, distinct from a non-fatal wrong-type operation with two operands.
+    style = "ENTRY {} {} {}\nFUNCTION {f} { #1 + }\nREAD\nEXECUTE {f}\n"
+    out = run_for_exit1(submission_command, "@misc{a,}\n", style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)

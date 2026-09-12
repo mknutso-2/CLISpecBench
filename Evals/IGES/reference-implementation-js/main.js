@@ -253,6 +253,10 @@ class ParamTokenizer {
     if (i > digitStart && this.data[i] === "H") {
       // Hollerith string. Parse the count.
       const n = parseInt(this.data.slice(digitStart, i), 10);
+      if (n === 0) {
+        throw new IgesError(makeDiag("error", 0, SECTION.UNKNOWN,
+          "Hollerith character count must be positive", "§2.2.2.3"));
+      }
       const textStart = i + 1;
       const textEnd = textStart + n;
       if (textEnd > this.data.length) {
@@ -421,6 +425,8 @@ function formatInteger(v) {
 }
 
 function formatHollerith(s) {
+  // §§2.2.2.3/2.2.3: default NULL strings; zero-count Hollerith is illegal.
+  if (s.length === 0) return "";
   // Encode as <N>H<...N chars...>
   const bytes = Buffer.from(s, "latin1");
   return `${bytes.length}H${s}`;
@@ -2069,18 +2075,17 @@ registerEntity(214,
 );
 
 // ──── §4.62 Linear Dimension (Type 216) ────
+// Public Type216 schema/spec table has exactly five pointer parameters.
 registerEntity(216,
   (tok) => ({
     denote: tok.nextPointer(0),
     dearrw1: tok.nextPointer(0), dearrw2: tok.nextPointer(0),
     dewit1: tok.nextPointer(0), dewit2: tok.nextPointer(0),
-    xt: tok.nextReal(0), yt: tok.nextReal(0),
   }),
   (d, pw) => {
     pw.writePointer(d.denote);
     pw.writePointer(d.dearrw1); pw.writePointer(d.dearrw2);
     pw.writePointer(d.dewit1); pw.writePointer(d.dewit2);
-    pw.writeReal(d.xt); pw.writeReal(d.yt);
   }
 );
 

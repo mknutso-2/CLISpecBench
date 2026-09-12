@@ -15,6 +15,7 @@ not cascade into the others.
 
 from __future__ import annotations
 
+# btxdoc lines 173–178: every cross-referenced parent follows its children.
 from pathlib import Path
 
 from conftest import run_bibtex
@@ -153,8 +154,8 @@ def test_crossref_preserves_parent_key_case_in_child_crossref_value(
     # The child's resolved crossref in the log should reflect the parent's
     # declared casing (MixedCase), even though lookup was case-insensitive.
     bib = """
-@proceedings{MixedCase, year = 2020}
 @inproceedings{child, crossref = "mixedcase"}
+@proceedings{MixedCase, year = 2020}
 """
     style = """\
 ENTRY { year } { } { }

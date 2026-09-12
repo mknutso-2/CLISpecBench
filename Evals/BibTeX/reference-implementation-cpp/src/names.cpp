@@ -72,7 +72,7 @@ void decompose_form1_slice(const std::vector<std::string>& toks,
     }
     // Find the last lowercase token in the range. If none, all caps: first = all but last, last = last token.
     std::size_t last_lower = end;
-    for (std::size_t i = begin; i < end; ++i) {
+    for (std::size_t i = begin; i + 1 < end; ++i) {
         if (token_is_lowercase(toks[i])) last_lower = i;
     }
     if (last_lower == end) {
@@ -90,16 +90,8 @@ void decompose_form1_slice(const std::vector<std::string>& toks,
     if (first_lower > begin) first = join_tokens(toks, begin, first_lower);
     // von = tokens[first_lower..last_lower+1)
     von = join_tokens(toks, first_lower, last_lower + 1);
-    // Last = tokens[last_lower+1..end)
-    if (last_lower + 1 < end) {
-        last = join_tokens(toks, last_lower + 1, end);
-    } else {
-        // Edge case: lowercase tokens run all the way to the end with no trailing uppercase.
-        // Per spec example `"van de"` -> First=``, von=``, Last=`van de`.
-        // Pull the von back: Last gets everything from first_lower onwards, von is empty.
-        last = join_tokens(toks, first_lower, end);
-        von.clear();
-    }
+    // The final token was excluded from the von scan, so Last is nonempty.
+    last = join_tokens(toks, last_lower + 1, end);
 }
 
 } // namespace
@@ -145,33 +137,12 @@ NamePart decompose_name(std::string_view value) {
         last.clear();
         if (toks.empty()) return;
         std::size_t n = toks.size();
-        std::size_t last_lower = n;
-        for (std::size_t i = 0; i < n; ++i) {
-            if (token_is_lowercase(toks[i])) last_lower = i;
-        }
-        if (last_lower == n) {
-            last = join_tokens(toks, 0, n);
-            return;
-        }
-        std::size_t first_lower = 0;
-        while (first_lower < n && !token_is_lowercase(toks[first_lower])) first_lower++;
-        if (last_lower + 1 < n) {
-            // Leading caps (if any) before first_lower prepend to Last.
-            std::string prefix = join_tokens(toks, 0, first_lower);
-            std::string suffix = join_tokens(toks, last_lower + 1, n);
-            if (prefix.empty()) last = suffix;
-            else if (suffix.empty()) last = prefix;
-            else last = prefix + " " + suffix;
-            von = join_tokens(toks, first_lower, last_lower + 1);
-        } else {
-            // Head ends on a lowercase token: no trailing-caps Last.
-            // Spec §4.2 invariant: Last is non-empty; promote everything from first_lower to Last.
-            // Leading caps (if any) still prepend.
-            std::string prefix = join_tokens(toks, 0, first_lower);
-            std::string rest = join_tokens(toks, first_lower, n);
-            last = prefix.empty() ? rest : prefix + " " + rest;
-            von.clear();
-        }
+        // WEB comma forms start von at token zero and keep at least
+        // the final token in Last; leading uppercase tokens stay in von.
+        std::size_t last_start = n - 1;
+        while (last_start > 0 && !token_is_lowercase(toks[last_start - 1])) --last_start;
+        von = join_tokens(toks, 0, last_start);
+        last = join_tokens(toks, last_start, n);
     };
 
     if (segments.size() == 2) {
@@ -189,13 +160,13 @@ NamePart decompose_name(std::string_view value) {
         return np;
     }
 
-    // 4+ segments: use first two commas as structural, join rest into First.
+    // WEB discards extra commas after the two structural separators.
     auto head_toks = tokenize_name(segments[0]);
     decompose_head(head_toks, np.von, np.last);
     np.jr = segments[1];
     std::string first;
     for (std::size_t i = 2; i < segments.size(); ++i) {
-        if (!first.empty()) first += ", ";
+        if (!first.empty()) first += " ";
         first += segments[i];
     }
     np.first = first;

@@ -273,6 +273,9 @@ class ParamTokenizer:
 
         if index > digit_start and index < len(self.data) and self.data[index] == "H":
             count = int(self.data[digit_start:index])
+            if count == 0:
+                raise IgesError(make_diag("error", 0, SECTION.UNKNOWN,
+                    "Hollerith character count must be positive", "§2.2.2.3"))
             text_start = index + 1
             text_end = text_start + count
             if text_end > len(self.data):
@@ -424,6 +427,9 @@ def format_integer(value: int) -> str:
 
 
 def format_hollerith(value: str) -> str:
+    # §§2.2.2.3/2.2.3: NULL strings use a defaulted field; 0H is illegal.
+    if not value:
+        return ""
     return f"{len(value.encode('latin-1'))}H{value}"
 
 

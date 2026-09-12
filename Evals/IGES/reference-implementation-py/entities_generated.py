@@ -1060,16 +1060,15 @@ def install_entities(registerEntity, obj, IgesError, makeDiag, SECTION, readAttr
             pw.writeReal(s.y)
     registerEntity(214, _parse_214, _write_214)
 
+    # Public Type216 schema/spec table has exactly five pointer parameters.
     def _parse_216(tok, form):
-        return obj({"denote": tok.nextPointer(0), "dearrw1": tok.nextPointer(0), "dearrw2": tok.nextPointer(0), "dewit1": tok.nextPointer(0), "dewit2": tok.nextPointer(0), "xt": tok.nextReal(0), "yt": tok.nextReal(0)})
+        return obj({"denote": tok.nextPointer(0), "dearrw1": tok.nextPointer(0), "dearrw2": tok.nextPointer(0), "dewit1": tok.nextPointer(0), "dewit2": tok.nextPointer(0)})
     def _write_216(d, pw, form):
         pw.writePointer(d.denote)
         pw.writePointer(d.dearrw1)
         pw.writePointer(d.dearrw2)
         pw.writePointer(d.dewit1)
         pw.writePointer(d.dewit2)
-        pw.writeReal(d.xt)
-        pw.writeReal(d.yt)
     registerEntity(216, _parse_216, _write_216)
 
     def _parse_218(tok, form):

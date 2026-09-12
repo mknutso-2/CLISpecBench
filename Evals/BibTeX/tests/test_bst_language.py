@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+# bibtex.web lines 8141–8146 predefine the per-entry sort.key$ string;
+# ENTRY must not redeclare it. These fixtures exercise its use directly.
 from pathlib import Path
 
 from conftest import run_bibtex
@@ -38,7 +40,8 @@ def _run_with_body(
     the given body. Returns the .bbl text."""
     body = _maybe_flush(body)
     style = f"""\
-ENTRY {{ author title year }} {{ }} {{ }}
+ENTRY {{ author title year journal }} {{ }} {{ }}
+FUNCTION {{article}} {{ skip$ }}
 FUNCTION {{f}} {{ {body} }}
 READ
 ITERATE {{f}}
@@ -353,7 +356,7 @@ ITERATE {f}
 
 def test_sort_by_sort_key(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     style = """\
-ENTRY { author } { } { sort.key$ }
+ENTRY { author } { } { }
 FUNCTION {init.key} { author 'sort.key$ := }
 FUNCTION {dump} { cite$ write$ newline$ }
 READ

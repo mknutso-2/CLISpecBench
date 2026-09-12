@@ -446,7 +446,8 @@ std::expected<std::string, Diagnostic> ParamTokenizer::next_string_or(std::strin
     if (record_ended_) return def;
 
     auto field = next_field();
-    if (!field.has_value()) return def;
+    // Defaults apply to absent fields, never malformed Hollerith strings (§2.2.2.3).
+    if (!field.has_value()) return std::unexpected(field.error());
 
     if (std::holds_alternative<std::string>(field.value())) {
         return std::get<std::string>(field.value());

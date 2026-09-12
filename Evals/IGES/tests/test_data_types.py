@@ -21,9 +21,9 @@ from iges_support import (
     make_entity,
     parse_iges_to_json,
     semantic_roundtrip_json,
-    wrap_entities,
 )
 from raw_iges_support import build_global_payload, hollerith, make_empty_iges
+from topology_support import open_triangle_document
 
 
 def _parse_raw_document(
@@ -335,27 +335,89 @@ def test_spec_version_above_range_is_clamped_to_v5_3(
 def test_pointer_and_logical_values_roundtrip_through_entity_json(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(
-        [
-            make_entity(
-                de_index=1,
-                entity_type=110,
-                data={"start": [0.0, 0.0, 0.0], "terminate": [1.0, 0.0, 0.0]},
-                directory_entry_overrides={"color": -7},
-            ),
-            make_entity(
-                de_index=3,
-                entity_type=510,
-                form=1,
-                data={"surf": 0, "n": 0, "outer_loop_flag": True, "loops": []},
-            ),
-        ]
+    # §§2.2.4.4.13/4.76 and 4.146: a negative Color Definition pointer
+    # and the Face boolean must occur in a complete legal geometric context.
+    doc, ids = open_triangle_document()
+    line = next(record for record in doc["entities"] if record["entity"]["type"] == 110)
+    line_de = line["de_index"]
+    color_de = max(record["de_index"] for record in doc["entities"]) + 2
+    line["directory_entry"]["color"] = -color_de
+    doc["entities"].append(
+        make_entity(
+            de_index=color_de,
+            entity_type=314,
+            data={"red": 20.0, "green": 40.0, "blue": 60.0, "name": "CUSTOM"},
+            directory_entry_overrides={
+                "color": 8,
+                "status": {
+                    "blank": "visible",
+                    "subordinate": "independent",
+                    "entity_use": "definition",
+                    "hierarchy": "global_top_down",
+                },
+            },
+        )
     )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
-
-    line_record = reparsed["entities"][0]
-    assert line_record["directory_entry"]["color"] == -7
-
-    face_record = reparsed["entities"][1]
+    records = {record["de_index"]: record for record in reparsed["entities"]}
+    assert records[line_de]["directory_entry"]["color"] == -color_de
+    face_record = records[ids["face"]]
     assert face_record["entity"]["type"] == 510
     assert face_record["entity"]["data"]["outer_loop_flag"] is True
+
+
+def test_zero_count_hollerith_is_rejected_after_defaulted_string_control(
+    submission_command: Sequence[str], tmp_path: Path
+) -> None:
+    # §§2.2.2.3/2.2.3 distinguish a legal defaulted NULL from illegal 0H.
+    # Use a standalone raw Global fixture, so neither submitted writing nor
+    # any geometry feature is a prerequisite for observing this string rule.
+    fields = [
+        hollerith("product"),
+        hollerith("test.igs"),
+        hollerith("native"),
+        hollerith("v1"),
+        "32",
+        "38",
+        "6",
+        "308",
+        "15",
+        "",
+        "1.0",
+        "1",
+        hollerith("IN"),
+        "1",
+        "0.01",
+        hollerith("20260416.120000"),
+        "1.0E-6",
+        "1000.0",
+        hollerith("John"),
+        hollerith("Org"),
+        "11",
+        "0",
+        "",
+        "",
+    ]
+    valid = _parse_raw_document(
+        submission_command,
+        tmp_path,
+        make_empty_iges(build_global_payload(fields)),
+        name="hollerith-default-control",
+    )
+    global_section = valid["global"]
+    assert isinstance(global_section, dict)
+    assert global_section["app_protocol"] == ""
+    fields[-1] = "0H"
+    path = tmp_path / "zero-count.iges"
+    output = tmp_path / "zero-count.json"
+    path.write_bytes(make_empty_iges(build_global_payload(fields)).encode("latin-1"))
+    completed = subprocess.run(
+        [*submission_command, "parse", "--input", str(path), "--output", str(output)],
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=30,
+    )
+    assert completed.returncode != 0
+    payload = json.loads(output.read_text(encoding="utf-8"))
+    assert is_input_rejection(payload)

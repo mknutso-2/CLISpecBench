@@ -8,12 +8,14 @@ from __future__ import annotations
 from collections.abc import Sequence
 from pathlib import Path
 
+from hollerith_support import assert_legal_hollerith_counts
 from iges_support import (
     assert_semantic_equal,
     parse_iges_to_json,
     wrap_entities,
     write_iges_from_json,
 )
+from raw_iges_support import physical_lines_by_section
 
 
 def test_write_and_parse_preserve_all_26_global_fields(
@@ -78,6 +80,11 @@ def test_write_empty_document_roundtrips_default_global_values(
 ) -> None:
     doc = wrap_entities([])
     iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="global-defaults")
+    # §§2.2.2.3/2.2.3: a writer/parser pair must not earn credit by sharing
+    # the same illegal 0H encoding for the optional empty timestamp string.
+    assert_legal_hollerith_counts(
+        "".join(line[:72] for line in physical_lines_by_section(iges_path)["G"])
+    )
     parsed = parse_iges_to_json(submission_command, iges_path, tmp_path, name="global-defaults")
 
     global_section = parsed["global"]

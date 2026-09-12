@@ -17,6 +17,8 @@ This file exercises the visibility contracts above.
 
 from __future__ import annotations
 
+# bibtex.web lines 8141–8146 predefine the per-entry sort.key$ string;
+# ENTRY must not redeclare it. These fixtures exercise its use directly.
 from pathlib import Path
 
 from conftest import run_bibtex
@@ -82,7 +84,7 @@ def test_entry_integer_resets_between_entries(
     style = """\
 ENTRY { } { slot } { }
 FUNCTION {check.and.bump}
-{ slot int.to.str$ write$ " " * write$
+{ slot int.to.str$ write$ " " write$
   slot #99 + 'slot := }
 FUNCTION {init.slot} { #0 'slot := }
 READ
@@ -198,14 +200,13 @@ def test_disambiguation_counter_distinguishes_homonym_entries(
         '@article{c, author = "Alice Jones", year = 2024}\n'
     )
     style = """\
-ENTRY { author year } { } { sort.key$ }
+ENTRY { author year } { } { }
 INTEGERS { smithct }
 FUNCTION {init} { #0 'smithct := }
 FUNCTION {assign.key}
-{ author text.prefix$ #5 substring$
-  duplicate$ "Smith" =
-    { pop$ smithct #1 + 'smithct := smithct int.to.chr$ #96 + int.to.chr$ swap$ pop$ }
-    { pop$ "Z" }
+{ author #1 "{ll}" format.name$ "Smith" =
+    { smithct #1 + 'smithct := smithct #96 + int.to.chr$ }
+    { "Z" }
   if$
   cite$ swap$ * 'sort.key$ :=
 }
@@ -224,11 +225,9 @@ ITERATE {emit}
     # Each of a and b has a Smith-derived key with different chr codes; c gets "Z".
     # Specifically: a -> "a" + chr(96+1) = "aa", b -> "b" + chr(96+2) = "bb", c -> "cZ"
     # (We don't pin exact values — just that Smith entries differ.)
-    smith_lines = [ln for ln in lines if "a" in ln or "b" in ln]
-    # The two Smith keys must not be identical.
-    assert len(set(smith_lines)) == len(smith_lines), (
-        f"Smith entries produced duplicate disambiguation keys: {smith_lines!r}"
-    )
+    # Exact non-vacuous suffixes measure shared counter state; unique cite
+    # prefixes alone would make any output appear distinct (false credit).
+    assert lines == ["aa", "bb", "cZ"]
 
 
 # ---------------------------------------------------------------------------

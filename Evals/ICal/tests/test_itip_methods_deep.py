@@ -6,7 +6,7 @@ This file adds the less-common methods RFC 5546 §3.2 requires:
 
   * ADD (§3.2.4) — adds a new recurrence to an existing VEVENT. Required
     rows: DTSTAMP, DTSTART, ORGANIZER, SEQUENCE (MUST be > 0), SUMMARY,
-    UID. The new occurrence typically carries RECURRENCE-ID.
+    UID. RECURRENCE-ID has presence 0 and is forbidden.
   * REFRESH (§3.2.6) — attendee requests an updated iCal from the
     organizer. Required rows: ATTENDEE, DTSTAMP, ORGANIZER, UID.
     SEQUENCE is "0" (MUST NOT be present).
@@ -37,6 +37,18 @@ TAIL = "END:VCALENDAR\n"
 def _warn_kinds(out: dict[str, Any]) -> list[str]:
     raw = cast(list[dict[str, Any]], out.get("warnings") or [])
     return [str(w.get("kind", "")) for w in raw]
+
+
+def _has_itip_property_warning(out: dict[str, Any], property_name: str) -> bool:
+    # Public v3 warning metadata identifies the exact method/component row.
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    return any(
+        warning.get("kind") == "itip_missing_property"
+        and warning.get("method") == "ADD"
+        and warning.get("component") == "VEVENT"
+        and warning.get("property") == property_name
+        for warning in warnings
+    )
 
 
 def _wrap(method: str, event_body: str) -> str:
@@ -80,10 +92,10 @@ def test_add_requires_organizer(submission_command: tuple[str, ...], tmp_path: P
     """METHOD:ADD without ORGANIZER → itip_missing_property."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
-        "RECURRENCE-ID:20260305T100000Z\n"
+        "SEQUENCE:1\nSUMMARY:Added instance\n"
     )
     out = run_parse(submission_command, _wrap("ADD", body), tmp_path)
-    assert "itip_missing_property" in _warn_kinds(out)
+    assert _has_itip_property_warning(out, "ORGANIZER")
 
 
 def test_add_with_organizer_ok(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -92,7 +104,7 @@ def test_add_with_organizer_ok(submission_command: tuple[str, ...], tmp_path: Pa
     row; SEQUENCE:1 is the canonical "first added instance" value."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
-        "SEQUENCE:1\nRECURRENCE-ID:20260305T100000Z\n"
+        "SEQUENCE:1\n"
         "SUMMARY:Added instance\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
@@ -108,11 +120,24 @@ def test_add_sequence_must_be_greater_than_zero(
     is present."""
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
-        "SEQUENCE:0\nRECURRENCE-ID:20260305T100000Z\n"
+        "SEQUENCE:0\nSUMMARY:Added instance\n"
         "ORGANIZER:mailto:boss@example.com\n"
     )
     out = run_parse(submission_command, _wrap("ADD", body), tmp_path)
-    assert "itip_missing_property" in _warn_kinds(out)
+    assert _has_itip_property_warning(out, "SEQUENCE")
+
+
+def test_add_forbids_recurrence_id(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    # RFC 5546 §3.2.4 marks RECURRENCE-ID presence 0. Supply all required
+    # properties so only this row can account for the named warning.
+    body = (
+        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260305T100000Z\n"
+        "SEQUENCE:1\nSUMMARY:Added instance\n"
+        "ORGANIZER:mailto:boss@example.com\n"
+        "RECURRENCE-ID:20260305T100000Z\n"
+    )
+    out = run_parse(submission_command, _wrap("ADD", body), tmp_path)
+    assert _has_itip_property_warning(out, "RECURRENCE-ID")
 
 
 # ---------------------------------------------------------------------------

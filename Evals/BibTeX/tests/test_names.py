@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+# bibtex.web lines 9680–9747 and 9880–9906 define the contiguous name
+# slices. They supersede the contradictory navigation summary (§2).
 from pathlib import Path
 
 from conftest import PROBE_STYLE_NAMES, parse_name_dump, run_bibtex
@@ -51,10 +53,10 @@ def test_form1_von_without_first(submission_command: tuple[str, ...], tmp_path: 
 
 def test_form1_all_lowercase(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     n = _one_name(submission_command, tmp_path, "van de")
-    # All-lowercase head: von emptied, last absorbs.
+    # bibtex.web keeps at least the final token in Last; preceding van is von.
     assert n["first"] == ""
-    assert n["von"] == ""
-    assert n["last"] == "van de"
+    assert n["von"] == "van"
+    assert n["last"] == "de"
 
 
 def test_form1_single_token(submission_command: tuple[str, ...], tmp_path: Path) -> None:
@@ -87,13 +89,13 @@ def test_form2_with_von(submission_command: tuple[str, ...], tmp_path: Path) -> 
     assert n["last"] == "Pol"
 
 
-def test_form2_leading_caps_prepend_to_last(
+def test_form2_leading_caps_remain_in_von(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     n = _one_name(submission_command, tmp_path, "Foo van der Pol, Charles")
     assert n["first"] == "Charles"
-    assert n["von"] == "van der"
-    assert n["last"] == "Foo Pol"
+    assert n["von"] == "Foo van der"
+    assert n["last"] == "Pol"
 
 
 # --- Form 3: two commas ---

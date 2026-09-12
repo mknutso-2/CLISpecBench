@@ -28,11 +28,13 @@ def test_parse_500_events_in_reasonable_time(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """A calendar with 500 events parses and surfaces all of them."""
+    # RFC 5545 §3.3.5 DATE-TIME uses exactly eight date digits.
+    # Fixture formatting must not turn a volume test into malformed-date rejection.
     events: list[str] = []
     for i in range(500):
         events.append(
             f"BEGIN:VEVENT\nUID:e{i:04d}\nDTSTAMP:20260101T120000Z\n"
-            f"DTSTART:20260{(i % 12) + 1:02d}01T100000Z\n"
+            f"DTSTART:2026{(i % 12) + 1:02d}01T100000Z\n"
             f"SUMMARY:Event {i}\nEND:VEVENT\n"
         )
     ics = HEAD + "".join(events) + TAIL

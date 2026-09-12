@@ -304,6 +304,8 @@ def test_historical_post_2007_fold_still_fires(
     assert "timezone_fold_ambiguous" in _kinds(out)
 
 
+# RFC 5545 §3.8.3.3: FROM is the offset in effect before the onset.
+# The 2014 transition restores +0100 before the 2025 RDATE fall-back.
 RDATE_DRIVEN_TZ = """\
 BEGIN:VTIMEZONE
 TZID:Test/RDate
@@ -314,9 +316,10 @@ TZOFFSETTO:+0000
 RDATE:20250315T020000
 END:STANDARD
 BEGIN:DAYLIGHT
-DTSTART:20251015T020000
+DTSTART:20141015T020000
 TZOFFSETFROM:+0000
 TZOFFSETTO:+0100
+RDATE:20251015T020000
 END:DAYLIGHT
 END:VTIMEZONE
 """
@@ -378,21 +381,10 @@ def test_recurring_event_crossing_dst_boundary(
 # not just the "year y only" scan.
 # ---------------------------------------------------------------------------
 
-# A contrived-but-legal zone whose (spring-forward) transition lands at
-# local 2024-12-31 23:30:00. The +30min jump to 2025-01-01 00:00 creates
-# a gap that crosses the year boundary: local 2024-12-31 23:45 exists,
-# but the wall-clock skips straight to 2025-01-01 00:00. An event at
-# 2024-12-31 23:45 local is in the gap; finding this requires scanning
-# the transition at year y=2024 when querying year 2024.
-#
-# The stronger test is the mirror: an event in year 2025 near the
-# boundary. If the transition anchor is DTSTART=20241231T233000, then
-# RRULE FREQ=YEARLY generates transitions each Dec 31 23:30. An event
-# at 2026-01-01 00:00:15 — i.e. just past a transition-delta window that
-# ends in Jan of the EVENT year but started in December of the PRIOR
-# year — would be caught only if the detector scans year local.year - 1
-# (i.e. 2025). A year-only scan (2026) would miss it: the 2026 transition
-# is Dec 31 2026 23:30, months later.
+# An annual +00:00 → +01:00 transition at Dec 31 23:30 creates a gap
+# crossing into Jan 1. A June return to +00:00 makes each later FROM
+# offset the state actually in effect, as RFC 5545 §3.8.3.3 requires.
+# No particular transition enumeration algorithm is required.
 
 YEAREND_GAP_TZ = """\
 BEGIN:VTIMEZONE
@@ -404,6 +396,12 @@ TZOFFSETTO:+0100
 TZNAME:YEG
 RRULE:FREQ=YEARLY;BYMONTH=12;BYMONTHDAY=31
 END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:20250601T020000
+TZOFFSETFROM:+0100
+TZOFFSETTO:+0000
+RRULE:FREQ=YEARLY;BYMONTH=6;BYMONTHDAY=1
+END:DAYLIGHT
 END:VTIMEZONE
 """
 

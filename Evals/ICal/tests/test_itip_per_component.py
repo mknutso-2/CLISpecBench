@@ -367,12 +367,12 @@ def test_vfreebusy_shared_checks_carry_structured_metadata(
     discriminate a missing UID on a VFREEBUSY from the same rule on
     another component.
 
-    Fixture: empty UID + no DTSTAMP on a REQUEST VFREEBUSY. Both
+    Fixture: omitted UID and DTSTAMP on a REQUEST VFREEBUSY. Both
     warnings must identify REQUEST, VFREEBUSY, and the missing
     property."""
     body = (
-        # UID intentionally empty (trailing value),  no DTSTAMP.
-        "UID:\n"
+        # Omit both properties. The public presence matrix does not require
+        # treating a present-but-empty TEXT value as an absent property.
         "DTSTART:20260301T000000Z\nDTEND:20260302T000000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
         "ATTENDEE:mailto:a@example.com\n"

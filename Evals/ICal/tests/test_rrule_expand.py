@@ -77,12 +77,12 @@ def test_daily_until(submission_command: tuple[str, ...], tmp_path: Path) -> Non
 
 
 def test_weekly_byday_multiple(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    # DTSTART is Thu 2026-03-05. BYDAY=MO,WE,FR. Should emit Fri 3/6 first,
-    # then Mon 3/9, Wed 3/11, Fri 3/13, ...
+    # RFC 5545 §3.8.5.3 leaves unsynchronized DTSTART/RRULE sets undefined.
+    # Start on Friday so the named weekday expansion has a defined first instance.
     starts = _expand(
         submission_command,
         tmp_path,
-        "20260305T100000Z",
+        "20260306T100000Z",
         "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=6",
         "2026-03-01T00:00:00Z",
         "2026-05-01T00:00:00Z",

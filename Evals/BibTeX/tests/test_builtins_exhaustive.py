@@ -45,6 +45,7 @@ def _exec(
         body = body + " newline$"
     style = f"""\
 ENTRY {{ {entry_fields} }} {{ }} {{ }}
+FUNCTION {{article}} {{ skip$ }}
 FUNCTION {{f}} {{ {body} }}
 READ
 EXECUTE {{f}}
@@ -64,6 +65,7 @@ def _iterate(
     """Like ``_exec`` but with ``ITERATE {f}`` so there is a current entry."""
     style = f"""\
 ENTRY {{ {entry_fields} }} {{ }} {{ }}
+FUNCTION {{article}} {{ skip$ }}
 FUNCTION {{f}} {{ {body} }}
 READ
 ITERATE {{f}}
@@ -103,7 +105,7 @@ def test_plus_negative(submission_command: tuple[str, ...], tmp_path: Path) -> N
 def test_plus_type_error_pushes_zero(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Non-integer top → warn + push 0 (spec §3.3)."""
     bbl, log = _exec(submission_command, tmp_path, '"abc" #3 + int.to.str$ write$', with_log=True)
-    assert bbl.strip() == "3"  # "abc" popped as int → 0; 0+3 = 3.
+    assert bbl.strip() == "0"  # bibtex.web x_plus: either wrong type defaults the result.
     assert _has_type_error(log)
 
 
@@ -206,9 +208,9 @@ def test_concat_empty_right(submission_command: tuple[str, ...], tmp_path: Path)
 def test_concat_type_error_pushes_empty(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    bbl, log = _exec(submission_command, tmp_path, '#5 "suffix" * write$', with_log=True)
+    bbl, log = _exec(submission_command, tmp_path, '#5 "suffix" * "|" * write$', with_log=True)
     # First pop is a string, second pop should be string but got int → default "".
-    assert bbl.strip() == "suffix"
+    assert bbl == "|\n"  # bibtex.web x_concatenate defaults the whole result.
     assert _has_type_error(log)
 
 
@@ -599,14 +601,14 @@ def test_if_false_branch(submission_command: tuple[str, ...], tmp_path: Path) ->
     assert bbl.strip() == "no"
 
 
-def test_if_nonzero_is_true(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """Per spec, condition is "nonzero → true", not just 1."""
+def test_if_negative_is_false(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    """btxhak if$: only integers greater than zero select the true branch."""
     bbl, _ = _exec(
         submission_command,
         tmp_path,
         '#-1 { "yes" write$ } { "no" write$ } if$',
     )
-    assert bbl.strip() == "yes"
+    assert bbl.strip() == "no"
 
 
 # ---------------------------------------------------------------------------
@@ -760,15 +762,12 @@ def test_preamble_empty_when_none(submission_command: tuple[str, ...], tmp_path:
 
 
 def test_preamble_concatenated(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """summary.md §3.5 `preamble$` row: concatenation of all
-    `@preamble` values in source order, separated by a single
-    ASCII space. Two preambles "aa" + "bb" MUST yield exactly
-    "aa bb" per the documented contract."""
+    """bibtex.web x_preamble appends strings directly with no separator.
+    The public summary explicitly gives the authoritative WEB precedence.
+    """
     bib = '@preamble{"aa"}\n@preamble{"bb"}\n@article{a, author = "X"}\n'
     bbl, _ = _exec(submission_command, tmp_path, "preamble$ write$", bib=bib)
-    assert bbl.rstrip("\n") == "aa bb", (
-        f"expected 'aa bb' (source order, single-space separator); got {bbl!r}"
-    )
+    assert bbl == "aabb\n"
 
 
 # ---------------------------------------------------------------------------

@@ -234,39 +234,25 @@ def test_vresource_component_does_not_crash_parser(
     assert len(events) == 1
 
 
-def test_known_component_nested_in_unknown_does_not_escape(
+def test_nested_location_does_not_overwrite_event_properties(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A known sub-component (e.g. VALARM) nested inside an unknown outer
-    component (e.g. PARTICIPANT) must NOT be opened as a real VALARM. If
-    the parent is dropped as unsupported, the nested VALARM is equally
-    dropped — it would attach to the wrong scope otherwise."""
+    """RFC 9073 §7.1 permits VLOCATION inside PARTICIPANT. Its properties
+    must stay in their own scope; VALARM is not legal in that position."""
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
-        "BEGIN:VEVENT\n"
-        "UID:outer-event\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260301T100000Z\n"
-        "BEGIN:PARTICIPANT\n"
-        "UID:p1\n"
-        "PARTICIPANT-TYPE:ATTENDEE\n"
-        "BEGIN:VALARM\n"
-        "ACTION:DISPLAY\n"
-        "TRIGGER:-PT15M\n"
-        "DESCRIPTION:inner-alarm-should-not-leak\n"
-        "END:VALARM\n"
-        "END:PARTICIPANT\n"
-        "END:VEVENT\n"
-        "END:VCALENDAR\n"
+        "BEGIN:VEVENT\nUID:outer-event\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260301T100000Z\nDESCRIPTION:outer-description\n"
+        "BEGIN:PARTICIPANT\nUID:p1\nPARTICIPANT-TYPE:ATTENDEE\n"
+        "BEGIN:VLOCATION\nUID:inner-location\nNAME:Inner room\n"
+        "DESCRIPTION:inner-description\nEND:VLOCATION\n"
+        "END:PARTICIPANT\nEND:VEVENT\nEND:VCALENDAR\n"
     )
     out = run_parse(submission_command, ics, tmp_path)
     events = cast(list[dict[str, Any]], out.get("events") or [])
     assert len(events) == 1
-    # The outer event must keep its own UID, unchanged by nested PARTICIPANT.
     assert events[0].get("uid") == "outer-event"
-    # The event's alarms list must be empty: the nested VALARM was inside
-    # an unsupported outer PARTICIPANT and should NOT leak to the event.
-    alarms = cast(list[Any], events[0].get("alarms") or [])
-    assert len(alarms) == 0
+    assert events[0].get("description") == "outer-description"
 
 
 # ---------------------------------------------------------------------------

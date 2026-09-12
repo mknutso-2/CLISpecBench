@@ -13,6 +13,8 @@ import math
 from pathlib import Path
 from typing import Any
 
+from hollerith_support import assert_legal_hollerith_counts
+
 # Parameter Data tables in §§4.3, 4.5, 4.17–4.21, 4.25, 4.30, 4.50–4.54.
 _SCALARS = {
     100: "zt x1 y1 x2 y2 x3 y3",
@@ -225,6 +227,13 @@ def validate(path: Path) -> tuple[int, int]:
         assert lines == [line for s in "SGDPT" for line in grouped[s]]
         for group in grouped.values():
             assert [int(line[73:80]) for line in group] == list(range(1, len(group) + 1))
+        # §2.2.2.3: reference-generated records previously contained illegal 0H.
+        # Scan the joined Global stream so physical-line boundaries cannot hide it.
+        assert_legal_hollerith_counts(
+            "".join(line[:72] for line in grouped["G"]),
+            document["global"]["param_delimiter"],
+            document["global"]["record_delimiter"],
+        )
         assert len(grouped["T"]) == 1
         assert grouped["T"][0][:32] == "".join(f"{s}{len(grouped[s]):7d}" for s in "SGDP")
         assert [line[:72].rstrip() for line in grouped["S"]] == document["start_lines"]

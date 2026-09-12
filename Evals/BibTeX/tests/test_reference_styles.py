@@ -5,17 +5,11 @@ test runs the submission against a curated `refs.bib` + `refs.cites`
 and asserts the submission's `.bbl` output matches a known-good
 artifact under `tests/fixtures/`.
 
-The `.expected.bbl` fixtures committed in the repository are the
-contract. They should be regenerated from the historic BibTeX 0.99c
-binary (see `Evals/BibTeX/tools/regenerate_bbl_fixtures.sh` —
-supports a Docker `texlive/texlive` image). Initial fixtures may be
-seeded from the repo's reference implementation; any bug in the
-reference impl relative to BibTeX 0.99c surfaces as a test failure
-that must be resolved by fixing the impl and regenerating fixtures.
-
-These four tests are the **single largest discriminator** in the
-BibTeX eval: a correct interpreter of the `.bst` stack machine
-against realistic inputs must reproduce BibTeX's output.
+The public summary §8 requires parity with the supplied canonical styles and
+BibTeX 0.99c. The expected artifacts encode that public behavior; see
+`tools/regenerate_bbl_fixtures.sh` for their independent oracle workflow.
+The test-owned style copies preserve the exact public bytes so these checks
+also work in the Docker grader, which mounts only the tests directory.
 """
 
 from __future__ import annotations
@@ -27,8 +21,8 @@ import pytest
 
 HERE = Path(__file__).parent
 FIXTURES = HERE / "fixtures"
-# Reference styles live in the eval's docs/authoritative/.
-STYLES_DIR = HERE.parent / "prompt" / "docs" / "authoritative"
+# Exact public style copies and SHA-256 provenance are committed together.
+STYLES_DIR = FIXTURES / "authoritative"
 
 
 REFERENCE_STYLES = ["plain", "alpha", "unsrt", "abbrv"]

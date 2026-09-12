@@ -1974,19 +1974,24 @@ inline void from_json(nlohmann::json const& j, ViewEntity& o) {
     j.at("form").get_to(o.form);
     j.at("view_number").get_to(o.view_number);
     j.at("scale").get_to(o.scale);
-    j.at("clip_planes").get_to(o.clip_planes);
-    j.at("view_plane_normal").get_to(o.view_plane_normal);
-    j.at("view_reference_point").get_to(o.view_reference_point);
-    j.at("center_of_projection").get_to(o.center_of_projection);
-    j.at("view_up_vector").get_to(o.view_up_vector);
-    j.at("view_plane_distance").get_to(o.view_plane_distance);
-    j.at("umin").get_to(o.umin);
-    j.at("umax").get_to(o.umax);
-    j.at("vmin").get_to(o.vmin);
-    j.at("vmax").get_to(o.vmax);
-    j.at("depth_clipping").get_to(o.depth_clipping);
-    j.at("wmin").get_to(o.wmin);
-    j.at("wmax").get_to(o.wmax);
+    // Public Type410 permits defaulted fields from the inactive form.
+    // Only the form-appropriate fields are required and carried on the wire.
+    if (o.form == 0) {
+        j.at("clip_planes").get_to(o.clip_planes);
+    } else {
+        j.at("view_plane_normal").get_to(o.view_plane_normal);
+        j.at("view_reference_point").get_to(o.view_reference_point);
+        j.at("center_of_projection").get_to(o.center_of_projection);
+        j.at("view_up_vector").get_to(o.view_up_vector);
+        j.at("view_plane_distance").get_to(o.view_plane_distance);
+        j.at("umin").get_to(o.umin);
+        j.at("umax").get_to(o.umax);
+        j.at("vmin").get_to(o.vmin);
+        j.at("vmax").get_to(o.vmax);
+        j.at("depth_clipping").get_to(o.depth_clipping);
+        j.at("wmin").get_to(o.wmin);
+        j.at("wmax").get_to(o.wmax);
+    }
 }
 
 // â”€â”€ wedge_entity.hpp â”€â”€

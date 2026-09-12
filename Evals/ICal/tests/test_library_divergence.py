@@ -30,9 +30,11 @@ def test_bysetpos_with_byhour_picks_last_time_slot(
     # For FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9,17;BYSETPOS=-1,
     # March 2026's last weekday is Tue 3/31. BYHOUR expands to 09:00 and 17:00.
     # BYSETPOS=-1 on the full list picks 3/31 17:00.
+    # RFC 5545 §3.8.5.3 requires synchronized DTSTART for a defined set:
+    # the initial instance must itself be the selected 17:00 slot.
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260331T090000Z\n"
+        "DTSTART:20260331T170000Z\n"
         "RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYHOUR=9,17;BYSETPOS=-1;COUNT=2\n"
     )
     out = run_expand(

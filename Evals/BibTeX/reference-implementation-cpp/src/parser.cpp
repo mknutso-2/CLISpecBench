@@ -5,25 +5,10 @@
 
 namespace bibtex {
 
-namespace {
-
-void seed_month_macros(Database& db) {
-    static constexpr std::pair<const char*, const char*> MONTHS[] = {
-        {"jan", "January"}, {"feb", "February"}, {"mar", "March"}, {"apr", "April"},
-        {"may", "May"},     {"jun", "June"},     {"jul", "July"},  {"aug", "August"},
-        {"sep", "September"},{"oct", "October"}, {"nov", "November"},{"dec", "December"}
-    };
-    for (const auto& [name, expansion] : MONTHS) {
-        db.strings.emplace(name, expansion);
-    }
-}
-
-} // namespace
-
+// WEB seeds database abbreviations from the selected style's MACRO
+// commands, not from a hard-coded month table (abbrv uses Jan., etc.).
 Parser::Parser(std::string_view source, Database& db)
-    : lexer_(source), db_(db) {
-    seed_month_macros(db_);
-}
+    : lexer_(source), db_(db) {}
 
 void Parser::add_warning(Warning w) {
     db_.warnings.push_back(std::move(w));
@@ -74,6 +59,9 @@ std::optional<ParseError> Parser::parse_string_entry() {
     if (eq.kind != TokenKind::Equals) {
         return ParseError{"bib", eq.line, eq.column, "expected '=' after macro name"};
     }
+    // WEB ignores a macro's self-reference, even when it replaces a prior
+    // definition. Removing the previous binding makes that path unresolved.
+    db_.strings.erase(to_lower(name_tok.text));
     std::string value;
     auto verr = read_field_value(value);
     if (verr) return verr;
@@ -104,7 +92,7 @@ std::optional<ParseError> Parser::parse_preamble_entry() {
     if (close_tok.kind != close) {
         return ParseError{"bib", close_tok.line, close_tok.column, "expected closing delimiter for @preamble"};
     }
-    if (!db_.preamble.empty()) db_.preamble.push_back(' ');
+    // WEB x_preamble concatenates source preambles without inserting spaces.
     db_.preamble += whitespace_normalize(value);
     return std::nullopt;
 }

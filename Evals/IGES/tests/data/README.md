@@ -21,6 +21,13 @@ probes are kept; writer/roundtrip-only captures were discarded.
 Capture alone does not establish conformance. The following changes followed
 independent inspection of the model-visible specification:
 
+- On 2026-09-12, the v1.0.17 follow-up independently verified that all 44
+  captured Global streams contained illegal `0H` for optional field25.
+  §2.2.2.3 requires a nonzero count; §2.2.3 defaults an empty field to NULL.
+  Replace that token with an empty field, repack only Global physical records
+  and update Terminate counts. Semantic documents/keys and all S/D/P records
+  remain identical. The independent validator now scans Hollerith boundaries
+  in joined Global streams, so reference acceptance cannot hide this again.
 - Uniform Offset Curve PTYPE is zero (§4.25); the paired physical tokens match.
 - Type114 ignored boundary slots are explicit in this corpus (§4.15). The new
   2×1 fixture was built directly from its parameter table with ignored values
@@ -56,7 +63,7 @@ closed-shell opposing edge uses and the contained void. Neither adds score units
 
 All three reference languages run against the repaired suite in that offline
 image. Coordinate expectations in scored tests are independently calculated,
-not copied from reference evaluation. See `docs/validation/IGES-1.0.16.md` for
+not copied from reference evaluation. See `docs/validation/IGES-1.0.16.md` and `docs/validation/IGES-1.0.17.md` for
 results, explicit public conflicts and remaining correlated prerequisites.
 
 For future fixture maintenance, update both semantic documents and physical

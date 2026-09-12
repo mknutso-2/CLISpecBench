@@ -1,5 +1,34 @@
 # BibTeX Eval Changelog
 
+## v1.2.3 — 2026-09-12
+
+- Correct positive BST fixtures that redeclared built-in `crossref` or
+  `sort.key$`, accessed undeclared fields/types, or underflowed the stack.
+  Order crossref parents after their children and separate missing-field
+  output from string concatenation, avoiding shared fixture failures.
+- Follow the supplied authoritative WEB/style guide for negative `if$`,
+  whole-result type-error defaults, preambles,
+  recursive string macros, name parts, and trailing whitespace. Require
+  structured rejection for illegal command ordering and unknown/duplicate
+  functions. The public navigation summary explicitly gives these sources
+  precedence when it disagrees. Preserve its explicitly permitted no-op `top$`,
+  name-spacing, and brace-width approximations; parity corpora exercise their
+  intersection.
+- Bundle exact public BST copies with hashes under tests. Regenerate all
+  eight canonical BBLs with an independent compatible BibTeX oracle; flatten
+  their crossrefs and use TeX spelling for the ambiguous raw-Unicode label
+  case. Dedicated threshold controls retain crossref coverage without making
+  eight style scores depend on that one rule.
+- Add focused controls for the two parent-inclusion thresholds, four illegal
+  declarations, actual runtime underflow, the separate database-macro namespace,
+  and whitespace-only output flushing. Total scored cases: 386.
+- Correct the C++ reference against these independently grounded rules.
+- Require an explicit executable or immutable Docker image for BBL regeneration;
+  record identity/runtime/input/output hashes and support byte-exact `--check`.
+- Model-visible prompts and documentation are unchanged. See
+  `docs/validation/BibTeX-1.2.3.md` for source anchors, oracle provenance,
+  reference/submission validation, and deferred public clarifications.
+
 ## v1.2.2 — 2026-09-11
 
 - Isolate the previously documented comma-less empty-entry parsing bug in one

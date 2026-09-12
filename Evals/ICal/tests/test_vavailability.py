@@ -328,13 +328,16 @@ def test_available_recurrence_id_with_tzid_and_range(
     and RANGE=THISANDFUTURE/THISANDPRIOR. The Available schema must
     preserve both parameters (the structured object shape); a scalar
     ISO string would silently drop them."""
-    body = (
-        "UID:av1\nDTSTAMP:20260101T120000Z\n"
-        "DTSTART:20260101T000000Z\n"
+    # RFC 5545 §3.6.5 places VTIMEZONE directly under VCALENDAR.
+    zone = (
         "BEGIN:VTIMEZONE\nTZID:America/New_York\n"
         "BEGIN:STANDARD\nDTSTART:20071104T020000\n"
         "TZOFFSETFROM:-0400\nTZOFFSETTO:-0500\n"
         "END:STANDARD\nEND:VTIMEZONE\n"
+    )
+    body = (
+        "UID:av1\nDTSTAMP:20260101T120000Z\n"
+        "DTSTART:20260101T000000Z\n"
         "BEGIN:AVAILABLE\n"
         "UID:a1\nDTSTAMP:20260101T120000Z\n"
         "DTSTART;TZID=America/New_York:20260601T090000\n"
@@ -342,7 +345,11 @@ def test_available_recurrence_id_with_tzid_and_range(
         "RECURRENCE-ID;TZID=America/New_York;RANGE=THISANDFUTURE:20260601T090000\n"
         "END:AVAILABLE\n"
     )
-    out = run_parse(submission_command, _wrap_va(body), tmp_path)
+    out = run_parse(
+        submission_command,
+        HEAD + zone + "BEGIN:VAVAILABILITY\n" + body + "END:VAVAILABILITY\n" + TAIL,
+        tmp_path,
+    )
     vas = _availabilities(out)
     av = cast(list[dict[str, Any]], vas[0].get("available"))[0]
     rid = av.get("recurrence_id")

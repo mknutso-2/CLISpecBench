@@ -113,18 +113,15 @@ def test_macro_redefinition_does_not_affect_prior_uses(
 
 
 def test_macro_concat_with_self(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    """@string{x = x # "more"} is a forward reference to x within its own
-    definition. Per btxdoc §3.1, this is undefined/error; we accept either
-    a failed parse OR a lazy resolution that sees x as empty the first time."""
+    """bibtex.web 'Scan a macro name' ignores a recursive self-reference
+    with a warning, even when a previous definition exists. Normal field
+    whitespace compression removes the resulting leading space.
+    """
     bib = '@string{x = "start"}\n@string{x = x # " end"}\n@article{k, title = x}\n'
-    # Accept both interpretations: impl may resolve eagerly to "start end" or
-    # error out. We only verify the tool doesn't produce nonsense.
     bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, ["k"], tmp_path)
     rec = _first(parse_dump(bbl), "k")
     title = rec.get("title", "")
-    assert title in ("start end", "start", " end", ""), (
-        f"unexpected self-concat resolution: {title!r}"
-    )
+    assert title == "end"
 
 
 def test_macro_chain(submission_command: tuple[str, ...], tmp_path: Path) -> None:

@@ -5,6 +5,7 @@ A minimal style file (PROBE_STYLE_FIELDS) dumps each cited entry's fields as
 
 from __future__ import annotations
 
+# btxdoc lines 173–178: every cross-referenced parent follows its children.
 from pathlib import Path
 
 from conftest import PROBE_STYLE_FIELDS, PROBE_STYLE_KEYS, parse_dump, run_bibtex
@@ -96,22 +97,26 @@ def test_string_concatenation_hash(submission_command: tuple[str, ...], tmp_path
     assert _entries(bbl)["k"]["year"] == "2024-11"
 
 
-def test_predefined_month_jan(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+def test_style_month_macro_jan(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = "@article{k, month = jan}\n"
-    bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, ["k"], tmp_path)
+    # btxhak MACRO and the supplied plain.bst define month names in the
+    # style; bibtex.web has no built-in month-macro predefinitions.
+    style = 'MACRO {jan} {"January"}\n' + PROBE_STYLE_FIELDS
+    bbl, _ = run_bibtex(submission_command, bib, style, ["k"], tmp_path)
     assert _entries(bbl)["k"]["month"] == "January"
 
 
 def test_string_macro_overrides_month(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = '@string{may = "Mai"}\n@article{k, month = may}\n'
-    bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, ["k"], tmp_path)
+    style = 'MACRO {may} {"May"}\n' + PROBE_STYLE_FIELDS
+    bbl, _ = run_bibtex(submission_command, bib, style, ["k"], tmp_path)
     assert _entries(bbl)["k"]["month"] == "Mai"
 
 
 def test_crossref_inheritance(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = """
-@proceedings{parent, title = "Proc Volume", year = 2020, publisher = "ACM"}
 @inproceedings{child, author = "Jones", title = "Paper X", crossref = "parent"}
+@proceedings{parent, title = "Proc Volume", year = 2020, publisher = "ACM"}
 """
     bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, ["child"], tmp_path)
     rec = _entries(bbl)["child"]
@@ -124,8 +129,8 @@ def test_crossref_case_insensitive_lookup(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     bib = (
-        "@proceedings{Parent, year = 2020}\n"
         '@inproceedings{child, crossref = "PARENT", title = "x"}\n'
+        "@proceedings{Parent, year = 2020}\n"
     )
     bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, ["child"], tmp_path)
     assert _entries(bbl)["child"]["year"] == "2020"

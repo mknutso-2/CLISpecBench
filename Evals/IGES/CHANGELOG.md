@@ -1,5 +1,27 @@
 # IGES Changelog
 
+## v1.0.17 — 2026-09-12
+
+- Repair the shared frozen Global-section input: all 44 documents used illegal
+  zero-count Hollerith (`0H`) for the optional timestamp. Use an empty field,
+  preserving every semantic input and model-visible byte. This one fixture bug
+  caused 69 correlated failures in a stricter saved Astra submission.
+- Independently scan frozen Global fields and default-global writer output for
+  legal nonzero Hollerith counts. Add one focused reader negative, paired with
+  a legal defaulted-NULL control; the suite now has 261 cases.
+- Repair remaining positive annotation, solid, display, FEA and data-type
+  fixtures with actual typed references and correct parent/use flags. Keep
+  assertions on the target entity. GeneralLabel210 now has its required leader;
+  Type216 input has only its five public pointers. The old zero-leader label
+  test is renamed, with unchanged case count.
+- Correct Python/JavaScript references to default empty strings, reject `0H`,
+  and serialize the five-pointer Type216 layout. Correct C++ to propagate
+  malformed string errors instead of treating them as defaults and accept
+  omitted inactive View410 fields, as its public form-specific contract allows.
+- Preserve all model-visible prompts/documentation, historical source and
+  generation records. Validation, independent peer findings and remaining
+  correlated prerequisites are recorded in `docs/validation/IGES-1.0.17.md`.
+
 ## v1.0.16 — 2026-09-12
 
 - Use frozen IGES inputs for reader, query, evaluation and reader-error probes;

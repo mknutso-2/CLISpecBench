@@ -1,5 +1,24 @@
 # ICal Eval Changelog
 
+## v3.0.2 — 2026-09-12
+
+- Repair undefined or malformed positive fixtures: synchronize DTSTART with
+  RRULE, emit eight-digit stress dates, place VTIMEZONE at VCALENDAR scope,
+  and use legal VLOCATION nesting within PARTICIPANT.
+- Make RDATE and year-end DST fixtures internally consistent by restoring the
+  previous offset before later clock transitions. Preserve their fold/gap cases.
+- Remove forbidden RECURRENCE-ID from valid ADD fixtures; isolate organizer
+  and SEQUENCE warnings with exact structured metadata. Add a dedicated
+  RECURRENCE-ID prohibition control and correct the C++ reference.
+- Make no-STATUS CANCEL explicitly uninvite a selected attendee; supply
+  affected attendees to the other CANCEL fixtures and a valid cancellation
+  status to the missing-organizer control, which now observes ORGANIZER.
+- Test truly absent UID/DTSTAMP for iTIP presence warnings; accept null or START
+  for an omitted RELATED parameter while preserving the trigger duration, as
+  the public nullable schema does not require materializing the RFC default.
+- Preserve all model-visible inputs. See `docs/validation/ICal-3.0.2.md` for
+  public sources, independent controls and retained-submission validation.
+
 ## v3.0.1 — 2026-09-11
 
 - Correct spring-gap UTC resolution to RFC 5545 §3.3.5's pre-gap offset. Both

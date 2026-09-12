@@ -16,8 +16,9 @@ bibtex.web §3000+ (`.bst` lexer / parser).
 
 from __future__ import annotations
 
+# bibtex.web lines 8141–8146 predefine the per-entry sort.key$ string;
+# ENTRY must not redeclare it. These fixtures exercise its use directly.
 from pathlib import Path
-from typing import Any, cast
 
 from conftest import run_bibtex
 
@@ -187,100 +188,44 @@ READ
     assert "error" in bbl.lower()
 
 
-def test_execute_before_read_is_permitted(
+def test_execute_before_read_is_rejected(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """EXECUTE on a function that doesn't touch entries is fine before READ."""
-    style = """\
-ENTRY { } { } { }
-FUNCTION {f} { "pre-read" write$ }
-EXECUTE {f}
-READ
-"""
-    bbl, _ = run_bibtex(submission_command, MINI_BIB, style, ["a"], tmp_path)
-    assert "pre-read" in bbl
+    # bibtex.web bst_execute_command rejects EXECUTE before READ even if
+    # the function does not access entries. Technical requirements require
+    # exit 1 and structured error JSON for a BST error.
+    from test_errors import run_for_exit1
+
+    style = 'ENTRY {} {} {}\nFUNCTION {f} { "pre-read" write$ }\nEXECUTE {f}\nREAD\n'
+    out = run_for_exit1(submission_command, MINI_BIB, style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)
 
 
-def test_missing_entry_declaration_prevents_entry_access(
+def test_read_without_entry_declaration_is_rejected(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Without ENTRY, entry-scoped field access is unavailable. The tool
-    may either reject the .bst at load time or silently return empty/missing
-    when the undefined fields are referenced; we only assert that the tool
-    does not produce an .bbl containing nonsense field values."""
-    # A .bst that doesn't declare ENTRY at all but tries to access a field.
-    style = """\
-FUNCTION {f} { title write$ }
-READ
-EXECUTE {f}
-"""
-    bbl, log = run_bibtex(
-        submission_command,
-        '@article{a, title = "T"}\n',
-        style,
-        ["a"],
-        tmp_path,
-        expect_exit=0,  # Accept either behavior
-        with_log=True,
-    )
-    # If the tool accepted it, the bbl must not contain the field value
-    # (since `title` was never declared as an entry field).
-    assert "T" not in bbl or log is not None
+    # bibtex.web bst_read_command requires ENTRY before READ. Keep the
+    # function valid so an unrelated unknown identifier cannot earn credit.
+    from test_errors import run_for_exit1
+
+    style = 'FUNCTION {f} { "ok" write$ }\nREAD\nEXECUTE {f}\n'
+    out = run_for_exit1(submission_command, MINI_BIB, style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)
 
 
-# ---------------------------------------------------------------------------
-# Duplicate names
-# ---------------------------------------------------------------------------
-
-
-def test_duplicate_function_definition_is_either_error_or_override(
+def test_duplicate_function_definition_is_rejected(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Redefining an existing FUNCTION: bibtex.web §4030 says hard error,
-    but many implementations allow last-definition-wins. Accept either: if
-    the tool accepts, "two" (the second definition) is what runs, not "one".
-    """
-    style = """\
-ENTRY { } { } { }
-FUNCTION {f} { "one" write$ }
-FUNCTION {f} { "two" write$ }
-READ
-EXECUTE {f}
-"""
-    import subprocess
+    # bibtex.web bst_function_command / already_seen_function_print reject
+    # reusing an identifier. A parse error must have the harness error JSON.
+    from test_errors import run_for_exit1
 
-    bib_file = tmp_path / "refs.bib"
-    bst_file = tmp_path / "style.bst"
-    out_file = tmp_path / "out.bbl"
-    cites_file = tmp_path / "cites.txt"
-    bib_file.write_text(MINI_BIB, encoding="utf-8")
-    bst_file.write_text(style, encoding="utf-8")
-    cites_file.write_text("a\n", encoding="utf-8")
-    result = subprocess.run(
-        [
-            *submission_command,
-            "--bib",
-            str(bib_file),
-            "--style",
-            str(bst_file),
-            "--cites",
-            str(cites_file),
-            "--output",
-            str(out_file),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
+    style = (
+        'ENTRY {} {} {}\nFUNCTION {f} { "one" write$ }\n'
+        'FUNCTION {f} { "two" write$ }\nREAD\nEXECUTE {f}\n'
     )
-    if result.returncode == 1:
-        # Strict mode: produced an error. OK.
-        return
-    assert result.returncode == 0, (
-        f"tool exited with unexpected code {result.returncode}: {result.stderr}"
-    )
-    # Lenient mode: last definition wins.
-    content = out_file.read_text(encoding="utf-8") if out_file.exists() else ""
-    assert "two" in content, f"last-definition-wins expected, but output contains: {content!r}"
+    out = run_for_exit1(submission_command, MINI_BIB, style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +262,7 @@ def test_quoted_name_assigns_function_by_reference(
 ) -> None:
     """'sort.key$ := pops the value and stores it into sort.key$."""
     style = """\
-ENTRY { } { } { sort.key$ }
+ENTRY { } { } { }
 FUNCTION {setkey} { "abc" 'sort.key$ := }
 FUNCTION {emit} { sort.key$ write$ }
 READ
@@ -333,60 +278,41 @@ ITERATE {emit}
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_function_reference_fails_or_warns(
+def test_unknown_function_reference_is_load_error(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Referencing an undefined identifier is a load-time error per
-    bibtex.web §3100 (strict). Lenient implementations may substitute
-    Missing and emit a warning. Accept either."""
-    style = """\
-ENTRY { } { } { }
-FUNCTION {f} { does.not.exist }
-READ
-EXECUTE {f}
-"""
-    import subprocess
+    # Technical requirements 'Exit codes' explicitly require exit 1 for an
+    # unknown function at load time; a warning or bare crash cannot pass.
+    from test_errors import run_for_exit1
 
-    bib_file = tmp_path / "refs.bib"
-    bst_file = tmp_path / "style.bst"
-    out_file = tmp_path / "out.bbl"
-    cites_file = tmp_path / "cites.txt"
-    log_file = tmp_path / "out.log"
-    bib_file.write_text(MINI_BIB, encoding="utf-8")
-    bst_file.write_text(style, encoding="utf-8")
-    cites_file.write_text("a\n", encoding="utf-8")
-    result = subprocess.run(
-        [
-            *submission_command,
-            "--bib",
-            str(bib_file),
-            "--style",
-            str(bst_file),
-            "--cites",
-            str(cites_file),
-            "--output",
-            str(out_file),
-            "--log",
-            str(log_file),
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
+    style = "ENTRY {} {} {}\nFUNCTION {f} { does.not.exist }\nREAD\nEXECUTE {f}\n"
+    out = run_for_exit1(submission_command, MINI_BIB, style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)
+
+
+def test_macro_name_has_separate_database_namespace(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # bibtex.web bst_macro_command uses macro_ilk, distinct from the
+    # bst_fn_ilk namespace containing the built-in crossref field.
+    style = (
+        'MACRO {crossref} {"value"}\nENTRY {title} {} {}\n'
+        "FUNCTION {f} { title write$ newline$ }\nREAD\nITERATE {f}\n"
     )
-    if result.returncode == 1:
-        # Strict mode — an error JSON was emitted. OK.
-        return
-    assert result.returncode == 0
-    # Lenient mode — must have emitted a warning about the unknown name.
-    assert log_file.exists()
-    import json
+    bbl, _ = run_bibtex(submission_command, "@misc{a, title = crossref}\n", style, ["a"], tmp_path)
+    assert bbl == "value\n"
 
-    log_data = json.loads(log_file.read_text(encoding="utf-8"))
-    log = cast(dict[str, Any], log_data) if isinstance(log_data, dict) else {}
-    warnings = cast(list[dict[str, Any]], log.get("warnings", []))
-    msgs = [str(w.get("message", "")) for w in warnings]
-    kinds = [str(w.get("kind", "")) for w in warnings]
-    assert any(
-        "does.not.exist" in m or "unknown" in k.lower() or "undefined" in k.lower()
-        for m, k in zip(msgs, kinds, strict=False)
-    ), f"lenient mode must emit a warning naming the unknown function; got warnings: {warnings!r}"
+
+def test_database_macro_is_not_callable_bst_function(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # macro_ilk does not define a function in bst_fn_ilk. The technical
+    # requirements require structured load-time rejection of unknown names.
+    from test_errors import run_for_exit1
+
+    style = (
+        'MACRO {onlymacro} {"value"}\nENTRY {} {} {}\n'
+        "FUNCTION {f} { onlymacro write$ }\nREAD\nEXECUTE {f}\n"
+    )
+    out = run_for_exit1(submission_command, MINI_BIB, style, "a\n", tmp_path)
+    assert isinstance(out.get("error"), dict)

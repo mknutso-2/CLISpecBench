@@ -21,6 +21,7 @@ def _roundtrip_single(
     entity_type: int,
     form: int = 0,
     data: Mapping[str, Any],
+    supporting: Sequence[dict[str, Any]] = (),
 ) -> dict[str, Any]:
     doc = wrap_entities(
         [
@@ -29,14 +30,55 @@ def _roundtrip_single(
                 entity_type=entity_type,
                 form=form,
                 data=data,
+                directory_entry_overrides={
+                    "status": _status(
+                        "definition"
+                        if entity_type == 184
+                        else "other"
+                        if entity_type == 182
+                        else "geometry"
+                    )
+                },
             ),
+            *supporting,
         ]
     )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
-    entity = reparsed["entities"][0]["entity"]
+    # Observe only the named target, not the independent support payloads.
+    entity = next(e for e in reparsed["entities"] if e["de_index"] == 1)["entity"]
     assert entity["type"] == entity_type
     assert entity["form"] == form
     return entity["data"]
+
+
+def _status(use: str = "geometry", *, dependent: bool = False) -> dict[str, str]:
+    return {
+        "blank": "visible",
+        "subordinate": "physically_dependent" if dependent else "independent",
+        "entity_use": use,
+        "hierarchy": "global_top_down",
+    }
+
+
+def _sphere(index: int, x: float) -> dict[str, Any]:
+    return make_entity(
+        de_index=index,
+        entity_type=158,
+        data={"radius": 1.0, "center": [x, 0.0, 0.0]},
+        directory_entry_overrides={"status": _status(dependent=True)},
+    )
+
+
+def _transform(index: int, x: float) -> dict[str, Any]:
+    # §4.21: a proper orthogonal matrix and finite translation.
+    return make_entity(
+        de_index=index,
+        entity_type=124,
+        data={
+            "rotation": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "translation": [x, 0.0, 0.0],
+        },
+    )
 
 
 def test_block_roundtrip(
@@ -166,6 +208,16 @@ def test_solid_of_revolution_roundtrip(
         submission_command,
         tmp_path,
         entity_type=162,
+        # §4.43 Form0: open profile coplanar with the Z axis, never crossing
+        # it; endpoint projections close a positive-area rectangle.
+        supporting=[
+            make_entity(
+                de_index=3,
+                entity_type=110,
+                data={"start": [2.0, 0.0, 0.0], "terminate": [2.0, 0.0, 3.0]},
+                directory_entry_overrides={"status": _status(dependent=True)},
+            )
+        ],
         data={
             "ptr": 3,
             "f": 0.5,
@@ -186,6 +238,16 @@ def test_solid_of_linear_extrusion_roundtrip(
         submission_command,
         tmp_path,
         entity_type=164,
+        # §4.44: a closed non-self-intersecting XY circle; the extrusion
+        # direction is not coplanar with its bounding curve.
+        supporting=[
+            make_entity(
+                de_index=3,
+                entity_type=100,
+                data={"zt": 0.0, "x1": 0.0, "y1": 0.0, "x2": 2.0, "y2": 0.0, "x3": 2.0, "y3": 0.0},
+                directory_entry_overrides={"status": _status(dependent=True)},
+            )
+        ],
         data={"ptr": 3, "length": 10.0, "direction": [0.0, 0.0, 1.0]},
     )
     assert data["ptr"] == 3
@@ -223,9 +285,11 @@ def test_boolean_tree_roundtrip(
         submission_command,
         tmp_path,
         entity_type=180,
-        data={"n": 3, "entries": [-1, -3, 1]},
+        # §4.46: operands are real solid primitives, followed by union.
+        supporting=[_sphere(3, 0.0), _sphere(5, 4.0)],
+        data={"n": 3, "entries": [-3, -5, 1]},
     )
-    assert data == {"n": 3, "entries": [-1, -3, 1]}
+    assert data == {"n": 3, "entries": [-3, -5, 1]}
 
 
 def test_selected_component_roundtrip(
@@ -236,10 +300,22 @@ def test_selected_component_roundtrip(
         submission_command,
         tmp_path,
         entity_type=182,
-        data={"btree": 5, "sel_point": [1.0, 2.0, 3.0]},
+        # §4.47: the point lies strictly inside one component of a disjoint
+        # Boolean union. The tree and both operands exist and are acyclic.
+        supporting=[
+            make_entity(
+                de_index=3,
+                entity_type=180,
+                data={"n": 3, "entries": [-5, -7, 1]},
+                directory_entry_overrides={"status": _status(dependent=True)},
+            ),
+            _sphere(5, 0.0),
+            _sphere(7, 4.0),
+        ],
+        data={"btree": 3, "sel_point": [0.0, 0.0, 0.0]},
     )
-    assert data["btree"] == 5
-    assert data["sel_point"] == pytest.approx([1.0, 2.0, 3.0], rel=1e-12, abs=1e-15)
+    assert data["btree"] == 3
+    assert data["sel_point"] == pytest.approx([0.0, 0.0, 0.0], rel=1e-12, abs=1e-15)
 
 
 def test_solid_assembly_roundtrip(
@@ -250,6 +326,8 @@ def test_solid_assembly_roundtrip(
         submission_command,
         tmp_path,
         entity_type=184,
+        # §4.48 Form0: actual solid primitives and actual Type124 transforms.
+        supporting=[_sphere(3, 0.0), _sphere(5, 4.0), _transform(7, 1.0), _transform(9, -1.0)],
         data={"n": 2, "items": [3, 5], "transforms": [7, 9]},
     )
     assert data["items"] == [3, 5]

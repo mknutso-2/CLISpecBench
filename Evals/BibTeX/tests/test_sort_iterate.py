@@ -18,6 +18,8 @@ and bibtex.web §12230+ (the sort implementation).
 
 from __future__ import annotations
 
+# bibtex.web lines 8141–8146 predefine the per-entry sort.key$ string;
+# ENTRY must not redeclare it. These fixtures exercise its use directly.
 from pathlib import Path
 
 from conftest import run_bibtex
@@ -47,7 +49,7 @@ def _sort_bbl(
         presort_body = " ".join(branches)
 
     style_lines = [
-        "ENTRY { author title year } { } { sort.key$ }",
+        "ENTRY { author title year } { } { }",
         "FUNCTION {presort} { " + presort_body + " }",
         "FUNCTION {emit} { cite$ write$ newline$ }",
         "READ",
@@ -143,7 +145,7 @@ def test_last_sort_key_wins(submission_command: tuple[str, ...], tmp_path: Path)
     assignment before a SORT determines the effective key for that SORT."""
     bib = "@misc{a,}\n@misc{b,}\n"
     style = """\
-ENTRY { } { } { sort.key$ }
+ENTRY { } { } { }
 FUNCTION {first.key} { cite$ 'sort.key$ := }
 FUNCTION {second.key}
 { cite$ "a" =
@@ -175,7 +177,7 @@ def test_execute_between_sort_and_iterate_preserves_order(
 ) -> None:
     bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     style = """\
-ENTRY { } { } { sort.key$ }
+ENTRY { } { } { }
 FUNCTION {presort} { cite$ 'sort.key$ := }
 FUNCTION {nop} { skip$ }
 FUNCTION {emit} { cite$ write$ newline$ }
@@ -262,7 +264,7 @@ def test_sort_key_persists_into_post_sort_iterate(
     the post-SORT ITERATE (each entry's scratch survives across SORT)."""
     bib = "@misc{a,}\n@misc{b,}\n"
     style = """\
-ENTRY { } { } { sort.key$ }
+ENTRY { } { } { }
 FUNCTION {presort}
 { cite$ "a" = { "first" 'sort.key$ := } { "second" 'sort.key$ := } if$ }
 FUNCTION {emit} { sort.key$ write$ newline$ }
@@ -303,7 +305,7 @@ def test_sort_idempotent_on_sorted_input(
     """Calling SORT twice on already-sorted data yields the same order."""
     bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     style = """\
-ENTRY { } { } { sort.key$ }
+ENTRY { } { } { }
 FUNCTION {presort} { cite$ 'sort.key$ := }
 FUNCTION {emit} { cite$ write$ newline$ }
 READ

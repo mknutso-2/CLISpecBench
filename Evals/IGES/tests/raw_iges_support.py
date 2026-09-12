@@ -10,7 +10,8 @@ from pathlib import Path
 
 def hollerith(text: str) -> str:
     """Encode ``text`` as an IGES Hollerith string."""
-    return f"{len(text)}H{text}"
+    # §§2.2.2.3/2.2.3: a NULL string is represented by a defaulted field.
+    return f"{len(text)}H{text}" if text else ""
 
 
 def build_global_payload(

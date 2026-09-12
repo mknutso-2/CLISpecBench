@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from context_support import context_line, context_matrix, context_note, context_status
 from iges_support import make_entity, semantic_roundtrip_json, wrap_entities
 
 
@@ -21,6 +22,8 @@ def _roundtrip_single(
     entity_type: int,
     form: int = 0,
     data: Mapping[str, Any],
+    supporting: Sequence[dict[str, Any]] = (),
+    directory_entry_overrides: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     doc = wrap_entities(
         [
@@ -29,11 +32,13 @@ def _roundtrip_single(
                 entity_type=entity_type,
                 form=form,
                 data=data,
+                directory_entry_overrides=directory_entry_overrides,
             ),
+            *supporting,
         ]
     )
     reparsed = semantic_roundtrip_json(submission_command, doc, tmp_path)
-    entity = reparsed["entities"][0]["entity"]
+    entity = next(record for record in reparsed["entities"] if record["de_index"] == 1)["entity"]
     assert entity["type"] == entity_type
     assert entity["form"] == form
     return entity["data"]
@@ -61,19 +66,38 @@ def test_drawing_form_one_roundtrips_angles_and_annotations(
         tmp_path,
         entity_type=404,
         form=1,
+        # §4.96: real Views are logically dependent; drawing-space annotation
+        # is physically dependent. Keep the observation on the Drawing data.
+        supporting=[
+            *[
+                make_entity(
+                    de_index=index,
+                    entity_type=410,
+                    data={"form": 0, "view_number": number, "scale": 1.0, "clip_planes": [0] * 6},
+                    directory_entry_overrides={
+                        "xform_matrix": 9,
+                        "status": context_status("annotation", "logically_dependent"),
+                    },
+                )
+                for index, number in [(3, 1), (5, 2)]
+            ],
+            context_note(7),
+            context_matrix(9, use="annotation"),
+        ],
+        directory_entry_overrides={"status": context_status("annotation")},
         data={
             "n": 2,
             "views": [
-                {"view": 1, "x_origin": 0.0, "y_origin": 0.0, "angle": 0.0},
-                {"view": 3, "x_origin": 5.0, "y_origin": 10.0, "angle": 1.5708},
+                {"view": 3, "x_origin": 0.0, "y_origin": 0.0, "angle": 0.0},
+                {"view": 5, "x_origin": 5.0, "y_origin": 10.0, "angle": 1.5708},
             ],
             "m": 1,
-            "annotations": [9],
+            "annotations": [7],
         },
     )
-    assert data["views"][1]["view"] == 3
+    assert data["views"][1]["view"] == 5
     assert data["views"][1]["angle"] == pytest.approx(1.5708, rel=1e-12, abs=1e-15)
-    assert data["annotations"] == [9]
+    assert data["annotations"] == [7]
 
 
 def test_view_form_one_roundtrips_perspective_fields(
@@ -85,6 +109,8 @@ def test_view_form_one_roundtrips_perspective_fields(
         tmp_path,
         entity_type=410,
         form=1,
+        # §2.2.4.4.9.3 explicitly assigns View entities to annotation use.
+        directory_entry_overrides={"status": context_status("annotation")},
         data={
             "form": 1,
             "view_number": 2,
@@ -118,8 +144,10 @@ def test_rectangular_array_roundtrips_do_dont_list(
         submission_command,
         tmp_path,
         entity_type=412,
+        # §4.136 permits a Line as the base entity; the list selects 2/12 copies.
+        supporting=[context_line(3)],
         data={
-            "de": 5,
+            "de": 3,
             "s": 2.0,
             "position": [1.0, 2.0, 0.0],
             "nc": 3,

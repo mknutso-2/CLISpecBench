@@ -234,13 +234,13 @@ def test_string_with_embedded_newline_flushes(
 # ---------------------------------------------------------------------------
 
 
-def test_trailing_whitespace_preserved_on_short_line(
+def test_trailing_whitespace_removed_on_short_line(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Trailing spaces on a line under 79 cols are preserved (not stripped)."""
+    """bibtex.web output_bbl_line trims trailing whitespace on every flush."""
     body = '"abc   " write$ newline$'
     bbl = _run(submission_command, tmp_path, body)
-    assert bbl == "abc   \n"
+    assert bbl == "abc\n"  # bibtex.web output_bbl_line strips trailing whitespace.
 
 
 def test_trailing_whitespace_before_newline(
@@ -278,3 +278,13 @@ def test_bare_write_flushes_at_end_of_run(
     # with a terminating LF, some without). The invariant is that the
     # payload "hello" MUST appear in the .bbl; bbl.strip() normalizes.
     assert bbl.strip() == "hello", f"bare write$ must flush at end of run; got {bbl!r}"
+
+
+def test_whitespace_only_line_is_discarded_on_flush(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # bibtex.web output_bbl_line returns without a newline if a nonempty
+    # buffer becomes empty after trailing-whitespace trimming. Neighboring
+    # content makes successful output observable, separate from no output.
+    body = '"A" write$ newline$ "   " write$ newline$ "B" write$ newline$'
+    assert _run(submission_command, tmp_path, body) == "A\nB\n"

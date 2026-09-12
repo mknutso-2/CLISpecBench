@@ -19,6 +19,8 @@ case decides whether a token is a von fragment.
 
 from __future__ import annotations
 
+# bibtex.web lines 9680–9747 and 9880–9906 define the contiguous name
+# slices. They supersede the contradictory navigation summary (§2).
 from pathlib import Path
 
 from conftest import run_bibtex
@@ -135,16 +137,14 @@ def test_form1_von_without_first(submission_command: tuple[str, ...], tmp_path: 
     assert n["last"] == "Pol"
 
 
-def test_form1_all_lowercase_absorbs_into_last(
+def test_form1_all_lowercase_keeps_last_token(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 1, all-lowercase tokens: Last absorbs all, von emptied
-    (spec §2.2). Inter-token separator in the multi-token Last may
-    be tie or space per §2.6."""
+    """bibtex.web keeps the last token in Last, even when lowercase."""
     n = _parts(submission_command, tmp_path, "van de")
     assert n["first"] == ""
-    assert n["von"] == ""
-    assert _normalize_separator(n["last"]) == "van de"
+    assert n["von"] == "van"
+    assert n["last"] == "de"
 
 
 def test_form1_all_uppercase_last_is_final_token(
@@ -219,16 +219,14 @@ def test_form2_von_plus_last_head(submission_command: tuple[str, ...], tmp_path:
     assert n["last"] == "Pol"
 
 
-def test_form2_leading_caps_prepend_to_last(
+def test_form2_leading_caps_remain_in_von(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Form 2, leading uppercase tokens before von fold into Last (spec §2.3).
-    Inter-token separator inside multi-token Last or von may be tie or
-    space per §2.6."""
+    """bibtex.web starts the comma-form von slice at the first head token."""
     n = _parts(submission_command, tmp_path, "Foo van der Pol, Charles")
     assert n["first"] == "Charles"
-    assert _normalize_separator(n["von"]) == "van der"
-    assert _normalize_separator(n["last"]) == "Foo Pol"
+    assert _normalize_separator(n["von"]) == "Foo van der"
+    assert n["last"] == "Pol"
 
 
 def test_form2_head_without_lowercase_is_all_last(
@@ -280,15 +278,15 @@ def test_form3_jr_multiword_senior(submission_command: tuple[str, ...], tmp_path
     assert n["jr"] == "Senior"
 
 
-def test_form3_extra_commas_fold_into_first(
+def test_form3_extra_commas_are_discarded(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """Only the first two commas are structural (spec §2.5); extras join into First."""
+    """bibtex.web 'Name-process a comma' warns and discards extra commas."""
     n = _parts(submission_command, tmp_path, "Smith, Jr., James, Jr.")
     assert n["last"] == "Smith"
     assert n["jr"] == "Jr."
-    # Remaining commas rejoin into First with commas preserved.
-    assert "," in n["first"]
+    # The first-name token boundaries survive; the extra comma does not.
+    assert _normalize_separator(n["first"]) == "James Jr."
     assert "James" in n["first"]
 
 

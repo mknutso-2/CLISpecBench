@@ -94,7 +94,7 @@ def test_error_reports_source_bib_for_bib_errors(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """When the error originates in the .bib, source='bib'."""
-    bib = "@article{a, title = !@#$}\n"
+    bib = '@article{a, title = "unterminated}\n'  # definite quoted-string syntax error
     err = _run_for_error(submission_command, tmp_path, bib, MIN_STYLE)
     error = _error_object(err)
     if "source" in error:
