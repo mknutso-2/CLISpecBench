@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import subprocess
 from pathlib import Path
 from typing import Any
+
+import pytest
 
 from conftest import run_wordcount
 
@@ -59,6 +62,14 @@ class TestWhitespaceOnly:
 
 
 class TestLineCounting:
+    @pytest.mark.parametrize("text, expected", [("a\rb\rc", 1), ("a\r\nb\r\n", 2), ("a\n  ", 2)])
+    def test_only_lf_terminates_a_line(
+        self, text: str, expected: int, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        # Definitions: only LF terminates lines; CR is whitespace, and a final
+        # nonempty unterminated segment counts even when it contains only spaces.
+        assert _run(submission_command, text, tmp_path)["lines"] == expected
+
     def test_single_line_no_newline(
         self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
@@ -97,6 +108,16 @@ class TestLineCounting:
 
 
 class TestCharacterCounting:
+    def test_counts_utf8_bytes(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
+        # "Every byte" is explicit; this tests no Unicode case-folding policy.
+        text = "café 猫\n"
+        assert _run(submission_command, text, tmp_path)["characters"] == len(text.encode("utf-8"))
+
+    def test_preserves_crlf_bytes(
+        self, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        assert _run(submission_command, "a\r\nb\r\n", tmp_path)["characters"] == 6
+
     def test_simple(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "hello", tmp_path)
         assert result["characters"] == 5
@@ -119,6 +140,14 @@ class TestCharacterCounting:
 
 
 class TestWordCounting:
+    def test_only_the_six_defined_whitespace_characters_split_words(
+        self, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        # NBSP and EM SPACE are not in the specification's exhaustive delimiter
+        # list. Built-in Unicode split/regex defaults would incorrectly split them.
+        result = _run(submission_command, "a\u00a0b c\u2003d", tmp_path)
+        assert result["words"] == 2
+
     def test_single_word(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "hello", tmp_path)
         assert result["words"] == 1
@@ -222,9 +251,27 @@ class TestTopWords:
         text = " ".join(tokens)
         result = _run(submission_command, text, tmp_path)
         assert len(result["top_words"]) == 10
-        # First should be the most frequent
-        assert result["top_words"][0]["word"] == "word00"
-        assert result["top_words"][0]["count"] == 15
+        # Every selected entry must be one of the ten most frequent words. The
+        # previous first-entry-only check accepted nine arbitrary filler entries.
+        assert [(entry["word"], entry["count"]) for entry in result["top_words"]] == [
+            (word, 15 - i) for i, word in enumerate(words[:10])
+        ]
+
+    def test_ties_at_tenth_place_use_lexicographic_order(
+        self, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        words = [f"word{i:02d}" for i in range(12)]
+        result = _run(submission_command, " ".join(reversed(words)), tmp_path)
+        assert [entry["word"] for entry in result["top_words"]] == words[:10]
+
+    def test_case_variants_have_combined_frequency(
+        self, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        result = _run(submission_command, "Hello HELLO hello bye bye", tmp_path)
+        assert [(entry["word"], entry["count"]) for entry in result["top_words"]] == [
+            ("hello", 3),
+            ("bye", 2),
+        ]
 
     def test_fewer_than_ten(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "one two three", tmp_path)
@@ -253,6 +300,15 @@ class TestTopWords:
 
 
 class TestJsonStructure:
+    def test_quoted_and_backslash_words_survive_json_serialization(
+        self, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        # The spec retains punctuation as part of each word and requires JSON.
+        # Check decoded strings, allowing any equivalent JSON escape spelling.
+        word = '"path\\name"'
+        result = _run(submission_command, word, tmp_path)
+        assert result["top_words"] == [{"word": word, "count": 1}]
+
     def test_required_keys_present(
         self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
@@ -265,21 +321,23 @@ class TestJsonStructure:
 
     def test_types(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         result = _run(submission_command, "hello world", tmp_path)
-        assert isinstance(result["lines"], int)
-        assert isinstance(result["words"], int)
-        assert isinstance(result["characters"], int)
-        assert isinstance(result["unique_words"], int)
+        # JSON booleans are not integers even though Python's bool subclasses int.
+        assert type(result["lines"]) is int
+        assert type(result["words"]) is int
+        assert type(result["characters"]) is int
+        assert type(result["unique_words"]) is int
         assert isinstance(result["top_words"], list)
 
     def test_top_words_entry_structure(
         self, submission_command: tuple[str, ...], tmp_path: Path
     ) -> None:
         result = _run(submission_command, "hello", tmp_path)
+        assert result["top_words"], "A nonempty word list is needed to exercise entry structure"
         for entry in result["top_words"]:
             assert "word" in entry
             assert "count" in entry
             assert isinstance(entry["word"], str)
-            assert isinstance(entry["count"], int)
+            assert type(entry["count"]) is int
 
 
 # ---------------------------------------------------------------------------
@@ -288,6 +346,27 @@ class TestJsonStructure:
 
 
 class TestExitCodes:
+    def test_unknown_argument_exit_code(
+        self, submission_command: tuple[str, ...], tmp_path: Path
+    ) -> None:
+        # v1.0.1 expressly promises exit 1 for unknown arguments; use otherwise
+        # valid paths so a missing-input failure cannot satisfy this check.
+        input_file = tmp_path / "input.txt"
+        input_file.write_text("hello", encoding="utf-8")
+        result = subprocess.run(
+            [
+                *submission_command,
+                "--input",
+                str(input_file),
+                "--output",
+                str(tmp_path / "output.json"),
+                "--not-a-wordcount-option",
+            ],
+            capture_output=True,
+            timeout=30,
+        )
+        assert result.returncode == 1
+
     def test_success_exit_code(self, submission_command: tuple[str, ...], tmp_path: Path) -> None:
         input_file = tmp_path / "input.txt"
         output_file = tmp_path / "output.json"

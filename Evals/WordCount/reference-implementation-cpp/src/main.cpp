@@ -21,6 +21,27 @@ static std::string to_lower(const std::string& s) {
     return result;
 }
 
+static std::string json_string(const std::string& value) {
+    // Words retain punctuation, so quotes and backslashes must be escaped
+    // when written inside the required JSON string. UTF-8 bytes stay intact.
+    static constexpr char hex[] = "0123456789abcdef";
+    std::string result = "\"";
+    for (unsigned char c : value) {
+        if (c == '"' || c == '\\') {
+            result.push_back('\\');
+            result.push_back(static_cast<char>(c));
+        } else if (c < 0x20) {
+            result += "\\u00";
+            result.push_back(hex[c >> 4]);
+            result.push_back(hex[c & 0x0f]);
+        } else {
+            result.push_back(static_cast<char>(c));
+        }
+    }
+    result.push_back('"');
+    return result;
+}
+
 int main(int argc, char* argv[]) {
     std::string input_path;
     std::string output_path;
@@ -31,6 +52,11 @@ int main(int argc, char* argv[]) {
             input_path = argv[++i];
         } else if (arg == "--output" && i + 1 < argc) {
             output_path = argv[++i];
+        } else {
+            // The invocation contract requires exit 1 for unknown arguments
+            // and options without values; do not silently ignore either.
+            std::cerr << "Unknown or incomplete argument: " << arg << "\n";
+            return 1;
         }
     }
 
@@ -111,8 +137,8 @@ int main(int argc, char* argv[]) {
     ofs << "  \"top_words\": [";
     for (int i = 0; i < top_n; ++i) {
         if (i > 0) ofs << ",";
-        ofs << "\n    {\"word\": \"" << sorted_words[i].first
-            << "\", \"count\": " << sorted_words[i].second << "}";
+        ofs << "\n    {\"word\": " << json_string(sorted_words[i].first)
+            << ", \"count\": " << sorted_words[i].second << "}";
     }
     if (top_n > 0) ofs << "\n  ";
     ofs << "]\n";

@@ -48,6 +48,7 @@ def run_las(
     request_file = tmp_path / "request.json"
     output_file = tmp_path / "response.json"
     request_file.write_text(json.dumps(dict(request), indent=2), encoding="utf-8")
+    output_file.unlink(missing_ok=True)
 
     result = subprocess.run(
         [*command, "--input", str(request_file), "--output", str(output_file)],
@@ -59,5 +60,5 @@ def run_las(
     if not output_file.exists():
         return result, None
 
-    payload = cast(dict[str, Any], json.loads(output_file.read_text(encoding="utf-8")))
-    return result, payload
+    payload: object = json.loads(output_file.read_text(encoding="utf-8"))
+    return result, cast(dict[str, Any], payload) if isinstance(payload, dict) else None

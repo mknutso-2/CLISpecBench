@@ -5,7 +5,7 @@ import struct
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -31,23 +31,21 @@ def _was_rejected(
     result: subprocess.CompletedProcess[str],
     payload: dict[str, Any] | None,
 ) -> bool:
-    """Return True if the submission rejected the input in *any* documented way.
+    """Recognize a deliberate input rejection, never an unhandled crash.
 
-    The error envelope (status/result/error/code/message) is gated by the
-    schema tests in `test_schema.py`. Validation tests use this permissive
-    helper instead of pinning the exact error.code so that a single envelope
-    regression does not cascade into N redundant failures: each named test
-    then fails only when the agent failed to detect the condition the test
-    is named for. The exact `invalid_document` vs `invalid_request` routing
-    is pinned in `test_schema.py` (envelope-shape gates plus the malformed-
-    base64 routing test).
+    The response contract distinguishes invalid input (exit 1) from internal
+    failure (exit 2). A nonzero status alone used to award every validation
+    case to a program that immediately crashed. Require an observable error
+    indication, without repeating the exact envelope keys/code routing that
+    belong to test_schema.py. A missing status or error field can therefore
+    remain localized to its schema gate if the other error indication exists.
     """
-
-    if result.returncode != 0:
-        return True
-    if isinstance(payload, dict) and payload.get("status") == "error":
-        return True
-    return False
+    if result.returncode not in (0, 1) or not isinstance(payload, dict):
+        return False
+    error = payload.get("error")
+    if isinstance(error, dict) and cast(dict[str, Any], error).get("code") == "internal_error":
+        return False
+    return payload.get("status") == "error" or bool(cast(object, error))
 
 
 def _inspect_was_rejected(
@@ -492,13 +490,9 @@ def test_rejects_header_extent_mismatch(
     assert _inspect_was_rejected(submission_command, tmp_path, broken)
 
 
-def test_render_rejects_color_for_legacy_non_color_format(
-    submission_command: Sequence[str],
-    tmp_path: Path,
-) -> None:
-    dataset = dataset_for_point_format(0)
-    dataset["points"][0]["color"] = {"red": 1, "green": 2, "blue": 3}
-    assert _render_was_rejected(submission_command, tmp_path, dataset)
+# A color field supplied for a format without color has no specified JSON
+# unknown-field policy. Rejection versus ignoring it must not decide a score;
+# the point-format render tests already require the correct wire layout.
 
 
 def test_render_rejects_mismatched_extra_bytes_lengths(

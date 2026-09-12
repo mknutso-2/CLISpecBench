@@ -1,5 +1,13 @@
 # Changelog
 
+## v2.0.1 — 2026-09-11
+
+- Validation requires an observable deliberate rejection; a crash or internal-error response no longer earns invalid-input credit. Exact envelope details remain in schema gates.
+- Removed rejection of an irrelevant JSON color field: the public corpus specifies no unknown-field policy for render requests.
+- Empty-point rendering no longer imposes an undocumented zero min/max convention. Nonempty extent checks remain strict.
+- Removed a redundant success-status assertion from point-format behavior checks and clear previous response files before each invocation.
+- Model-visible prompts and documentation are unchanged; this is a test-only correction.
+
 ## v2.0.0 — 2026-04-29
 
 **Breaking — invocation form is no longer Python-specific.**

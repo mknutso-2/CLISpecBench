@@ -53,6 +53,7 @@ def run_wordcount(
     input_file = tmp_path / "input.txt"
     output_file = tmp_path / "output.json"
     input_file.write_bytes(input_text.encode("utf-8"))
+    output_file.unlink(missing_ok=True)
 
     result = subprocess.run(
         [*command, "--input", str(input_file), "--output", str(output_file)],
@@ -60,9 +61,10 @@ def run_wordcount(
         text=True,
         timeout=timeout,
     )
-    assert result.returncode == 0, (
-        f"wordcount exited with code {result.returncode}\nstderr: {result.stderr}"
+    # Exit-code conformance has a dedicated gate. Observable counts still carry
+    # useful signal when a submission writes correct JSON but exits incorrectly.
+    assert output_file.exists(), (
+        f"Output file was not created; exit={result.returncode}; stderr={result.stderr}"
     )
-    assert output_file.exists(), "Output file was not created"
     raw = output_file.read_text(encoding="utf-8")
     return cast(dict[str, Any], json.loads(raw))

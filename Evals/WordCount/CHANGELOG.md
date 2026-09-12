@@ -1,5 +1,24 @@
 # WordCount Changelog
 
+## v1.0.4 — 2026-09-11
+
+- Keep all model-visible prompts/docs unchanged; strengthen tests for the
+  existing byte-count, LF-only line, six-whitespace delimiter, top-ten ranking,
+  case-frequency and unknown-argument requirements.
+- Check all ten selected word/count pairs and ties at the cutoff, instead of
+  allowing nine arbitrary entries after the correct most frequent word.
+- Reject JSON booleans where integers are required and prevent the entry-schema
+  test from passing vacuously with an empty list for nonempty input.
+- Test JSON serialization of words containing quotes/backslashes, preserving
+  punctuation without imposing one particular JSON escape spelling. Correct
+  the C++ reference's unescaped string output.
+- Isolate successful exit-code conformance in its existing dedicated test so
+  correct observable counts remain measurable after an incorrect process exit.
+  Clear stale response files before each invocation and write exact input bytes
+  to preserve CRLF fixtures across platforms.
+- Fix the C++ reference's silent acceptance of unknown or incomplete arguments,
+  bringing it into line with the existing v1.0.1 exit-code contract.
+
 ## v1.0.3 — 2026-04-18
 
 ### Changed

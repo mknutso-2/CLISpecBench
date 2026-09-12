@@ -253,7 +253,13 @@ def test_render_empty_point_list_round_trips(
 
     assert render_result.returncode == 0
     assert render_payload is not None
-    assert payload_las_bytes(render_payload) == encode_dataset(dataset)
+    rendered = bytearray(payload_las_bytes(render_payload))
+    expected = bytearray(encode_dataset(dataset))
+    # LAS 1.4 defines extents from the points but gives no min/max convention
+    # for an empty set. Do not impose the oracle's zero-extents policy.
+    assert len(rendered) >= 375, "render must produce a complete LAS header"
+    rendered[179:227] = expected[179:227]
+    assert rendered == expected
 
 
 def test_render_waveform_dataset(

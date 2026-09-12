@@ -215,7 +215,6 @@ def test_render_exact_point_format_samples(
 
     assert result.returncode == 0
     assert payload is not None
-    assert payload["status"] == "ok"
     assert payload_las_bytes(payload) == encode_dataset(dataset)
 
 
