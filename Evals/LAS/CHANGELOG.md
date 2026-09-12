@@ -1,5 +1,17 @@
 # Changelog
 
+## v2.0.4 — 2026-09-12
+
+- Replace the ambiguous requirement to reject an internal waveform EVLR solely
+  because its deprecated internal-storage bit is clear. The negative now sets
+  the explicitly external-storage bit while retaining internal packet data,
+  testing an actual storage contradiction independently of both-bits-set checks.
+- Keep 223 cases and all model-visible input bytes unchanged. Acceptance or
+  rejection based only on clearing the deprecated bit remains unscored pending
+  a public clarification. References and generated submissions are unchanged;
+  previous sources can be regraded without inference. See
+  `docs/validation/LAS-2.0.4.md`.
+
 ## v2.0.3 — 2026-09-12
 
 - Make the oversized Extra Bytes descriptor rejection input unambiguous:

@@ -413,12 +413,17 @@ def test_rejects_internal_waveform_bit_without_waveform_evlr(
     assert _inspect_was_rejected(submission_command, tmp_path, data)
 
 
-def test_rejects_waveform_evlr_without_internal_bit(
+def test_rejects_internal_waveform_evlr_with_external_storage_flag(
     submission_command: Sequence[str],
     tmp_path: Path,
 ) -> None:
+    # LAS 1.4 Table 4 says bit 2 declares an external .wdp file. An internal
+    # packet EVLR contradicts that declaration. Keep bit 1 clear so this is
+    # independent of the separate mutually-exclusive-bits test. Table 4 calls
+    # bit 1 deprecated, and the public-header waveform offset can locate the
+    # internal EVLR; requiring rejection solely for a clear bit 1 was ambiguous.
     dataset = dataset_for_point_format(9)
-    dataset["header"]["global_encoding"] = dataset["header"]["global_encoding"] & ~0x02
+    dataset["header"]["global_encoding"] = (dataset["header"]["global_encoding"] & ~0x02) | 0x04
     data = encode_dataset(dataset)
     assert _inspect_was_rejected(submission_command, tmp_path, data)
 
