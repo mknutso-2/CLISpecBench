@@ -15,6 +15,14 @@ from clispecbench.harness.status import INCLUDED_NON_COMPLETED_STATUSES
 
 DEFAULT_PUBLISHED_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_FILE = Path(__file__).with_name("results-published.json")
+DEFAULT_STOP_ARCHIVE = Path(__file__).with_name("agent-stop-archive.v1.json")
+
+# These describe the original generation, so regrading or editorial changes
+# cannot transfer a historical stop message to a different submission.
+GENERATION_IDENTITY_FIELDS = (
+    "task", "agent", "agent_version", "model", "effort", "prompt_variant",
+    "run_number", "timestamp", "eval_version", "prompt_content_sha", "docker_image_sha",
+)
 
 EVAL_NAMES = {
     "bibtex": "BibTeX",
@@ -175,7 +183,9 @@ def transient_event_log_for(
         return None
 
     run_uid = metadata.get("run_uid")
-    if run_uid:
+    if run_uid is not None:
+        if not isinstance(run_uid, str) or not run_uid:
+            return None
         for candidate in candidates:
             result_path = candidate.parent / "result.json"
             if not result_path.is_file():
@@ -184,11 +194,67 @@ def transient_event_log_for(
                 result_payload = json.loads(result_path.read_text(encoding="utf-8"))
             except (OSError, json.JSONDecodeError):
                 continue
-            result_metadata: dict[str, Any] = result_payload.get("metadata") or {}
+            if not isinstance(result_payload, dict):
+                continue
+            result_metadata = cast(dict[str, Any], result_payload).get("metadata")
+            if not isinstance(result_metadata, dict):
+                continue
+            result_metadata = cast(dict[str, Any], result_metadata)
             if result_metadata.get("run_uid") == run_uid:
                 return candidate
+        # A publication run number can differ from the original transient run
+        # number. Never substitute another generation's latest event log.
+        return None
 
     return candidates[-1]
+
+
+def archived_codex_agent_stop(
+    path: Path, published_root: Path, metadata: dict[str, Any]
+) -> dict[str, str] | None:
+    """Recover only an identity-matched summary from the versioned dashboard.
+
+    This archive retains an earlier derived observation, not a local transcript.
+    It is consulted only after matching local canonical events are unavailable.
+    """
+    if not DEFAULT_STOP_ARCHIVE.is_file():
+        return None
+    archive: object = json.loads(DEFAULT_STOP_ARCHIVE.read_text(encoding="utf-8"))
+    if not isinstance(archive, dict):
+        raise ValueError("Expected an agent-stop archive object")
+    archive = cast(dict[str, Any], archive)
+    if archive.get("schema_version") != 1 or not isinstance(archive.get("entries"), dict):
+        raise ValueError("Unsupported agent-stop archive schema")
+    baseline = archive.get("baseline_artifact")
+    if not isinstance(baseline, dict) or not all(
+        isinstance(cast(dict[str, Any], baseline).get(key), str)
+        and cast(dict[str, Any], baseline)[key]
+        for key in ("revision", "path", "sha256")
+    ):
+        raise ValueError("Agent-stop archive lacks baseline provenance")
+    try:
+        relative = path.resolve().relative_to(published_root.resolve()).as_posix()
+    except ValueError:
+        return None
+    entry = cast(dict[str, Any], archive["entries"]).get(relative)
+    if not isinstance(entry, dict):
+        return None
+    entry = cast(dict[str, Any], entry)
+    run_uid = metadata.get("run_uid")
+    if not isinstance(run_uid, str) or not run_uid or entry.get("run_uid") != run_uid:
+        return None
+    identity = {key: metadata.get(key) for key in GENERATION_IDENTITY_FIELDS}
+    if entry.get("generation_identity") != identity:
+        return None
+    stop = entry.get("stop")
+    keys = ("agent_stop_reason", "agent_stop_label", "agent_stop_message")
+    if not isinstance(stop, dict) or not all(
+        isinstance(cast(dict[str, Any], stop).get(key), str) for key in keys
+    ):
+        raise ValueError(f"Malformed archived stop summary for {relative}")
+    result = {key: cast(dict[str, str], stop)[key] for key in keys}
+    result["agent_stop_source"] = "archived-codex-events"
+    return result
 
 
 def codex_agent_stop(
@@ -246,6 +312,9 @@ def agent_stop_info(path: Path, web_dir: Path, payload: dict[str, Any]) -> dict[
         from_events = codex_agent_stop(path, published_root, metadata)
         if from_events is not None:
             return from_events
+        archived = archived_codex_agent_stop(path, published_root, metadata)
+        if archived is not None:
+            return archived
 
     message_candidates = [
         metadata.get("agent_last_message") or "",

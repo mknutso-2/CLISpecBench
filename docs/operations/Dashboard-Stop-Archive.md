@@ -1,0 +1,11 @@
+# Archived dashboard stop summaries
+
+The versioned `published_results/web/agent-stop-archive.v1.json` preserves 19 Codex stop summaries from the tracked dashboard at revision `b7e5c1a453c4c3a5575742d624d2bf306764e022`. These historical runs were generated on another workstation; their local canonical event files are unavailable on this Linux checkout. A rebuild previously changed context exhaustion or a recorded agent error into “Finished,” or replaced the original event message with editorial prose.
+
+The archive records the baseline dashboard revision/path/SHA-256, each baseline publication SHA-256, and the exact historical stop reason/label/message. Each entry is bound to its publication-relative path, run UID, and original generation identity: task, agent/version, model/effort, prompt variant, original run number, timestamp, generation eval version, prompt hash, and generation image. Grading scores and later regrade/editorial fields are not identity inputs.
+
+Lookup order is matching local canonical events, then an exactly matching archived summary, then ordinary result-JSON inference. A matching local event log retains precedence even if it is incomplete and reports “Unknown.” An unrelated transient UID is never a substitute. Archive-derived summaries are labeled `archived-codex-events`; this explicitly distinguishes a preserved derived observation from locally available raw transcript evidence. Malformed present archive data fails the build rather than silently discarding the historical evidence.
+
+Only the 19 materially different stop summaries are archived. The other historical rows whose classification is unchanged continue to truthfully label their current fallback source `result-json`; this does not claim that local transcripts survived. Original published results, scores, tokens, costs, and old regrade records are unchanged.
+
+Do not regenerate this archive from a dashboard rebuilt without the historical events: that would archive the fallback and lose the richer observations. Any additions require a specific versioned source artifact and identity/provenance validation. Fixes to the original generation metadata cause an archive identity mismatch and require explicit review rather than automatic reuse.
