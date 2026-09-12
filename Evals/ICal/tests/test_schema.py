@@ -30,14 +30,12 @@ def test_parse_top_level_keys(submission_command: tuple[str, ...], tmp_path: Pat
     assert required.issubset(set(out.keys()))
 
 
-def test_parse_top_level_keys_all_present(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    # v0.3: key order is a harness-recommended convention, not semantic.
-    # Tests assert presence only.
+def test_parse_top_level_value_types(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    # The contract mandates value types; this used to duplicate the presence
+    # gate without testing any independent schema requirement.
     out = run_parse(submission_command, SIMPLE, tmp_path)
-    required = {
-        "calendar",
+    assert isinstance(out.get("calendar"), dict)
+    for key in (
         "events",
         "todos",
         "journals",
@@ -45,25 +43,24 @@ def test_parse_top_level_keys_all_present(
         "timezones",
         "availabilities",
         "warnings",
-    }
-    assert required.issubset(set(out.keys()))
+    ):
+        assert isinstance(out.get(key), list), f"{key} must be an array"
 
 
 def test_expand_top_level_keys(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     out = run_expand(
         submission_command, SIMPLE, "2026-03-01T00:00:00Z", "2026-04-01T00:00:00Z", tmp_path
     )
-    assert set(out.keys()) == {"occurrences", "warnings"}
+    assert {"occurrences", "warnings"}.issubset(out)
 
 
-def test_expand_top_level_keys_all_present(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    # v0.3: key order is harness-recommended, not semantic.
+def test_expand_top_level_value_types(submission_command: tuple[str, ...], tmp_path: Path) -> None:
+    # Independently score array types, not a second copy of key presence.
     out = run_expand(
         submission_command, SIMPLE, "2026-03-01T00:00:00Z", "2026-04-01T00:00:00Z", tmp_path
     )
-    assert {"occurrences", "warnings"}.issubset(set(out.keys()))
+    assert isinstance(out.get("occurrences"), list)
+    assert isinstance(out.get("warnings"), list)
 
 
 def test_calendar_has_prodid_version(submission_command: tuple[str, ...], tmp_path: Path) -> None:

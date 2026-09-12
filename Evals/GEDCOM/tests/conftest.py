@@ -47,6 +47,8 @@ def run_gedcom(
 ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any] | None]:
     request_file = tmp_path / "request.json"
     output_file = tmp_path / "response.json"
+    # Each invocation must supply its own response, including roundtrips.
+    output_file.unlink(missing_ok=True)
     request_file.write_text(json.dumps(dict(request), indent=2), encoding="utf-8")
 
     result = subprocess.run(

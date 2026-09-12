@@ -316,23 +316,30 @@ std::optional<DateTime> resolve_zoned_to_utc(
     // Find the most recent transition <= local across both standard and daylight.
     DateTime best = {};
     const std::string* best_offset_to = nullptr;
+    const std::string* best_offset_from = nullptr;
     bool have_best = false;
     DateTime dummy = local;
 
     for (const auto& obs : tz->standard) {
         for (const auto& dt : enumerate_observance(obs, dummy)) {
+            // DTSTART/RDATE without an RRULE may include future transitions.
+            if (compare_datetime(dt, local) > 0) continue;
             if (!have_best || compare_datetime(dt, best) > 0) {
                 best = dt;
                 best_offset_to = &obs.tzoffsetto;
+                best_offset_from = &obs.tzoffsetfrom;
                 have_best = true;
             }
         }
     }
     for (const auto& obs : tz->daylight) {
         for (const auto& dt : enumerate_observance(obs, dummy)) {
+            // DTSTART/RDATE without an RRULE may include future transitions.
+            if (compare_datetime(dt, local) > 0) continue;
             if (!have_best || compare_datetime(dt, best) > 0) {
                 best = dt;
                 best_offset_to = &obs.tzoffsetto;
+                best_offset_from = &obs.tzoffsetfrom;
                 have_best = true;
             }
         }
@@ -361,6 +368,16 @@ std::optional<DateTime> resolve_zoned_to_utc(
 
     auto off_opt = parse_utc_offset(*best_offset_to);
     if (!off_opt) return std::nullopt;
+    // RFC 5545 §3.3.5: an explicit local time inside a forward gap uses
+    // the UTC offset BEFORE the gap. The public summary's post-transition
+    // prose conflicts, but the prompt explicitly gives the RFC precedence.
+    if (best_offset_from) {
+        auto before = parse_utc_offset(*best_offset_from);
+        if (before && *off_opt > *before &&
+            compare_datetime(local, add_seconds(best, *off_opt - *before)) < 0) {
+            off_opt = before;
+        }
+    }
     // Convert local → UTC: UTC = local - offset.
     DateTime result = add_seconds(local, -static_cast<long long>(*off_opt));
     result.kind = TimeKind::Utc;

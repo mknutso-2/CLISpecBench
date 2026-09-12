@@ -55,7 +55,12 @@ def test_date_value_forms_are_accepted(
     date_payload: str,
 ) -> None:
     date_line = "2 DATE" if date_payload == "" else f"2 DATE {date_payload}"
-    text = document_text(individual_record_block(extra_lines=["1 BIRT Y", date_line]))
+    date_lines = [date_line]
+    if date_payload == "":
+        # DATE_VALUE permits an absent value, but §1.2 still requires a child
+        # on a payload-free structure. PHRASE is permitted under DATE (§3.1).
+        date_lines.append("3 PHRASE Date not known")
+    text = document_text(individual_record_block(extra_lines=["1 BIRT Y", *date_lines]))
     result, payload = run_gedcom(
         submission_command,
         {"action": "inspect", "gedcom_text": text},
@@ -314,7 +319,7 @@ def test_enum_payloads_are_validated(
         document_text(
             individual_record_block(extra_lines=extra_lines),
             individual_record_block(xref="@I2@"),
-            ["0 @F1@ FAM"],
+            ["0 @F1@ FAM", "1 NOTE Supporting family"],
         ),
     )
 
@@ -337,7 +342,7 @@ def test_extension_enum_payloads_are_accepted(
     text = document_text(
         individual_record_block(extra_lines=extra_lines),
         individual_record_block(xref="@I2@"),
-        ["0 @F1@ FAM"],
+        ["0 @F1@ FAM", "1 NOTE Supporting family"],
     )
     result, payload = run_gedcom(
         submission_command,

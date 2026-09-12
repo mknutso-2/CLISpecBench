@@ -193,6 +193,11 @@ def run_bibtex(
     bst_file = tmp_path / "style.bst"
     output_file = tmp_path / "out.bbl"
     log_file = tmp_path / "out.log" if with_log else None
+    # Multiple probes may share tmp_path; stale artifacts must not let an
+    # invocation that writes nothing inherit an earlier invocation's credit.
+    output_file.unlink(missing_ok=True)
+    if log_file is not None:
+        log_file.unlink(missing_ok=True)
     bib_file.write_text(bib_text, encoding="utf-8")
     bst_file.write_text(style_text, encoding="utf-8")
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from conftest import run_expand, run_parse, warnings_of
+from conftest import run_expand, run_parse, run_unresolved_timezone, warnings_of
 
 US_EASTERN_TZ = """\
 BEGIN:VTIMEZONE
@@ -90,8 +90,10 @@ def test_tzid_resolves_in_standard_time(
     assert out["occurrences"][0]["dtstart"] == "2026-01-15T15:00:00Z"
 
 
-def test_unresolved_tzid_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    # No VTIMEZONE provided for referenced TZID -> warning + treat as floating.
+def test_unresolved_tzid_uses_permitted_policy(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # §5.1.2 permits warning+floating continuation or a documented hard error.
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
         "BEGIN:VEVENT\n"
@@ -100,8 +102,11 @@ def test_unresolved_tzid_warning(submission_command: tuple[str, ...], tmp_path: 
         "END:VEVENT\n"
         "END:VCALENDAR\n"
     )
-    out = run_expand(
-        submission_command, ics, "2026-01-01T00:00:00Z", "2026-12-01T00:00:00Z", tmp_path
-    )
+    out = run_unresolved_timezone(submission_command, ics, tmp_path)
+    if out is None:
+        return
     kinds = [w.get("kind") for w in warnings_of(out)]
     assert "unresolved_tzid" in kinds
+    assert [(o.get("dtstart"), o.get("tz")) for o in out.get("occurrences", [])] == [
+        ("2026-03-05T10:00:00", "Mars/Tharsis")
+    ]

@@ -11,8 +11,8 @@ summary.md promised two warning kinds that weren't implemented:
     on the second Sunday of March doesn't exist).
 
 Resolution itself still produces a single UTC moment per the policy
-pinned in summary.md §5.1.1 (fall-back → pre-transition offset /
-fold=0; spring-forward → post-transition offset). The warning is
+pinned by authoritative RFC 5545 §3.3.5 (both fall-back and an explicit
+spring-gap value use the pre-transition offset). The warning is
 surfaced in the expand output so downstream consumers can flag the
 ambiguity.
 """
@@ -90,6 +90,8 @@ def test_fall_back_unambiguous_does_not_warn(
         "2026-12-01T00:00:00Z",
         tmp_path,
     )
+    # Absence of a warning is meaningful only if this input event was observed.
+    assert any(o.get("uid") == "e1" for o in out.get("occurrences", []))
     assert "timezone_fold_ambiguous" not in _kinds(out)
 
 
@@ -125,6 +127,8 @@ def test_spring_forward_before_gap_does_not_warn(
         "2026-04-01T00:00:00Z",
         tmp_path,
     )
+    # Absence of a warning is meaningful only if this input event was observed.
+    assert any(o.get("uid") == "e1" for o in out.get("occurrences", []))
     assert "nonexistent_local_time" not in _kinds(out)
 
 
@@ -140,6 +144,8 @@ def test_spring_forward_after_gap_does_not_warn(
         "2026-04-01T00:00:00Z",
         tmp_path,
     )
+    # Absence of a warning is meaningful only if this input event was observed.
+    assert any(o.get("uid") == "e1" for o in out.get("occurrences", []))
     assert "nonexistent_local_time" not in _kinds(out)
 
 
@@ -173,6 +179,8 @@ def test_no_dst_zone_does_not_emit_fold_warnings(
         tmp_path,
     )
     kinds = _kinds(out)
+    # Absence of a warning is meaningful only if this input event was observed.
+    assert any(o.get("uid") == "e1" for o in out.get("occurrences", []))
     assert "timezone_fold_ambiguous" not in kinds
     assert "nonexistent_local_time" not in kinds
 
@@ -199,6 +207,8 @@ def test_floating_time_does_not_trigger_dst_warnings(
         tmp_path,
     )
     kinds = _kinds(out)
+    # Absence of a warning is meaningful only if this input event was observed.
+    assert any(o.get("uid") == "e1" for o in out.get("occurrences", []))
     assert "timezone_fold_ambiguous" not in kinds
     assert "nonexistent_local_time" not in kinds
 

@@ -20,7 +20,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, cast
 
-from conftest import run_expand, starts_for, wrap_event
+from conftest import run_expand, run_unresolved_timezone, starts_for, wrap_event
 
 HEAD = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
 TAIL = "END:VCALENDAR\n"
@@ -301,15 +301,71 @@ def test_observance_yearly_bymonthday_transition(
 # ---------------------------------------------------------------------------
 
 
-def test_unknown_tzid_emits_warning(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=Fictional/Nowhere:20260601T120000\n"
-    out = run_expand(
-        submission_command,
-        wrap_event(body),
-        "2026-01-01T00:00:00Z",
-        "2027-01-01T00:00:00Z",
-        tmp_path,
-    )
+def test_missing_iana_timezone_is_not_resolved_from_host(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # summary §12 forbids host IANA lookup even for a familiar TZID. §5.1.2
+    # allows either hard rejection or floating continuation when the file
+    # omits the corresponding VTIMEZONE definition.
+    body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20260601T120000\n"
+    out = run_unresolved_timezone(submission_command, wrap_event(body), tmp_path)
+    if out is None:
+        return
     warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
-    kinds = [str(w.get("kind", "")) for w in warnings]
-    assert "unresolved_tzid" in kinds
+    assert "unresolved_tzid" in [w.get("kind") for w in warnings]
+    assert [(o.get("dtstart"), o.get("tz")) for o in out.get("occurrences", [])] == [
+        ("2026-06-01T12:00:00", "America/New_York")
+    ]
+
+
+def test_one_off_half_hour_gap_uses_pre_transition_offset(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # RFC 5545 §3.3.5 applies to any forward jump, not just an hour or RRULE.
+    ics = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//EN
+BEGIN:VTIMEZONE
+TZID:Test/HalfHour
+BEGIN:STANDARD
+DTSTART:20260308T020000
+TZOFFSETFROM:+0000
+TZOFFSETTO:+0030
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:gap
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Test/HalfHour:20260308T021500
+END:VEVENT
+END:VCALENDAR
+"""
+    out = run_expand(submission_command, ics, "2026-03-08", "2026-03-09", tmp_path)
+    assert starts_for(out.get("occurrences", []), "gap") == ["2026-03-08T02:15:00Z"]
+
+
+def test_before_one_off_observance_uses_earliest_offset_from(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # RFC 5545 §3.8.3.1 defines TZOFFSETFROM as the offset before observance;
+    # summary §5.1 step 4 explicitly applies it before the earliest DTSTART.
+    ics = """BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Test//EN
+BEGIN:VTIMEZONE
+TZID:Test/Future
+BEGIN:STANDARD
+DTSTART:20260308T020000
+TZOFFSETFROM:+0000
+TZOFFSETTO:+0030
+END:STANDARD
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:before
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=Test/Future:20260308T014500
+END:VEVENT
+END:VCALENDAR
+"""
+    out = run_expand(submission_command, ics, "2026-03-08", "2026-03-09", tmp_path)
+    assert starts_for(out.get("occurrences", []), "before") == ["2026-03-08T01:45:00Z"]

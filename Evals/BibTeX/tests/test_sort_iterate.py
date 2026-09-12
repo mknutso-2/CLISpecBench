@@ -75,7 +75,7 @@ def test_sort_is_stable_on_ties(submission_command: tuple[str, ...], tmp_path: P
     btxhak §3.2: "If two entries have identical sort keys, they appear in
     the order in which they were READ."
     """
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     # Assign identical sort keys to all three.
     keys = {"a": "same", "b": "same", "c": "same"}
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b", "c"], keys=keys)
@@ -86,7 +86,7 @@ def test_sort_is_stable_on_partial_ties(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Ties within one bucket respect READ order; buckets are ordered by key."""
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n@misc{d}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n@misc{d,}\n"
     keys = {"a": "x", "b": "y", "c": "x", "d": "y"}  # a,c same; b,d same
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b", "c", "d"], keys=keys)
     # Bucket x = [a, c] (in READ order); bucket y = [b, d] (in READ order).
@@ -102,7 +102,7 @@ def test_sort_empty_key_orders_with_others_lexicographically(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """An empty sort key sorts before non-empty keys (empty string lex-less than any nonempty)."""
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     keys = {"a": "", "b": "x"}
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b"], keys=keys)
     assert bbl.split() == ["a", "b"]
@@ -117,7 +117,7 @@ def test_sort_is_lexicographic_not_numeric(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Sort keys compare as byte strings: "10" < "2" lexicographically."""
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     keys = {"a": "10", "b": "2"}
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b"], keys=keys)
     # Lex order: "10" < "2" because '1' (0x31) < '2' (0x32).
@@ -126,7 +126,7 @@ def test_sort_is_lexicographic_not_numeric(
 
 def test_sort_case_sensitivity(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Uppercase sorts before lowercase (ASCII-ordered)."""
-    bib = "@misc{lo}\n@misc{UP}\n"
+    bib = "@misc{lo,}\n@misc{UP,}\n"
     keys = {"lo": "abc", "UP": "ABC"}
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["lo", "UP"], keys=keys)
     # "ABC" (uppercase) < "abc" (lowercase) lex.
@@ -141,7 +141,7 @@ def test_sort_case_sensitivity(submission_command: tuple[str, ...], tmp_path: Pa
 def test_last_sort_key_wins(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """bibtex.web: when sort.key$ is reassigned between SORTs, the last
     assignment before a SORT determines the effective key for that SORT."""
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     style = """\
 ENTRY { } { } { sort.key$ }
 FUNCTION {first.key} { cite$ 'sort.key$ := }
@@ -173,7 +173,7 @@ ITERATE {emit}
 def test_execute_between_sort_and_iterate_preserves_order(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     style = """\
 ENTRY { } { } { sort.key$ }
 FUNCTION {presort} { cite$ 'sort.key$ := }
@@ -196,7 +196,7 @@ ITERATE {emit}
 
 def test_reverse_after_sort(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """REVERSE iterates in the OPPOSITE of the sorted order."""
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["a", "b", "c"], with_reverse=True)
     # Sorted a<b<c, then REVERSE → c, b, a.
     assert bbl.split() == ["c", "b", "a"]
@@ -204,7 +204,7 @@ def test_reverse_after_sort(submission_command: tuple[str, ...], tmp_path: Path)
 
 def test_reverse_without_sort(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """REVERSE without prior SORT iterates in reverse READ order."""
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     bbl = _sort_bbl(
         submission_command,
         tmp_path,
@@ -226,7 +226,7 @@ def test_iterate_empty_cited_list_is_noop(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """When no entries are cited, ITERATE runs zero times, not an error."""
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     style = """\
 ENTRY { } { } { }
 FUNCTION {emit} { cite$ write$ newline$ }
@@ -245,7 +245,7 @@ ITERATE {emit}
 
 def test_sort_of_single_entry_is_noop(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """SORT of one entry is a no-op, not an error."""
-    bib = "@misc{only}\n"
+    bib = "@misc{only,}\n"
     bbl = _sort_bbl(submission_command, tmp_path, bib, ["only"])
     assert bbl.strip() == "only"
 
@@ -260,7 +260,7 @@ def test_sort_key_persists_into_post_sort_iterate(
 ) -> None:
     """After SORT, the sort.key$ assigned in presort is still visible to
     the post-SORT ITERATE (each entry's scratch survives across SORT)."""
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     style = """\
 ENTRY { } { } { sort.key$ }
 FUNCTION {presort}
@@ -284,7 +284,7 @@ ITERATE {emit}
 
 def test_two_iterates_are_independent(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     """Running ITERATE twice visits every entry again in the same order."""
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     style = """\
 ENTRY { } { } { }
 FUNCTION {emit} { cite$ write$ newline$ }
@@ -301,7 +301,7 @@ def test_sort_idempotent_on_sorted_input(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Calling SORT twice on already-sorted data yields the same order."""
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     style = """\
 ENTRY { } { } { sort.key$ }
 FUNCTION {presort} { cite$ 'sort.key$ := }

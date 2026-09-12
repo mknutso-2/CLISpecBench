@@ -1,5 +1,15 @@
 # BibTeX Eval Changelog
 
+## v1.2.2 — 2026-09-11
+
+- Isolate the previously documented comma-less empty-entry parsing bug in one
+  dedicated syntax gate. Unrelated BST, output, sorting, state, and Unicode
+  fixtures use comma-terminated empty entries, preserving their field state.
+- Remove stale output/log artifacts before each invocation so reused temporary
+  directories cannot credit a program for a previous response.
+- Model-visible prompts and documentation are unchanged. See
+  `docs/validation/BibTeX-1.2.2.md` for reference and mutation controls.
+
 ## v1.2.1 — 2026-04-24
 
 Documentation and prompt-contract cleanup from author-eval review.

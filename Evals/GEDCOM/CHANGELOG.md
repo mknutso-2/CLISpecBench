@@ -1,5 +1,22 @@
 # Changelog
 
+## v4.0.1 — 2026-09-11
+
+- Complete official fragment pointer targets and supporting records with legal
+  content (§1.2); an empty DATE acceptance case now includes its permitted
+  PHRASE child. Add focused inspect/render empty-structure rejection gates.
+- Verify the actual semantic content of official fragment parses, excluding
+  synthetic wrapper/pointer-closure records and independently gated null-field
+  serialization. Render those fragments from known fixture trees, so parser
+  bugs no longer skip render coverage.
+- Accept the public BOM and CR/CRLF/LF serialization choices in fragment output.
+  Add an initial-BOM parse gate and fix the reference to ignore the permitted
+  initial BOM and enforce nonempty structures, with pseudo-structure exceptions.
+- Clear response files before every invocation to prevent stale-response credit.
+- Preserve all public model inputs. Keep distinct datatype and record cases;
+  correlated failures do not establish an equivalent number of independent bugs.
+  See `docs/validation/GEDCOM-4.0.1.md` for controls and remaining public issues.
+
 ## v4.0.0 — 2026-04-29
 
 **Breaking — invocation form is no longer Python-specific.**

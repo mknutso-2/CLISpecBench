@@ -68,7 +68,7 @@ FUNCTION {f}
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     parts = bbl.strip().split()
     assert parts[0] == "97"  # ord('a')
@@ -85,7 +85,7 @@ FUNCTION {f} { #48 int.to.chr$ write$ #57 int.to.chr$ write$ }
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.rstrip("\n") == "09"
 
@@ -116,7 +116,7 @@ FUNCTION {f} { "abc123" purify$ write$ newline$ }
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.strip() == "abc123"
 
@@ -137,7 +137,7 @@ FUNCTION {f} { "hello" #1 #3 substring$ write$ newline$ }
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.strip() == "hel"
 
@@ -152,6 +152,6 @@ FUNCTION {f} { "hello" text.length$ int.to.str$ write$ newline$ }
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.strip() == "5"

@@ -43,16 +43,19 @@ def _run_tool(
     tmp_path: Path,
     *,
     timeout: int = 30,
-    expect_exit: int = 0,
+    expect_exit: int | tuple[int, ...] = 0,
 ) -> dict[str, Any]:
     output_file = tmp_path / "out.json"
+    # Each invocation must supply its own response, including roundtrips.
+    output_file.unlink(missing_ok=True)
     result = subprocess.run(
         [*command, *args, "--output", str(output_file)],
         capture_output=True,
         text=True,
         timeout=timeout,
     )
-    assert result.returncode == expect_exit, (
+    allowed_exits = (expect_exit,) if isinstance(expect_exit, int) else expect_exit
+    assert result.returncode in allowed_exits, (
         f"ical exited with {result.returncode} (expected {expect_exit})\n"
         f"stdout: {result.stdout}\nstderr: {result.stderr}"
     )
@@ -66,7 +69,7 @@ def run_parse(
     tmp_path: Path,
     *,
     timeout: int = 30,
-    expect_exit: int = 0,
+    expect_exit: int | tuple[int, ...] = 0,
 ) -> dict[str, Any]:
     ics_file = tmp_path / "in.ics"
     # Ensure CRLF line endings per RFC 5545.
@@ -89,7 +92,7 @@ def run_expand(
     tmp_path: Path,
     *,
     timeout: int = 30,
-    expect_exit: int = 0,
+    expect_exit: int | tuple[int, ...] = 0,
 ) -> dict[str, Any]:
     ics_file = tmp_path / "in.ics"
     normalized = ics.replace("\r\n", "\n").replace("\n", "\r\n")
@@ -145,3 +148,20 @@ BASIC_FOOTER = "END:VCALENDAR\n"
 def wrap_event(body: str) -> str:
     """Wrap a VEVENT body in a minimal VCALENDAR."""
     return BASIC_HEADER + "BEGIN:VEVENT\n" + body + "END:VEVENT\n" + BASIC_FOOTER
+
+
+def run_unresolved_timezone(
+    command: tuple[str, ...], ics: str, tmp_path: Path
+) -> dict[str, Any] | None:
+    """Exercise both policies explicitly allowed by summary §5.1.2.
+
+    Rejection is a public alternative, not a parser failure to be force-scored
+    against continuation. The required --help policy prose needs independent
+    human review; it is not a precondition for these timezone behavior cases.
+    """
+    out = run_expand(command, ics, "2026-01-01", "2027-01-01", tmp_path, expect_exit=(0, 1))
+    if isinstance(out.get("error"), dict):
+        assert isinstance(out["error"].get("message"), str)
+        assert out["error"]["message"].strip()
+        return None
+    return out

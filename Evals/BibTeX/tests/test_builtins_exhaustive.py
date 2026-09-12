@@ -22,7 +22,7 @@ from typing import Any
 from conftest import run_bibtex
 
 MINI_BIB = '@article{a, author = "Smith", title = "T", year = 2024}\n'
-EMPTY_BIB = "@misc{a}\n"
+EMPTY_BIB = "@misc{a,}\n"
 
 
 def _exec(

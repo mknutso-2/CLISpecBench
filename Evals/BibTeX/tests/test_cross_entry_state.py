@@ -21,7 +21,7 @@ from pathlib import Path
 
 from conftest import run_bibtex
 
-THREE_BIB = "@misc{a}\n@misc{b}\n@misc{c}\n"
+THREE_BIB = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
 
 
 # ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ def test_entry_field_values_are_per_entry(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Field values written in one entry's context don't leak to another."""
-    bib = '@article{a, title = "AlphaTitle"}\n@article{b}\n'
+    bib = '@article{a, title = "AlphaTitle"}\n@article{b,}\n'
     style = """\
 ENTRY { title } { } { }
 FUNCTION {dump} { title duplicate$ missing$ { "MISSING" swap$ pop$ } { skip$ } if$ write$ newline$ }

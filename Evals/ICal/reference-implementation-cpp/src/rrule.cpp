@@ -360,7 +360,7 @@ DateTime to_comparable(const DateTime& dt, const Calendar& cal, std::vector<Warn
                 if (anomaly == "timezone_fold_ambiguous") {
                     w.message = "Local time in DST fall-back overlap; using pre-transition offset";
                 } else {
-                    w.message = "Local time in DST spring-forward gap; using post-transition offset";
+                    w.message = "Local time in DST spring-forward gap; using pre-transition offset";
                 }
                 w.uid = uid.empty() ? std::optional<std::string>{} : uid;
                 w.value = dt.tzid;

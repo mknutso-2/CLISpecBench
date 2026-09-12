@@ -1,5 +1,26 @@
 # ICal Eval Changelog
 
+## v3.0.1 — 2026-09-11
+
+- Correct spring-gap UTC resolution to RFC 5545 §3.3.5's pre-gap offset. Both
+  the public base prompt and summary explicitly give the RFC precedence over
+  the summary's conflicting post-transition prose. Fix the reference, including
+  future one-off observance selection, and cover a half-hour gap and pre-start
+  fallback without changing model-visible input.
+- Honor the explicitly permitted structured-rejection alternative for unresolved
+  TZID values. Continuation must preserve the floating time and original TZID;
+  a separate case ensures host IANA data is not silently used.
+- Stop treating RFC 5545's producer line-folding recommendation as a mandatory
+  reader warning; check lossless content instead. Warning triggers need public
+  clarification before stricter scoring.
+- Replace duplicate key-presence checks with independent value-type gates;
+  allow extension keys consistently in expand output. Require complete Gregorian,
+  Chinese, and Hebrew recurrence sequences when support is claimed, instead of
+  crediting a few anchors or extra incorrect occurrences.
+- Require an observed event before crediting DST warning-absence cases.
+- Clear response artifacts between invocations. Model-visible inputs are unchanged.
+  See `docs/validation/ICal-3.0.1.md` for validation and deferred public issues.
+
 ## v3.0.0 — 2026-04-25
 
 Fixes author-eval review findings around documentation and warning

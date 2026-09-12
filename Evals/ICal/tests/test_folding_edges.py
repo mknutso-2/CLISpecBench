@@ -1,8 +1,8 @@
 """75-octet folding edge cases beyond test_line_folding_octets.py.
 
-Closes Codex v1.0 adversarial-review finding #3. `test_line_folding_octets.py`
-explicitly declined to assert `line_too_long` or invalid-fold behavior;
-this file pins them.
+Checks lossless content decoding at and beyond the recommended physical
+line length. Warning policy is not asserted: the public corpus never defines
+a mandatory reader trigger or prohibition for line_too_long.
 
 References: RFC 5545 §3.1 — "SHOULD NOT be longer than 75 octets,
 excluding the line break" and the fold/unfold rules.
@@ -48,11 +48,14 @@ def _parse_raw(
 # ---------------------------------------------------------------------------
 
 
-def test_unfolded_line_over_75_octets_warns(
+def test_unfolded_line_over_75_octets_preserves_content(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A content line longer than 75 octets (not folded) SHOULD emit
-    line_too_long per RFC 5545 §3.1."""
+    """RFC 5545 §3.1 recommends producer folding, not mandatory reader warnings.
+
+    The public contract lists line_too_long but never defines a mandatory
+    trigger. Score decoded content here; a warning may accompany it.
+    """
     # DESCRIPTION: is 12 chars; pad the value to reach 90 total octets.
     long_desc = "X" * 90  # 12 + 90 = 102 > 75
     ics = (
@@ -65,14 +68,12 @@ def test_unfolded_line_over_75_octets_warns(
     )
     code, data = _parse_raw(submission_command, tmp_path, ics)
     assert code == 0, "long unfolded lines should not hard-fail"
-    warnings = cast(list[dict[str, Any]], data.get("warnings") or [])
-    kinds = [w.get("kind") for w in warnings]
-    assert "line_too_long" in kinds, (
-        f"expected line_too_long warning for 102-octet line; got {kinds!r}"
-    )
+    events = cast(list[dict[str, Any]], data.get("events") or [])
+    assert len(events) == 1
+    assert events[0].get("description") == long_desc
 
 
-def test_exactly_75_octet_line_does_not_warn(
+def test_exactly_75_octet_line_preserves_content(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """A content line of exactly 75 octets is within spec (SHOULD NOT >75)."""
@@ -88,16 +89,19 @@ def test_exactly_75_octet_line_does_not_warn(
     )
     code, data = _parse_raw(submission_command, tmp_path, ics)
     assert code == 0
-    warnings = cast(list[dict[str, Any]], data.get("warnings") or [])
-    kinds = [w.get("kind") for w in warnings]
-    assert "line_too_long" not in kinds, "75-octet line should not warn"
+    events = cast(list[dict[str, Any]], data.get("events") or [])
+    assert len(events) == 1
+    assert events[0].get("description") == desc
 
 
-def test_properly_folded_long_line_does_not_warn(
+def test_properly_folded_long_line_preserves_content(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """A long logical line that's been properly folded into 75-octet chunks
-    should not trigger line_too_long."""
+    """RFC 5545 §3.1 unfolds the complete value without inserting spaces.
+
+    The public corpus leaves warning triggers unspecified; require the decoded
+    content instead of allowing an empty response to pass a warning-absence check.
+    """
     # Build a DESCRIPTION that unfolds to ~200 bytes, but each physical line
     # is folded at 74 octets + CRLF + SP.
     # Physical line 1: "DESCRIPTION:" (12) + 63 X's = 75 octets → fits.
@@ -115,9 +119,9 @@ def test_properly_folded_long_line_does_not_warn(
     )
     code, data = _parse_raw(submission_command, tmp_path, ics)
     assert code == 0
-    warnings = cast(list[dict[str, Any]], data.get("warnings") or [])
-    kinds = [w.get("kind") for w in warnings]
-    assert "line_too_long" not in kinds
+    events = cast(list[dict[str, Any]], data.get("events") or [])
+    assert len(events) == 1
+    assert events[0].get("description") == "X" * (63 + 74 + 60)
 
 
 # ---------------------------------------------------------------------------

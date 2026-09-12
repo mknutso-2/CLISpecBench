@@ -27,8 +27,8 @@ _XREF_REQUIRED_RECORD_TAGS = sorted(
 _Y_OR_NULL_EVENT_CASES = y_or_null_event_cases()
 
 _XREF_REQUIRED_RECORD_BLOCKS: dict[str, list[str]] = {
-    "FAM": ["0 FAM"],
-    "INDI": ["0 INDI"],
+    "FAM": ["0 FAM", "1 NOTE Family"],
+    "INDI": ["0 INDI", "1 NAME Example /Person/"],
     "OBJE": ["0 OBJE", "1 FILE photo.jpg", "2 FORM image/jpeg"],
     "REPO": ["0 REPO", "1 NAME Example Repository"],
     "SNOTE": ["0 SNOTE Shared note"],
@@ -497,7 +497,9 @@ def test_creation_date_requires_date(submission_command: tuple[str, ...], tmp_pa
 
 
 def test_association_requires_role(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    text = document_text(individual_record_block(extra_lines=["1 ASSO @I2@"]), ["0 @I2@ INDI"])
+    text = document_text(
+        individual_record_block(extra_lines=["1 ASSO @I2@"]), individual_record_block(xref="@I2@")
+    )
     result, payload = run_gedcom(
         submission_command,
         {"action": "inspect", "gedcom_text": text},
@@ -653,7 +655,7 @@ def test_adoption_famc_substructure_allows_enum_payload(
                 "3 ADOP HUSB",
             ]
         ),
-        ["0 @F1@ FAM"],
+        ["0 @F1@ FAM", "1 NOTE Supporting family"],
     )
     result, payload = run_gedcom(
         submission_command,
@@ -797,5 +799,37 @@ def test_render_rejects_submitter_without_name(
         submission_command,
         {"action": "render", "dataset": dataset},
         tmp_path,
+    )
+    assert not _unexpected_result(result.returncode, payload, "invalid_request")
+
+
+def test_empty_individual_structure_is_rejected(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # §1.2: structures require a nonempty payload or at least one child.
+    # This gate owns empty-record validation; ordinary fixtures are nonempty.
+    result, payload = run_gedcom(
+        submission_command,
+        {"action": "inspect", "gedcom_text": "0 HEAD\n1 GEDC\n2 VERS 7.0\n0 @I1@ INDI\n0 TRLR\n"},
+        tmp_path,
+    )
+    assert result.returncode == 1
+    assert payload is not None
+    assert payload.get("error", {}).get("code") == "invalid_document"
+
+
+def test_render_rejects_empty_individual_structure(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # The same §1.2 nonempty-structure invariant applies to render requests.
+    dataset = {
+        "records": [
+            node("HEAD", children=[node("GEDC", children=[node("VERS", "7.0")])]),
+            node("INDI", xref="@I1@"),
+            node("TRLR"),
+        ]
+    }
+    result, payload = run_gedcom(
+        submission_command, {"action": "render", "dataset": dataset}, tmp_path
     )
     assert not _unexpected_result(result.returncode, payload, "invalid_request")

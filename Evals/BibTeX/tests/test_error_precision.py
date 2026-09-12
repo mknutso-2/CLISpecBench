@@ -121,7 +121,7 @@ def test_error_reports_line_column_for_malformed_bst(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """Garbage in .bst produces an error with line/column."""
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     # Malformed .bst: using !!! which isn't a valid construct.
     style = """\
 ENTRY { } { } { }
@@ -191,7 +191,7 @@ def test_nonexistent_aux_file_exits_one(
 ) -> None:
     """--aux pointing at a nonexistent path exits 1."""
     bib = tmp_path / "refs.bib"
-    bib.write_text("@misc{a}\n", encoding="utf-8")
+    bib.write_text("@misc{a,}\n", encoding="utf-8")
     style = tmp_path / "s.bst"
     style.write_text(MIN_STYLE, encoding="utf-8")
     out = tmp_path / "out.bbl"

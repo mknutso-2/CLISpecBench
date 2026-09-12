@@ -21,7 +21,7 @@ from typing import Any, cast
 
 from conftest import run_bibtex
 
-MINI_BIB = "@misc{a}\n"
+MINI_BIB = "@misc{a,}\n"
 
 
 def _exec(

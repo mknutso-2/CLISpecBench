@@ -240,12 +240,14 @@ def test_dst_fall_back_ambiguous_time_uses_pre_transition(
     assert out["occurrences"][0]["dtstart"] == "2026-11-01T05:30:00Z"
 
 
-def test_dst_spring_forward_nonexistent_time_uses_post_transition(
+def test_dst_spring_forward_gap_uses_rfc_pre_transition_offset(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     # 2026-03-08 DST starts at 02:00 local (EST → EDT). Local time 02:30 does
-    # NOT exist in the wall clock. Per v0.3 spec §5.1.1, pick post-transition
-    # (EDT, -0400). 02:30 treated as 06:30 UTC (EDT equivalent).
+    # NOT exist in the wall clock. RFC 5545 §3.3.5 requires the offset BEFORE
+    # the gap (-0500). The summary's §5.1.1 says post-transition, but both the
+    # base prompt and summary opening explicitly give the RFC precedence.
+    # Correct the hidden expectation without changing any public input.
     body = "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART;TZID=America/New_York:20260308T023000\n"
     out = run_expand(
         submission_command,
@@ -255,5 +257,4 @@ def test_dst_spring_forward_nonexistent_time_uses_post_transition(
         tmp_path,
     )
     assert len(out["occurrences"]) == 1
-    # EDT (-0400): 02:30 local = 06:30 UTC.
-    assert out["occurrences"][0]["dtstart"] == "2026-03-08T06:30:00Z"
+    assert out["occurrences"][0]["dtstart"] == "2026-03-08T07:30:00Z"

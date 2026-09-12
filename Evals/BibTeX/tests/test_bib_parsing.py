@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from conftest import PROBE_STYLE_FIELDS, parse_dump, run_bibtex
+from conftest import PROBE_STYLE_FIELDS, PROBE_STYLE_KEYS, parse_dump, run_bibtex
 
 
 def _entries(bbl: str) -> dict[str, dict[str, str]]:
@@ -129,3 +129,13 @@ def test_crossref_case_insensitive_lookup(
     )
     bbl, _ = run_bibtex(submission_command, bib, PROBE_STYLE_FIELDS, ["child"], tmp_path)
     assert _entries(bbl)["child"]["year"] == "2020"
+
+
+def test_empty_entry_without_comma_is_accepted(
+    submission_command: tuple[str, ...], tmp_path: Path
+) -> None:
+    # bibtex.web READ accepts a closing brace immediately after the cite key.
+    # Keep this syntax edge here; unrelated BST probes use @misc{a,} so one
+    # empty-entry parser bug cannot obscure their separate behavior.
+    bbl, _ = run_bibtex(submission_command, "@misc{a}\n", PROBE_STYLE_KEYS, ["a"], tmp_path)
+    assert bbl == "a\n"

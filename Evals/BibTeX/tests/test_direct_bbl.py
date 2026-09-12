@@ -116,7 +116,7 @@ EXECUTE {f}
 
 
 def test_log_entries_read_count(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     style = """\
 ENTRY { } { } { }
 FUNCTION {f} { cite$ write$ newline$ }
@@ -170,7 +170,7 @@ ITERATE {f}
 
 
 def test_aux_input_multi_key_citation(submission_command: tuple[str, ...], tmp_path: Path) -> None:
-    bib = "@misc{a}\n@misc{b}\n@misc{c}\n"
+    bib = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
     aux = r"""
 \relax
 \citation{a,b,c}
@@ -188,7 +188,7 @@ ITERATE {f}
 def test_aux_input_multiple_citation_commands(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     aux = r"""
 \citation{a}
 \citation{b}

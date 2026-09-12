@@ -22,7 +22,7 @@ from pathlib import Path
 
 from conftest import run_bibtex
 
-MINI_BIB = "@misc{a}\n"
+MINI_BIB = "@misc{a,}\n"
 
 
 def _run(submission_command: tuple[str, ...], tmp_path: Path, body: str) -> str:

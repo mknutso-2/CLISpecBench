@@ -88,9 +88,9 @@ def test_rscale_gregorian_yearly_expands_correctly(
     # COUNT=5 against a default SKIP=OMIT rule that only emits on leap years.
     # The first five valid instances are 2024, 2028, 2032, 2036, 2040 — but we
     # stop the expand window at 2033, so we should see 2024, 2028, 2032.
-    assert "2024-02-29" in starts
-    assert "2028-02-29" in starts
-    assert "2032-02-29" in starts
+    # The complete window must contain only valid leap-year candidates.
+    # Membership alone credited extra incorrect non-leap occurrences.
+    assert starts == ["2024-02-29", "2028-02-29", "2032-02-29"]
 
 
 def test_rscale_gregorian_skip_forward_fills_missing_dates(
@@ -125,10 +125,7 @@ def test_rscale_gregorian_skip_forward_fills_missing_dates(
     else:
         # If the implementation claims support, it must produce the expected
         # filled-in dates: 2012-02-29, 2013-03-01, 2014-03-01, 2015-03-01.
-        assert "2012-02-29" in starts
-        assert "2013-03-01" in starts
-        assert "2014-03-01" in starts
-        assert "2015-03-01" in starts
+        assert starts == ["2012-02-29", "2013-03-01", "2014-03-01", "2015-03-01"]
 
 
 # ---------------------------------------------------------------------------
@@ -161,11 +158,9 @@ def test_rscale_chinese_either_expand_or_unsupported_warning(
         raw = _raw_rrule(ev) or ""
         assert "RSCALE=CHINESE" in raw
     else:
-        # Implementation claims it supports Chinese. Must produce at least the
-        # anchor instance (2013-02-10) and the 2014 instance (2014-01-31) from
-        # RFC 7529 §4.3.1.
-        assert "2013-02-10" in starts
-        assert "2014-01-31" in starts
+        # RFC 7529 §4.3.1 gives all five dates. Checking two anchors alone
+        # let partial or extra-date expansions claim full calendar support.
+        assert starts == ["2013-02-10", "2014-01-31", "2015-02-19", "2016-02-08", "2017-01-28"]
 
 
 def test_rscale_hebrew_either_expand_or_unsupported_warning(
@@ -194,8 +189,9 @@ def test_rscale_hebrew_either_expand_or_unsupported_warning(
         # essential for downstream re-expansion).
         assert "5L" in raw
     else:
-        # Must produce at least the anchor instance.
-        assert "2014-02-08" in starts
+        # RFC 7529 §4.3.3 gives the complete sequence. Returning DTSTART
+        # unchanged does not demonstrate Hebrew leap-month recurrence support.
+        assert starts == ["2014-02-08", "2015-02-27", "2016-02-17", "2017-03-06", "2018-02-23"]
 
 
 def test_rscale_islamic_warning_preserves_rrule(

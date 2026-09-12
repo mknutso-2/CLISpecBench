@@ -4,10 +4,11 @@ import base64
 import json
 import re
 import zipfile
+from collections.abc import Mapping
 from copy import deepcopy
 from io import BytesIO
 from pathlib import Path
-from typing import TypedDict, cast
+from typing import Any, TypedDict, cast
 
 _RECORD_FRAGMENTS_PATH = Path(__file__).resolve().parent / "generated" / "gedcom_examples.json"
 _OFFICIAL_RECORD_FRAGMENT_IDS = {
@@ -439,7 +440,10 @@ def individual_record_block(
     xref: str = "@I1@",
     extra_lines: list[str] | None = None,
 ) -> list[str]:
-    lines = [f"0 {xref} INDI"]
+    # §1.2 requires a payload or a child on every structure. Give supporting
+    # records a simple ordinary child so unrelated validation probes do not
+    # accidentally contain an additional empty-record error.
+    lines = [f"0 {xref} INDI", "1 NOTE Supporting individual"]
     if extra_lines is not None:
         lines.extend(extra_lines)
     return lines
@@ -447,6 +451,10 @@ def individual_record_block(
 
 def wrap_record_fragment(fragment_text: str) -> str:
     lines = fragment_text.strip().splitlines()
+    # cb5 illustrates one valid *line*, not a complete nonempty structure.
+    # Complete that isolated INDI before using it as a whole dataset (§1.2).
+    if len(lines) == 1 and lines[0].endswith(" INDI"):
+        lines.append("1 NAME Example /Person/")
     if not lines:
         raise AssertionError("Record fragment may not be empty")
 
@@ -525,7 +533,78 @@ def _append_stub_records(lines: list[str]) -> str:
         if xref == "@VOID@" or xref in defined_xrefs:
             continue
         record_tag = _DEFAULT_RECORD_TAG_BY_POINTER_TAG.get(tag, "INDI")
-        stub_lines.append(f"0 {xref} {record_tag}")
+        # Pointer closure must also satisfy §1.2 and the target record grammar.
+        if record_tag == "SNOTE":
+            stub_lines.append(f"0 {xref} SNOTE Fixture note")
+        else:
+            stub_lines.append(f"0 {xref} {record_tag}")
+            if record_tag in {"SUBM", "REPO"}:
+                stub_lines.append("1 NAME Fixture name")
+            elif record_tag == "OBJE":
+                stub_lines.extend(["1 FILE fixture.jpg", "2 FORM image/jpeg"])
+            else:
+                stub_lines.append("1 NOTE Fixture record")
         defined_xrefs.add(xref)
 
     return "\n".join([*lines, *stub_lines, "0 TRLR"]) + "\n"
+
+
+def normalized_gedcom_text(text: str) -> str:
+    """Normalize only public §1.1 BOM / §1.3 EOL representation choices."""
+    return text.removeprefix("\ufeff").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def fixture_dataset(text: str) -> ExpectedDataset:
+    """Transcribe trusted fixture lines into the contract's ordered node tree.
+
+    This helper does not validate submissions or GEDCOM semantics. It gives
+    render probes an input independent of the submitted inspect implementation.
+    §1.3 CONT lines join the parent payload; doubled leading @ is unescaped.
+    """
+    records: list[ExpectedNode] = []
+    stack: list[ExpectedNode] = []
+    for line in normalized_gedcom_text(text).splitlines():
+        level_text, body = line.split(" ", 1)
+        level = int(level_text)
+        xref = None
+        if body.startswith("@"):
+            xref, body = body.split(" ", 1)
+        tag, separator, value = body.partition(" ")
+        payload = value.removeprefix("@") if value.startswith("@@") else value
+        if tag == "CONT":
+            parent = stack[level - 1]
+            parent["payload"] = (parent["payload"] or "") + "\n" + payload
+            continue
+        current = node(tag, payload if separator else None, xref=xref)
+        if level == 0:
+            records.append(current)
+        else:
+            stack[level - 1]["children"].append(current)
+        stack[level:] = [current]
+    return {"records": records}
+
+
+def fragment_records(dataset: Mapping[str, Any], fragment: str) -> list[dict[str, Any]]:
+    """Project named example records without rechecking unrelated wrapper/schema.
+
+    The schema gate owns missing null fields and empty children lists. Compare
+    the actual tags, pointers, payloads and nested structure for the example,
+    excluding the synthetic HEAD/TRLR and pointer-closure records.
+    """
+    identities = {
+        (record["tag"], record["xref"]) for record in fixture_dataset(fragment)["records"]
+    }
+
+    def semantic_node(raw: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "tag": raw.get("tag"),
+            "xref": raw.get("xref"),
+            "payload": raw.get("payload"),
+            "children": [semantic_node(child) for child in raw.get("children", [])],
+        }
+
+    return [
+        semantic_node(record)
+        for record in dataset.get("records", [])
+        if (record.get("tag"), record.get("xref")) in identities
+    ]

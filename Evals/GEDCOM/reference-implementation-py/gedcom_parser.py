@@ -106,6 +106,8 @@ _EVENT_Y_OR_NULL_TAGS = {
 
 
 def parse_gedcom_text(text: str) -> GedcomDataset:
+    # §1.1 permits an initial UTF-8 BOM; it has no GEDCOM semantic meaning.
+    text = text.removeprefix("\ufeff")
     _validate_text_characters(text, request_code="invalid_document")
     records = _parse_records(text)
     dataset = GedcomDataset(records=records)
@@ -351,6 +353,11 @@ def _validate_node(
     if node.tag in {"CONT", "CONC"}:
         raise GedcomError(request_code, f"{node.tag} may not appear as a normal structure node")
     _validate_text_characters(node.tag, request_code=request_code)
+    # GEDCOM §1.2 requires every structure to have a nonempty payload or a
+    # child. HEAD/TRLR are pseudo-structures with separate envelope rules;
+    # CONT is already folded into its parent payload during parsing.
+    if node.tag not in {"HEAD", "TRLR"} and not node.payload and not node.children:
+        raise GedcomError(request_code, f"{node.tag} requires a payload or a substructure")
 
     if node.xref is not None:
         _validate_text_characters(node.xref, request_code=request_code)

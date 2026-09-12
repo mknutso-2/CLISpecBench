@@ -145,7 +145,7 @@ FUNCTION {f}
 READ
 ITERATE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.strip() == "321"
 
@@ -297,7 +297,7 @@ FUNCTION {f}
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.strip() == "42"
 
@@ -312,7 +312,7 @@ FUNCTION {f}
 READ
 EXECUTE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["a"], tmp_path)
     assert bbl.strip() == "hello"
 
@@ -380,7 +380,7 @@ FUNCTION {f} { cite$ write$ newline$ }
 READ
 REVERSE {f}
 """
-    bib = "@misc{x}\n@misc{y}\n@misc{z}\n"
+    bib = "@misc{x,}\n@misc{y,}\n@misc{z,}\n"
     bbl, _ = run_bibtex(submission_command, bib, style, ["x", "y", "z"], tmp_path)
     assert bbl.strip().split("\n") == ["z", "y", "x"]
 
@@ -395,7 +395,7 @@ FUNCTION {f} { cite$ write$ newline$ }
 READ
 ITERATE {f}
 """
-    bib = "@misc{a}\n@misc{b}\n"
+    bib = "@misc{a,}\n@misc{b,}\n"
     _, log = run_bibtex(submission_command, bib, style, ["a", "b"], tmp_path, with_log=True)
     assert log is not None
     assert log["entries_read"] == 2
@@ -409,7 +409,7 @@ FUNCTION {f} { cite$ write$ newline$ }
 READ
 ITERATE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     _, log = run_bibtex(submission_command, bib, style, ["a", "ghost"], tmp_path, with_log=True)
     assert log is not None
     assert "ghost" in log["entries_cited_missing"]
@@ -424,7 +424,7 @@ FUNCTION {f} { cite$ write$ newline$ }
 READ
 ITERATE {f}
 """
-    bib = "@misc{a}\n"
+    bib = "@misc{a,}\n"
     _, log = run_bibtex(submission_command, bib, style, ["a"], tmp_path, with_log=True)
     assert log is not None
     assert "jan" in log["macros_defined"]
