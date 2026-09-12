@@ -145,12 +145,16 @@ def test_roundtrip_preserves_data_field_without_subfields(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     record = sample_record()
-    record["data_fields"].append(
+    # ISO directories order data fields by the first tag digit (bdintro.html, Directory).
+    # Put 500 before 650; preserve the empty field without requiring the
+    # former unsorted fixture's unrelated whole-record order.
+    record["data_fields"].insert(
+        3,
         {
             "tag": "500",
             "indicators": [" ", " "],
             "subfields": [],
-        }
+        },
     )
     render_result, render_payload = run_marc21(
         submission_command,
@@ -159,4 +163,7 @@ def test_roundtrip_preserves_data_field_without_subfields(
     )
     assert render_result.returncode == 0
     assert render_payload is not None
-    assert decode_iso2709_record(unb64(render_payload["result"]["record_b64"])) == record
+    decoded = decode_iso2709_record(unb64(render_payload["result"]["record_b64"]))
+    assert [field for field in decoded["data_fields"] if field["tag"] == "500"] == [
+        {"tag": "500", "indicators": [" ", " "], "subfields": []}
+    ]

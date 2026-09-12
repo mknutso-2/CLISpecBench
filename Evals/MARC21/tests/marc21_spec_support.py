@@ -154,6 +154,10 @@ def try_roundtrippable_example_text(tag: str) -> str | None:
     )
     for row in rows:
         text = row["text"]
+        # bd357's first display example contradicts its explicit indicator
+        # table (both must be blank). Later examples satisfy that same rule.
+        if tag == "357" and text == "#0$aORCON$bCIA$cDIA":
+            continue
         try:
             field = parse_data_field_example(tag, text)
         except ValueError:
@@ -180,6 +184,10 @@ def try_rule_compatible_example_text(tag: str) -> str | None:
     rule = load_field_rules()[tag]
     for row in rows:
         text = row["text"]
+        # bd357's first display example contradicts its explicit indicator
+        # table (both must be blank). Later examples satisfy that same rule.
+        if tag == "357" and text == "#0$aORCON$bCIA$cDIA":
+            continue
         try:
             field = parse_data_field_example(tag, text)
         except ValueError:
@@ -197,6 +205,28 @@ def parse_data_field_example(tag: str, example_text: str) -> dict[str, Any]:
         normalize_indicator_char(example_text[1]),
     ]
     payload = example_text[2:]
+    # The flattened display text loses HTML emphasis that marks subfield
+    # delimiters. In bd018's two examples, $01.25/$00.95 are literal currency
+    # inside $a; bd880's /$1 is the script code inside $6, not subfield $1.
+    # Preserve these exact public examples without guessing at other dollars.
+    if tag == "018" and example_text in {
+        "##$a0844021842/78/010032-08$01.25/1",
+        "##$a03043923/78/050243-03$00.95/0",
+    }:
+        return {
+            "tag": tag,
+            "indicators": indicators,
+            "subfields": [{"code": "a", "value": payload[2:]}],
+        }
+    if tag == "880" and example_text == "10$6245-02/$1$a[Chinese characters]":
+        return {
+            "tag": tag,
+            "indicators": indicators,
+            "subfields": [
+                {"code": "6", "value": "245-02/$1"},
+                {"code": "a", "value": "[Chinese characters]"},
+            ],
+        }
     if not payload.startswith("$"):
         raise ValueError(
             f"Example for field {tag} does not start with a subfield: {example_text!r}"

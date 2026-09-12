@@ -1,5 +1,19 @@
 # Changelog
 
+## v3.0.2 — 2026-09-12
+
+- Preserve every model-visible file. Use the recommended six/eight-character
+  bases for positive electronic-resource/motion-picture 007 cases. The public
+  "should always" wording does not unequivocally require acceptance or rejection
+  of shorter forms; undersized c/m rejection is likewise left unscored. Other
+  fixed-length categories and all over-maximum negative bounds remain.
+- Preserve literal currency and script-code dollar signs in the flattened 018
+  and 880 examples. Use a 357 example consistent with its explicit blank-only
+  indicator table instead of the contradictory first displayed example.
+- Put the empty-subfield 500 fixture in directory block order and observe that
+  field independently of unrelated full-record ordering and normalization.
+  No reference behavior or generated rule table changes are needed.
+
 ## v3.0.1 — 2026-09-11
 
 - Keep all model-visible prompts/docs unchanged. Remove the v2.8.2 session-wide

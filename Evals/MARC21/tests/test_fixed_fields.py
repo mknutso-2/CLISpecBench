@@ -50,6 +50,14 @@ CONTROL_007_LENGTH_CASES = [
     (category, bounds["minimum"], bounds["maximum"])
     for category, bounds in FIXED_RULES["007"]["category_lengths"].items()
 ]
+# bd007c/bd007m Input Conventions recommend six/eight initial positions.
+# Whether shorter forms must be accepted is not unequivocal ("should always").
+# Test positive lengths inside both readings. For c/m, only over-maximum
+# negatives are unequivocal; undersized acceptance/rejection is left unscored.
+CONTROL_007_ACCEPTED_LENGTH_CASES = [
+    (category, {"c": 6, "m": 8}.get(category, minimum), maximum)
+    for category, minimum, maximum in CONTROL_007_LENGTH_CASES
+]
 CONTROL_008_DATE_TYPES = [_code(value) for value in FIXED_RULES["008"]["date_type_position_06"]]
 CONTROL_008_POSITION_CASES = [
     (int(position), _code(value))
@@ -129,9 +137,10 @@ def _assert_render_ok(
         # This case names one Leader position. The remaining positions and
         # success envelope have their own schema/integration checks.
         assert leader_position is not None
-        assert rendered["leader_template"][leader_position] == record["leader_template"][
-            leader_position
-        ]
+        assert (
+            rendered["leader_template"][leader_position]
+            == record["leader_template"][leader_position]
+        )
 
 
 def _assert_render_error(
@@ -227,13 +236,15 @@ def test_render_accepts_all_007_position_00_categories_from_official_table(
     submission_command: tuple[str, ...],
     tmp_path: Path,
 ) -> None:
-    minimum = FIXED_RULES["007"]["category_lengths"][category]["minimum"]
+    minimum = {"c": 6, "m": 8}.get(
+        category, int(FIXED_RULES["007"]["category_lengths"][category]["minimum"])
+    )
     record = _with_control_field("007", category + "|" * (minimum - 1))
     _assert_render_ok(submission_command, tmp_path, record)
 
 
-@pytest.mark.parametrize(("category", "minimum", "maximum"), CONTROL_007_LENGTH_CASES)
-def test_render_accepts_007_category_specific_minimum_and_maximum_lengths(
+@pytest.mark.parametrize(("category", "minimum", "maximum"), CONTROL_007_ACCEPTED_LENGTH_CASES)
+def test_render_accepts_007_recommended_base_and_maximum_lengths(
     category: str,
     minimum: int,
     maximum: int,
@@ -256,7 +267,11 @@ def test_inspect_rejects_007_category_lengths_outside_official_range(
 ) -> None:
     too_short = _with_control_field("007", category + "|" * (minimum - 2))
     too_long = _with_control_field("007", category + "|" * maximum)
-    _assert_inspect_error(submission_command, tmp_path, too_short)
+    # The variable-length c/m pages do not make a precise short-form cutoff
+    # mandatory. Defined positions alone do not establish the old inferred
+    # two-character minimum; leave that public ambiguity unscored.
+    if category not in {"c", "m"}:
+        _assert_inspect_error(submission_command, tmp_path, too_short)
     _assert_inspect_error(submission_command, tmp_path, too_long)
 
 
