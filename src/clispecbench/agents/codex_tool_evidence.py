@@ -77,6 +77,12 @@ def scan(session_root: Path, events_path: Path) -> dict[str, Any]:
             typ = value.get("type")
             call_id = value.get("call_id")
             context = {"path": str(path), "line": line, "payload": value}
+            if typ in {
+                "custom_tool_call", "function_call",
+                "custom_tool_call_output", "function_call_output",
+            } and (not isinstance(call_id, str) or not call_id):
+                errors.append(f"Invalid tool call ID at {path}:{line}")
+                continue
             if typ in {"custom_tool_call", "function_call"}:
                 requests.setdefault(call_id, []).append(context)
             elif typ in {"custom_tool_call_output", "function_call_output"}:
@@ -106,7 +112,10 @@ def scan(session_root: Path, events_path: Path) -> dict[str, Any]:
                 "mcp_tool_call",
                 "web_search",
             }:
-                ident = item.get("id", f"line:{line}")
+                ident = item.get("id")
+                if not isinstance(ident, str) or not ident:
+                    errors.append(f"Invalid canonical item ID at {events_path}:{line}")
+                    continue
                 items[ident] = {
                     "line": line,
                     "id": ident,

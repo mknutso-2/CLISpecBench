@@ -128,19 +128,34 @@ class CodexCLIAdapter(AgentAdapter):
         # copy_out() extracts /tmp/codex-events.jsonl → extract_dir/codex-events.jsonl
         event_log = container_fs / "codex-events.jsonl"
         if event_log.is_file():
-            sources.append(event_log.read_text(encoding="utf-8"))
+            try:
+                sources.append(event_log.read_text(encoding="utf-8"))
+            except (OSError, UnicodeError):
+                log.warning("Could not read Codex event log; using other telemetry", exc_info=True)
 
         # Some nested calls are rejected before exec emits a canonical item.
         # Supplement only proven attempts; incomplete evidence invalidates the
         # tool metric without changing authoritative token totals or costs.
-        evidence = scan(container_fs / "sessions", event_log)
-        tool_calls = supplement(evidence, count_tool_calls(sources))["corrected_tool_calls"]
+        tool_calls: int | None = None
+        try:
+            evidence = scan(container_fs / "sessions", event_log)
+            tool_calls = supplement(evidence, count_tool_calls(sources))["corrected_tool_calls"]
+        except Exception:
+            # Optional tool evidence must never suppress independently preserved
+            # token totals when a file cannot be read or its shape is unexpected.
+            log.warning("Codex tool evidence unavailable; retaining token usage", exc_info=True)
         if sources:
             usage = _parse_exec_event_usage(sources, tool_calls)
             if usage is not None:
                 # Older exec streams omit detail available in the session. Only
                 # enrich from a snapshot whose core totals match this turn.
-                rollout = _parse_session_rollout_usage(container_fs, tool_calls)
+                try:
+                    rollout = _parse_session_rollout_usage(container_fs, tool_calls)
+                except Exception:
+                    # Session enrichment is optional when completed-turn usage
+                    # already supplies authoritative totals.
+                    log.warning("Codex session enrichment unavailable", exc_info=True)
+                    rollout = None
                 if rollout is not None and (
                     rollout.input_tokens == usage.input_tokens
                     and rollout.output_tokens == usage.output_tokens

@@ -107,12 +107,24 @@ def supplement(audit: dict[str, Any], baseline: int | None) -> dict[str, Any]:
         pairs.append(rejection)
         batches.append({"id": len(pairs) - 1, "source": source})
     syntax_checks: list[tuple[str, str]] = []
-    seen_other: set[str] = set()
+    seen_other: dict[str, str] = {}
     for failed in audit.get("other_failed_wrappers", []):
         call_id = failed.get("call_id")
-        if call_id in seen_other:
+        if not isinstance(call_id, str) or not call_id:
+            problems.append("failed wrapper lacks a stable call ID")
             continue
-        seen_other.add(call_id)
+        signature = json.dumps(
+            {
+                "requests": [r["payload"] for r in failed.get("requests", [])],
+                "output": failed["output"]["payload"],
+            },
+            sort_keys=True,
+        )
+        if call_id in seen_other:
+            if seen_other[call_id] != signature:
+                problems.append(f"conflicting duplicate failed wrapper: {call_id}")
+            continue
+        seen_other[call_id] = signature
         requests = failed.get("requests", [])
         payloads = {json.dumps(r["payload"], sort_keys=True) for r in requests}
         error_blocks = failed_wrapper_blocks(failed["output"]["payload"])

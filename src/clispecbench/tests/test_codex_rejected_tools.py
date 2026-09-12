@@ -4,6 +4,9 @@ import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest.mock import patch
+
+import pytest
 
 from clispecbench.agents.codex_rejected_tools import supplement
 from clispecbench.agents.codex_tool_evidence import scan
@@ -205,3 +208,128 @@ def test_truncated_session_makes_tool_count_unavailable(tmp_path: Path) -> None:
     evidence = scan(sessions, events)
     assert evidence["evidence_errors"]
     assert supplement(evidence, 2)["corrected_tool_calls"] is None
+
+
+@pytest.mark.parametrize("bad_id", [[], {}, None, "", 7])
+@pytest.mark.parametrize("location", ["session_request", "session_output", "canonical"])
+def test_invalid_ids_only_invalidate_tool_metric(
+    tmp_path: Path, bad_id: Any, location: str,
+) -> None:
+    from clispecbench.agents.codex_cli import CodexCLIAdapter
+
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    event = {
+        "type": "turn.completed",
+        "usage": {"input_tokens": 100, "output_tokens": 20,
+                  "cached_input_tokens": 30, "reasoning_output_tokens": 10},
+    }
+    logs = json.dumps(event) + "\n"
+    if location == "canonical":
+        session_record = {"type": "session_meta"}
+        logs += json.dumps({"type": "item.completed", "item": {
+            "type": "command_execution", "id": bad_id, "command": "true",
+        }}) + "\n"
+    else:
+        kind = "function_call" if location == "session_request" else "function_call_output"
+        session_record = {"type": "response_item", "payload": {
+            "type": kind, "name": "exec", "call_id": bad_id, "arguments": "text(1)",
+        }}
+    (sessions / "s.jsonl").write_text(json.dumps(session_record) + "\n")
+    events = tmp_path / "codex-events.jsonl"
+    events.write_text(logs)
+    evidence = scan(sessions, events)
+    assert evidence["evidence_errors"]
+    assert supplement(evidence, 1)["corrected_tool_calls"] is None
+    adapter = CodexCLIAdapter(model="gpt-5.6-luna")
+    usage = adapter.parse_token_usage(tmp_path, logs)
+    assert usage is not None
+    assert (usage.input_tokens, usage.output_tokens, usage.reasoning_output_tokens) == (100, 20, 10)
+    assert usage.cache_read_input_tokens == 30
+    assert usage.total_tokens == 120
+    assert usage.tool_calls is None
+    assert usage.tool_calls_definition is None
+    assert not usage.is_partial
+    assert adapter.estimate_cost(usage) == round((70 * 0.20 + 30 * 0.02 + 20 * 1.20) / 1e6, 6)
+
+
+@pytest.mark.parametrize("failure", [OSError("evidence unreadable"), TypeError("bad shape")])
+@pytest.mark.parametrize("stage", ["scan", "supplement"])
+def test_evidence_reader_failure_preserves_authoritative_usage(
+    tmp_path: Path, failure: Exception, stage: str,
+) -> None:
+    from clispecbench.agents.codex_cli import CodexCLIAdapter
+
+    logs = json.dumps({"type": "turn.completed", "usage": {
+        "input_tokens": 100, "output_tokens": 20, "cached_input_tokens": 30,
+        "reasoning_output_tokens": 10,
+    }})
+    adapter = CodexCLIAdapter(model="gpt-5.6-luna")
+    baseline = adapter.parse_token_usage(tmp_path, logs)
+    assert baseline is not None
+    with patch(f"clispecbench.agents.codex_cli.{stage}", side_effect=failure):
+        usage = adapter.parse_token_usage(tmp_path, logs)
+    assert usage is not None
+    assert usage == baseline
+    assert adapter.estimate_cost(usage) == adapter.estimate_cost(baseline)
+
+
+@pytest.mark.parametrize("conflict_first", [False, True])
+def test_conflicting_duplicate_other_failure_is_unavailable(conflict_first: bool) -> None:
+    p = pair("await tools.exec_command(")
+    p["rejection_output"]["payload"]["output"][1]["text"] = (
+        "Script error:\nSyntaxError: missing )"
+    )
+    failed: dict[str, Any] = {
+        "call_id": "c", "requests": p["requests"], "output": p["rejection_output"],
+    }
+    conflict = copy.deepcopy(failed)
+    conflict["output"]["payload"]["output"][1]["text"] = (
+        "Script error:\nTypeError: uncertain runtime failure"
+    )
+    audit = CountingTests().audit([])
+    audit["other_failed_wrappers"] = [conflict, failed] if conflict_first else [failed, conflict]
+    result = supplement(audit, 12)
+    assert result["corrected_tool_calls"] is None
+    assert any("conflicting duplicate failed wrapper" in p for p in result["problems"])
+
+
+def test_identical_duplicate_other_failure_is_counted_once() -> None:
+    p = pair("await tools.exec_command(")
+    p["rejection_output"]["payload"]["output"][1]["text"] = (
+        "Script error:\nSyntaxError: missing )"
+    )
+    failed: dict[str, Any] = {
+        "call_id": "c", "requests": p["requests"], "output": p["rejection_output"],
+    }
+    duplicate = copy.deepcopy(failed)
+    duplicate["output"]["path"] = "copied-session"
+    audit = CountingTests().audit([])
+    audit["other_failed_wrappers"] = [failed, duplicate]
+    result = supplement(audit, 12)
+    assert result["corrected_tool_calls"] == 12
+    assert result["confirmed_preexecution_syntax_rejections"] == ["c"]
+
+
+@pytest.mark.parametrize("location", ["sessions/s.jsonl", "codex-events.jsonl"])
+def test_invalid_utf8_evidence_preserves_completed_turn_totals(
+    tmp_path: Path, location: str,
+) -> None:
+    from clispecbench.agents.codex_cli import CodexCLIAdapter
+
+    logs = json.dumps({"type": "turn.completed", "usage": {
+        "input_tokens": 100, "output_tokens": 20, "cached_input_tokens": 30,
+        "reasoning_output_tokens": 10,
+    }})
+    (tmp_path / "sessions").mkdir()
+    (tmp_path / "sessions/s.jsonl").write_text('{"type":"session_meta"}\n')
+    (tmp_path / "codex-events.jsonl").write_text(logs)
+    (tmp_path / location).write_bytes(b"\xff")
+    usage = CodexCLIAdapter().parse_token_usage(tmp_path, logs)
+    assert usage is not None
+    assert usage.total_tokens == 120
+    assert usage.reasoning_output_tokens == 10
+    assert usage.cache_read_input_tokens == 30
+    assert usage.tool_calls is None
+    assert usage.source == "codex_exec_turn_completed"
+    assert not usage.is_partial
