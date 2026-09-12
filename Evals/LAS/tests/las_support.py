@@ -365,7 +365,9 @@ def point_for_format(point_format: int, *, extra_bytes: bytes = b"") -> dict[str
     if point_format in WAVEFORM_FORMATS:
         point["waveform"] = {
             "descriptor_index": 1,
-            "byte_offset_to_waveform_data": 2,
+            # LAS 1.4 §3, Point Format 4: offset starts at the waveform EVLR
+            # header, not its payload. The first packet follows its 60 bytes.
+            "byte_offset_to_waveform_data": 60,
             "waveform_packet_size_in_bytes": 4,
             "return_point_waveform_location": 8.5,
             "xt": _f32(0.1),
@@ -1145,7 +1147,18 @@ def encode_request_for_inspect(dataset: dict[str, Any]) -> dict[str, Any]:
 
 
 def encode_request_for_render(dataset: dict[str, Any]) -> dict[str, Any]:
-    return {"action": "render", "dataset": clone(dataset)}
+    request_dataset = clone(dataset)
+    # _evlr_hint belongs only to our binary-fixture builder. The public JSON
+    # contract does not require submissions to tolerate this private field.
+    # Strip only that marker: normalizing records here would conceal malformed
+    # values deliberately supplied by render validation tests.
+    for field in ("vlrs", "evlrs"):
+        records = request_dataset.get(field)
+        if isinstance(records, list):
+            for record in cast(list[Any], records):
+                if isinstance(record, dict):
+                    cast(dict[str, Any], record).pop("_evlr_hint", None)
+    return {"action": "render", "dataset": request_dataset}
 
 
 def payload_dataset(payload: dict[str, Any]) -> dict[str, Any]:

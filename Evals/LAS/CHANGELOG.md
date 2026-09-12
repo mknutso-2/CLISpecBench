@@ -1,5 +1,25 @@
 # Changelog
 
+## v2.0.2 — 2026-09-12
+
+- Repair the shared positive waveform fixture: the byte offset is relative to
+  the Waveform Data Packet EVLR header, so its first packet starts at byte 60,
+  not byte 2. The former fixture made correct range validation fail unrelated
+  header, point, metadata and render observations.
+- Add four inspect/render checks for packets overlapping the EVLR header or
+  extending beyond its payload. Fix the Python reference's missing interval
+  validation while keeping waveform sample layout and padding out of scope.
+- Accept both public-compatible JSON representations for an absent waveform,
+  empty classification descriptions, and the final GeoASCII terminator.
+  Preserve meaningful data, embedded separators, GeoKey value offsets and
+  exact nonempty descriptions; malformed or missing observations still fail.
+- Remove the fixture builder's private `_evlr_hint` field from render requests.
+  It is not part of the public record schema; requiring acceptance of this
+  leaked field penalized otherwise valid render implementations.
+- The hidden suite has 223 cases. Prompts and supplied documentation are
+  unchanged. Existing generated source can be regraded without new inference.
+  See `docs/validation/LAS-2.0.2.md` for controls and provenance.
+
 ## v2.0.1 — 2026-09-11
 
 - Validation requires an observable deliberate rejection; a crash or internal-error response no longer earns invalid-input credit. Exact envelope details remain in schema gates.

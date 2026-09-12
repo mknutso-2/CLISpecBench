@@ -88,7 +88,19 @@ def test_inspect_geotiff_triplet_records(
     assert payload is not None
     observed = payload_dataset(payload)
     expected = canonical_dataset(dataset)
-    assert _vlrs_from(observed) == _vlrs_from(expected)
+    actual_records = [dict(record) for record in _vlrs_from(observed)]
+    expected_records = _vlrs_from(expected)
+    assert len(actual_records) == len(expected_records)
+    for actual, reference in zip(actual_records, expected_records, strict=True):
+        if reference["kind"] == "geo_ascii_params":
+            # The public JSON schema says only `text`. LAS defines NUL-separated
+            # binary strings but does not select whether JSON retains the final
+            # terminator. Preserve every embedded separator and other character.
+            text = cast(str, reference["text"])
+            allowed = [text, text[:-1]] if text.endswith("\x00") else [text]
+            assert actual["text"] in allowed
+            actual["text"] = text
+    assert actual_records == expected_records
 
 
 def test_render_geotiff_triplet_records(
@@ -102,7 +114,18 @@ def test_render_geotiff_triplet_records(
     assert payload is not None
     rendered = payload_las_bytes(payload)
     expected = encode_dataset(dataset)
-    assert _vlr_payloads(rendered) == _vlr_payloads(expected)
+    actual_records = _vlr_payloads(rendered)
+    expected_records = _vlr_payloads(expected)
+    assert len(actual_records) == len(expected_records)
+    for actual, reference in zip(actual_records, expected_records, strict=True):
+        assert actual[:2] == reference[:2]
+        if reference[:2] == ("LASF_Projection", 34737):
+            # A renderer whose JSON convention excludes the final terminator
+            # adds one to this fixture's text. Only that single final byte may
+            # differ: GeoKey value offsets, embedded separators and content remain exact.
+            assert actual[2] in (reference[2], reference[2] + b"\x00")
+        else:
+            assert actual[2] == reference[2]
 
 
 def test_inspect_wkt_pair_records(
@@ -119,6 +142,24 @@ def test_inspect_wkt_pair_records(
     assert _vlrs_from(observed) == _vlrs_from(expected)
 
 
+def _classification_descriptions(record: dict[str, Any]) -> dict[int, str]:
+    # LAS always stores 256 classification structs. The public JSON contract
+    # allows omitted classes to mean empty descriptions on render and never
+    # requires inspect to omit those empty entries. Normalize only that choice.
+    entries = record["entries"]
+    assert isinstance(entries, list)
+    descriptions: dict[int, str] = {}
+    for raw_entry in cast(list[Any], entries):
+        assert isinstance(raw_entry, dict)
+        entry = cast(dict[str, Any], raw_entry)
+        number, description = entry["class_number"], entry["description"]
+        assert type(number) is int and 0 <= number <= 255
+        assert isinstance(description, str)
+        assert number not in descriptions, "duplicate classification entry"
+        descriptions[number] = description
+    return {number: text for number, text in descriptions.items() if text != ""}
+
+
 def test_inspect_classification_lookup_and_text_area_description(
     submission_command: Sequence[str],
     tmp_path: Path,
@@ -130,7 +171,14 @@ def test_inspect_classification_lookup_and_text_area_description(
     assert payload is not None
     observed = payload_dataset(payload)
     expected = canonical_dataset(dataset)
-    assert _vlrs_from(observed) == _vlrs_from(expected)
+    actual_records = [dict(record) for record in _vlrs_from(observed)]
+    expected_records = [dict(record) for record in _vlrs_from(expected)]
+    assert len(actual_records) == len(expected_records)
+    for actual, reference in zip(actual_records, expected_records, strict=True):
+        if reference["kind"] == "classification_lookup":
+            actual["entries"] = _classification_descriptions(actual)
+            reference["entries"] = _classification_descriptions(reference)
+    assert actual_records == expected_records
 
 
 def test_inspect_unknown_vlr_and_evlr_as_opaque(

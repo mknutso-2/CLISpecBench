@@ -942,6 +942,20 @@ def _validate_waveform_semantics(
                 "Waveform descriptor index does not reference an existing "
                 "Waveform Packet Descriptor record",
             )
+        # LAS 1.4 Point Format 4 measures packet offsets from the beginning
+        # of the Waveform Packet Data header, including its 60-byte EVLR
+        # header. Packet contents remain opaque, but the referenced byte
+        # interval must be in the stored payload, not in the header/outside it.
+        byte_offset = _get_int(waveform, "byte_offset_to_waveform_data")
+        packet_size = _get_int(waveform, "waveform_packet_size_in_bytes")
+        if byte_offset < 60:
+            raise LasError("invalid_document", "Waveform packet offset points into its EVLR header")
+        if internal_waveforms and waveform_data_records:
+            payload_end = 60 + len(waveform_data_records[0].payload)
+            if byte_offset + packet_size > payload_end:
+                raise LasError(
+                    "invalid_document", "Waveform packet extends beyond its EVLR payload"
+                )
 
     if waveform_data_records:
         if len(waveform_data_records) > 1:

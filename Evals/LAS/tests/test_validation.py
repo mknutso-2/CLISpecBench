@@ -70,6 +70,32 @@ def _render_was_rejected(
     return _was_rejected(result, payload)
 
 
+@pytest.mark.parametrize("offset, size", [(2, 4), (60, 5)])
+def test_inspect_rejects_waveform_packet_outside_payload(
+    submission_command: Sequence[str], tmp_path: Path, offset: int, size: int
+) -> None:
+    # LAS 1.4 Point Format 4: offsets include the 60-byte EVLR header.
+    # These independently probe header overlap and end-of-payload overflow;
+    # no assumption about the opaque packet's sample layout is involved.
+    dataset = dataset_for_point_format(9)
+    waveform = dataset["points"][0]["waveform"]
+    waveform["byte_offset_to_waveform_data"] = offset
+    waveform["waveform_packet_size_in_bytes"] = size
+    assert _inspect_was_rejected(submission_command, tmp_path, encode_dataset(dataset))
+
+
+@pytest.mark.parametrize("offset, size", [(2, 4), (60, 5)])
+def test_render_rejects_waveform_packet_outside_payload(
+    submission_command: Sequence[str], tmp_path: Path, offset: int, size: int
+) -> None:
+    # The same documented interval invariant also applies to render requests.
+    dataset = dataset_for_point_format(9)
+    waveform = dataset["points"][0]["waveform"]
+    waveform["byte_offset_to_waveform_data"] = offset
+    waveform["waveform_packet_size_in_bytes"] = size
+    assert _render_was_rejected(submission_command, tmp_path, dataset)
+
+
 def test_rejects_invalid_file_signature(
     submission_command: Sequence[str],
     tmp_path: Path,
