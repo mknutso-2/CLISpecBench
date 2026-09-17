@@ -11,6 +11,7 @@ from pathlib import Path
 
 from iges_support import make_entity, single_line_document, wrap_entities, write_iges_from_json
 from raw_iges_support import physical_lines_by_section
+from topology_support import open_triangle_document
 
 
 def test_global_strings_use_hollerith_encoding_in_g_section(
@@ -96,19 +97,34 @@ def test_string_values_in_parameter_records_use_hollerith_encoding(
 def test_logical_values_in_parameter_records_use_zero_and_one(
     submission_command: Sequence[str], tmp_path: Path
 ) -> None:
-    doc = wrap_entities(
-        [
-            make_entity(
-                de_index=1,
-                entity_type=510,
-                form=1,
-                data={"surf": 0, "n": 0, "outer_loop_flag": True, "loops": []},
-            ),
-        ]
-    )
-    iges_path = write_iges_from_json(submission_command, doc, tmp_path, name="logical-format")
-
-    p_body = physical_lines_by_section(iges_path)["P"][0][:64].rstrip()
-    assert p_body.startswith("510,0,0,1")
-    assert "TRUE" not in p_body
-    assert "FALSE" not in p_body
+    # §4.146 requires a real surface, N > 0 loops and a Shell parent. An
+    # empty Face is invalid before its boolean encoding can be observed.
+    # Reuse the independently validated topology; do not parse/evaluate it
+    # through the submission or assert unrelated supporting entity fields.
+    doc, ids = open_triangle_document()
+    face = next(record for record in doc["entities"] if record["de_index"] == ids["face"])
+    for flag in (True, False):
+        # Both values are legal: false leaves the outer loop undesignated.
+        face["entity"]["data"]["outer_loop_flag"] = flag
+        iges_path = write_iges_from_json(
+            submission_command, doc, tmp_path, name=f"logical-format-{int(flag)}"
+        )
+        # A writer may renumber DEs and split parameter data across lines.
+        # Group by the physical owner and identify the sole Face by type.
+        by_owner: dict[int, str] = {}
+        for line in physical_lines_by_section(iges_path)["P"]:
+            owner = int(line[64:72])
+            by_owner[owner] = by_owner.get(owner, "") + line[:64]
+        fields = next(
+            body.split(";", 1)[0].split(",")
+            for body in by_owner.values()
+            if int(body.split(",", 1)[0].strip()) == 510
+        )
+        token = fields[3].strip()
+        # §§2.2.2.6/2.2.3: unsigned integer 1/0, with an empty field also
+        # permitted for implicit FALSE. Ignore legal trailing comments and
+        # unrelated field encodings; real literals and TRUE/FALSE must fail.
+        if not flag and not token:
+            continue
+        assert re.fullmatch(r"[0-9]+", token), f"Invalid Logical token: {token!r}"
+        assert int(token) == int(flag), f"Wrong Logical value: {token!r}"

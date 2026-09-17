@@ -1,5 +1,18 @@
 # IGES Changelog
 
+## v1.0.18 — 2026-09-17
+
+- Repair the remaining invalid positive in the Logical writer-format test:
+  its Face510 had no surface, loops or Shell parent. Reuse the independently
+  validated triangular open-shell context and inspect only the Face boolean
+  token, without requiring submitted parsing or geometric evaluation.
+- Exercise both legal outer-loop flag values, allow implicit FALSE and legal
+  integer formatting, and tolerate DE renumbering, physical line splitting
+  and trailing comments. The test retains its node ID and the suite remains
+  261 cases. No model-visible input or generated submission changes.
+- See `docs/validation/IGES-1.0.18.md` for source authority, independent review,
+  reference checks, negative controls and saved-submission regrade evidence.
+
 ## v1.0.17 — 2026-09-12
 
 - Repair the shared frozen Global-section input: all 44 documents used illegal
