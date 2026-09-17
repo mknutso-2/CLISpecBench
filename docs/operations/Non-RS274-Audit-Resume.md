@@ -134,10 +134,26 @@ The 55-result dashboard check preserves all 1,830 preceding rows and verifies
 the new row against publication; 1,169,304 test records were generated. Evidence
 is in `work/non-rs274-audit/dashboard-55-validation.json`.
 
-There are **57 cells remaining**, including five excluded quota attempts that
-need fresh retries. The 55 qualifying runs total **$242.356759** in recorded
+BibTeX C++ / Sol / Max completed and is reviewed/published at **379/386**,
+bringing coverage to **56/112**. Seven focused failures reflect five causes:
+shared macro/callable namespaces, past-end name selection, extra name commas,
+preamble separators, and output whitespace flushing. All eight official
+canonical-style parity cases pass. Supplied authoritative WEB rules support
+the failures; no rubric change is needed and there is no broad prerequisite
+cascade. Clean builds and sanitizer executions are corroborated. Many local
+probes only print output; one visibly preserves trailing whitespace despite
+the model's broad passing-check claim, which publication notes qualify.
+Accounting matches **123 tool calls**, **45,178 reasoning tokens**, and a
+**$11.557364** API-equivalent estimate. Its UID is
+`81ffee84-ff8e-47d1-a513-4a2c6b7dfbc0`.
+The 56-result dashboard check preserves all 1,831 preceding rows and verifies
+the new publication row; 1,169,690 test records were generated. Evidence is in
+`work/non-rs274-audit/dashboard-56-validation.json`.
+
+There are **56 cells remaining**, including five excluded quota attempts that
+need fresh retries. The 56 qualifying runs total **$253.914123** in recorded
 API-equivalent estimates; excluded attempts still total $54.228829. The next
-selected submission is BibTeX C++ / Sol / Max; inspect its ledger before
+selected submission is BibTeX JavaScript / Sol / Max; inspect its ledger before
 launching to avoid a duplicate. Continue one submission at a time.
 
 ## Stop condition and current state
