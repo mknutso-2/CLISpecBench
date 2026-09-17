@@ -54,10 +54,23 @@ control summaries and unchanged-input hashes are retained in
 ## Saved submissions and limits
 
 Original source, transcripts, usage and generation grades remain immutable.
-Fresh-source regrades under this committed rubric will be recorded separately
-under `regraded_results/iges/1.0.18/` before current publication. They make no
-new generation calls. Publication must retain the original 1.0.17 score as
-generation history and distinguish it from the new scoring version.
+Fresh-source regrades under the committed rubric are published separately in
+`regraded_results/iges/1.0.18/gpt-6-astra_max/` with original-result/source
+hashes, exact grading provenance and complete prior publication payloads.
+All ran sequentially under the pinned image, with no new generation calls.
+
+| Astra Max submission | 1.0.17 score | 1.0.18 score | Change |
+|---|---:|---:|---|
+| Python | 261/261 | 261/261 | All outcomes unchanged |
+| C++ | 259/261 | 259/261 | All outcomes unchanged |
+| JavaScript | 259/261 | 260/261 | Only repaired Logical fixture changes to pass |
+
+JavaScript still incorrectly accepts `0H`. C++ both accepts and writes `0H`;
+those are separate reader/writer observations of one shared rule error.
+Python passes both. Its older generation score of 170/260 and previous
+regrade history also remain preserved. The JavaScript generation used 41
+tool calls, 23,051 reasoning tokens and a recorded $8.583752 API-equivalent
+estimate; none of that accounting changed during regrading.
 
 The legal topology remains a prerequisite to observing its writer field;
 the test cannot eliminate every dependency of a valid IGES file. It avoids

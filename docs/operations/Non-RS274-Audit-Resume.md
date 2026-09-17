@@ -63,7 +63,20 @@ this symmetric defect. External CAD samples were unavailable, as the final
 message acknowledges. Usage matches preserved events: 53 underlying tool calls,
 31,221 reasoning tokens, and a $10.873110 recorded API-equivalent estimate.
 Its UID is `55906e04-d378-4f80-8b79-150a110517d1`.
-The next selected submission is IGES JavaScript / Astra / Max; inspect its ledger
+IGES JavaScript / Astra / Max completed and is reviewed/published at **260/261**
+under the tests-only IGES **1.0.18** patch, bringing coverage to **52/112**.
+Its original 259/261 exposed a remaining invalid Face fixture; the corrected
+test uses a validated topology and directly observes Logical encoding.
+Reference checks, deliberate mutations and independent review support the fix.
+Exactly one outcome changes; the real `0H` reader defect remains. The source,
+public inputs and generation accounting remain unchanged: 41 underlying tool
+calls, 23,051 reasoning tokens, and a $8.583752 API-equivalent estimate.
+Its UID is `97909084-fe80-42ff-b359-2a30798f8f67`.
+Existing Astra IGES Python and C++ were regraded sequentially to 1.0.18 and
+remain 261/261 and 259/261, respectively, with all individual outcomes unchanged.
+Original grades and complete prior publication/audit chains are preserved.
+See [IGES 1.0.18 validation](../validation/IGES-1.0.18.md).
+The next selected submission is IGES Rust / Astra / Max; inspect its ledger
 before launching to avoid a duplicate.
 
 ## Stop condition and current state
@@ -111,7 +124,7 @@ the local commits and artifacts when reconciling future remote changes.
   [build-and-lint skill](../../.codex/skills/build-and-lint/SKILL.md)
 
 Final scoring versions: WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
-MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, IGES **1.0.17**. Their
+MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, IGES **1.0.18**. Their
 dated changelogs and linked validation notes explain source authority,
 reference results, negative controls, permitted alternatives, and exact
 retained-submission changes. All 28 assembled model inputs remain unchanged.
