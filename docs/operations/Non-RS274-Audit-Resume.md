@@ -1,5 +1,41 @@
 # Resume the non-RS274 audit and GPT collection
 
+## Current authorization: serial work resumed
+
+On 2026-09-16 (local time), the user authorized continuation with **one
+submission at a time**. Finish the four retained reviews sequentially before
+generating more submissions, then launch exactly one selected missing cell,
+wait for its worker to exit, and review/publish or explicitly exclude it before
+starting another. No parallel collection queue is authorized. The local
+`work/non-rs274-audit/SERIAL_RESUME.json` records this instruction and the
+hash-preserved archive of the prior pause/queue state. A remaining pause marker
+is a dispatch gate while saved reviews are completed, not a prohibition on
+the newly authorized review work.
+
+All four workers from the September 12 pause exited normally. Their original
+scores are GEDCOM Rust 212/212, ICal C++ 466/468, ICal JavaScript 467/468, and
+ICal Rust 465/468; review and publication status must be read from the current
+ledger. The completed local drain inventory is `final-drain-results.json`.
+The September 12 snapshots below remain historical checkpoints.
+
+The four retained submissions have now been reviewed and published locally,
+bringing coverage to **47/112**. Their raw scores are unchanged. The ICal
+failures are isolated diagnostic omissions: all three languages miss the
+EXDATE/orphan warning, C++ and Rust miss the absent alarm-trigger warning, and
+Rust also omits the forbidden `RECURRENCE-ID` diagnostic for iTIP ADD. Reviews
+checked these expectations against the supplied application contract and RFCs;
+none justified another scoring change. Full accounting and isolation checks
+passed for all four. Independent content reviews and publication checks are
+retained in each local ledger directory. The four original API-equivalent
+estimates sum to **$31.597644**; these are existing generation costs, not new
+inference caused by reviewing them.
+
+The 47-result dashboard check verified that all 1,819 preceding rows remained
+unchanged and that four new rows match their publications. Evidence is in
+`work/non-rs274-audit/dashboard-47-validation.json`. The next selected new
+submission is MARC21 C++ / Astra / Max; inspect its ledger before launching to
+avoid a duplicate.
+
 ## Stop condition and current state
 
 On 2026-09-12 the user requested winding down to conserve usage. **Do not
@@ -153,9 +189,10 @@ unchanged public input, and requires explicit apps disablement. A quota retry
 needs `--retry-excluded`; this archives the exact excluded ledger and starts a
 fresh generation. Do not reuse its partial source or change its old score.
 
-The optional `collect_remaining.py --run --max-active 4` queue would dispatch
+The historical `collect_remaining.py --run --max-active 4` queue would dispatch
 **all remaining inventoried cells**, pausing on generation/grading errors.
-It never publishes automatically. Do not use it merely to inspect status.
+It never publishes automatically. **Do not restart it under the current
+one-submission-at-a-time authorization.** It also cannot be used merely to inspect status.
 `start_queue.py` opens `collection-queue.log` exclusively, so it cannot be rerun
 over the existing log. Before an authorized full-queue restart, archive the old
 log, launch record, status, plan, and pause marker with hashes; remove only the
