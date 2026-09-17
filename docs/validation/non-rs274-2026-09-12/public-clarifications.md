@@ -7,7 +7,7 @@ tests, references, results, or the authority used for existing scores. No
 external specification was substituted for the files supplied to the models.
 
 The current revisions are WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
-MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, and IGES **1.0.19**. GEDCOM
+MARC21 **3.0.2**, BibTeX **1.2.5**, ICal **3.0.2**, and IGES **1.0.19**. GEDCOM
 4.0.3 is integrated in commit `e6a13bf`; its minimal VOID fixture is therefore
 current behavior, not a pending proposal. Each task's model-visible inputs
 remain unchanged through these scoring repairs.
@@ -151,7 +151,7 @@ Evidence: [MARC21 validation][marc-validation].
    source. Accepting the contradictory example would require an explicit new
    exception.
 
-## BibTeX 1.2.4
+## BibTeX 1.2.5
 
 Evidence: [final summary-versus-WEB audit][bib-validation]. The [base prompt,
    lines 24–28][bib-base] and [summary introduction, lines 28–32][bib-summary]

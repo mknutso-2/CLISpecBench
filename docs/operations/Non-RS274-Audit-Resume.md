@@ -1,5 +1,49 @@
 # Resume the non-RS274 audit and GPT collection
 
+## Latest checkpoint — September 17, 2026
+
+Coverage is **57/112 reviewed local publications** (Astra 28, Sol 12, Terra 10,
+Luna 7); **55 remain**. No generation is active. The sequential authorization
+below remains in effect, but new dispatch is held for capacity: the account
+reported **99% weekly usage** at 06:14 CDT, with its scheduled reset at
+**September 19, 04:41:46 CDT**. Recheck actual limits before spending more model
+usage. No reset credit or paid purchase is authorized. The next selected cell
+is **BibTeX Rust / Sol / Max**, after confirming this checkpoint and worker state.
+Do not launch a duplicate JavaScript run or restart the parallel queue.
+
+Sol Max BibTeX JavaScript completed normally with original grade 314/386. Its
+review exposed another shared scoring prerequisite. The supplied authoritative
+WEB discards pending output at EOF, contrary to the summary's must-flush prose;
+the existing public authority hierarchy resolves the conflict. The private
+**BibTeX 1.2.5** repair explicitly flushes semantic probes and corrects the one
+EOF test. Corrected reference 386/386, old-reference mutation 385/386, five native
+oracle probes, strict lint/type checks and independent review support the fix.
+The submission now scores **383/386**: 69 false failures disappear, while two
+namespace observations and one past-end-name defect remain. Public inputs,
+submitted source and generation records stay unchanged.
+
+The run UID is `acd96c79-8fa0-402c-b3ee-875a25629538`; usage is 178 tool calls,
+81,166 reasoning tokens (within 137,070 output tokens), and a **$14.191125**
+API-equivalent estimate. Content review corroborates final syntax/style checks
+but qualifies printed probes and one locally failed assertion hidden by a later
+successful cleanup command. All eight official canonical-style parity cases pass.
+The original 314/386 report is preserved, with a separate official regrade.
+
+The seven other retained qualifying BibTeX submissions were regraded one at a
+time; each loses exactly the erroneous EOF point, with all other 385 outcomes
+unchanged. Complete previous publication payloads and audit hashes are retained.
+See [BibTeX 1.2.5 validation](../validation/BibTeX-1.2.5.md) and the refreshed
+[score matrix](../validation/non-rs274-2026-09-12/README.md).
+Current qualifying estimates total **$268.105248**; the six excluded attempts
+remain **$54.228829**. These estimates are not subscription charges.
+
+The scoring fix is commit `ab4e09f`; publication/checkpoint changes follow it
+locally. No push was made. Validation, native probes and serial regrade logs are
+in `work/bibtex-eof-followup`; original generations and the review ledgers remain
+in the locations below. `LAUNCHES_PAUSED` records the capacity hold and next cell.
+The historical progress paragraphs below explain earlier checkpoints; the
+current matrix and this section supersede their old counts and scoring versions.
+
 ## Current authorization: serial work resumed
 
 On 2026-09-16 (local time), the user authorized continuation with **one
@@ -201,7 +245,7 @@ the local commits and artifacts when reconciling future remote changes.
   [build-and-lint skill](../../.codex/skills/build-and-lint/SKILL.md)
 
 Final scoring versions: WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
-MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, IGES **1.0.19**. Their
+MARC21 **3.0.2**, BibTeX **1.2.5**, ICal **3.0.2**, IGES **1.0.19**. Their
 dated changelogs and linked validation notes explain source authority,
 reference results, negative controls, permitted alternatives, and exact
 retained-submission changes. All 28 assembled model inputs remain unchanged.

@@ -80,3 +80,34 @@ one at a time. Ruff, strict Pyright and `git diff --check` pass. Independent
 review of the private test/reference changes found no correctness or contract
 blocker. Saved-source official regrades and their publication hash chains are
 recorded separately after committing this scoring revision.
+
+## Official retained-source regrades
+
+Committed rubric: `ab4e09f`. Test-suite SHA256:
+`216715b38acdae4159e87cf933c870097bf74c06da13e880dcb720b37d59da92`. Each submission was graded, checked and published before the
+next saved submission was started. No new inference was used.
+
+| Model | Language | Prior 1.2.4 | Corrected 1.2.5 | Changed outcomes |
+| --- | --- | ---: | ---: | --- |
+| gpt-5.6-sol Max | js | 314/386 | 383/386 | 69 fail → pass |
+| gpt-5.6-sol Max | cpp | 379/386 | 378/386 | EOF only: pass → fail |
+| gpt-6-astra Max | cpp | 379/386 | 378/386 | EOF only: pass → fail |
+| gpt-6-astra Max | js | 382/386 | 381/386 | EOF only: pass → fail |
+| gpt-5.6-sol Max | py | 381/386 | 380/386 | EOF only: pass → fail |
+| gpt-5.6-terra Max | py | 374/386 | 373/386 | EOF only: pass → fail |
+| gpt-6-astra Max | py | 380/386 | 379/386 | EOF only: pass → fail |
+| gpt-6-astra Max | rs | 383/386 | 382/386 | EOF only: pass → fail |
+
+For the seven previously published submissions, all other **385 outcomes are
+identical** (2,695 observations). Generation metadata, raw-result/source hashes,
+token/cost accounting and the prior complete publication/audit payloads remain
+preserved. The new JavaScript publication exactly matches its independently
+reviewed candidate grade; its original report remains 314/386. The public input
+manifest verifies all 28 task/language inputs against the original inventory.
+
+Portable audits are committed under `regraded_results/bibtex/1.2.5/` and current
+publication records under `published_results/bibtex-{language}/`. Full local
+regrades, logs, content reviews and the comparison manifest remain under
+`work/non-rs274-audit/regrades/bibtex/1.2.5/` and `work/bibtex-eof-followup/`.
+The originals cannot be reconstructed from the Git summaries alone; preserve
+`transient_results` and the local work directories.
