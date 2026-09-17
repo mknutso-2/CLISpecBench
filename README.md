@@ -28,10 +28,10 @@ What makes CLISpecBench unique:
 - **Repeated-Run Scoring**: Results are generated multiple times for each published agent/model/effort configuration. A full sweep is typically 3x per language across all 4 languages, for a total of 12 runs per agent/model/effort/eval grouping, to capture variability and consistency.
 
 Below are CLISpecBench results for the flagship RS274 eval, refreshed September 16, 2026
-using the v3.2.2 grading rubric. The screenshots include GPT-5.6 Luna, Sol, Terra,
-and GPT-6 Astra at low, high, and max effort. The new API-only runs and earlier
-web-enabled runs appear in separate panels, with language coverage and run counts
-shown for each. Full results are available in the [interactive results dashboard](https://mknutso-2.github.io/CLISpecBench/web/results-dashboard.html), which lets you slice results by eval, language, agent/model/effort grouping, and more.
+using the v3.2.2 grading rubric. The screenshots show only the highest tested
+reasoning level for each model, including max effort for GPT-5.6 Luna, Sol,
+Terra, and GPT-6 Astra, together in one graph and table. Captions note differences
+in network access, language coverage, and run counts. Full results are available in the [interactive results dashboard](https://mknutso-2.github.io/CLISpecBench/web/results-dashboard.html), which lets you slice results by eval, language, agent/model/effort grouping, and more.
 
 ![RS274 Results Graph](assets/rs274-results-graph.png)
 ![RS274 Results Table](assets/rs274-results-table.png)
