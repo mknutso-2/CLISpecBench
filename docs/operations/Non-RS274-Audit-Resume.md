@@ -120,10 +120,24 @@ The 54-result dashboard check confirms all 1,829 preceding rows are unchanged
 and the new row matches its publication, with 1,169,081 generated test records.
 Evidence is in `work/non-rs274-audit/dashboard-54-validation.json`.
 
-There are **58 cells remaining**, including five excluded quota attempts that
-need fresh retries. The 54 qualifying runs total **$237.764257** in recorded
+LAS Rust / Sol / Max then completed and is reviewed/published at **219/223**,
+bringing coverage to **55/112**. It has the same shared absent-waveform metadata
+defect across four formats; public authority supports the tests. Final release
+build and CLI probes are corroborated, while `cargo test` ran zero tests and
+rustfmt/Clippy were unavailable. Selected synthetic probes do not establish
+external interoperability. The current harness correctly recorded **65 tool
+calls**, including one rejected patch, directly in the original result; no
+backfill or regrade was needed. Usage matches preserved evidence: **28,300
+reasoning tokens** and a **$4.592502** API-equivalent estimate. Its UID is
+`066b6ee1-e620-41f3-8142-a1702196d614`.
+The 55-result dashboard check preserves all 1,830 preceding rows and verifies
+the new row against publication; 1,169,304 test records were generated. Evidence
+is in `work/non-rs274-audit/dashboard-55-validation.json`.
+
+There are **57 cells remaining**, including five excluded quota attempts that
+need fresh retries. The 55 qualifying runs total **$242.356759** in recorded
 API-equivalent estimates; excluded attempts still total $54.228829. The next
-selected submission is LAS Rust / Sol / Max; inspect its ledger before
+selected submission is BibTeX C++ / Sol / Max; inspect its ledger before
 launching to avoid a duplicate. Continue one submission at a time.
 
 ## Stop condition and current state
