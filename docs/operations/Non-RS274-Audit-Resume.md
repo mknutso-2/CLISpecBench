@@ -40,8 +40,13 @@ Its 94 internal regression checks and 48 CLI checks are corroborated, along
 with 40 underlying tool calls, 12,274 reasoning tokens, and a $5.547096 recorded
 API-equivalent estimate. The unchanged scoring rubric and grader image were
 verified. Its UID is `dfe849c7-c762-4104-b6dc-e1a33cbf617e`.
-The next selected submission is MARC21 JavaScript / Astra / Max; inspect its
-ledger before launching to avoid a duplicate.
+MARC21 JavaScript / Astra / Max then completed normally and is reviewed and
+published at **2900/2900**, bringing coverage to **49/112**. Its 30 self-test
+groups and isolated-output-copy checks are corroborated, together with 39
+underlying tool calls, 12,048 reasoning tokens, and a $6.413580 recorded
+API-equivalent estimate. Its UID is `70e4aee1-6323-4865-8bbe-a69903f61149`.
+The next selected submission is MARC21 Rust / Astra / Max; inspect its ledger
+before launching to avoid a duplicate.
 
 ## Stop condition and current state
 
