@@ -32,9 +32,16 @@ inference caused by reviewing them.
 
 The 47-result dashboard check verified that all 1,819 preceding rows remained
 unchanged and that four new rows match their publications. Evidence is in
-`work/non-rs274-audit/dashboard-47-validation.json`. The next selected new
-submission is MARC21 C++ / Astra / Max; inspect its ledger before launching to
-avoid a duplicate.
+`work/non-rs274-audit/dashboard-47-validation.json`.
+
+The first fresh serial generation, MARC21 C++ / Astra / Max, completed normally
+and is reviewed/published at **2900/2900**, bringing coverage to **48/112**.
+Its 94 internal regression checks and 48 CLI checks are corroborated, along
+with 40 underlying tool calls, 12,274 reasoning tokens, and a $5.547096 recorded
+API-equivalent estimate. The unchanged scoring rubric and grader image were
+verified. Its UID is `dfe849c7-c762-4104-b6dc-e1a33cbf617e`.
+The next selected submission is MARC21 JavaScript / Astra / Max; inspect its
+ledger before launching to avoid a duplicate.
 
 ## Stop condition and current state
 

@@ -1,6 +1,6 @@
 # Non-RS274 scoring audit and GPT coverage
 
-Checkpoint: 2026-09-17T03:09:15.043621+00:00. Local implementation revision `37870bcf3d580e2e2acab1273387a49548d617b2`. Results are in the local publication tree; no push has been made for this task.
+Checkpoint: 2026-09-17T03:42:00.362053+00:00. Local implementation revision `0a9f5618c9e486ad229cd4e30ee79e035a56cbb1`. Results are in the local publication tree; no push has been made for this task.
 
 The user resumed work on September 16 with one submission at a time: finish each retained review before new generation, then finish and review each new run before starting another. The previous parallel queue remains disabled. See the [resume instructions](../../operations/Non-RS274-Audit-Resume.md).
 
@@ -20,7 +20,7 @@ Failure amplification was material. One illegal shared IGES Global token caused 
 
 Independent subagents reviewed source/spec alignment and candidate changes, including counterexamples and explicit permissions. Final ICal/BibTeX tests match reviewed candidates byte-for-byte; IGES differs only by three import-format blank-line edits with identical ASTs. Official Docker regrades reproduce the independently reviewed test outcomes. Reference and mutation-control results, limitations and source anchors appear in the linked records. The full applicable harness suite passed 359 tests plus 6 subtests; three host-Cargo cases were skipped and 23 Docker/model cases were deselected. The grader-image patch also passed a live offline image-identity probe and 119 independently rerun targeted checks. Strict Pyright and Ruff passed for the edited code. Rejected-tool evidence failures now leave authoritative token usage intact, and separate replacement guards verify prior audit contents as well as file hashes.
 
-## Coverage: 47 of 112 missing cells recorded
+## Coverage: 48 of 112 missing cells recorded
 
 The inventory already contained three runs per task/language for GPT-5.5, GPT-5.4, GPT-5.4-mini, GPT-5.3-Codex and GPT-5.2 at their configured top efforts. Astra, Sol, Terra and Luna had no published coverage on these tasks. This collection targets one Max run per missing cell; it does not imply three-repeat coverage, other reasoning efforts, or every possible GPT model. Earlier non-RS274 source artifacts were unavailable locally, so historical rows were not silently rescored.
 
@@ -46,7 +46,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |las-js|223/223|Pending|Pending|Pending|
 |las-py|223/223|219/223|223/223|216/223|
 |las-rs|223/223|Pending|Pending|Pending|
-|marc21-cpp|Pending|Pending|Pending|Pending|
+|marc21-cpp|2900/2900|Pending|Pending|Pending|
 |marc21-js|Pending|Pending|Pending|Pending|
 |marc21-py|2900/2900|Pending|2841/2900|Pending|
 |marc21-rs|Pending|Pending|Pending|Pending|
@@ -55,7 +55,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |wordcount-py|46/46|46/46|46/46|46/46|
 |wordcount-rs|46/46|46/46|46/46|46/46|
 
-65 cells still need a qualifying result, including active runs. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. Capacity subsequently became available again and collection resumed. The previous four-worker queue is disabled. Resumed collection processes one submission at a time, including review before the next generation. Every excluded retry gets a fresh generation and preserves its previous artifacts and ledger.
+64 cells still need a qualifying result, including active runs. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. Capacity subsequently became available again and collection resumed. The previous four-worker queue is disabled. Resumed collection processes one submission at a time, including review before the next generation. Every excluded retry gets a fresh generation and preserves its previous artifacts and ledger.
 
 ## Conditions and accounting
 
@@ -63,7 +63,7 @@ The initial 35 valid completed runs predate explicit hosted-app disablement. The
 
 The v2 tool-call definition is unchanged. Session evidence exposed 19 rejected nested attempts across 17 of the initial 35 eligible completed generations that canonical items omitted. In that initial group, 12 exact totals were corrected; six totals are unavailable because other failed-wrapper evidence cannot establish an exact count (one such run had no explicit process rejection). Seventeen totals remain unchanged. Original token totals, reasoning, costs and generation-completion flags are preserved. Separate audits preserve complete prior publication bytes and existing regrade audit hash chains. The same omission was observed in one of 12 local historical RS274 attempts; its prior publication has not been silently rewritten. Subsequent generations use the corrected parser and are independently checked against their preserved sessions.
 
-Estimated API-equivalent generation cost for the 47 qualifying completed runs: **$183.947913**. Excluded attempted generations total **$54.228829** at the recorded estimates, including partial quota runs. These are estimates, not the subscription bill. Reasoning tokens are a subset of output tokens and are not charged or added twice. Active runs are not included in these completed/excluded sums.
+Estimated API-equivalent generation cost for the 48 qualifying completed runs: **$189.495009**. Excluded attempted generations total **$54.228829** at the recorded estimates, including partial quota runs. These are estimates, not the subscription bill. Reasoning tokens are a subset of output tokens and are not charged or added twice. Active runs are not included in these completed/excluded sums.
 
 Agent image: `sha256:af2c19c8f457977011653519905408e861235272007daca50b92fc685f1aef73` (Codex CLI 0.153.4). Grader/reference image: `sha256:9a4f1fe0219b50b94c4a7abeb8a48cedd6a9c17c1ab90d34cc4bb4d826a7c90c`. Saved-source regrades require no new inference or model cost. Normal grading now resolves, pins and records the actual grader image separately from the agent image; failed resolution preserves the completed generation and usage without inventing a score. Historical grader identity remains unknown unless explicitly recorded or supplied by a preserved regrade. The dashboard no longer substitutes an agent image for missing grader evidence.
 
@@ -75,5 +75,5 @@ Machine-readable records: [completed results](completed-results.json), [remainin
 
 ## Dispatch status
 
-New dispatch is paused: Resume authorized with one submission at a time. New generation remains gated until saved completed submissions are reviewed; do not restart the prior parallel queue.
+New dispatch is paused: One submission at a time: MARC21 C++ Astra Max is the selected attempt. Let it exit and finish its review before dispatching another. Do not restart the parallel queue.
 Active generations are allowed to finish and remain subject to full review.
