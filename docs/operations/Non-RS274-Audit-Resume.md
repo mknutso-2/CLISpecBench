@@ -52,8 +52,19 @@ and 180 CLI requests are corroborated, together with 34 underlying tool calls,
 The self-test correction from `007="zz"` to invalid `007="zx"` follows explicit
 examples in the supplied documentation; it did not alter runtime validation.
 Its UID is `acad2564-7e18-41b0-85cd-019a5352a0fc`.
-The next selected submission is IGES C++ / Astra / Max; inspect its ledger before
-launching to avoid a duplicate.
+IGES C++ / Astra / Max completed normally and is reviewed and published at
+**259/261**, bringing coverage to **51/112**. Both failures expose the same
+zero-count Hollerith misconception separately in the reader and writer:
+the former accepts `0H`, and the latter emits it for empty Global strings.
+The supplied nonzero-count rule and legal NULL controls support both tests;
+this is one shared defect, without broad failure amplification. Final normal
+and sanitizer checks are corroborated, but self-roundtrip consistency misses
+this symmetric defect. External CAD samples were unavailable, as the final
+message acknowledges. Usage matches preserved events: 53 underlying tool calls,
+31,221 reasoning tokens, and a $10.873110 recorded API-equivalent estimate.
+Its UID is `55906e04-d378-4f80-8b79-150a110517d1`.
+The next selected submission is IGES JavaScript / Astra / Max; inspect its ledger
+before launching to avoid a duplicate.
 
 ## Stop condition and current state
 
