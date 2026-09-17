@@ -1,4 +1,4 @@
-"""Read session outputs for explicit nested pre-item process rejections.
+"""Read session outputs for explicit nested pre-item tool rejections.
 
 This collects evidence; it does not infer corrected tool counts. Generated
 code is never executed and submitted source is never imported.
@@ -47,8 +47,13 @@ def explicit_pre_item_rejection(payload: dict[str, Any]) -> list[str]:
     return [
         text
         for text in failed_wrapper_blocks(payload)
-        if text.startswith("Script error:\nexec_command failed: CreateProcess")
-        and "Rejected(" in text
+        if (
+            text.startswith("Script error:\nexec_command failed: CreateProcess")
+            and "Rejected(" in text
+        )
+        or text.startswith(
+            "Script error:\napply_patch verification failed: Failed to find expected lines in "
+        )
     ]
 
 
@@ -56,6 +61,7 @@ def scan(session_root: Path, events_path: Path) -> dict[str, Any]:
     requests: dict[str | None, list[dict[str, Any]]] = {}
     outputs: list[dict[str, Any]] = []
     other_outputs: list[dict[str, Any]] = []
+    output_signatures: dict[str, str] = {}
     manifest: list[dict[str, Any]] = []
     items: dict[str, dict[str, Any]] = {}
     errors: list[str] = []
@@ -78,14 +84,23 @@ def scan(session_root: Path, events_path: Path) -> dict[str, Any]:
             call_id = value.get("call_id")
             context = {"path": str(path), "line": line, "payload": value}
             if typ in {
-                "custom_tool_call", "function_call",
-                "custom_tool_call_output", "function_call_output",
+                "custom_tool_call",
+                "function_call",
+                "custom_tool_call_output",
+                "function_call_output",
             } and (not isinstance(call_id, str) or not call_id):
                 errors.append(f"Invalid tool call ID at {path}:{line}")
                 continue
             if typ in {"custom_tool_call", "function_call"}:
                 requests.setdefault(call_id, []).append(context)
             elif typ in {"custom_tool_call_output", "function_call_output"}:
+                # Check every output before classifying failures. A conflicting
+                # successful output for the same ID also invalidates pairing.
+                output_id = cast(str, call_id)
+                signature = json.dumps(value, sort_keys=True)
+                if output_id in output_signatures and output_signatures[output_id] != signature:
+                    errors.append(f"Conflicting tool outputs for {output_id} at {path}:{line}")
+                output_signatures[output_id] = signature
                 if explicit_pre_item_rejection(value):
                     outputs.append(context)
                 elif failed_wrapper_blocks(value):
@@ -142,7 +157,7 @@ def scan(session_root: Path, events_path: Path) -> dict[str, Any]:
     return {
         "schema_version": 1,
         "evidence_errors": errors,
-        "scope": "Explicit nested process rejection evidence; no inferred corrected count.",
+        "scope": "Explicit nested tool rejection evidence; no inferred corrected count.",
         "other_failed_wrappers": [
             {
                 "call_id": output["payload"].get("call_id"),

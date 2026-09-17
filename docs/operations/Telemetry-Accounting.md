@@ -122,3 +122,32 @@ exact count. For the September non-RS274 cohort, separate publication audits ret
 original result hashes, original usage, complete prior publication bytes, and
 per-request evidence; raw generation results and prior regrade records remain
 unchanged. Unknown tool metrics do not invalidate a completed correctness score.
+
+## September 17, 2026: rejected patch requests
+
+The same conservative recovery now covers `apply_patch` verification failures
+that report "Failed to find expected lines" in a failed runtime wrapper without
+creating a canonical `file_change` item. The static inspector accepts one directly
+awaited patch call with a literal string, optionally stored first in a `const`.
+It rejects computed arguments, control flow, multiple calls, and shadowed bindings.
+Successful stdout containing error-like text is not rejection evidence.
+
+A patch supplement is unavailable if any canonical file-change item is failed,
+in progress, or lacks a completed status: those items do not carry enough request
+identity to rule out overlap. An accepted supplement records the patch SHA-256 and
+the preserved request/output locations. Identical duplicated evidence counts once.
+All outputs are compared by call ID before failure classification: conflicting
+successful or unclassified outputs also make the count unavailable.
+
+The Sol Max LAS JavaScript run `2afb5142-8c8a-4e36-b7a9-323a7116324b` exposed
+this case: 62 canonical tool items plus one proven rejected patch give 63 tool
+calls. Its original null metric remains in the immutable raw result; publication
+correction evidence records the recovered count separately. This implements the
+existing `underlying_tool_invocations_v2` definition. Token totals, reasoning
+tokens, estimated cost, and correctness score are unaffected.
+
+Validation: 188 relevant harness tests and 20 subtests pass, including twelve
+success/unclassified-output conflict cases across patch, process and syntax
+rejections in both orders. Identical session copies remain count-once. Ruff,
+strict Pyright and Node syntax checks pass. The actual preserved LAS evidence
+contains one request and one failed output for the recovered patch call ID.

@@ -37,6 +37,17 @@ def pair(
     }
 
 
+def patch_pair(
+    source: str = 'const patch="p"; const result=await tools.apply_patch(patch); text(result);',
+) -> dict[str, Any]:
+    p = pair(source)
+    p["rejection_output"]["payload"]["output"][1]["text"] = (
+        "Script error:\napply_patch verification failed: Failed to find expected lines in "
+        "/workspace/output/las.js:\nold line"
+    )
+    return p
+
+
 class CountingTests(unittest.TestCase):
     def audit(
         self,
@@ -54,6 +65,79 @@ class CountingTests(unittest.TestCase):
         r = supplement(self.audit(), 12)
         self.assertTrue(r["available"])
         self.assertEqual(r["corrected_tool_calls"], 13)
+
+    def test_patch_verification_rejection_is_one_attempt(self) -> None:
+        for source in [
+            'text(await tools.apply_patch("*** Begin Patch\\n*** End Patch"));',
+            'const patch="*** Begin Patch\\n*** End Patch"; '
+            "const result=await tools.apply_patch(patch); text(result);",
+        ]:
+            with self.subTest(source=source):
+                p = patch_pair(source)
+                # A successful edit to the same file cannot represent the
+                # failed verification. Count the rejected attempt only once.
+                result = supplement(
+                    self.audit(
+                        [p, copy.deepcopy(p)],
+                        [{"id": "edit", "type": "file_change", "status": "completed"}],
+                    ),
+                    62,
+                )
+                self.assertEqual(result["corrected_tool_calls"], 63)
+                self.assertEqual(result["evidence"][0]["tool"], "apply_patch")
+                self.assertEqual(len(result["evidence"][0]["request_patch_sha256"]), 64)
+
+    def test_patch_overlap_or_incomplete_item_remains_unavailable(self) -> None:
+        for status in ["failed", "in_progress", None]:
+            with self.subTest(status=status):
+                result = supplement(
+                    self.audit(
+                        [patch_pair()],
+                        [{"id": "edit", "type": "file_change", "status": status}],
+                    ),
+                    62,
+                )
+                self.assertIsNone(result["corrected_tool_calls"])
+
+    def test_patch_complex_wrappers_or_mismatched_tool_are_not_guessed(self) -> None:
+        for source in [
+            'for(let i=0;i<2;i++) await tools.apply_patch("p");',
+            'await tools.apply_patch("p"); await tools.apply_patch("q");',
+            "const patch=makePatch(); await tools.apply_patch(patch);",
+            'let patch="p"; await tools.apply_patch(patch);',
+            'const patch="p"; patch="q"; await tools.apply_patch(patch);',
+            'const tools="p"; await tools.apply_patch(tools);',
+            'const patch="p"; const text=await tools.apply_patch(patch); text(text);',
+            'const patch="p"; await tools.exec_command({cmd:"x"});',
+            'await tools.exec_command({cmd:"x"});',
+        ]:
+            with self.subTest(source=source):
+                self.assertIsNone(
+                    supplement(self.audit([patch_pair(source)]), 62)["corrected_tool_calls"]
+                )
+
+    def test_patch_failure_is_read_from_runtime_not_successful_stdout(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sessions = root / "sessions"
+            sessions.mkdir()
+            events = root / "events"
+            events.write_text("")
+            p = patch_pair()
+            request: dict[str, Any] = {
+                "type": "response_item",
+                "payload": p["requests"][0]["payload"],
+            }
+            output: dict[str, Any] = {
+                "type": "response_item",
+                "payload": p["rejection_output"]["payload"],
+            }
+            session = sessions / "s.jsonl"
+            session.write_text(json.dumps(request) + "\n" + json.dumps(output))
+            self.assertEqual(supplement(scan(sessions, events), 62)["corrected_tool_calls"], 63)
+            output["payload"]["output"][0]["text"] = "Script completed\nOutput:\n"
+            session.write_text(json.dumps(request) + "\n" + json.dumps(output))
+            self.assertEqual(supplement(scan(sessions, events), 62)["corrected_tool_calls"], 62)
 
     def test_text_await_shape_is_supported(self) -> None:
         a = self.audit(
@@ -199,6 +283,61 @@ class CountingTests(unittest.TestCase):
             self.assertEqual(path.read_bytes(), original)
 
 
+@pytest.mark.parametrize("kind", ["patch", "process", "syntax"])
+@pytest.mark.parametrize("conflict_first", [False, True])
+@pytest.mark.parametrize("other_output", ["success", "unclassified"])
+def test_output_conflicts_are_checked_before_failure_classification(
+    tmp_path: Path, kind: str, conflict_first: bool, other_output: str
+) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    p = patch_pair() if kind == "patch" else pair()
+    if kind == "syntax":
+        p["requests"][0]["payload"]["input"] = "await tools.exec_command("
+        p["rejection_output"]["payload"]["output"][1]["text"] = (
+            "Script error:\nSyntaxError: missing )"
+        )
+    original = p["rejection_output"]["payload"]
+    conflict = copy.deepcopy(original)
+    conflict["output"] = [
+        {"type": "text", "text": "Script completed\nOutput:\n"}
+        if other_output == "success"
+        else {"type": "text", "text": "Unclassified response"}
+    ]
+    outputs = [conflict, original] if conflict_first else [original, conflict]
+    rows = [p["requests"][0]["payload"], *outputs]
+    (sessions / "s.jsonl").write_text(
+        "\n".join(json.dumps({"type": "response_item", "payload": r}) for r in rows)
+    )
+    events = tmp_path / "events"
+    events.write_text(
+        json.dumps(
+            {
+                "type": "item.completed",
+                "item": {"id": "edit", "type": "file_change", "status": "completed"},
+            }
+        )
+    )
+    audit = scan(sessions, events)
+    assert any("Conflicting tool outputs" in e for e in audit["evidence_errors"])
+    assert supplement(audit, 62)["corrected_tool_calls"] is None
+
+
+def test_identical_session_output_copies_are_not_conflicts(tmp_path: Path) -> None:
+    sessions = tmp_path / "sessions"
+    sessions.mkdir()
+    p = patch_pair()
+    rows = [p["requests"][0]["payload"], p["rejection_output"]["payload"]]
+    data = "\n".join(json.dumps({"type": "response_item", "payload": r}) for r in rows)
+    (sessions / "original.jsonl").write_text(data)
+    (sessions / "copy.jsonl").write_text(data)
+    events = tmp_path / "events"
+    events.write_text("")
+    audit = scan(sessions, events)
+    assert not audit["evidence_errors"]
+    assert supplement(audit, 62)["corrected_tool_calls"] == 63
+
+
 def test_truncated_session_makes_tool_count_unavailable(tmp_path: Path) -> None:
     sessions = tmp_path / "sessions"
     sessions.mkdir()
@@ -213,7 +352,9 @@ def test_truncated_session_makes_tool_count_unavailable(tmp_path: Path) -> None:
 @pytest.mark.parametrize("bad_id", [[], {}, None, "", 7])
 @pytest.mark.parametrize("location", ["session_request", "session_output", "canonical"])
 def test_invalid_ids_only_invalidate_tool_metric(
-    tmp_path: Path, bad_id: Any, location: str,
+    tmp_path: Path,
+    bad_id: Any,
+    location: str,
 ) -> None:
     from clispecbench.agents.codex_cli import CodexCLIAdapter
 
@@ -221,20 +362,40 @@ def test_invalid_ids_only_invalidate_tool_metric(
     sessions.mkdir()
     event = {
         "type": "turn.completed",
-        "usage": {"input_tokens": 100, "output_tokens": 20,
-                  "cached_input_tokens": 30, "reasoning_output_tokens": 10},
+        "usage": {
+            "input_tokens": 100,
+            "output_tokens": 20,
+            "cached_input_tokens": 30,
+            "reasoning_output_tokens": 10,
+        },
     }
     logs = json.dumps(event) + "\n"
     if location == "canonical":
         session_record = {"type": "session_meta"}
-        logs += json.dumps({"type": "item.completed", "item": {
-            "type": "command_execution", "id": bad_id, "command": "true",
-        }}) + "\n"
+        logs += (
+            json.dumps(
+                {
+                    "type": "item.completed",
+                    "item": {
+                        "type": "command_execution",
+                        "id": bad_id,
+                        "command": "true",
+                    },
+                }
+            )
+            + "\n"
+        )
     else:
         kind = "function_call" if location == "session_request" else "function_call_output"
-        session_record = {"type": "response_item", "payload": {
-            "type": kind, "name": "exec", "call_id": bad_id, "arguments": "text(1)",
-        }}
+        session_record = {
+            "type": "response_item",
+            "payload": {
+                "type": kind,
+                "name": "exec",
+                "call_id": bad_id,
+                "arguments": "text(1)",
+            },
+        }
     (sessions / "s.jsonl").write_text(json.dumps(session_record) + "\n")
     events = tmp_path / "codex-events.jsonl"
     events.write_text(logs)
@@ -256,14 +417,23 @@ def test_invalid_ids_only_invalidate_tool_metric(
 @pytest.mark.parametrize("failure", [OSError("evidence unreadable"), TypeError("bad shape")])
 @pytest.mark.parametrize("stage", ["scan", "supplement"])
 def test_evidence_reader_failure_preserves_authoritative_usage(
-    tmp_path: Path, failure: Exception, stage: str,
+    tmp_path: Path,
+    failure: Exception,
+    stage: str,
 ) -> None:
     from clispecbench.agents.codex_cli import CodexCLIAdapter
 
-    logs = json.dumps({"type": "turn.completed", "usage": {
-        "input_tokens": 100, "output_tokens": 20, "cached_input_tokens": 30,
-        "reasoning_output_tokens": 10,
-    }})
+    logs = json.dumps(
+        {
+            "type": "turn.completed",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 20,
+                "cached_input_tokens": 30,
+                "reasoning_output_tokens": 10,
+            },
+        }
+    )
     adapter = CodexCLIAdapter(model="gpt-5.6-luna")
     baseline = adapter.parse_token_usage(tmp_path, logs)
     assert baseline is not None
@@ -277,11 +447,11 @@ def test_evidence_reader_failure_preserves_authoritative_usage(
 @pytest.mark.parametrize("conflict_first", [False, True])
 def test_conflicting_duplicate_other_failure_is_unavailable(conflict_first: bool) -> None:
     p = pair("await tools.exec_command(")
-    p["rejection_output"]["payload"]["output"][1]["text"] = (
-        "Script error:\nSyntaxError: missing )"
-    )
+    p["rejection_output"]["payload"]["output"][1]["text"] = "Script error:\nSyntaxError: missing )"
     failed: dict[str, Any] = {
-        "call_id": "c", "requests": p["requests"], "output": p["rejection_output"],
+        "call_id": "c",
+        "requests": p["requests"],
+        "output": p["rejection_output"],
     }
     conflict = copy.deepcopy(failed)
     conflict["output"]["payload"]["output"][1]["text"] = (
@@ -296,11 +466,11 @@ def test_conflicting_duplicate_other_failure_is_unavailable(conflict_first: bool
 
 def test_identical_duplicate_other_failure_is_counted_once() -> None:
     p = pair("await tools.exec_command(")
-    p["rejection_output"]["payload"]["output"][1]["text"] = (
-        "Script error:\nSyntaxError: missing )"
-    )
+    p["rejection_output"]["payload"]["output"][1]["text"] = "Script error:\nSyntaxError: missing )"
     failed: dict[str, Any] = {
-        "call_id": "c", "requests": p["requests"], "output": p["rejection_output"],
+        "call_id": "c",
+        "requests": p["requests"],
+        "output": p["rejection_output"],
     }
     duplicate = copy.deepcopy(failed)
     duplicate["output"]["path"] = "copied-session"
@@ -313,14 +483,22 @@ def test_identical_duplicate_other_failure_is_counted_once() -> None:
 
 @pytest.mark.parametrize("location", ["sessions/s.jsonl", "codex-events.jsonl"])
 def test_invalid_utf8_evidence_preserves_completed_turn_totals(
-    tmp_path: Path, location: str,
+    tmp_path: Path,
+    location: str,
 ) -> None:
     from clispecbench.agents.codex_cli import CodexCLIAdapter
 
-    logs = json.dumps({"type": "turn.completed", "usage": {
-        "input_tokens": 100, "output_tokens": 20, "cached_input_tokens": 30,
-        "reasoning_output_tokens": 10,
-    }})
+    logs = json.dumps(
+        {
+            "type": "turn.completed",
+            "usage": {
+                "input_tokens": 100,
+                "output_tokens": 20,
+                "cached_input_tokens": 30,
+                "reasoning_output_tokens": 10,
+            },
+        }
+    )
     (tmp_path / "sessions").mkdir()
     (tmp_path / "sessions/s.jsonl").write_text('{"type":"session_meta"}\n')
     (tmp_path / "codex-events.jsonl").write_text(logs)

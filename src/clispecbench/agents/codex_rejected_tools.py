@@ -9,6 +9,7 @@ cost remain independent. The parser reads JavaScript syntax but never executes i
 
 from __future__ import annotations
 
+import hashlib
 import json
 import shlex
 import subprocess
@@ -102,7 +103,7 @@ def supplement(audit: dict[str, Any], baseline: int | None) -> dict[str, Any]:
             continue
         matched = explicit_pre_item_rejection(output)
         if len(matched) != 1:
-            problems.append(f"no single explicit pre-item process rejection: {call_id}")
+            problems.append(f"no single explicit pre-item tool rejection: {call_id}")
             continue
         pairs.append(rejection)
         batches.append({"id": len(pairs) - 1, "source": source})
@@ -194,6 +195,48 @@ def supplement(audit: dict[str, Any], baseline: int | None) -> dict[str, Any]:
         call_id = pair["call_id"]
         if not parsed_item.get("available"):
             problems.append(f"{call_id}: {parsed_item.get('reason')}")
+            continue
+        failure = explicit_pre_item_rejection(pair["rejection_output"]["payload"])[0]
+        expected_tool = (
+            "apply_patch" if "\napply_patch verification failed:" in failure else "exec_command"
+        )
+        if parsed_item.get("tool") != expected_tool:
+            problems.append(f"{call_id}: rejected tool does not match the parsed request")
+            continue
+        if expected_tool == "apply_patch":
+            # Failed patch verification can precede canonical item creation.
+            # Canonical file changes lack patch content / parent wrapper IDs;
+            # any non-successful file item could overlap, so retain uncertainty.
+            possible_overlap = [
+                item["id"]
+                for item in audit["canonical_items"]
+                if item["type"] == "file_change" and item.get("status") != "completed"
+            ]
+            if possible_overlap:
+                problems.append(f"{call_id}: canonical patch overlap: {possible_overlap}")
+                continue
+            evidence.append(
+                {
+                    "wrapper_call_id": call_id,
+                    "tool": "apply_patch",
+                    "added_invocations": 1,
+                    "reason": (
+                        "Explicit patch context-verification failure, paired with exactly one "
+                        "direct awaited literal patch request; no failed or incomplete canonical "
+                        "file-change item can already represent the rejection."
+                    ),
+                    "request_patch_sha256": hashlib.sha256(
+                        parsed_item["patch"].encode()
+                    ).hexdigest(),
+                    "request_locations": [
+                        {"path": r["path"], "line": r["line"]} for r in pair["requests"]
+                    ],
+                    "output_location": {
+                        "path": pair["rejection_output"]["path"],
+                        "line": pair["rejection_output"]["line"],
+                    },
+                }
+            )
             continue
         command = parsed_item["command"]
         matches: list[str] = []
