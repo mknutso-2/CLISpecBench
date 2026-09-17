@@ -100,10 +100,30 @@ editorial fields, and the new Rust row matches its publication. Generation
 accounting and cohorts are unchanged. Evidence is in
 `work/non-rs274-audit/dashboard-53-validation.json`.
 
-There are **59 cells remaining**, including five excluded quota attempts that
-need fresh retries. The 53 qualifying runs total **$233.369697** in recorded
+LAS JavaScript / Sol / Max completed and is reviewed/published at **219/223**,
+bringing coverage to **54/112**. One shared overstrict waveform-metadata
+prerequisite causes the four failures in formats 4, 5, 9 and 10; the supplied
+specification supports the positive no-waveform cases, so no rubric change is
+needed. Final local probes, CLI error checks and syntax checks are corroborated;
+external interoperability remains unverified. Its UID is
+`2afb5142-8c8a-4e36-b7a9-323a7116324b`.
+
+This run exposed a failed patch omitted from canonical file-change events.
+The independently reviewed harness fix recovers **63 tool calls** from 62
+canonical items plus the proven rejection, with conservative conflicting-output
+and overlap guards. The original null metric remains in the raw result. All
+tokens and the **$4.394560** API-equivalent estimate are unchanged, including
+37,373 reasoning tokens. A same-version saved-source regrade reproduces every
+one of the 223 outcomes and preserves correction evidence in the publication
+audit. See [telemetry accounting](Telemetry-Accounting.md).
+The 54-result dashboard check confirms all 1,829 preceding rows are unchanged
+and the new row matches its publication, with 1,169,081 generated test records.
+Evidence is in `work/non-rs274-audit/dashboard-54-validation.json`.
+
+There are **58 cells remaining**, including five excluded quota attempts that
+need fresh retries. The 54 qualifying runs total **$237.764257** in recorded
 API-equivalent estimates; excluded attempts still total $54.228829. The next
-selected submission is LAS JavaScript / Sol / Max; inspect its ledger before
+selected submission is LAS Rust / Sol / Max; inspect its ledger before
 launching to avoid a duplicate. Continue one submission at a time.
 
 ## Stop condition and current state
