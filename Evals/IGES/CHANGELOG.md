@@ -1,5 +1,20 @@
 # IGES Changelog
 
+## v1.0.19 — 2026-09-17
+
+- Normalize the hidden appendix files' status fields to eight digits, as
+  Table 2 and §2.2.4.4.9 require. Replace positive, semantically ignored
+  structure values with zero to stay within both §2.2.4.4.3 and the technical
+  JSON contract. Preserve all other bytes and all model-visible inputs.
+- Consolidate each file's five parse/roundtrip cases into one integration
+  case, retaining every observation. A parser defect no longer receives five
+  penalties for one file. This explicitly changes weighting: 261 cases become
+  249, rather than treating the former failures as independent defects.
+- Apply the existing public real-number tolerance to the retained semantic
+  roundtrip assertion; discrete values and byte idempotence remain exact.
+- See `docs/validation/IGES-1.0.19.md` for normalization provenance, reference
+  and mutation checks, independent review and saved-submission regrades.
+
 ## v1.0.18 — 2026-09-17
 
 - Repair the remaining invalid positive in the Logical writer-format test:

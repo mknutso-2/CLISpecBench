@@ -7,7 +7,7 @@ tests, references, results, or the authority used for existing scores. No
 external specification was substituted for the files supplied to the models.
 
 The current revisions are WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
-MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, and IGES **1.0.17**. GEDCOM
+MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, and IGES **1.0.19**. GEDCOM
 4.0.3 is integrated in commit `e6a13bf`; its minimal VOID fixture is therefore
 current behavior, not a pending proposal. Each task's model-visible inputs
 remain unchanged through these scoring repairs.
@@ -308,6 +308,15 @@ Evidence: [1.0.16 validation][iges-116] and [1.0.17 follow-up][iges-117].
    wording:** explicitly limit these entities to the appendix contract, or
    supply the omitted sections and expand the JSON schema. Do not infer full
    omitted-standard conformance from the present score.
+5. **Cleanup — legacy positive Structure values (found 2026-09-17).** The
+   supplied specification §2.2.4.4.3 permits nonnegative Structure values and
+   requires postprocessors to ignore them; the technical JSON schema describes
+   the field as zero or a negative DE pointer. The historical `ex2.iges` uses
+   positive legacy version markers. The hidden 1.0.19 fixture normalizes those
+   ignored markers to zero, preserving semantics under both readings. **Proposed
+   wording:** explicitly accept positive legacy wire values and describe their
+   canonical JSON normalization to zero. Do not penalize an old submission for
+   choosing the narrower supplied schema before that conflict is resolved.
 
 The five deferred nodes are:
 

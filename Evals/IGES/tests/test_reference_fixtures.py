@@ -1,8 +1,14 @@
-"""Reference fixture tests — parse the three real-world IGES files.
+"""One integration observation per appendix file: parse and stable roundtrip.
 
 Ports ``Evals/IGES-SDK/tests/integration/test_reference_files.cpp`` to drive
 the ``iges parse`` CLI. ex1/ex2/ex3 are Burkardt-collection files from the
-IGES 5.3 appendices; together they exercise most of the spec surface.
+IGES appendices. Hidden copies normalize status padding (§2.2.4.4.9) and
+ignored positive structure values (§2.2.4.4.3) to avoid public-contract conflicts.
+
+Keep each file's observations together: five separately scored cases used to
+fail on the same initial parse, amplifying one defect fivefold. These are
+deliberately integration cases; focused tests elsewhere isolate individual
+entities, Global fields, physical writing and validation rules.
 
 These fixtures are the regression fence for the three defaulted-field
 parser fixes landed 2026-04-14 (Connect Point §4.26 cid/cfn, Network
@@ -19,7 +25,9 @@ from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 
-from iges_support import parse_iges_to_json
+import pytest
+
+from iges_support import assert_semantic_equal, parse_iges_to_json, roundtrip_iges
 
 FIXTURES = Path(__file__).parent / "data"
 
@@ -38,14 +46,7 @@ def _entity_type_counts(parsed: dict[str, object]) -> Counter[int]:
     return counts
 
 
-# -----------------------------------------------------------------
-# ex1.iges — IC library cell (subfigures, copious data, connect points)
-# -----------------------------------------------------------------
-def test_ex1_parses_with_expected_global_and_start_lines(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    parsed = parse_iges_to_json(submission_command, FIXTURES / "ex1.iges", tmp_path)
-
+def _check_ex1(parsed: dict[str, object]) -> None:
     start = parsed["start_lines"]
     assert isinstance(start, list)
     assert len(start) == 2
@@ -56,10 +57,6 @@ def test_ex1_parses_with_expected_global_and_start_lines(
     assert g["file_name"] == "PADIN"
     # Unit flag 9 in the spec maps to "microns".
     assert g["units"] == "microns"
-
-
-def test_ex1_entity_type_mix(submission_command: Sequence[str], tmp_path: Path) -> None:
-    parsed = parse_iges_to_json(submission_command, FIXTURES / "ex1.iges", tmp_path)
     counts = _entity_type_counts(parsed)
 
     assert counts[308] == 2  # Subfigure Definition (PADBLK, CONTACT)
@@ -73,21 +70,10 @@ def test_ex1_entity_type_mix(submission_command: Sequence[str], tmp_path: Path) 
     assert counts[412] >= 1
 
 
-# -----------------------------------------------------------------
-# ex2.iges — Mechanical part with dimensions and annotations
-# -----------------------------------------------------------------
-def test_ex2_parses_with_expected_global(submission_command: Sequence[str], tmp_path: Path) -> None:
-    parsed = parse_iges_to_json(submission_command, FIXTURES / "ex2.iges", tmp_path)
-
+def _check_ex2(parsed: dict[str, object]) -> None:
     g = parsed["global"]
     assert isinstance(g, dict)
     assert g["product_id_sender"] == "PANEL123"
-
-
-def test_ex2_contains_geometry_and_annotation(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    parsed = parse_iges_to_json(submission_command, FIXTURES / "ex2.iges", tmp_path)
     counts = _entity_type_counts(parsed)
 
     assert counts[110] > 0  # Lines
@@ -98,23 +84,39 @@ def test_ex2_contains_geometry_and_annotation(
     assert counts[216] + counts[218] + counts[222] > 0  # Dimensions
 
 
-# -----------------------------------------------------------------
-# ex3.iges — View/Drawing with transformation matrices
-# -----------------------------------------------------------------
-def test_ex3_parses_with_expected_global(submission_command: Sequence[str], tmp_path: Path) -> None:
-    parsed = parse_iges_to_json(submission_command, FIXTURES / "ex3.iges", tmp_path)
-
+def _check_ex3(parsed: dict[str, object]) -> None:
     g = parsed["global"]
     assert isinstance(g, dict)
     assert g["product_id_sender"] == "VIEWDWG2"
-
-
-def test_ex3_contains_view_drawing_and_xform(
-    submission_command: Sequence[str], tmp_path: Path
-) -> None:
-    parsed = parse_iges_to_json(submission_command, FIXTURES / "ex3.iges", tmp_path)
     counts = _entity_type_counts(parsed)
 
     assert counts[410] > 0  # View
     assert counts[404] > 0  # Drawing
     assert counts[124] > 0  # Transformation Matrix
+
+
+@pytest.mark.parametrize(
+    ("name", "expected_count"),
+    [("ex1.iges", 21), ("ex2.iges", 90), ("ex3.iges", 109)],
+)
+def test_appendix_file_parse_and_roundtrip(
+    submission_command: Sequence[str], tmp_path: Path, name: str, expected_count: int
+) -> None:
+    # Technical requirements §1.2/§4: parse, preserve canonical entity data,
+    # and produce a byte-stable normalized roundtrip. Retain every prior
+    # appendix observation, but count this shared workflow only once per file.
+    src = FIXTURES / name
+    original = parse_iges_to_json(submission_command, src, tmp_path, name="original")
+    {"ex1.iges": _check_ex1, "ex2.iges": _check_ex2, "ex3.iges": _check_ex3}[name](original)
+    first = roundtrip_iges(submission_command, src, tmp_path, name="first")
+    reparsed = parse_iges_to_json(submission_command, first, tmp_path, name="reparsed")
+    assert len(original["entities"]) == expected_count
+    assert len(reparsed["entities"]) == expected_count
+    for orig, rt in zip(original["entities"], reparsed["entities"], strict=True):
+        assert orig["entity"]["type"] == rt["entity"]["type"]
+        assert orig["entity"]["form"] == rt["entity"]["form"]
+        # §3 permits bounded real serialization error; discrete fields remain
+        # exact. Use the same public tolerance as the focused semantic tests.
+        assert_semantic_equal(rt["entity"]["data"], orig["entity"]["data"])
+    second = roundtrip_iges(submission_command, first, tmp_path, name="second")
+    assert first.read_bytes() == second.read_bytes()
