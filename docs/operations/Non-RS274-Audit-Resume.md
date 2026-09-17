@@ -76,8 +76,35 @@ Existing Astra IGES Python and C++ were regraded sequentially to 1.0.18 and
 remain 261/261 and 259/261, respectively, with all individual outcomes unchanged.
 Original grades and complete prior publication/audit chains are preserved.
 See [IGES 1.0.18 validation](../validation/IGES-1.0.18.md).
-The next selected submission is IGES Rust / Astra / Max; inspect its ledger
-before launching to avoid a duplicate.
+IGES Rust / Astra / Max then completed normally, bringing coverage to
+**53/112** and completing all **28 Astra cells**. Its original 245/261 exposed
+invalid/conflicted appendix fields and fivefold repeated parse prerequisites.
+The independently reviewed tests-only **1.0.19** repair normalizes those fields
+and consolidates fifteen integration cases into three, retaining the assertions
+and explicitly changing the denominator from 261 to 249. All model inputs stay
+unchanged. Three references pass 249/249 and four mutation controls verify the
+retained observations and reduced failure amplification.
+
+Official sequential regrades are Python **249/249**, C++ **247/249**,
+JavaScript **248/249** and Rust **247/249**. Rust's two remaining defects accept
+illegal `0H` and mishandle a legal trailing default before an empty array.
+All 246 unchanged per-case outcomes match each preceding publication. Complete
+original records and publication chains are preserved. Rust's release build,
+nine unit tests and 232 synthetic CLI requests are corroborated; accounting
+matches 56 tool calls, 23,383 reasoning tokens and a $13.159838 API-equivalent
+estimate. Its UID is `e81a9c23-e06f-4fe7-8a1e-e39e9941c058`.
+See [IGES 1.0.19 validation](../validation/IGES-1.0.19.md).
+The rebuilt dashboard contains 1,829 rows: all 1,825 unrelated rows are
+unchanged, the three earlier Astra IGES rows change only reviewed scoring or
+editorial fields, and the new Rust row matches its publication. Generation
+accounting and cohorts are unchanged. Evidence is in
+`work/non-rs274-audit/dashboard-53-validation.json`.
+
+There are **59 cells remaining**, including five excluded quota attempts that
+need fresh retries. The 53 qualifying runs total **$233.369697** in recorded
+API-equivalent estimates; excluded attempts still total $54.228829. The next
+selected submission is LAS JavaScript / Sol / Max; inspect its ledger before
+launching to avoid a duplicate. Continue one submission at a time.
 
 ## Stop condition and current state
 
@@ -118,13 +145,13 @@ the local commits and artifacts when reconciling future remote changes.
 - [Remaining coverage](../validation/non-rs274-2026-09-12/remaining-coverage.json)
 - [Excluded attempts](../validation/non-rs274-2026-09-12/excluded-attempts.json)
 - [Public-input hash manifest](../validation/non-rs274-2026-09-12/public-inputs.json)
-- [29 deferred public clarifications](../validation/non-rs274-2026-09-12/public-clarifications.md)
+- [30 deferred public clarifications](../validation/non-rs274-2026-09-12/public-clarifications.md)
 - [Repository instructions](../../AGENTS.md), [author-eval skill](../../.codex/skills/author-eval/SKILL.md),
   [run-eval skill](../../.codex/skills/run-eval/SKILL.md), and
   [build-and-lint skill](../../.codex/skills/build-and-lint/SKILL.md)
 
 Final scoring versions: WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
-MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, IGES **1.0.18**. Their
+MARC21 **3.0.2**, BibTeX **1.2.4**, ICal **3.0.2**, IGES **1.0.19**. Their
 dated changelogs and linked validation notes explain source authority,
 reference results, negative controls, permitted alternatives, and exact
 retained-submission changes. All 28 assembled model inputs remain unchanged.

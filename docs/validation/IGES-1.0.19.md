@@ -72,8 +72,29 @@ Four disposable Python-reference controls verify the retained observations:
 | Alter one real Parameter value during writing | All three fail at semantic data comparison |
 | Add a Start-text prefix on every roundtrip | All three fail at byte idempotence |
 
-The unchanged Rust source passes **247/249** in diagnostic validation: ex2/ex3
-now pass; `0H` and ex1's trailing-default/empty-array defect remain. Official
-fresh-source regrades follow after committing the rubric. Independent content
-review corroborates its release build, nine Rust unit tests and 232 synthetic
-CLI checks; those checks did not establish external-corpus conformance.
+The unchanged Rust source passes **247/249** in both diagnostic validation and
+the official committed-rubric regrade: ex2/ex3 now pass; `0H` and ex1's
+trailing-default/empty-array defect remain. Independent content review
+corroborates its release build, nine Rust unit tests and 232 synthetic CLI
+checks; those checks did not establish external-corpus conformance.
+
+## Official saved-source regrades
+
+All four regrades used the committed rubric and pinned image, sequentially.
+They are published under `regraded_results/iges/1.0.19/gpt-6-astra_max/`.
+Original result/source hashes and complete previous publications are preserved.
+All 246 retained node outcomes match each submission's preceding 1.0.18 grade.
+
+| Astra Max | Previous 1.0.18 | Current 1.0.19 | Remaining failures |
+|---|---:|---:|---|
+| Python | 261/261 | 249/249 | None |
+| C++ | 259/261 | 247/249 | `0H` reader and writer |
+| JavaScript | 260/261 | 248/249 | `0H` reader |
+| Rust | 245/261 | 247/249 | `0H` reader and ex1 trailing defaults |
+
+For C++, JavaScript and Python the same failures remain with lower integration
+weight. Rust additionally loses the invalid/conflicted ex2/ex3 prerequisites
+and four duplicate ex1 penalties. No generated implementation changed.
+Rust generation accounting matches its complete session: 56 underlying tool
+calls, 23,383 reasoning tokens and a $13.159838 API-equivalent estimate.
+Regrading changed no generation accounting and made no model calls.
