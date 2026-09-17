@@ -1291,8 +1291,8 @@ struct Interpreter {
                 }
             }
         }
-        // Flush any pending current line.
-        if (!current_line.empty()) flush_line(true);
+        // bibtex.web bst_done closes the BBL at EOF without draining out_buf.
+        // Only newline$ and line wrapping emit the pending logical line.
         return std::nullopt;
     }
 };

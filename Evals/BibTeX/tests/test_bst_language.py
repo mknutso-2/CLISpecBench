@@ -11,24 +11,6 @@ from conftest import run_bibtex
 MINI_BIB = '@article{a, author = "Smith", title = "TA", year = 2024}\n'
 
 
-def _maybe_flush(body: str) -> str:
-    """Append `newline$` to the body when it ends on a `write$` without a
-    following `newline$`. Guards the suite against Rule 3 cascade: a buggy
-    interpreter that only flushes its output buffer on `newline$` would
-    otherwise silently drop every test body that ends with bare `write$`,
-    converting one flush bug into ~200 cascading failures that have nothing
-    to do with the built-in the test is named for.
-
-    The bare-write$-flushes-at-exit rule is itself pinned by a separate
-    gate test in `test_output_buffer.py`; by appending `newline$` here we
-    keep the individual built-in tests measuring the built-in under test.
-    """
-    stripped = body.rstrip()
-    if stripped.endswith("write$"):
-        return body + " newline$"
-    return body
-
-
 def _run_with_body(
     submission_command: tuple[str, ...],
     tmp_path: Path,
@@ -38,11 +20,12 @@ def _run_with_body(
 ) -> str:
     """Run a .bst containing a single ITERATE-able function called `f` with
     the given body. Returns the .bbl text."""
-    body = _maybe_flush(body)
+    # Explicit newline$ isolates this semantic probe from pending output at EOF.
     style = f"""\
 ENTRY {{ author title year journal }} {{ }} {{ }}
 FUNCTION {{article}} {{ skip$ }}
-FUNCTION {{f}} {{ {body} }}
+FUNCTION {{f}} {{ {body}
+  newline$ }}
 READ
 ITERATE {{f}}
 """
@@ -57,10 +40,11 @@ def _run_with_execute(
     bib: str = MINI_BIB,
 ) -> str:
     """Run EXECUTE on a function body (no current entry)."""
-    body = _maybe_flush(body)
+    # Explicit newline$ isolates this semantic probe from pending output at EOF.
     style = f"""\
 ENTRY {{ author }} {{ }} {{ }}
-FUNCTION {{f}} {{ {body} }}
+FUNCTION {{f}} {{ {body}
+  newline$ }}
 READ
 EXECUTE {{f}}
 """
@@ -144,7 +128,7 @@ FUNCTION {f}
 { #3 'i :=
   { i #0 > }
     { i int.to.str$ write$ i #1 - 'i := }
-  while$ }
+  while$ newline$ }
 READ
 ITERATE {f}
 """
@@ -279,7 +263,7 @@ def test_preamble(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bib = '@preamble{"hi"}\n@article{a, title = "T"}\n'
     style = """\
 ENTRY { } { } { }
-FUNCTION {f} { preamble$ write$ }
+FUNCTION {f} { preamble$ write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -296,7 +280,7 @@ ENTRY { } { } { }
 INTEGERS { counter }
 FUNCTION {f}
 { #42 'counter :=
-  counter int.to.str$ write$ }
+  counter int.to.str$ write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -311,7 +295,7 @@ ENTRY { } { } { }
 STRINGS { label }
 FUNCTION {f}
 { "hello" 'label :=
-  label write$ }
+  label write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -326,7 +310,7 @@ EXECUTE {f}
 def test_num_names(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     style = """\
 ENTRY { author } { } { }
-FUNCTION {f} { author num.names$ int.to.str$ write$ }
+FUNCTION {f} { author num.names$ int.to.str$ write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -340,7 +324,7 @@ def test_format_name_first_last(submission_command: tuple[str, ...], tmp_path: P
 ENTRY { author } { } { }
 FUNCTION {f}
 { author #1 "{ll}" format.name$ write$ newline$
-  author #1 "{ff}" format.name$ write$ }
+  author #1 "{ff}" format.name$ write$ newline$ }
 READ
 ITERATE {f}
 """

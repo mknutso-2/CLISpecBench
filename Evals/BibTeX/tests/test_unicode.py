@@ -81,7 +81,7 @@ def test_int_to_chr_ascii_produces_single_char(
     """int.to.chr$ of 48..57 produces '0'..'9'."""
     style = """\
 ENTRY { } { } { }
-FUNCTION {f} { #48 int.to.chr$ write$ #57 int.to.chr$ write$ }
+FUNCTION {f} { #48 int.to.chr$ write$ #57 int.to.chr$ write$ newline$ }
 READ
 EXECUTE {f}
 """

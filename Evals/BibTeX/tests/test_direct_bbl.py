@@ -15,6 +15,9 @@ from pathlib import Path
 
 from conftest import run_bibtex
 
+# Semantic fixtures explicitly end their output with newline$: the supplied
+# bibtex.web closes the BBL at EOF without flushing its pending logical line.
+
 MINI_BIB = '@article{a, author = "Smith", title = "T", year = 2024}\n'
 
 
@@ -26,7 +29,7 @@ MINI_BIB = '@article{a, author = "Smith", title = "T", year = 2024}\n'
 def test_empty_of_missing_field_is_1(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     style = """\
 ENTRY { author journal } { } { }
-FUNCTION {f} { journal empty$ int.to.str$ write$ }
+FUNCTION {f} { journal empty$ int.to.str$ write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -37,7 +40,7 @@ ITERATE {f}
 def test_empty_of_present_field_is_0(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     style = """\
 ENTRY { author } { } { }
-FUNCTION {f} { author empty$ int.to.str$ write$ }
+FUNCTION {f} { author empty$ int.to.str$ write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -50,7 +53,7 @@ def test_empty_of_whitespace_string_is_1(
 ) -> None:
     style = """\
 ENTRY { } { } { }
-FUNCTION {f} { "   " empty$ int.to.str$ write$ }
+FUNCTION {f} { "   " empty$ int.to.str$ write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -66,7 +69,7 @@ def test_missing_distinguishes_from_empty(
 ENTRY { journal } { } { }
 FUNCTION {f}
 { journal missing$ int.to.str$ write$
-  "" missing$ int.to.str$ write$ }
+  "" missing$ int.to.str$ write$ newline$ }
 READ
 ITERATE {f}
 """

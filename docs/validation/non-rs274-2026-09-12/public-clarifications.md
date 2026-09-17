@@ -162,10 +162,12 @@ That precedence is distinct from separately stated allowed approximations.
    statements in the [supplied summary][bib-summary]: predefined months (§1.5,
    around line 96), name partition/extra-comma descriptions (§§2.2–2.5), nonzero
    `if$`/`while$` truth (§3.5, lines 325–326), space-joined `preamble$` (line 346),
-   and mandatory short trailing-whitespace preservation (§3.6, lines 389–395).
+   mandatory short trailing-whitespace preservation (§3.6, lines 389–395), and
+   mandatory EOF flushing (§3.6, lines 397–401).
    Current tests use explicit month `MACRO` declarations and follow the supplied
    [WEB][bib-web] for name slices, strictly positive conditionals, direct
-   preamble concatenation, and line-buffer trimming. Canonical parity corpora
+   preamble concatenation, line-buffer trimming, and pending-line discard at EOF
+   ([1.2.5 correction](../BibTeX-1.2.5.md)). Canonical parity corpora
    contain at most one preamble, avoiding eight failures from that one focused
    behavior. **Proposed wording:** replace each conflicting description with
    the supplied WEB behavior and retain the existing authority statement.

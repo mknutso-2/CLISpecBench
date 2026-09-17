@@ -33,15 +33,10 @@ def _exec(
     entry_fields: str = "",
     expect_exit: int = 0,
 ) -> str:
-    # Append newline$ if body ends with bare write$ — see test_bst_language
-    # _maybe_flush for rationale. Guards the suite against a cascade where
-    # one missing end-of-run flush in the interpreter takes down every
-    # write$-terminated test body.
-    if body.rstrip().endswith("write$"):
-        body = body + " newline$"
+    # Flush every semantic probe explicitly, including writes inside branches.
     style = (
         f"ENTRY {{ {entry_fields} }} {{ }} {{ }}\n"
-        f"FUNCTION {{f}} {{ {body} }}\n"
+        f"FUNCTION {{f}} {{ {body}\n newline$ }}\n"
         "READ\n"
         "EXECUTE {f}\n"
     )
@@ -104,7 +99,7 @@ FUNCTION {setup} { #3 'n := }
 FUNCTION {loop}
 { { n #0 > }
   { "x" write$ n #1 - 'n := }
-  while$ }
+  while$ newline$ }
 READ
 EXECUTE {setup}
 EXECUTE {loop}
@@ -162,7 +157,7 @@ def test_full_line_comment(submission_command: tuple[str, ...], tmp_path: Path) 
 ENTRY { } { } { }
 % Style-file documentation here.
 % Author: somebody.
-FUNCTION {f} { "ok" write$ }
+FUNCTION {f} { "ok" write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -241,7 +236,7 @@ def test_bst_macro_definition_is_parsed(
     style = """\
 ENTRY { } { } { }
 MACRO {custommac} {"MyValue"}
-FUNCTION {f} { "ok" write$ }
+FUNCTION {f} { "ok" write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -264,7 +259,7 @@ def test_quoted_name_assigns_function_by_reference(
     style = """\
 ENTRY { } { } { }
 FUNCTION {setkey} { "abc" 'sort.key$ := }
-FUNCTION {emit} { sort.key$ write$ }
+FUNCTION {emit} { sort.key$ write$ newline$ }
 READ
 ITERATE {setkey}
 ITERATE {emit}

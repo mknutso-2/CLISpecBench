@@ -252,32 +252,18 @@ def test_trailing_whitespace_before_newline(
     assert bbl == "a   b\n"
 
 
-def test_bare_write_flushes_at_end_of_run(
+def test_pending_write_is_discarded_at_end_of_run(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """End-of-run flush gate (Rule 3 independence).
-
-    Content pushed via ``write$`` MUST reach the ``.bbl`` file by the
-    time the process exits, even when the ``.bst`` program never calls
-    ``newline$``. BibTeX 0.99c's output buffer accumulates bytes in an
-    internal buffer for 79-column line-wrapping decisions; implementations
-    that only move the buffer to the ``.bbl`` on newline$/overflow and
-    forget to flush on shutdown silently produce an empty ``.bbl``.
-
-    This single test catches that specific bug. Without this gate, the
-    same bug cascades across every arithmetic / built-in test whose body
-    ends on bare ``write$`` — turning one flush oversight into ~200
-    failures that have nothing to do with the built-in under test.
-    The other test helpers in this suite append a defensive ``newline$``
-    to bare ``write$`` bodies (see ``test_bst_language._maybe_flush``),
-    so those tests measure what they're named for; this gate is where the
-    end-of-run flush is actually pinned."""
-    body = '"hello" write$'
-    bbl = _run(submission_command, tmp_path, body)
-    # The exact trailing-newline policy is an impl choice (some flush
-    # with a terminating LF, some without). The invariant is that the
-    # payload "hello" MUST appear in the .bbl; bbl.strip() normalizes.
-    assert bbl.strip() == "hello", f"bare write$ must flush at end of run; got {bbl!r}"
+    """WEB's bst_done closes the BBL without draining the logical buffer."""
+    # bibtex.web 3478–3483 goes directly from BST EOF to closing files;
+    # write$ (11288–11300) only adds to out_buf. Only wrapping/newline$
+    # call output_bbl_line. The public authority notice gives WEB precedence
+    # over summary §3.6's contradictory MUST-flush statement, just as for
+    # its contradictory trailing-whitespace rule. A flushed prefix prevents
+    # an implementation that produces no output from passing this test.
+    body = '"flushed" write$ newline$ "pending" write$'
+    assert _run(submission_command, tmp_path, body) == "flushed\n"
 
 
 def test_whitespace_only_line_is_discarded_on_flush(

@@ -1,5 +1,20 @@
 # BibTeX Eval Changelog
 
+## v1.2.5 — 2026-09-17
+
+- Correct the EOF output oracle: the supplied authoritative `bibtex.web`
+  closes the BBL without flushing its pending logical line. Replace the
+  contradictory must-flush probe with a flushed-prefix/pending-tail control,
+  and remove the C++ reference's automatic final flush. Explicit source
+  precedence resolves the summary disagreement, as for trailing whitespace.
+- End semantic fixtures with explicit `newline$`, including branch, loop,
+  entry-state and name-formatting observations. This removes the shared EOF
+  dependency that hid dozens of otherwise independent behaviors. Preserve
+  their assertions, canonical style fixtures and all 386 scored cases.
+- All model-visible inputs remain unchanged. Independent source/oracle review,
+  reference and mutation controls, and saved-submission score changes are
+  recorded in `docs/validation/BibTeX-1.2.5.md`.
+
 ## v1.2.4 — 2026-09-12
 
 - Correct the existing positive past-end `format.name$` probe: the supplied

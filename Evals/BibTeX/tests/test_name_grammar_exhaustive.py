@@ -25,6 +25,9 @@ from pathlib import Path
 
 from conftest import run_bibtex
 
+# Semantic fixtures explicitly end their output with newline$: the supplied
+# bibtex.web closes the BBL at EOF without flushing its pending logical line.
+
 # ---------------------------------------------------------------------------
 # Single-name probes: build a style that emits exactly four tagged parts
 # of the first name. Each test owns its .bst and its assertion so a failure
@@ -66,7 +69,7 @@ FUNCTION {{f}}
 {{ "first<|" author #{which} "{{ff}}" format.name$ * "|>" * write$
   "von<|"   author #{which} "{{vv}}" format.name$ * "|>" * write$
   "last<|"  author #{which} "{{ll}}" format.name$ * "|>" * write$
-  "jr<|"    author #{which} "{{jj}}" format.name$ * "|>" * write$ }}
+  "jr<|"    author #{which} "{{jj}}" format.name$ * "|>" * write$ newline$ }}
 READ
 ITERATE {{f}}
 """
@@ -90,7 +93,7 @@ def _num_names(submission_command: tuple[str, ...], tmp_path: Path, literal: str
     bib = f'@article{{k, author = "{literal}"}}\n'
     style = """\
 ENTRY { author } { } { }
-FUNCTION {f} { author num.names$ int.to.str$ write$ }
+FUNCTION {f} { author num.names$ int.to.str$ write$ newline$ }
 READ
 ITERATE {f}
 """

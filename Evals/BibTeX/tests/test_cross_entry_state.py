@@ -23,6 +23,9 @@ from pathlib import Path
 
 from conftest import run_bibtex
 
+# Semantic fixtures explicitly end their output with newline$: the supplied
+# bibtex.web closes the BBL at EOF without flushing its pending logical line.
+
 THREE_BIB = "@misc{a,}\n@misc{b,}\n@misc{c,}\n"
 
 
@@ -86,10 +89,12 @@ ENTRY { } { slot } { }
 FUNCTION {check.and.bump}
 { slot int.to.str$ write$ " " write$
   slot #99 + 'slot := }
+FUNCTION {finish} { newline$ }
 FUNCTION {init.slot} { #0 'slot := }
 READ
 ITERATE {init.slot}
 ITERATE {check.and.bump}
+EXECUTE {finish}
 """
     bbl, _ = run_bibtex(submission_command, THREE_BIB, style, ["a", "b", "c"], tmp_path)
     # Each entry starts with slot=0 (set by init.slot), writes "0 ".

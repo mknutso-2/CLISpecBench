@@ -38,15 +38,12 @@ def _exec(
 
     Returns (bbl_text, log_or_None).
     """
-    # Append newline$ when body ends on bare write$ — guards against a
-    # single-line flush bug cascading across every built-in test. See
-    # test_bst_language._maybe_flush for rationale.
-    if body.rstrip().endswith("write$"):
-        body = body + " newline$"
+    # Flush every semantic probe explicitly, including writes inside branches.
     style = f"""\
 ENTRY {{ {entry_fields} }} {{ }} {{ }}
 FUNCTION {{article}} {{ skip$ }}
-FUNCTION {{f}} {{ {body} }}
+FUNCTION {{f}} {{ {body}
+  newline$ }}
 READ
 EXECUTE {{f}}
 """
@@ -66,7 +63,8 @@ def _iterate(
     style = f"""\
 ENTRY {{ {entry_fields} }} {{ }} {{ }}
 FUNCTION {{article}} {{ skip$ }}
-FUNCTION {{f}} {{ {body} }}
+FUNCTION {{f}} {{ {body}
+  newline$ }}
 READ
 ITERATE {{f}}
 """
@@ -223,7 +221,7 @@ def test_assign_integer(submission_command: tuple[str, ...], tmp_path: Path) -> 
     style = """\
 ENTRY { } { } { }
 INTEGERS { n }
-FUNCTION {f} { #42 'n := n int.to.str$ write$ }
+FUNCTION {f} { #42 'n := n int.to.str$ write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -235,7 +233,7 @@ def test_assign_string(submission_command: tuple[str, ...], tmp_path: Path) -> N
     style = """\
 ENTRY { } { } { }
 STRINGS { s }
-FUNCTION {f} { "hello" 's := s write$ }
+FUNCTION {f} { "hello" 's := s write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -247,7 +245,7 @@ def test_assign_empty_string_edge(submission_command: tuple[str, ...], tmp_path:
     style = """\
 ENTRY { } { } { }
 STRINGS { s }
-FUNCTION {f} { "" 's := s "X" * write$ }
+FUNCTION {f} { "" 's := s "X" * write$ newline$ }
 READ
 EXECUTE {f}
 """
@@ -627,7 +625,7 @@ FUNCTION {f}
 { #3 'i :=
   { i #0 > }
     { i int.to.str$ write$ i #1 - 'i := }
-  while$ }
+  while$ newline$ }
 READ
 ITERATE {f}
 """
@@ -646,7 +644,7 @@ FUNCTION {f}
   { i #0 > }
     { "BAD" write$ }
   while$
-  "ok" write$ }
+  "ok" write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -711,7 +709,7 @@ def test_call_type_dispatches(submission_command: tuple[str, ...], tmp_path: Pat
 ENTRY { title } { } { }
 FUNCTION {article} { "art:" write$ title write$ }
 FUNCTION {default.type} { "def" write$ }
-FUNCTION {f} { call.type$ }
+FUNCTION {f} { call.type$ newline$ }
 READ
 ITERATE {f}
 """
@@ -781,7 +779,7 @@ def test_preamble_concatenated(submission_command: tuple[str, ...], tmp_path: Pa
 
 def test_write_normal(submission_command: tuple[str, ...], tmp_path: Path) -> None:
     bbl, _ = _exec(submission_command, tmp_path, '"hello" write$')
-    # Implementation flushes any pending line at end-of-run; tolerate a final newline.
+    # The semantic helper ends this observation with an explicit newline$.
     assert bbl.rstrip("\n") == "hello"
 
 

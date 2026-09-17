@@ -29,13 +29,11 @@ def _exec(
     extra_entry: str = "{ }",
 ) -> str:
     """Build a style that EXECUTEs `body` (no ITERATE) and returns the .bbl."""
-    # Append newline$ when body ends on bare write$ — guards against the
-    # end-of-run flush cascade. See test_bst_language._maybe_flush.
-    if body.rstrip().endswith("write$"):
-        body = body + " newline$"
+    # Flush every semantic probe explicitly, including writes inside branches.
     style = f"""\
 ENTRY {{ author title }} {{ }} {extra_entry}
-FUNCTION {{f}} {{ {body} }}
+FUNCTION {{f}} {{ {body}
+  newline$ }}
 READ
 EXECUTE {{f}}
 """
@@ -60,7 +58,7 @@ ENTRY { author } { } { }
 FUNCTION {f}
 { author #1 "{ff}" format.name$ write$ "/" write$
   author #1 "{vv}" format.name$ write$ "/" write$
-  author #1 "{ll}" format.name$ write$ }
+  author #1 "{ll}" format.name$ write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -81,7 +79,7 @@ def test_name_tied_tokens_preserved_as_separate(
 ENTRY { author } { } { }
 FUNCTION {f}
 { author #1 "{ff}" format.name$ write$ "/" write$
-  author #1 "{ll}" format.name$ write$ }
+  author #1 "{ll}" format.name$ write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -99,7 +97,7 @@ def test_num_names_treats_brace_group_and_as_literal(
     bib = '@article{a, author = "Smith and Jones and {Brown and Green}"}\n'
     style = """\
 ENTRY { author } { } { }
-FUNCTION {f} { author num.names$ int.to.str$ write$ }
+FUNCTION {f} { author num.names$ int.to.str$ write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -118,7 +116,7 @@ def test_string_macro_redefinition_last_wins(
     bib = '@string{pub = "first"}\n@string{pub = "second"}\n@article{a, publisher = pub}\n'
     style = """\
 ENTRY { publisher } { } { }
-FUNCTION {f} { publisher write$ }
+FUNCTION {f} { publisher write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -135,7 +133,7 @@ def test_string_macro_forward_reference_fails(
     style = """\
 ENTRY { publisher } { } { }
 FUNCTION {f}
-{ publisher empty$ { "yes-empty" write$ } { "no" write$ } if$ }
+{ publisher empty$ { "yes-empty" write$ } { "no" write$ } if$ newline$ }
 READ
 ITERATE {f}
 """
@@ -159,7 +157,7 @@ def test_crossref_preserves_parent_key_case_in_child_crossref_value(
 """
     style = """\
 ENTRY { year } { } { }
-FUNCTION {f} { year write$ }
+FUNCTION {f} { year write$ newline$ }
 READ
 ITERATE {f}
 """
@@ -179,7 +177,7 @@ def test_format_name_with_literal_glue(submission_command: tuple[str, ...], tmp_
     style = """\
 ENTRY { author } { } { }
 FUNCTION {f}
-{ author #1 "{f. }{vv }{ll}{, jj}" format.name$ write$ }
+{ author #1 "{f. }{vv }{ll}{, jj}" format.name$ write$ newline$ }
 READ
 ITERATE {f}
 """
