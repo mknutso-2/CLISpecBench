@@ -45,8 +45,15 @@ published at **2900/2900**, bringing coverage to **49/112**. Its 30 self-test
 groups and isolated-output-copy checks are corroborated, together with 39
 underlying tool calls, 12,048 reasoning tokens, and a $6.413580 recorded
 API-equivalent estimate. Its UID is `70e4aee1-6323-4865-8bbe-a69903f61149`.
-The next selected submission is MARC21 Rust / Astra / Max; inspect its ledger
-before launching to avoid a duplicate.
+MARC21 Rust / Astra / Max completed normally and is reviewed and published at
+**2900/2900**, bringing coverage to **50/112**. Its release build, nine Rust tests
+and 180 CLI requests are corroborated, together with 34 underlying tool calls,
+10,166 reasoning tokens, and a $4.844408 recorded API-equivalent estimate.
+The self-test correction from `007="zz"` to invalid `007="zx"` follows explicit
+examples in the supplied documentation; it did not alter runtime validation.
+Its UID is `acad2564-7e18-41b0-85cd-019a5352a0fc`.
+The next selected submission is IGES C++ / Astra / Max; inspect its ledger before
+launching to avoid a duplicate.
 
 ## Stop condition and current state
 
