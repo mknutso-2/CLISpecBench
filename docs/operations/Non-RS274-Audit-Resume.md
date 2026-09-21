@@ -53,15 +53,33 @@ tokens within 98,113 output tokens, and the recomputed **$3.236420** API-equival
 estimate. Isolation, prompt/test hashes, and pinned images all match the study.
 No scoring repair, telemetry correction, or regrade was required.
 
-Coverage is **58/112**, with 54 cells needing qualifying results: Sol 16, Terra 17
-and Luna 21. There are 48 unstarted cells and six retries (five quota, one provider
+Terra Max / LAS Rust then completed normally at **223/223** under LAS 2.0.4,
+UID `a0ec7949-71be-4442-8e84-2ed3d48ddee0`, generated from `c747ec5`.
+Independent review supports its general standard-library implementation and final
+build claim. Initial compile errors and a UUID panic were corrected; rustfmt was
+unavailable. A late chained negative probe can mask an earlier failure, and the
+final waveform error-offset edit was rebuilt without a later execution probe.
+The hidden suite grades that final source. Accounting preserves 46,504 reasoning
+tokens within 94,375 output tokens and a **$3.038195** API-equivalent estimate.
+Its original tool count was conservatively unavailable: a direct rejected patch
+used a display-only `typeof`/`JSON.stringify` expression outside the parser's
+accepted forms. A narrow AST extension proves **70 tool calls** (68 canonical
+actions plus two explicit pre-item rejections). It does not execute generated
+JavaScript or admit conditional tool requests. Focused tests, strict Pyright,
+Ruff and independent review validate the extension. The separate
+[tool-count audit](../../regraded_results/tool-counts/2026-09-21/a0ec7949-71be-4442-8e84-2ed3d48ddee0.json)
+preserves the original usage and complete previous publication; scores, source,
+generation bytes, token totals and costs are unchanged. No regrade was needed.
+
+Coverage is **59/112**, with 53 cells needing qualifying results: Sol 16, Terra 16
+and Luna 21. There are 47 unstarted cells and six retries (five quota, one provider
 capacity); no earlier completed-review backlog. All 28 Astra cells are complete.
 Collection covers all seven non-RS274 tasks, including their tests-only repairs;
 the public-input revision remains deferred. The next selected pending cell is
-**Terra Max / LAS Rust**. Inspect its live ledger before dispatch. Finish each
+**Luna Max / LAS JavaScript**. Inspect its live ledger before dispatch. Finish each
 result's transcript, source, scoring and accounting review, then publish/commit
 before the next run. The previous four-worker queue remains disabled. Seven
-excluded attempts total **$54.862522**; qualifying estimates total **$271.341668**.
+excluded attempts total **$54.862522**; qualifying estimates total **$274.379863**.
 These are API-equivalent estimates, not subscription bills.
 
 ## Latest checkpoint — September 17, 2026

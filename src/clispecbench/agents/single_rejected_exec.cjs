@@ -35,6 +35,19 @@ function inspect(source) {
     if (!node || node.type !== 'CallExpression' || node.callee.type !== 'Identifier' || node.callee.name !== 'text' || node.arguments.length !== 1) return false;
     const arg=node.arguments[0];
     if (awaitedTool(arg)) return true;
+    // This exact display-only ternary follows a direct awaited tool request.
+    // Do not admit branches that choose whether (or which) tool gets called.
+    if (arg.type === 'ConditionalExpression' && resultVariable !== null && resultVariable !== 'JSON' && literalVariable !== 'JSON') {
+      const test = arg.test, stringify = arg.alternate, callee = stringify.callee;
+      const isResult = node => node && node.type === 'Identifier' && node.name === resultVariable;
+      if (test.type === 'BinaryExpression' && test.operator === '===' &&
+          test.left.type === 'UnaryExpression' && test.left.operator === 'typeof' && isResult(test.left.argument) &&
+          test.right.type === 'Literal' && test.right.value === 'string' && isResult(arg.consequent) &&
+          stringify.type === 'CallExpression' && !stringify.optional &&
+          callee.type === 'MemberExpression' && !callee.computed && !callee.optional &&
+          callee.object.type === 'Identifier' && callee.object.name === 'JSON' && callee.property.name === 'stringify' &&
+          stringify.arguments.length === 1 && isResult(stringify.arguments[0])) return true;
+    }
     return resultVariable !== null && ((arg.type === 'Identifier' && arg.name === resultVariable) || (arg.type === 'MemberExpression' && !arg.computed && arg.object.type === 'Identifier' && arg.object.name === resultVariable && arg.property.name === 'output'));
   }
   for (const statement of ast.body) {
@@ -48,7 +61,7 @@ function inspect(source) {
       if (declaration.id.type !== 'Identifier' || !awaitedTool(declaration.init)) return {available:false,reason:'wrapper is not one direct awaited tool call'};
       resultVariable=declaration.id.name;
     } else if (statement.type === 'ExpressionStatement' && (printedResult(statement.expression) || awaitedTool(statement.expression))) {
-      // Exact print-result or awaited-call forms only; no loops/branches/catches.
+      // Exact display or awaited-call forms only; no loops/tool-selection branches/catches.
     } else return {available:false,reason:'wrapper contains unsupported control flow or expressions'};
   }
   return calls === 1 && (literalVariable === null || literalUsed)

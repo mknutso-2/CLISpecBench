@@ -71,6 +71,8 @@ class CountingTests(unittest.TestCase):
             'text(await tools.apply_patch("*** Begin Patch\\n*** End Patch"));',
             'const patch="*** Begin Patch\\n*** End Patch"; '
             "const result=await tools.apply_patch(patch); text(result);",
+            'const patch="p"; const r=await tools.apply_patch(patch); '
+            'text(typeof r === "string" ? r : JSON.stringify(r));',
         ]:
             with self.subTest(source=source):
                 p = patch_pair(source)
@@ -86,6 +88,41 @@ class CountingTests(unittest.TestCase):
                 self.assertEqual(result["corrected_tool_calls"], 63)
                 self.assertEqual(result["evidence"][0]["tool"], "apply_patch")
                 self.assertEqual(len(result["evidence"][0]["request_patch_sha256"]), 64)
+
+    def test_exec_display_formatter_does_not_change_attempt_count(self) -> None:
+        source = (
+            'const r=await tools.exec_command({cmd:"rm -f /tmp/test"}); '
+            'text(typeof r === "string" ? r : JSON.stringify(r));'
+        )
+        self.assertEqual(supplement(self.audit([pair(source)]), 12)["corrected_tool_calls"], 13)
+
+    def test_display_formatter_only_accepts_the_exact_safe_shape(self) -> None:
+        sources = [
+            'const JSON="p"; const r=await tools.apply_patch(JSON); '
+            'text(typeof r === "string" ? r : JSON.stringify(r));',
+            'const JSON=await tools.apply_patch("p"); '
+            'text(typeof JSON === "string" ? JSON : JSON.stringify(JSON));',
+            'const r="fake await tools.apply_patch(p)"; '
+            'text(typeof r === "string" ? r : JSON.stringify(r));',
+            'text(typeof x === "string" ? await tools.apply_patch("p") : x);',
+        ]
+        for display in [
+            'typeof r === "string" ? r : await tools.apply_patch("q")',
+            'typeof r === "string" ? r : JSON.stringify(await tools.apply_patch("q"))',
+            'typeof r === "string" ? r : JSON.stringify(other)',
+            'typeof r === "string" ? other : JSON.stringify(r)',
+            'typeof other === "string" ? r : JSON.stringify(r)',
+            'typeof r === "string" ? r : JSON["stringify"](r)',
+            'typeof r === "string" ? r : JSON.stringify(r, await tools.apply_patch("q"))',
+            'typeof r === "string" ? r : stringify(r)',
+            'typeof r === "string" ? r : null',
+        ]:
+            sources.append(f'const r=await tools.apply_patch("p"); text({display});')
+        for source in sources:
+            with self.subTest(source=source):
+                self.assertIsNone(
+                    supplement(self.audit([patch_pair(source)]), 62)["corrected_tool_calls"]
+                )
 
     def test_patch_overlap_or_incomplete_item_remains_unavailable(self) -> None:
         for status in ["failed", "in_progress", None]:
