@@ -1,5 +1,36 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 21 continuation
+
+The user renewed the instruction to continue, still one submission at a time.
+Weekly capacity was checked at 7% used (93% remaining). The September 17
+capacity hold is historical. Sol Max / BibTeX Rust was launched from `c3e5f0c`
+under BibTeX 1.2.5, UID `7a1a5ac4-26c5-474f-872a-5dbfe55cc071`, but the provider
+ended it after 259 seconds with `server_overloaded` / “Selected model is at
+capacity.” It had only read references and produced no source. Its 386 grader
+setup errors are diagnostic; they are not a completed 0/386 model score.
+
+Independent review and original/session accounting agree: 555,000 partial tokens,
+4,300 reasoning tokens within 5,803 output tokens, 15 tool calls, and a $0.633693
+API-equivalent estimate. Raw artifacts are unchanged. Its ledger `omitted.json`
+uses **infra_provider_capacity**, distinct from the five **infra_usage_cap**
+attempts. The original and structured failure evidence are included in the
+committed excluded-attempt snapshot. A future retry must use a fresh generation.
+The local `dispatch_safety.py` retry guard now recognizes this exact status only
+with a matching preserved capacity-failure terminal event; real provider/quota
+and negative-control checks, Ruff and strict Pyright passed. Preserve the local
+helpers and ledgers with the raw artifacts.
+
+Coverage remains 57/112, with 55 cells needing qualifying results: Sol 16, Terra 18
+and Luna 21. There are 49 unstarted cells and six retries (five quota, one provider
+capacity); no earlier completed-review backlog. All 28 Astra cells are complete.
+The next selected pending cell is **Terra Max / LAS JavaScript**, avoiding an
+immediate repeat on the unavailable Sol model. Inspect its live ledger before
+dispatch. Finish each result's transcript, source, scoring and accounting review,
+then publish/commit before the next run. The previous four-worker queue remains
+disabled. Seven excluded attempts now total **$54.862522**; qualifying estimates
+remain **$268.105248**. These are API-equivalent estimates, not subscription bills.
+
 ## Latest checkpoint — September 17, 2026
 
 Coverage is **57/112 reviewed local publications** (Astra 28, Sol 12, Terra 10,

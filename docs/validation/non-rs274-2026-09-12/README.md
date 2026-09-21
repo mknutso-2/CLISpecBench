@@ -1,6 +1,6 @@
 # Non-RS274 scoring audit and GPT coverage
 
-Checkpoint: 2026-09-17T11:23:20.724996+00:00. Local implementation revision `ab4e09f839b16089b6f0f10cd6d0b4df76730b78`. Results are in the local publication tree; no push has been made for this task.
+Checkpoint: 2026-09-21T20:45:09.769961+00:00. Local implementation revision `c3e5f0c430049156bdcee1e7bb763d73b86413f4`. Results are in the local publication tree; no push has been made for this task.
 
 The user resumed work on September 16 with one submission at a time: finish each retained review before new generation, then finish and review each new run before starting another. The previous parallel queue remains disabled. See the [resume instructions](../../operations/Non-RS274-Audit-Resume.md).
 
@@ -29,7 +29,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |bibtex-cpp|378/386|378/386|Pending|Pending|
 |bibtex-js|381/386|383/386|Pending|Pending|
 |bibtex-py|379/386|380/386|373/386|Retry: quota|
-|bibtex-rs|382/386|Pending|Pending|Pending|
+|bibtex-rs|382/386|Retry: capacity|Pending|Pending|
 |gedcom-cpp|212/212|Pending|Pending|Pending|
 |gedcom-js|212/212|Pending|Pending|Pending|
 |gedcom-py|212/212|205/212|205/212|201/212|
@@ -57,13 +57,15 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 
 55 cells still need a qualifying result, including active runs. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. Capacity subsequently became available again and collection resumed. The previous four-worker queue is disabled. Resumed collection processes one submission at a time, including review before the next generation. Every excluded retry gets a fresh generation and preserves its previous artifacts and ledger.
 
+Provider-capacity interruptions are tracked separately from account-quota interruptions. They are excluded from correctness scores, preserve partial usage, and require fresh attempts; see the excluded-attempt records for each cause.
+
 ## Conditions and accounting
 
 The initial 35 valid completed runs predate explicit hosted-app disablement. Their complete session audit found no external tool invocation, and they are labeled `api-proxy-apps-available-unused`; this is distinct from future `api-only-apps-disabled` runs. Hosted app traffic can pass through the API and bypass the Docker socket proxy. The adapter now disables apps as well as web search, with three live isolation probes and independent review. Actual launch conditions remain recorded; generation metadata is not rewritten.
 
 The v2 tool-call definition is unchanged. Session evidence exposed 19 rejected nested attempts across 17 of the initial 35 eligible completed generations that canonical items omitted. In that initial group, 12 exact totals were corrected; six totals are unavailable because other failed-wrapper evidence cannot establish an exact count (one such run had no explicit process rejection). Seventeen totals remain unchanged. Original token totals, reasoning, costs and generation-completion flags are preserved. Separate audits preserve complete prior publication bytes and existing regrade audit hash chains. The same omission was observed in one of 12 local historical RS274 attempts; its prior publication has not been silently rewritten. Subsequent generations use the corrected parser and are independently checked against their preserved sessions.
 
-Estimated API-equivalent generation cost for the 57 qualifying completed runs: **$268.105248**. Excluded attempted generations total **$54.228829** at the recorded estimates, including partial quota runs. These are estimates, not the subscription bill. Reasoning tokens are a subset of output tokens and are not charged or added twice. Active runs are not included in these completed/excluded sums.
+Estimated API-equivalent generation cost for the 57 qualifying completed runs: **$268.105248**. Excluded attempted generations total **$54.862522** at the recorded estimates, including partial quota runs. These are estimates, not the subscription bill. Reasoning tokens are a subset of output tokens and are not charged or added twice. Active runs are not included in these completed/excluded sums.
 
 Agent image: `sha256:af2c19c8f457977011653519905408e861235272007daca50b92fc685f1aef73` (Codex CLI 0.153.4). Grader/reference image: `sha256:9a4f1fe0219b50b94c4a7abeb8a48cedd6a9c17c1ab90d34cc4bb4d826a7c90c`. Saved-source regrades require no new inference or model cost. Normal grading now resolves, pins and records the actual grader image separately from the agent image; failed resolution preserves the completed generation and usage without inventing a score. Historical grader identity remains unknown unless explicitly recorded or supplied by a preserved regrade. The dashboard no longer substitutes an agent image for missing grader evidence.
 
@@ -75,5 +77,5 @@ Machine-readable records: [completed results](completed-results.json), [remainin
 
 ## Dispatch status
 
-New dispatch is paused: Serial checkpoint after Sol Max BibTeX JavaScript review. Account weekly usage was99% used; finish zero-inference regrades and documentation, then check replenished capacity before any new generation. No reset or credit purchase authorized. Do not restart the parallel queue.
+New dispatch is paused: Serial dispatch gate: BibTeX Rust / Sol Max selected. Finish grading, content/accounting review and publication before another submission. Do not restart the parallel queue.
 Active generations are allowed to finish and remain subject to full review.
