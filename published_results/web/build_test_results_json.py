@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import tempfile
+from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 DEFAULT_RUNS_FILE = Path(__file__).with_name("results-published.json")
 DEFAULT_OUTPUT_FILE = Path(__file__).with_name("test-results-published.json")
@@ -36,7 +39,7 @@ def read_json(path: Path) -> dict[str, Any]:
         data = json.load(handle)
     if not isinstance(data, dict):
         raise ValueError(f"{path} is not a JSON object")
-    return data
+    return cast(dict[str, Any], data)
 
 
 def result_path(runs_file: Path, result_link: str) -> Path:
@@ -75,20 +78,24 @@ def normalize_message(test: dict[str, Any]) -> str:
     return message if isinstance(message, str) else ""
 
 
-def build_payload(runs_file: Path) -> dict[str, Any]:
+def _build_metadata(
+    runs_file: Path, consume_row: Callable[[dict[str, Any]], None]
+) -> dict[str, Any]:
+    """Visit each expanded test row once, retaining only run metadata and counts."""
     runs_payload = read_json(runs_file)
     official_rows = runs_payload.get("rows", [])
     if not isinstance(official_rows, list):
         raise ValueError(f"{runs_file}: expected a top-level rows array")
 
     runs: list[dict[str, Any]] = []
-    rows: list[dict[str, Any]] = []
+    test_result_count = 0
     outcome_counts: dict[str, int] = {}
     unique_tests: set[tuple[str, str]] = set()
 
-    for run_index, row in enumerate(official_rows):
+    for run_index, row in enumerate(cast(list[object], official_rows)):
         if not isinstance(row, dict):
             continue
+        row = cast(dict[str, Any], row)
         key = run_key(row)
         result_link = str(row.get("result_link", ""))
         path = result_path(runs_file, result_link)
@@ -96,8 +103,9 @@ def build_payload(runs_file: Path) -> dict[str, Any]:
         tests = result.get("tests", [])
         if not isinstance(tests, list):
             raise ValueError(f"{path}: expected tests to be an array")
+        tests = cast(list[object], tests)
 
-        run = {
+        run: dict[str, Any] = {
             "run_key": key,
             "task": row.get("task"),
             "eval": row.get("eval"),
@@ -122,13 +130,14 @@ def build_payload(runs_file: Path) -> dict[str, Any]:
         for ordinal, test in enumerate(tests):
             if not isinstance(test, dict):
                 continue
+            test = cast(dict[str, Any], test)
             node_id = str(test.get("node_id") or "")
             outcome = str(test.get("outcome") or "unknown")
             if outcome == "passed":
                 passed += 1
             outcome_counts[outcome] = outcome_counts.get(outcome, 0) + 1
             unique_tests.add((run["eval_language"], node_id))
-            rows.append(
+            consume_row(
                 {
                     "row_id": f"{key}|{ordinal}",
                     "run_key": key,
@@ -152,12 +161,15 @@ def build_payload(runs_file: Path) -> dict[str, Any]:
                     "message": normalize_message(test),
                 },
             )
+            test_result_count += 1
 
         score_count = row.get("score_count")
         if isinstance(score_count, int) and score_count != passed:
             raise ValueError(
                 f"{path}: score_count {score_count} does not match {passed} passed test outcomes",
             )
+        # Release this source run before loading the next one.
+        del result, tests
 
     return {
         "schema_version": "1.0",
@@ -166,24 +178,58 @@ def build_payload(runs_file: Path) -> dict[str, Any]:
             "Official completed runs from results-published.json linked curated run JSON files"
         ),
         "completed_run_count": len(runs),
-        "test_result_count": len(rows),
+        "test_result_count": test_result_count,
         "unique_test_count": len(unique_tests),
         "outcome_counts": dict(sorted(outcome_counts.items())),
         "runs": runs,
-        "rows": rows,
     }
+
+
+def build_payload(runs_file: Path) -> dict[str, Any]:
+    """Build an in-memory payload for small inputs; the CLI uses write_payload."""
+    rows: list[dict[str, Any]] = []
+    return {**_build_metadata(runs_file, rows.append), "rows": rows}
+
+
+def write_payload(runs_file: Path, output: Path) -> dict[str, Any]:
+    """Stream rows to a sibling temporary file and publish only a validated result."""
+    temporary_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=output.parent,
+            prefix=f".{output.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as handle:
+            temporary_path = Path(handle.name)
+            handle.write('{"rows":[')
+            first_row = True
+
+            def write_row(row: dict[str, Any]) -> None:
+                nonlocal first_row
+                if not first_row:
+                    handle.write(",")
+                handle.write(json.dumps(row, ensure_ascii=True, separators=(",", ":")))
+                first_row = False
+
+            metadata = _build_metadata(runs_file, write_row)
+            handle.write("]")
+            for key, value in metadata.items():
+                handle.write(f",{json.dumps(key)}:")
+                json.dump(value, handle, ensure_ascii=True, separators=(",", ":"))
+            handle.write("}\n")
+        os.replace(temporary_path, output)
+        return metadata
+    finally:
+        if temporary_path is not None:
+            temporary_path.unlink(missing_ok=True)
 
 
 def main() -> None:
     args = parse_args()
-    payload = build_payload(args.runs_file)
-    # Keep the ignored local aggregate compact. The full per-test payload can be
-    # hundreds of MB; pretty-printing has pushed real datasets above browser
-    # string-size limits even though the underlying data is otherwise valid.
-    args.output.write_text(
-        json.dumps(payload, ensure_ascii=True, separators=(",", ":")) + "\n",
-        encoding="utf-8",
-    )
+    payload = write_payload(args.runs_file, args.output)
     print(
         f"Wrote {payload['test_result_count']} test results across "
         f"{payload['completed_run_count']} runs to {args.output}",

@@ -2,6 +2,26 @@
 
 ## September 21 continuation
 
+At 16:27:49 CDT, the host exhausted RAM and all 4 GB of swap during overlapping
+reporting work. The kernel killed a Python process, and the ChatGPT app scopes
+ended immediately afterward. The OS did not restart (boot remains September 16).
+The Terra LAS JavaScript generation and review had already finished; its raw
+result, local publication and 58-result checkpoint survived. No next generation
+had started. The main dashboard was refreshed, but the 1.25 GB per-test aggregate
+remained the previous September 17 file. Reporting now streams each expanded
+test row into a sibling temporary file and atomically replaces the destination
+only after validation succeeds. A full recovery build under a 512 MiB address
+space limit produced 1,170,299 records across 1,834 runs in 36 seconds, with
+37,224 KiB peak resident memory and no swaps. Relevant kernel/app evidence and
+recovery logs are in `work/non-rs274-audit/incident-20260921-oom`. Keep these
+operations sequential and never load the full per-test aggregate into Python
+for validation. This reporting change does not alter scoring or model inputs.
+All 1,170,076 preceding test rows were then compared with bounded memory:
+their contents are unchanged except the expected run-index shift after the new
+publication; all 223 added rows match it. The comparison used 25,520 KiB peak
+resident memory. Twenty-seven targeted regression tests, strict Pyright, Ruff
+and independent review passed. Recovery is complete; no eval rerun is needed.
+
 The user renewed the instruction to continue, still one submission at a time.
 Weekly capacity was checked at 7% used (93% remaining). The September 17
 capacity hold is historical. Sol Max / BibTeX Rust was launched from `c3e5f0c`
@@ -21,15 +41,28 @@ with a matching preserved capacity-failure terminal event; real provider/quota
 and negative-control checks, Ruff and strict Pyright passed. Preserve the local
 helpers and ledgers with the raw artifacts.
 
-Coverage remains 57/112, with 55 cells needing qualifying results: Sol 16, Terra 18
-and Luna 21. There are 49 unstarted cells and six retries (five quota, one provider
+Terra Max / LAS JavaScript subsequently completed normally and is reviewed and
+published locally at **223/223** under unchanged LAS 2.0.4 tests. UID
+`a5f6ae06-0043-4315-b357-61658398ef5b`; generation revision `8de6fef`.
+Independent review found a general implementation and supported completion
+claims, with qualifications for failed local test transport and unavailable
+utilities, a misdirected final negative probe, and focused rather than broad
+local retesting after its final waveform validation adjustment. The final source
+passed all 223 hidden cases. Preserved events match 68 tool calls, 53,623 reasoning
+tokens within 98,113 output tokens, and the recomputed **$3.236420** API-equivalent
+estimate. Isolation, prompt/test hashes, and pinned images all match the study.
+No scoring repair, telemetry correction, or regrade was required.
+
+Coverage is **58/112**, with 54 cells needing qualifying results: Sol 16, Terra 17
+and Luna 21. There are 48 unstarted cells and six retries (five quota, one provider
 capacity); no earlier completed-review backlog. All 28 Astra cells are complete.
-The next selected pending cell is **Terra Max / LAS JavaScript**, avoiding an
-immediate repeat on the unavailable Sol model. Inspect its live ledger before
-dispatch. Finish each result's transcript, source, scoring and accounting review,
-then publish/commit before the next run. The previous four-worker queue remains
-disabled. Seven excluded attempts now total **$54.862522**; qualifying estimates
-remain **$268.105248**. These are API-equivalent estimates, not subscription bills.
+Collection covers all seven non-RS274 tasks, including their tests-only repairs;
+the public-input revision remains deferred. The next selected pending cell is
+**Terra Max / LAS Rust**. Inspect its live ledger before dispatch. Finish each
+result's transcript, source, scoring and accounting review, then publish/commit
+before the next run. The previous four-worker queue remains disabled. Seven
+excluded attempts total **$54.862522**; qualifying estimates total **$271.341668**.
+These are API-equivalent estimates, not subscription bills.
 
 ## Latest checkpoint — September 17, 2026
 
@@ -445,13 +478,19 @@ regraded or compare them to corrected scores without acknowledging the rubric
 difference. Recover their original sources from the other workstation for a
 future zero-inference migration, rather than silently relabelling versions.
 
-After reviewed publication, refresh the report and dashboards:
+After reviewed publication, refresh the report and dashboards sequentially:
 
 ```sh
 sg docker -c '.venv/bin/python3 ../work/non-rs274-audit/write_checkpoint.py'
 .venv/bin/python3 published_results/web/build_results_json.py
-.venv/bin/python3 published_results/web/build_test_results_json.py
+(ulimit -v 524288; .venv/bin/python3 published_results/web/build_test_results_json.py)
 ```
+
+The last command adds a Linux 512 MiB process limit as a secondary guard; the
+streaming writer normally uses much less. Validate a large per-test aggregate
+with a streaming reader rather than `json.load` or `read_text` followed by
+`json.loads`. The aggregate can exceed 1 GB even though its source run files are
+small. Retain the old file until successful validation if comparing versions.
 
 The per-test aggregate is intentionally ignored by Git. Check changed numeric
 fields against actual publication records and preserve prior payload/audit
