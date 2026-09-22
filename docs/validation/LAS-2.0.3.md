@@ -1,5 +1,10 @@
 # LAS 2.0.3 fixture refinement — 2026-09-12
 
+> Later correction: [LAS 2.0.5](LAS-2.0.5.md) withdraws the interpretation
+> that metadata/storage-free zero-waveform files must be accepted. Any
+> classification below of those four failures as established model defects is
+> superseded; the historical measurements themselves remain preserved.
+
 The public inputs, all 223 case IDs, reference implementations and generated
 submissions are unchanged. One negative render fixture now provides an explicit
 one-byte `extra_bytes_b64` tail (`AQ==`) against its existing Type3 Extra Bytes

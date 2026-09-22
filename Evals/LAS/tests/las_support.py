@@ -414,13 +414,14 @@ def dataset_with_extra_bytes_type(data_type: int, *, options: int = 0) -> dict[s
     return dataset
 
 
-def dataset_without_waveform_packets(point_format: int) -> dict[str, Any]:
+def dataset_with_zero_waveform_blocks(point_format: int) -> dict[str, Any]:
     dataset = dataset_for_point_format(point_format)
-    dataset["header"]["global_encoding"] &= ~(WAVEFORM_INTERNAL_BIT | WAVEFORM_EXTERNAL_BIT)
-    dataset["vlrs"] = [
-        record for record in dataset["vlrs"] if record.get("kind") != "waveform_packet_descriptor"
-    ]
-    dataset["evlrs"] = []
+    # LAS Point Format 4 defines descriptor index zero as no waveform for that
+    # point; the technical contract writes zero wire fields for an omitted
+    # waveform object. Keep the otherwise-valid descriptor and storage context:
+    # the supplied Waveform Packet Descriptor/Data headings separately call
+    # those records required for formats 4/5/9/10. Their omission policy is not
+    # unambiguous, so this fixture tests only absent point associations.
     for point in dataset["points"]:
         point.pop("waveform", None)
     return dataset

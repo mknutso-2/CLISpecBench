@@ -6,7 +6,7 @@ proposes a later public-input revision; it does not change prompts, documents,
 tests, references, results, or the authority used for existing scores. No
 external specification was substituted for the files supplied to the models.
 
-The current revisions are WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
+The current revisions are WordCount **1.0.4**, LAS **2.0.5**, GEDCOM **4.0.3**,
 MARC21 **3.0.2**, BibTeX **1.2.5**, ICal **3.0.2**, and IGES **1.0.19**. GEDCOM
 4.0.3 is integrated in commit `e6a13bf`; its minimal VOID fixture is therefore
 current behavior, not a pending proposal. Each task's model-visible inputs
@@ -42,10 +42,11 @@ Evidence: [WordCount validation][wc-validation].
    choose UTF-8 with invalid sequences producing exit 1, or define arbitrary
    byte input and its JSON representation.
 
-## LAS 2.0.4
+## LAS 2.0.5
 
 Evidence: [initial audit][las-201], [representation repairs][las-202],
-[explicit short-tail repair][las-203], and [deprecated-bit repair][las-204].
+[explicit short-tail repair][las-203], [deprecated-bit repair][las-204], and
+[zero-waveform fixture repair][las-205].
 
 1. **Decision — unknown render JSON members.** The [technical schema][las-tr]
    specifies known fields but no unknown-key policy. The hidden suite no longer
@@ -99,6 +100,16 @@ Evidence: [initial audit][las-201], [representation repairs][las-202],
    acceptance/rejection is unscored. **Proposed wording:** state whether a
    nonzero internal offset may identify deprecated internal storage with bit 1
    clear, and distinguish it from the prohibited external/internal conflict.
+
+8. **Decision — file-level metadata when no point has a waveform.** The supplied
+   [descriptor-index rule, lines 975–979][las-layout] makes index zero a
+   per-point absence marker. It does not explicitly waive the separate required
+   descriptor/storage headings around lines 1720 and 1768. LAS 2.0.5 retains
+   valid metadata and storage while testing zero point fields; acceptance or
+   rejection of completely metadata/storage-free waveform formats is unscored.
+   **Proposed wording:** explicitly state whether those file-level records and
+   storage flags may be omitted when every point has descriptor index zero.
+   Apply the chosen policy only to new generations receiving that clarification.
 
 The 60-byte waveform EVLR header offset, explicit packet bounds, and opaque
 waveform payload treatment are already defined; they are repaired test
@@ -357,6 +368,7 @@ rescoring rather than applying those new choices retroactively.
 [las-202]: ../LAS-2.0.2.md
 [las-203]: ../LAS-2.0.3.md
 [las-204]: ../LAS-2.0.4.md
+[las-205]: ../LAS-2.0.5.md
 [las-tr]: ../../../Evals/LAS/prompt/technical-requirements-prompt.md
 [las-layout]: ../../../Evals/LAS/prompt/docs/17-030r1-layout.txt
 [las-base]: ../../../Evals/LAS/prompt/base-prompt.md

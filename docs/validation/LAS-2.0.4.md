@@ -1,5 +1,10 @@
 # LAS 2.0.4 waveform-storage fixture correction — 2026-09-12
 
+> Later correction: [LAS 2.0.5](LAS-2.0.5.md) withdraws the interpretation
+> that metadata/storage-free zero-waveform files must be accepted. Any
+> classification below of those four failures as established model defects is
+> superseded; the historical measurements themselves remain preserved.
+
 All model-visible input bytes, reference implementations and generated sources
 are unchanged. The hidden suite still contains 223 cases. One negative fixture
 now declares external waveform storage while retaining an internal waveform

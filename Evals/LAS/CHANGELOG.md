@@ -1,5 +1,21 @@
 # Changelog
 
+## v2.0.5 — 2026-09-21
+
+- Retain valid file-level waveform descriptors and internal storage in the four
+  zero-waveform point fixtures. Descriptor index zero means no association for
+  that point; it does not unambiguously waive the supplied specification's
+  separately required descriptor/storage records for formats 4/5/9/10.
+- Rename the four cases to describe their narrower invariant. Continue accepting
+  omitted or explicitly zero-valued waveform output, without repeating unrelated
+  point/header/metadata assertions. The suite remains 223 cases, and all other
+  219 case identities and assertions are unchanged.
+- Leave all-descriptor/storage omission unscored pending public clarification.
+  Model-visible inputs and references are unchanged. Earlier classifications of
+  those four old failures as proven implementation defects are withdrawn;
+  preserve historical scores and use separate saved-source regrades for current
+  reporting. See `docs/validation/LAS-2.0.5.md`.
+
 ## v2.0.4 — 2026-09-12
 
 - Replace the ambiguous requirement to reject an internal waveform EVLR solely

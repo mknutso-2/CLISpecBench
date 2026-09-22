@@ -1,5 +1,18 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 21 LAS scoring correction in progress
+
+Luna Max LAS Rust completed normally under 2.0.4 at 215/223 (UID
+`d0a1d8fc-a69f-451f-81a1-f778b3758942`). Its raw source, grade, transcript and
+usage are preserved. Publication is held for the tests-only 2.0.5 migration.
+The four descriptor/storage-free zero-waveform positives were ambiguous under
+the full public corpus. Earlier statements below calling those failures model
+defects, or saying no rubric repair was needed, are withdrawn. See
+[LAS 2.0.5](../validation/LAS-2.0.5.md) for the public basis and controls.
+Finish all 16 saved-source comparisons and publication reviews before launching
+another model. The one-submission gate remains in force. Swap stays at 4 GiB;
+use only the bounded-memory dashboard writer and streaming verification.
+
 ## September 21 continuation
 
 At 16:27:49 CDT, the host exhausted RAM and all 4 GB of swap during overlapping

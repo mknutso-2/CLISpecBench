@@ -1,5 +1,10 @@
 # LAS 2.0.2 follow-up validation — 2026-09-12
 
+> Later correction: [LAS 2.0.5](LAS-2.0.5.md) withdraws the interpretation
+> that metadata/storage-free zero-waveform files must be accepted. Any
+> classification below of those four failures as established model defects is
+> superseded; the historical measurements themselves remain preserved.
+
 All model-visible inputs are unchanged. Reviewing the first fresh Astra Max
 Python submission exposed defects that the initial reference-only LAS audit
 missed. The saved program passed 182/219 under 2.0.1; all 37 failures came from

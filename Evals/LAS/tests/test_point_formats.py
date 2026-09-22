@@ -13,7 +13,7 @@ from .las_support import (
     dataset_with_external_waveform_packets,
     dataset_with_legacy_multi_returns,
     dataset_with_modern_multi_returns,
-    dataset_without_waveform_packets,
+    dataset_with_zero_waveform_blocks,
     encode_dataset,
     encode_request_for_inspect,
     encode_request_for_render,
@@ -276,12 +276,12 @@ def test_inspect_modern_multi_return_counts(
 
 
 @pytest.mark.parametrize("point_format", [4, 5, 9, 10])
-def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descriptors(
+def test_waveform_capable_formats_accept_all_zero_waveform_blocks(
     submission_command: Sequence[str],
     tmp_path: Path,
     point_format: int,
 ) -> None:
-    dataset = dataset_without_waveform_packets(point_format)
+    dataset = dataset_with_zero_waveform_blocks(point_format)
     result, payload = run_las(submission_command, encode_request_for_inspect(dataset), tmp_path)
 
     assert result.returncode == 0
@@ -307,7 +307,7 @@ def test_waveform_capable_formats_accept_all_zero_waveform_blocks_without_descri
                 assert isinstance(wave[field], (int, float))
                 assert not isinstance(wave[field], bool) and wave[field] == 0
     # Other point fields, header, VLRs and envelope shape have dedicated tests;
-    # none is a prerequisite for this specific absent-waveform acceptance case.
+    # do not repeat their assertions in this absent-point-waveform case.
 
 
 def test_external_waveform_mode_does_not_require_waveform_evlr(
