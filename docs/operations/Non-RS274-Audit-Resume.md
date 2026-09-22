@@ -1,5 +1,39 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max GEDCOM Rust completion
+
+Sol Max GEDCOM Rust completed voluntarily from `a0e6b0f`, UID
+`769bd4eb-a204-4d83-b59e-54c22bb4f926`, and is reviewed and published locally at
+**212/212** under unchanged GEDCOM 4.0.3. All seven optional-identifier cases
+pass. Independent source/claim review found no publication blocker or scoring
+repair. The final command passes eight release-mode unit tests and asserts all
+four CLI actions, exact dataset/attachment round trips, independent Python
+DEFLATE attachment bytes, and malformed-level error code/line. Only `.gitignore`
+is added afterward. The captured Cargo build caches remain intact; the source
+hash covers all 329 files and five empty directories (58,105,994 file bytes).
+
+Accounting matches the retained session: **92 tool calls** (62 commands, 28 file
+changes and two rejected patches), **48,613 reasoning tokens** within 111,796
+output tokens, and a verified **$10.341348** API-equivalent estimate. This is
+not a subscription charge. The local eight tests are separate from the 212
+hidden cases, and neither count represents that many independent capabilities.
+
+Coverage is **65/112** (Astra 28, Sol 16, Terra 12, Luna 9), leaving **47** cells
+(42 pending and five quota retries). Qualifying estimates total **$325.905015**;
+excluded attempts remain **$54.862522**. Sol Max GEDCOM now has C++ 212/212,
+JavaScript 205/212, Python 205/212 and Rust 212/212.
+Both dashboards are verified: all 1,840 prior main rows and 1,171,778 prior test
+rows are preserved, except expected run-index shifts; 212 exact new cases were
+added. Build/validation used 37,100/33,064 KiB peak RSS, zero swaps, and
+34.21/92.15 seconds under 512 MiB limits.
+
+Commit this checkpoint before **Sol Max / iCalendar C++**, after a fresh usage
+check. Continue one submission at a time. Swap remains deferred; no scheduled
+follow-up or push is authorized. Use the objective helper and independent
+content review documented below, then publish, validate and commit before the
+next dispatch. This run's ledger is
+`work/non-rs274-audit/runs/gedcom-rs-gpt-5.6-sol-max`.
+
 ## September 22 Sol Max GEDCOM JavaScript completion
 
 Sol Max GEDCOM JavaScript completed voluntarily from `2a4d781`, UID
