@@ -9,14 +9,14 @@ concrete occurrences over a date window, resolves zoned date-times
 through in-file VTIMEZONE definitions, and honors the iTIP
 scheduling layer.
 
-> **Status.** v3.0.0 — author-eval review cleanup over the completed
-> v1.x/v2.x expansion work, tightening the iTIP warning contract and
-> documenting DST fold resolution. Ships **9 authoritative RFCs** verbatim:
+> **Status.** v3.0.3 — tests-only validity corrections over the completed
+> v1.x/v2.x expansion and v3.0.0 contract. All v3.0.0 model-visible inputs
+> remain unchanged. Ships **9 authoritative RFCs** verbatim:
 > RFC 5545 (core) +
 > RFC 5546 (iTIP) + RFC 6868 (param escaping) + RFC 7529 (RSCALE) +
 > RFC 7953 (Calendar Availability) + RFC 7986 (calendar props) +
 > RFC 9073 (event publishing) + RFC 9074 (VALARM extensions) +
-> RFC 9253 (relationships). Test suite is **465 tests** (up from
+> RFC 9253 (relationships). Test suite is **467 tests** (up from
 > 245 at v1.0), covering VALARM ext, VFREEBUSY semantics, VTIMEZONE
 > resolution depth, DST fold/gap warnings, iTIP per-method matrices,
 > VAVAILABILITY, event-publishing extensions, 75-octet folding edges,
@@ -87,7 +87,7 @@ tests/
 reference-implementation-cpp/
   CMakeLists.txt
   src/                              # see below
-VERSION                             # 3.0.0
+VERSION                             # 3.0.3
 CHANGELOG.md
 ```
 

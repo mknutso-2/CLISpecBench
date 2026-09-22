@@ -219,9 +219,10 @@ That precedence is distinct from separately stated allowed approximations.
    score its warning kind, wording, count or absence. Native warning exit status
    2 also does not override the wrapper's successful warning-only exit status 0.
 
-## ICal 3.0.2
+## ICal 3.0.3
 
-Evidence: [3.0.1 validation][ical-301] and [3.0.2 validation][ical-302].
+Evidence: [3.0.1 validation][ical-301], [3.0.2 validation][ical-302], and
+[3.0.3 validation](../ICal-3.0.3.md).
 
 1. **Cleanup — spring-gap summary contradiction.** [Summary §5.1.1, lines
    365–374][ical-summary] mandates the post-transition offset; [RFC 5545 §3.3.5,
@@ -280,6 +281,15 @@ Evidence: [3.0.1 validation][ical-301] and [3.0.2 validation][ical-302].
    list mandatory calendars/features and explicitly identify the cases where
    warning/preservation can replace expansion. Historical acceptance is not
    proof that this broad fallback was clearly documented to models.
+8. **Decision — missing required alarm properties.** RFC 5545 §3.6.6 requires
+   ACTION and TRIGGER in valid VALARM components, but does not prescribe reader
+   recovery. The technical contract permits structured exit-1 errors for
+   malformed input; summary §10 defines `malformed_value` for an unparseable
+   value, not an absent property. The former hidden missing-TRIGGER case
+   required exit 0, event preservation and that warning without public support.
+   It is removed in 3.0.3. **Proposed wording:** explicitly choose rejection or
+   recovery (or permit both), define which component data survives recovery,
+   and name any mandatory warning before scoring this invalid-input policy.
 
 ## IGES 1.0.17
 

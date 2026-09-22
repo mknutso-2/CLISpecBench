@@ -398,26 +398,7 @@ def test_non_standard_action_preserved(submission_command: tuple[str, ...], tmp_
     assert alarm.get("action") == "PROCEDURE"
 
 
-# --- No ACTION/TRIGGER: malformed (§3.6.6 REQUIRES both) ---
-
-
-def test_missing_required_alarm_properties_warns(
-    submission_command: tuple[str, ...], tmp_path: Path
-) -> None:
-    """§3.6.6: ACTION and TRIGGER are REQUIRED in every VALARM.
-    A VALARM missing either should emit a malformed_value warning but should
-    NOT abort parsing of the surrounding event."""
-    body = (
-        "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\nSUMMARY:ok\n"
-        "BEGIN:VALARM\n"
-        "ACTION:DISPLAY\n"
-        # no TRIGGER
-        "DESCRIPTION:broken\n"
-        "END:VALARM\n"
-    )
-    out = run_parse(submission_command, wrap_event(body), tmp_path)
-    ev = find_event(out, "e1")
-    # Event itself must still be intact.
-    assert ev["summary"] == "ok"
-    kinds = [w.get("kind") for w in out.get("warnings", [])]
-    assert "malformed_value" in kinds
+# RFC 5545 §3.6.6 requires ACTION/TRIGGER in valid alarms, but neither it nor
+# the public CLI contract specifies recovery or a warning kind when absent.
+# Do not score the former missing-TRIGGER/warn-and-continue case until that
+# policy is public. See docs/validation/ICal-3.0.3.md; valid alarm coverage stays.

@@ -153,7 +153,11 @@ def test_recurrence_id_cancel_marks_occurrence_cancelled(
     §9.2's occurrence schema keeps every key present including the
     `cancelled` boolean. The occurrence at 2026-03-07 10:00Z MUST be
     in the output with `cancelled: true`, not silently removed —
-    consumers should observe the cancellation explicitly."""
+    consumers should observe the cancellation explicitly.
+
+    RFC 5545 §§3.6.1 and 3.8.2.4 require DTSTART on every VEVENT when
+    VCALENDAR has no METHOD, including a cancelled override. Keep that
+    unrelated prerequisite valid so this case measures cancellation."""
     ics = (
         "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\n"
         "BEGIN:VEVENT\n"
@@ -162,6 +166,7 @@ def test_recurrence_id_cancel_marks_occurrence_cancelled(
         "BEGIN:VEVENT\n"
         "UID:e1\nDTSTAMP:20260420T120000Z\n"
         "RECURRENCE-ID:20260307T100000Z\n"
+        "DTSTART:20260307T100000Z\n"
         "STATUS:CANCELLED\nEND:VEVENT\n"
         "END:VCALENDAR\n"
     )

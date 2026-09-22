@@ -1,5 +1,17 @@
 # ICal Eval Changelog
 
+## v3.0.3 — 2026-09-22
+
+- Supply DTSTART on the cancelled-override positive: RFC 5545 requires it
+  when VCALENDAR has no METHOD. Preserve the existing occurrence-retention
+  and cancelled-flag assertions so strict validation cannot mask that behavior.
+- Remove the missing-TRIGGER case's undocumented warn-and-continue policy.
+  Required property presence does not specify reader recovery or the warning
+  kind; defer that policy to a future public-input revision. The suite has
+  467 cases, with all remaining alarm behavior tests retained.
+- Keep all model-visible inputs and reference implementations unchanged.
+  See `docs/validation/ICal-3.0.3.md` for independent review and validation.
+
 ## v3.0.2 — 2026-09-12
 
 - Repair undefined or malformed positive fixtures: synchronize DTSTART with
