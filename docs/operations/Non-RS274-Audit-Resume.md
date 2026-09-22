@@ -1,5 +1,56 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max iCalendar JavaScript and 67-result checkpoint
+
+Sol Max iCalendar JavaScript completed voluntarily from `d2c020e`, UID
+`34044a93-8006-4bd3-80dd-38529c677482`, and is reviewed and published locally at
+**462/467** under ICal **3.0.4**. The raw **458/467** grade under 3.0.3, source,
+transcript and usage remain unchanged. Five remaining observations represent
+four families: missing VEVENT CANCEL STATUS validation, missing METHOD:ADD
+prohibition, orphan membership checked before EXDATE exclusions, and missing
+orphan checks for both todos and journals. Independent review corroborated
+selected final semantic assertions but found that the complete-CLI claim
+overstates diagnostic coverage; one pipeline's exit status could mask its count
+assertion and is not credited as proof of that assertion.
+
+Tests-only commit `2423b39` replaces three invalid component-free calendar
+fixtures, accepts orphan diagnostics in parse or expand, and leaves ambiguous
+ADD property metadata unscored. All 28 assembled inputs and all reference sources
+are unchanged. The reference passes **467/467**. Seven focused cases change from
+**0/7 to 7/7** for a control combining three permitted policies; four negative
+controls still fail only their intended assertions. All seven retained-source
+regrades preserve **460 unaffected outcomes** each. Astra C++ and JavaScript
+remain **466/467**, Astra Python **467/467**, Astra Rust **465/467**, Terra Python
+**448/467**, and Sol C++ **464/467**. Sol JavaScript gains four justified points.
+Complete prior publication payloads and audit history are retained. See
+`docs/validation/ICal-3.0.4.md` and the scratch directory
+`work/non-rs274-audit/ical-3.0.4-validation/`.
+
+Accounting matches the retained session: **170 tool calls** (120 commands and
+50 file changes), **88,969 reasoning tokens** within 176,724 output tokens, and
+a **$16.879538** API-equivalent estimate. Coverage is **67/112** (Astra 28, Sol 18,
+Terra 12, Luna 9), leaving **45** cells (40 pending and five quota retries).
+Qualifying estimates total **$361.361627**; excluded attempts remain
+**$54.862522**. These are not subscription charges, and regrading made no model
+calls. Checkpoint comparison preserves 60 unrelated completed rows and all seven
+excluded attempts exactly; the six prior ICal rows change only scoring version,
+publication hash and regrade-audit link.
+
+Both dashboard checks passed: **1,843 runs and 1,172,919 test rows**, with all
+unrelated rows preserved apart from run-index shifts. The global unique count
+is 20,550: the two renamed cases add eight language-specific identities while
+historical runs retain the old names. Build/validation peaked at 37,500/53,356 KiB
+RSS with zero swaps under 512 MiB limits, taking 36.09/162.86 seconds. Evidence
+is `ical-3.0.4-validation/dashboard-validation.json` in the scratch directory.
+
+Commit this checkpoint before the next selected cell,
+**Sol Max / iCalendar Rust**, with a fresh account-capacity check. Continue
+one submission at a time through review, publication and commit. The user is
+away, so swap remains deferred pending local sudo authentication; use bounded
+memory for reporting. The parallel queue remains disabled. No scheduled
+follow-up, credit redemption, purchase or push is authorized. This run's ledger
+is `work/non-rs274-audit/runs/ical-js-gpt-5.6-sol-max`.
+
 ## September 22 Sol Max iCalendar C++ and 66-result checkpoint
 
 Sol Max iCalendar C++ completed voluntarily from `2d0c34c`, UID
