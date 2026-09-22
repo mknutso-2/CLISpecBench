@@ -1,5 +1,51 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max iCalendar C++ and 66-result checkpoint
+
+Sol Max iCalendar C++ completed voluntarily from `2d0c34c`, UID
+`412d4464-0aed-4a09-83c5-cfdb74e5b30e`, and is reviewed and published locally at
+**464/467** under ICal **3.0.3**. Its raw **463/468** grade under 3.0.2, source,
+transcript and usage are preserved. Three remaining observations represent two
+defect families: EXRULE wrongly excludes an unmatched initial DTSTART in two
+cases, and METHOD:ADD omits the forbidden RECURRENCE-ID check. Final builds and
+bounded sanitizer smoke checks pass; local functional checks mainly assert
+successful execution and JSON syntax, not complete semantic outputs.
+
+The tests-only correction is committed as `02335a6`: supply the RFC-required
+DTSTART on the no-METHOD cancelled override, retaining its cancellation
+assertions, and remove the missing-TRIGGER case's undocumented recovery/warning
+policy. Public inputs and reference implementations are unchanged. The reference
+passes **467/467**; a strict reader passes the repaired cancellation fixture,
+while a false cancellation flag still fails its boolean assertion. All six
+retained-source regrades are complete: Sol C++ **464/467**, Astra C++ **466/467**,
+Astra JavaScript **466/467**, Astra Python **467/467**, Astra Rust **465/467** and
+Terra Python **448/467**. Each preserves all **466 unaffected outcomes**; old
+publication payloads and audit history remain intact. See
+`docs/validation/ICal-3.0.3.md` and
+`work/non-rs274-audit/ical-3.0.3-validation/` for authority and measured controls.
+
+Accounting matches the retained session: **247 tool calls** (142 commands,
+101 file changes, three rejected patches and one rejected cleanup request),
+**96,801 reasoning tokens** within 188,251 output tokens, and a verified
+**$18.577074** API-equivalent estimate. Coverage is **66/112** (Astra 28, Sol 17,
+Terra 12, Luna 9), leaving **46** cells (41 pending and five quota retries).
+Qualifying estimates total **$344.482089**; excluded attempts remain
+**$54.862522**. These are not subscription charges; regrading made no model calls.
+
+Dashboard migration validation **passed**: 1,842 runs and 1,172,452 test rows,
+with unrelated records unchanged, all six targets matching their linked grades,
+and historical publications preserved. The streaming check peaked at 52,124 KiB
+RSS under a 512 MiB limit, with zero swaps. Its exact identity comparison retains
+the removed alarm test in historical runs; the global unique count remains
+20,542. Evidence is `ical-3.0.3-validation/dashboard-validation-v2.json` beneath
+the scratch directory above. Commit before the next selected cell,
+**Sol Max / iCalendar JavaScript**, with a fresh account-capacity check. The user
+is away and authorized continued useful collection, still **one submission at a
+time**. Swap remains deferred pending the user's local sudo authentication;
+continue bounded-memory reporting. The parallel queue stays disabled, and no
+scheduled follow-up, credit redemption, purchase or push is authorized. This
+run's ledger is `work/non-rs274-audit/runs/ical-cpp-gpt-5.6-sol-max`.
+
 ## September 22 Sol Max GEDCOM Rust completion
 
 Sol Max GEDCOM Rust completed voluntarily from `a0e6b0f`, UID
