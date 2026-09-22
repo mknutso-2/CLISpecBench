@@ -1,5 +1,43 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 continuation while the user is away
+
+The user explicitly asked to keep collecting useful results before the upcoming
+account reset, retaining **one submission at a time**. The swap increase is
+deferred because local sudo authentication requires the user; it must not block
+collection. The prepared script is `work/increase-swap-to-8g.sh`, but the active
+swap remains 4 GiB until a later successful host verification. Continue using
+bounded-memory reporting. No credit redemption, purchase or push is authorized.
+At 06:29 CDT, the account reported 26% weekly usage and a September 26,
+05:52:22 CDT reset. Recheck live capacity before every new dispatch.
+
+The fresh Sol Max BibTeX Rust attempt completed normally under 1.2.5 at
+**379/386**, UID `18469fec-1314-4b02-93eb-6b522084e9c6`, generated from
+`d6dbb7a` in `eval2`. The earlier provider-capacity attempt remains excluded and
+hash-preserved, with its prior ledger archived under its original UID. All eight
+canonical-style parity cases pass. Seven failures represent five causal
+families: merged database/function namespaces (two observations), past-end name
+selection, extra commas in names, whitespace trimming (two observations), and
+EOF buffering. The supplied WEB and existing authority hierarchy support the
+expectations; this result requires no scoring change.
+
+The final transcript supports 23 release-mode unit tests, a release build,
+four-style smoke fixtures and an aux workflow after the final source edit.
+Local whitespace tests assert the wrong behavior, so those successes do not
+establish complete canonical semantics. Accounting matches preserved evidence:
+**280 tool calls** (183 commands, 95 file changes and two rejected patches),
+**87,700 reasoning tokens** within 174,079 output tokens, and a **$21.255390**
+API-equivalent estimate. The reviewed collection advances to **62/112**, leaving
+50 cells (45 pending and five quota retries). Qualifying estimates total
+**$296.366850**; excluded attempts remain **$54.862522**. The next selected cell
+is **Sol Max / GEDCOM C++**. Publication and dashboard verification are complete;
+commit this checkpoint before dispatching it. All 1,170,968 previous test rows
+remain unchanged apart from the insertion's run-index shift, and all 386 added
+rows match the new publication. The main dashboard preserves all 1,837 previous
+rows. Build/verification peaked at 36,840/33,624 KiB RSS with zero swaps under
+512 MiB limits. Evidence, source/transcript review and preserved prior-attempt
+records are in `work/non-rs274-audit/runs/bibtex-rs-gpt-5.6-sol-max`.
+
 ## September 21 LAS scoring correction and 61-result checkpoint
 
 Luna Max LAS Rust completed normally under 2.0.4 at 215/223 (UID
