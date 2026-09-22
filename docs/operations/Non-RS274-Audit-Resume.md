@@ -1,5 +1,36 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max GEDCOM C++ completion
+
+Sol Max GEDCOM C++ completed voluntarily from `2358b55` under unchanged
+GEDCOM 4.0.3 at **212/212**, UID `f1262eca-0f6a-488e-80e4-9846ff776472`.
+Root accounting and an independent content review found no publication blocker
+or new scoring repair. The final source was recompiled in both ordinary and
+sanitizer builds; four final smoke requests asserted return codes and empty
+stderr. Earlier printed checks and pre-edit random archive checks are not
+represented as exhaustive final-source verification.
+
+The raw result records **149 tool calls** (90 commands, 57 file changes and two
+rejected requests), **47,263 reasoning tokens** within 105,728 output tokens,
+and a verified **$11.980829** API-equivalent estimate. Original source, transcript,
+raw grade and accounting remain unchanged. The reviewed collection is now
+**63/112**, with publication and both dashboard validations complete, leaving
+49 cells (44 pending and five quota retries). Qualifying estimates total
+**$308.347679**; excluded attempts remain **$54.862522**.
+
+Both dashboard checks passed. The main dashboard preserves all 1,838 old rows;
+the per-test dashboard preserves all 1,171,354 old rows except the expected
+run-index shift and adds exactly 212 matching cases. Build/validation used
+37,208/32,564 KiB peak RSS, zero swaps, and 34.92/90.74 seconds under 512 MiB
+limits. Commit this checkpoint before the next selected cell,
+**Sol Max / GEDCOM JavaScript**. The serial
+launch gate remains enabled and the old parallel queue remains disabled. Swap
+is still deferred. No scheduled follow-up was created: automatic approval review
+rejected a persistent 15-minute launch/commit schedule because explicit
+scheduling authorization was missing. An asynchronous approval question is
+pending; continue work within the active session without bypassing that rejection.
+Evidence lives in `work/non-rs274-audit/runs/gedcom-cpp-gpt-5.6-sol-max`.
+
 ## September 22 continuation while the user is away
 
 The user explicitly asked to keep collecting useful results before the upcoming
