@@ -233,7 +233,10 @@ def test_availabilities_key_present_when_empty(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """A calendar without any VAVAILABILITY still has the key as []."""
-    out = run_parse(submission_command, HEAD + TAIL, tmp_path)
+    # RFC 5545 §3.6 requires a component; tech-reqs "parse output" requires
+    # availabilities == [] when that particular component type is absent.
+    event = "BEGIN:VEVENT\nUID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\nEND:VEVENT\n"
+    out = run_parse(submission_command, HEAD + event + TAIL, tmp_path)
     availabilities = out.get("availabilities")
     assert availabilities == []
 

@@ -407,22 +407,28 @@ def test_calendar_all_rfc7986_properties_together(
 
 
 # ---------------------------------------------------------------------------
-# Empty calendar (no events, just RFC 7986 properties)
+# Calendar properties without events, using a valid VTIMEZONE-only calendar
 # ---------------------------------------------------------------------------
 
 
-def test_calendar_properties_without_any_component(
+def test_calendar_properties_with_timezone_only(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    """RFC 7986 enables "calendar-only" ICS files (e.g. a subscription stub
-    with SOURCE + REFRESH-INTERVAL and no events). This must parse without
-    errors: events / todos / journals / freebusy arrays are empty."""
+    """RFC 5545 §3.6 requires a component and permits VTIMEZONE-only calendars.
+
+    RFC 7986 §4 extends calendar properties, not that cardinality rule.
+    Keep the no-event property/schema signal without requiring acceptance
+    of a component-free calendar. The observance satisfies §3.6.5."""
     out = run_parse(
         submission_command,
         _wrap_calprops(
             "NAME:Subscription stub\n"
             "SOURCE;VALUE=URI:https://example.com/real.ics\n"
-            "REFRESH-INTERVAL;VALUE=DURATION:PT6H\n",
+            "REFRESH-INTERVAL;VALUE=DURATION:PT6H\n"
+            "BEGIN:VTIMEZONE\nTZID:Test/Fixed\n"
+            "BEGIN:STANDARD\nDTSTART:19700101T000000\n"
+            "TZOFFSETFROM:+0000\nTZOFFSETTO:+0000\n"
+            "END:STANDARD\nEND:VTIMEZONE\n",
             include_event=False,
         ),
         tmp_path,

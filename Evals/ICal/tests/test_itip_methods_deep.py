@@ -137,7 +137,17 @@ def test_add_forbids_recurrence_id(submission_command: tuple[str, ...], tmp_path
         "RECURRENCE-ID:20260305T100000Z\n"
     )
     out = run_parse(submission_command, _wrap("ADD", body), tmp_path)
-    assert _has_itip_property_warning(out, "RECURRENCE-ID")
+    # The public warning schema (tech-reqs "Warning schema") requires
+    # method/component metadata, but its property-name list omits
+    # RECURRENCE-ID. Score the sole invalid ADD row without inventing an
+    # enumeration extension; retain exact property checks on other cases.
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    assert any(
+        warning.get("kind") == "itip_missing_property"
+        and warning.get("method") == "ADD"
+        and warning.get("component") == "VEVENT"
+        for warning in warnings
+    )
 
 
 # ---------------------------------------------------------------------------

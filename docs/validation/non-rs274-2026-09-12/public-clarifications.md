@@ -291,6 +291,22 @@ Evidence: [3.0.1 validation][ical-301], [3.0.2 validation][ical-302], and
    recovery (or permit both), define which component data survives recovery,
    and name any mandatory warning before scoring this invalid-input policy.
 
+9. **Decision — component-free calendar recovery.** RFC 5545 §3.6 requires a
+   calendar component and explicitly permits VTIMEZONE-only objects. RFC 7986
+   extends properties without relaxing that minimum. Three positives now use
+   valid components in 3.0.4. **Proposed wording:** explicitly declare any desired
+   component-free extension and its rejection/recovery policy before scoring it.
+10. **Cleanup — iTIP property metadata enumeration.** The warning schema names
+    property-specific diagnostics but omits RECURRENCE-ID from its property list.
+    The isolated ADD prohibition case retains kind/method/component checks in
+    3.0.4. **Proposed wording:** make the list illustrative or add every required
+    property name explicitly; avoid forcing an unlisted value in hidden tests.
+11. **Decision — orphan diagnostic phase.** Uniform orphan checks for events,
+    todos and journals are required, but parse versus expand timing is unstated.
+    The three finite-series cases now accept the warning in either command,
+    using a window containing the series and anchor. **Proposed wording:** retain
+    both phases as valid or specify a mandatory phase before tightening tests.
+
 ## IGES 1.0.17
 
 Evidence: [1.0.16 validation][iges-116] and [1.0.17 follow-up][iges-117].

@@ -41,6 +41,39 @@ def _rid_field(ev: dict[str, Any]) -> dict[str, Any]:
     return cast(dict[str, Any], rid)
 
 
+def _assert_orphan_warning(submission_command: tuple[str, ...], ics: str, tmp_path: Path) -> None:
+    """Require the public diagnostic while allowing either validation phase.
+
+    summary.md §6 applies orphan checks uniformly to events/todos/journals;
+    §§7/10 require orphan_override, and the technical warning schema makes
+    its kind semantic. Neither names parse as the mandatory phase. Both
+    subcommands expose warnings, so accept eager or deferred validation.
+    The bounded window contains all base instances and orphan anchors in
+    these three finite fixtures; no todo/journal occurrence output is required.
+    """
+
+    def has_orphan_warning(out: dict[str, Any]) -> bool:
+        raw = out.get("warnings")
+        if not isinstance(raw, list):
+            return False
+        # Dedicated schema cases own malformed warning arrays; this case
+        # measures whether either phase emits the required diagnostic.
+        warnings = cast(list[Any], raw)
+        return any(
+            isinstance(warning, dict)
+            and cast(dict[str, Any], warning).get("kind") == "orphan_override"
+            for warning in warnings
+        )
+
+    parsed = run_parse(submission_command, ics, tmp_path)
+    if has_orphan_warning(parsed):
+        return
+    expanded = run_expand(
+        submission_command, ics, "2026-03-01T00:00:00Z", "2026-04-01T00:00:00Z", tmp_path
+    )
+    assert has_orphan_warning(expanded), "orphan_override missing from both parse and expand"
+
+
 def test_recurrence_id_without_range_has_null_range(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
@@ -232,9 +265,7 @@ def test_range_with_mismatched_recurrence_id_warns(
         "DTSTART:20260303T140000Z\nEND:VEVENT\n"
         "END:VCALENDAR\n"
     )
-    out = run_parse(submission_command, ics, tmp_path)
-    kinds = [w.get("kind") for w in out.get("warnings", [])]
-    assert "orphan_override" in kinds
+    _assert_orphan_warning(submission_command, ics, tmp_path)
 
 
 def test_orphan_override_on_vjournal_warns(
@@ -261,9 +292,7 @@ def test_orphan_override_on_vjournal_warns(
         "END:VJOURNAL\n"
         "END:VCALENDAR\n"
     )
-    out = run_parse(submission_command, ics, tmp_path)
-    kinds = [w.get("kind") for w in out.get("warnings", [])]
-    assert "orphan_override" in kinds
+    _assert_orphan_warning(submission_command, ics, tmp_path)
 
 
 def test_orphan_override_on_vtodo_warns(
@@ -285,9 +314,7 @@ def test_orphan_override_on_vtodo_warns(
         "END:VTODO\n"
         "END:VCALENDAR\n"
     )
-    out = run_parse(submission_command, ics, tmp_path)
-    kinds = [w.get("kind") for w in out.get("warnings", [])]
-    assert "orphan_override" in kinds
+    _assert_orphan_warning(submission_command, ics, tmp_path)
 
 
 def test_single_instance_override_does_not_shift_future(

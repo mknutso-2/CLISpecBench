@@ -43,15 +43,14 @@ def test_events_array_is_always_a_list(submission_command: tuple[str, ...], tmp_
     assert isinstance(out.get("events"), list)
 
 
-def test_empty_calendar_has_empty_arrays_not_nulls(
+def test_absent_component_arrays_are_empty_lists(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
-    empty = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//T//EN\nEND:VCALENDAR\n"
-    out = run_parse(submission_command, empty, tmp_path)
-    # All top-level list keys declared by tech-reqs MUST be empty
-    # lists on an empty VCALENDAR, not null. `availabilities` is in
-    # the tech-reqs mandatory set so it's checked here alongside the
-    # other list-shaped keys.
+    # RFC 5545 §3.6 requires at least one component. BASIC_CAL supplies a
+    # valid VEVENT; the mandatory parse schema still requires lists for
+    # every absent component type (tech-reqs "parse output", including
+    # the explicit empty-when-absent rule for availabilities).
+    out = run_parse(submission_command, BASIC_CAL, tmp_path)
     for key in (
         "events",
         "todos",
@@ -62,8 +61,12 @@ def test_empty_calendar_has_empty_arrays_not_nulls(
         "warnings",
     ):
         val = out.get(key)
-        assert val is not None, f"{key} is null; should be []"
+        assert val is not None, f"{key} is null; should be a list"
         assert isinstance(val, list), f"{key} not a list: {type(val)}"
+    for key in ("todos", "journals", "freebusy", "timezones", "availabilities"):
+        assert out.get(key) == [], f"absent {key} components must produce []"
+    # Warning kinds are semantic, but no public rule promises their absence
+    # for this input. Only their mandatory list type is asserted above.
 
 
 def test_warnings_entries_have_kind_key(

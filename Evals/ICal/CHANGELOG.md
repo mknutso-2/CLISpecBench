@@ -1,5 +1,20 @@
 # ICal Eval Changelog
 
+## v3.0.4 — 2026-09-22
+
+- Replace three component-free calendar positives with valid VTIMEZONE-only
+  or VEVENT fixtures. Preserve calendar-property decoding and absent-component
+  array checks without requiring acceptance contrary to RFC 5545 §3.6.
+- Keep the isolated ADD/RECURRENCE-ID violation check on warning kind, method,
+  and component. Do not require RECURRENCE-ID in warning.property when the
+  frozen public warning schema omits it from the property-name list; other
+  exact property metadata checks remain unchanged.
+- Accept the required orphan_override diagnostic from parse or, if absent,
+  bounded expand output for the three event/todo/journal cases. The public
+  corpus requires uniform component coverage but does not fix the phase.
+- Keep all model-visible inputs and reference implementations unchanged.
+  Seven cases change, two are renamed, and the suite remains 467 cases.
+
 ## v3.0.3 — 2026-09-22
 
 - Supply DTSTART on the cancelled-override positive: RFC 5545 requires it
