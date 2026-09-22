@@ -1,5 +1,58 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max iCalendar Rust and 68-result checkpoint
+
+Sol Max iCalendar Rust completed voluntarily from `efc4799`, UID
+`0ca96516-ffc9-44c0-a15b-56718bae72c7`, and is independently reviewed and published
+locally at **461/467** under unchanged ICal **3.0.4**. Six failed observations
+form four families: EXRULE wrongly excludes an unmatched initial DTSTART in two
+cases; VEVENT CANCEL STATUS and ADD RECURRENCE-ID checks are omitted; and orphan
+validation covers events but misses both todos and journals. All six tests reach
+their intended behavioral assertions under the frozen public requirements. No
+new scoring repair is needed.
+
+After the final source edit, item 191 passes six substantive unit tests and a
+fresh release build, including the late byte-level unfolding fix for split UTF-8.
+Earlier CLI schema assertions precede late edits; other examples merely print
+results or exit codes. Clippy and rustfmt were unavailable, so neither is claimed
+as passing. The final complete-implementation claim overstates the remaining
+defects. All ten package/source files (188,775 bytes) are retained; the model
+removed its temporary fixtures and build artifacts before submission.
+
+The accounting correction in `8b157de` recognizes duplicate-target patch
+verification failures through the existing conservative runtime/AST guards.
+Independent census and the corrected parser agree on **188 tool calls**:
+105 commands, 80 file changes and three rejected patches. A separate syntax
+failure occurs before execution and adds zero. The raw unavailable metric and
+complete first publication are preserved in
+`regraded_results/tool-counts/2026-09-22/0ca96516-ffc9-44c0-a15b-56718bae72c7.json`.
+All non-tool usage is unchanged: **79,447 reasoning tokens** within 166,339
+output tokens and a **$16.243050** API-equivalent estimate. The fix passes
+71 relevant tests and 42 subtests, Ruff and strict Pyright; the latter was run
+on the host because the sandbox did not expose the virtual environment's
+installed pytest to Pyright. See `docs/operations/Telemetry-Accounting.md`.
+
+Coverage is **68/112** (Astra 28, Sol 19, Terra 12, Luna 9), leaving **44** cells
+(39 pending and five quota retries). Qualifying estimates total **$377.604677**;
+excluded attempts remain **$54.862522**. These estimates are not subscription
+charges. Both dashboards are verified: all 1,843 prior main rows and 1,172,919
+prior test rows are preserved, apart from expected run-index shifts, and exactly
+467 matching cases were added. Build/validation peaked at 36,988/26,616 KiB RSS
+with zero swaps under 512 MiB caps, taking 35.65/93.93 seconds. The resulting
+dashboard has 1,844 runs and 1,173,386 test rows. Checkpoint comparison preserves
+all 67 prior completed rows and all seven excluded attempts exactly.
+
+Commit before the next selected cell,
+**Sol Max / iCalendar Python**, using a fresh usage check and a fresh attempt.
+Its excluded quota attempt is `6e2b3003-39b1-4db7-ac50-1d93272be2a3`; preserve it
+and use the serial launcher's explicit retry/expected-UID guards.
+
+Continue one submission at a time through generation, grading, review,
+publication and commit. Swap remains deferred because the user is away; reporting
+stays bounded in memory. No scheduled follow-up, credit redemption, purchase or
+push is authorized. Current evidence is in
+`work/non-rs274-audit/runs/ical-rs-gpt-5.6-sol-max`.
+
 ## September 22 Sol Max iCalendar JavaScript and 67-result checkpoint
 
 Sol Max iCalendar JavaScript completed voluntarily from `d2c020e`, UID
