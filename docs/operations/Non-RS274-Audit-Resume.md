@@ -1,5 +1,42 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max GEDCOM JavaScript completion
+
+Sol Max GEDCOM JavaScript completed voluntarily from `2a4d781`, UID
+`886ad695-c9d1-42ad-8af2-f9e6179eddc4`, and is reviewed and published locally at
+**205/212** under unchanged GEDCOM 4.0.3. All seven failures share the unconditional
+identifier requirement at `gedcom.js:971`: the supplied specification explicitly
+allows unreferenced records to omit their cross-reference IDs. The seven valid,
+pointer-free fixtures cover different record types. Report one defect family
+with seven observations, not seven independent bugs. Independent review found
+no invalid test or required scoring change.
+
+The final regression asserted all four CLI actions and malformed-level rejection
+after the last source edit. Earlier independent Python ZIP, Unicode, CRC and
+deep-tree checks are real assertions but were not all repeated after late edits.
+Accounting matches retained evidence: **90 tool calls** (62 commands and 28 file
+changes), **42,567 reasoning tokens** within 90,284 output tokens, and a verified
+**$7.215988** API-equivalent estimate. Raw results, source and sessions are intact.
+
+Coverage is **64/112** (Astra 28, Sol 15, Terra 12, Luna 9), leaving **48** cells
+(43 pending and five quota retries). Qualifying estimates total **$315.563667**;
+excluded attempts remain **$54.862522**. These are not subscription charges.
+Both dashboards are verified: all 1,839 prior main rows remain unchanged; all
+1,171,566 prior test rows remain unchanged except the expected run-index shift,
+and the 212 added cases match publication. Build/validation used 37,268/33,312
+KiB peak RSS, zero swaps, and 34.19/93.89 seconds under 512 MiB limits.
+
+Commit this checkpoint before launching **Sol Max / GEDCOM Rust**, after a fresh
+account-capacity check. Continue one submission at a time. Swap remains deferred,
+the parallel queue stays disabled, and no schedule or push is authorized.
+The local `work/non-rs274-audit/objective_review.py` helper now verifies factual
+accounting/provenance after `prepare_review.py` and verified host worker exit.
+It matched two prior reviewed runs and passed 15 failure controls, Ruff and
+strict Pyright; root reviewed its code. It writes no approval or content verdict,
+and refuses to overwrite records. Independent content review remains required.
+See local `OBJECTIVE-REVIEW.md` and `objective-review-validation.json` beside it.
+This run's ledger is `work/non-rs274-audit/runs/gedcom-js-gpt-5.6-sol-max`.
+
 ## September 22 Sol Max GEDCOM C++ completion
 
 Sol Max GEDCOM C++ completed voluntarily from `2358b55` under unchanged
