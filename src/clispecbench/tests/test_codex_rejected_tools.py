@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import json
 import tempfile
 import unittest
@@ -39,11 +40,12 @@ def pair(
 
 def patch_pair(
     source: str = 'const patch="p"; const result=await tools.apply_patch(patch); text(result);',
+    *,
+    failure: str = "Failed to find expected lines in /workspace/output/las.js:\nold line",
 ) -> dict[str, Any]:
     p = pair(source)
     p["rejection_output"]["payload"]["output"][1]["text"] = (
-        "Script error:\napply_patch verification failed: Failed to find expected lines in "
-        "/workspace/output/las.js:\nold line"
+        "Script error:\napply_patch verification failed: " + failure
     )
     return p
 
@@ -95,6 +97,95 @@ class CountingTests(unittest.TestCase):
             'text(typeof r === "string" ? r : JSON.stringify(r));'
         )
         self.assertEqual(supplement(self.audit([pair(source)]), 12)["corrected_tool_calls"], 13)
+
+    def test_duplicate_target_rejection_through_session_scan(self) -> None:
+        # The runtime rejects one patch request containing two operations on
+        # the same file before creating a canonical file-change item. Count
+        # the attempted request once, not once per operation or copied record.
+        patch_text = (
+            "*** Begin Patch\n*** Update File: /workspace/output/main.rs\n"
+            "@@\n-old\n+new\n*** Update File: /workspace/output/main.rs\n"
+            "@@\n-other\n+replacement\n*** End Patch"
+        )
+        source = (
+            f"const patch={json.dumps(patch_text)}; "
+            "const r=await tools.apply_patch(patch); text(r);"
+        )
+        p = patch_pair(
+            source, failure="invalid patch: multiple operations target /workspace/output/main.rs"
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sessions = root / "sessions"
+            sessions.mkdir()
+            events = root / "codex-events.jsonl"
+            records = [
+                {"type": "response_item", "payload": p["requests"][0]["payload"]},
+                {"type": "response_item", "payload": p["rejection_output"]["payload"]},
+            ]
+            session = sessions / "s.jsonl"
+            session.write_text("\n".join(json.dumps(record) for record in records * 2))
+            for status, expected in [("completed", 63), ("failed", None), ("in_progress", None)]:
+                with self.subTest(status=status):
+                    events.write_text(
+                        json.dumps(
+                            {
+                                "type": "item.completed"
+                                if status != "in_progress"
+                                else "item.started",
+                                "item": {"id": "edit", "type": "file_change", "status": status},
+                            }
+                        )
+                    )
+                    result = supplement(scan(sessions, events), 62)
+                    self.assertEqual(result["corrected_tool_calls"], expected)
+                    if expected is not None:
+                        self.assertEqual(result["additional_proven_rejections"], 1)
+                        self.assertEqual(
+                            result["evidence"][0]["request_patch_sha256"],
+                            hashlib.sha256(patch_text.encode()).hexdigest(),
+                        )
+
+            events.write_text("")
+            for envelope, failure, expected in [
+                (
+                    "Script completed\nOutput:\n",
+                    "invalid patch: multiple operations target /workspace/output/main.rs",
+                    62,
+                ),
+                (
+                    "Script failed\nWall time 0.0 seconds\nOutput:\n",
+                    "unrecognized verification problem",
+                    None,
+                ),
+            ]:
+                with self.subTest(envelope=envelope, failure=failure):
+                    output = copy.deepcopy(p["rejection_output"]["payload"])
+                    output["output"][0]["text"] = envelope
+                    output["output"][1]["text"] = (
+                        "Script error:\napply_patch verification failed: " + failure
+                    )
+                    session.write_text(
+                        json.dumps(records[0])
+                        + "\n"
+                        + json.dumps({"type": "response_item", "payload": output})
+                    )
+                    self.assertEqual(
+                        supplement(scan(sessions, events), 62)["corrected_tool_calls"], expected
+                    )
+
+    def test_duplicate_target_rejection_does_not_relax_wrapper_guards(self) -> None:
+        for source in [
+            'await tools.apply_patch("p"); await tools.apply_patch("q");',
+            'for(let i=0;i<2;i++) await tools.apply_patch("p");',
+            'await tools.exec_command({cmd:"x"});',
+        ]:
+            with self.subTest(source=source):
+                p = patch_pair(
+                    source,
+                    failure="invalid patch: multiple operations target /workspace/output/main.rs",
+                )
+                self.assertIsNone(supplement(self.audit([p]), 62)["corrected_tool_calls"])
 
     def test_display_formatter_only_accepts_the_exact_safe_shape(self) -> None:
         sources = [

@@ -151,3 +151,27 @@ success/unclassified-output conflict cases across patch, process and syntax
 rejections in both orders. Identical session copies remain count-once. Ruff,
 strict Pyright and Node syntax checks pass. The actual preserved LAS evidence
 contains one request and one failed output for the recovered patch call ID.
+
+## September 22, 2026: duplicate-target patch rejections
+
+The runtime can also reject a single patch with `invalid patch: multiple
+operations target ...` before creating a canonical file-change item. This
+diagnostic now follows the same conservative recovery path. Two operations in
+one rejected patch count as one attempted tool call. The accepted wrapper
+syntax, runtime-envelope requirement, deduplication and canonical-overlap
+guards are unchanged; no generated JavaScript is executed.
+
+Sol Max ICal Rust run `0ca96516-ffc9-44c0-a15b-56718bae72c7` exposed this case.
+Its 185 canonical actions (105 commands and 80 file changes) plus three proven
+rejected patches give **188 tool calls**. A separate malformed wrapper is
+confirmed by syntax parsing to have failed before execution and adds zero.
+The raw unavailable count and the complete initial publication remain in the
+linked correction audit; token totals, reasoning, costs and scores are unchanged.
+
+The new regression fails on the prior detector and passes after this narrow
+change. Relevant rejection/telemetry tests pass **71 tests and 42 subtests**,
+including duplicate evidence, overlapping failed/incomplete canonical patches,
+printed error text, unrecognized diagnostics, multi-call/loop wrappers and a
+mismatched tool. Independent session census and static review confirm the
+count and the unchanged uncertainty guards. This is an accounting correction
+under the existing v2 definition; no eval version, test suite or model input changes.

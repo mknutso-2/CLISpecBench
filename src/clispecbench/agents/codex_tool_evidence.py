@@ -44,6 +44,10 @@ def failed_wrapper_blocks(payload: dict[str, Any]) -> list[str]:
 
 
 def explicit_pre_item_rejection(payload: dict[str, Any]) -> list[str]:
+    # Both diagnostics can occur before a canonical file-change item exists.
+    # A duplicate target is still one attempted patch, not one per operation.
+    # The caller separately requires an unambiguous single-request wrapper
+    # and rejects possible overlap with non-successful canonical patch items.
     return [
         text
         for text in failed_wrapper_blocks(payload)
@@ -52,7 +56,11 @@ def explicit_pre_item_rejection(payload: dict[str, Any]) -> list[str]:
             and "Rejected(" in text
         )
         or text.startswith(
-            "Script error:\napply_patch verification failed: Failed to find expected lines in "
+            (
+                "Script error:\napply_patch verification failed: Failed to find expected lines in ",
+                "Script error:\napply_patch verification failed: invalid patch: "
+                "multiple operations target ",
+            )
         )
     ]
 

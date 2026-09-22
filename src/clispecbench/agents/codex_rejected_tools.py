@@ -221,7 +221,7 @@ def supplement(audit: dict[str, Any], baseline: int | None) -> dict[str, Any]:
                     "tool": "apply_patch",
                     "added_invocations": 1,
                     "reason": (
-                        "Explicit patch context-verification failure, paired with exactly one "
+                        "Explicit patch verification failure, paired with exactly one "
                         "direct awaited literal patch request; no failed or incomplete canonical "
                         "file-change item can already represent the rejection."
                     ),
