@@ -90,8 +90,55 @@ and outcomes must match exactly on every saved-source comparison.
 
 ## Saved submissions
 
-The rubric is committed before official regrading. The 15 existing LAS rows
-and the just-completed Luna Rust source will be processed one at a time, with
-per-case comparison, editorial review, preserved historical publication/audit
-chains, and a bounded-memory dashboard rebuild. This section will record the
-measured results when that publication migration completes.
+All 16 saved sources have completed the sequential 2.0.5 regrade, and their
+publications are updated: 15 replacements and the first publication of Luna
+Rust. Every row preserves all 219 unaffected case identities and outcomes; all
+four repaired zero-waveform cases pass. Original raw results, complete saved
+source hashes, public inputs, generation metadata, token totals and costs are
+preserved. No new model calls or generation costs were incurred.
+
+The table gives passed cases under **2.0.4 → 2.0.5**, each out of 223. Original
+generation versions remain in the run metadata.
+
+| Model (Max) | C++ | Python | JavaScript | Rust |
+| --- | ---: | ---: | ---: | ---: |
+| gpt-6-astra | 223 → 223 | 223 → 223 | 223 → 223 | 223 → 223 |
+| gpt-5.6-sol | 219 → 223 | 219 → 223 | 219 → 223 | 219 → 223 |
+| gpt-5.6-terra | 218 → 222 | 223 → 223 | 223 → 223 | 223 → 223 |
+| gpt-5.6-luna | 215 → 219 | 216 → 220 | 215 → 219 | 215 → 219 |
+
+There are no skips or errors. Eleven rows now pass all 223 cases; this does not
+establish exhaustive LAS conformance. The remaining failures are unchanged:
+Terra C++ has one undocumented Extra Bytes descriptor observation; Luna C++
+and JavaScript each have four waveform packet interval observations; Luna
+Python has two interval observations and one float-triplet overflow observation.
+Luna Rust has four superseded VLR/EVLR observations caused by one shared defect:
+it removes the preceding active record instead of only excluding the tagged
+superseded record. Repeated formats and inspect/render actions are not counts
+of independent defects.
+
+The Luna Rust source-only finding about unused Extra Bytes metadata slots is
+unexecuted and remains an unscored coverage limitation. The earlier classification
+of metadata-free zero-waveform rejection as a proven model defect is withdrawn.
+Separate telemetry audits remain intact: Luna C++ retains its proven 91-call
+correction and historical null publication; Sol C++ tool count remains unavailable.
+
+[Machine-readable regrade evidence](LAS-2.0.5-regrades.json) records all 16 run
+IDs, old/new grades, exact failed nodes, original and publication hashes, and
+linked audit records. Independent checks covered all 16 migration chains.
+All 553 original saved source files (95,304,829 bytes) also match their recorded
+hashes and topology. No blockers were found.
+
+The root task's final streaming aggregate validation passed: runs increase from
+1,836 to 1,837 and test rows from 1,170,745 to 1,170,968. All 16 target projections
+match their publications; other rows are identical apart from insertion-related
+`run_index` changes. A separate comparison against the rubric commit confirms
+all other tracked publications and older audit files remain byte-identical.
+The test aggregate SHA-256 is
+`c562e8e0b4c3e77bc3196e508d1eb10dce0b32a9bcdeb22e8651399fc20804f9`.
+Build/validation took 36.37/172.24 seconds and peaked at 37,172/53,272 KiB RSS,
+with zero swaps; validation used a 512 MiB address-space cap. The JSON evidence
+includes both dashboard hashes, measured resource values, and hashes of the
+supporting reports. Independent document review checked those compact reports
+without rereading the large aggregates. The checkpoint is 61 complete and 51
+remaining.

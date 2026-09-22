@@ -1,17 +1,49 @@
 # Resume the non-RS274 audit and GPT collection
 
-## September 21 LAS scoring correction in progress
+## September 21 LAS scoring correction and 61-result checkpoint
 
 Luna Max LAS Rust completed normally under 2.0.4 at 215/223 (UID
 `d0a1d8fc-a69f-451f-81a1-f778b3758942`). Its raw source, grade, transcript and
-usage are preserved. Publication is held for the tests-only 2.0.5 migration.
+usage are preserved. Its reviewed local publication now scores **219/223** under
+the tests-only LAS 2.0.5 migration. The remaining four failures share an incorrect
+superseded-record interpretation; they are not four independent bugs. Review
+also notes an unscored static ExtraBytes unused-slot validation gap. Its 90 tool
+calls, 50,492 reasoning tokens within 119,122 output tokens, and **$0.416148**
+API-equivalent estimate match the preserved session.
 The four descriptor/storage-free zero-waveform positives were ambiguous under
 the full public corpus. Earlier statements below calling those failures model
 defects, or saying no rubric repair was needed, are withdrawn. See
 [LAS 2.0.5](../validation/LAS-2.0.5.md) for the public basis and controls.
-Finish all 16 saved-source comparisons and publication reviews before launching
-another model. The one-submission gate remains in force. Swap stays at 4 GiB;
-use only the bounded-memory dashboard writer and streaming verification.
+All 16 saved-source comparisons and publication reviews are complete. Nine
+scores gain exactly four passes; seven stay unchanged. Each source preserves
+all 219 unaffected test outcomes. Historical publications and their audit chains
+remain embedded in separate regrade records. The tool-count audit for Luna C++
+also recovers **91 calls** (88 canonical actions plus three explicit rejected
+requests); its previously unavailable count came from older rejection parsing,
+not the later display-expression parser change. Original generation bytes,
+non-tool token usage and costs remain unchanged.
+
+Coverage is **61/112**: Astra 28, Sol 12, Terra 12 and Luna 9. **51 remain**
+(45 unstarted, five quota retries and one provider-capacity retry). The next
+selected cell is **Sol Max / BibTeX Rust**, retrying the preserved capacity
+failure below with a fresh output directory and `--retry-excluded`. Inspect
+worker state and fresh account capacity before dispatch; do not restart the
+parallel queue. Finish generation, grading, content/accounting review,
+publication and local commit for each submission before starting another.
+Qualifying estimates total **$275.111460**; seven excluded attempts total
+**$54.862522**. These are API-equivalent estimates, not subscription charges.
+The one-submission gate remains in force. Swap stays at 4 GiB; use only the
+bounded-memory dashboard writer and streaming verification.
+
+The completed migration dashboard has 1,837 runs and 1,170,968 test rows. A
+streaming comparison checks every previous row, all 16 changed/new LAS
+projections, exact counts and unique nodes. Unrelated records are unchanged
+apart from the insertion's run-index shift. The build used 37,172 KiB peak RSS
+in 36.37 seconds; verification used 53,272 KiB in 172.24 seconds. Both ran under
+a 512 MiB address-space limit with zero swaps. Tracked non-target publications
+and all older audit files remain unchanged. Evidence and the checked manifest
+are in `work/las-zero-waveform-followup`; the portable measured summary is
+[LAS 2.0.5 regrades](../validation/LAS-2.0.5-regrades.json).
 
 ## September 21 continuation
 
@@ -86,31 +118,26 @@ generation bytes, token totals and costs are unchanged. No regrade was needed.
 
 Luna Max / LAS JavaScript completed normally after 53 minutes at **215/223**,
 UID `5f2d7e9d-aa02-4b3c-85d9-05b513d912ce`, generated from `d03c8d6` under
-unchanged LAS 2.0.4. Root and independent source/transcript review identify two
-defect families: requiring waveform descriptors/storage even for all-zero
-waveform points, and missing internal waveform packet interval checks. The
-eight observations cover four point formats plus two boundaries through both
-CLI actions; they are not eight independent bugs. The same families are already
-documented for Luna C++. No new test repair, regrade or accounting backfill was
-needed. Local all-format smoke claims are supported but always supplied waveform
+unchanged LAS 2.0.4. The initial review incorrectly treated the four missing
+waveform-metadata positives as model defects; that interpretation is withdrawn
+above. After the 2.0.5 fixture correction, the unchanged source scores **219/223**.
+The four remaining observations measure missing internal waveform packet
+interval checks at two boundaries through both CLI actions, not four independent
+bugs. Luna C++ has the same remaining failure family. Local all-format smoke
+claims are supported but always supplied waveform
 metadata; several negative probes targeted the wrong condition, and later source
 changes received focused checks rather than another all-format sweep. Preserved
 evidence establishes **73 tool calls** (72 canonical actions plus one rejected
 patch), 57,817 reasoning tokens within 103,077 output tokens, and a **$0.315449**
 API-equivalent estimate. The review notes retain these limitations.
 
-Coverage is **60/112**, with 52 cells needing qualifying results: Sol 16, Terra 16
-and Luna 20. There are 46 unstarted cells and six retries (five quota, one provider
-capacity); no earlier completed-review backlog. All 28 Astra cells are complete.
+Before Luna Rust and the 2.0.5 migration, coverage was **60/112**, with 52 cells
+needing qualifying results. The current checkpoint above supersedes that count.
 Collection covers all seven non-RS274 tasks, including their tests-only repairs;
-the public-input revision remains deferred. The next selected pending cell is
-**Luna Max / LAS Rust**. Inspect its live ledger before dispatch. Finish each
-result's transcript, source, scoring and accounting review, then publish/commit
-before the next run. The previous four-worker queue remains disabled. Seven
-excluded attempts total **$54.862522**; qualifying estimates total **$274.695312**.
-These are API-equivalent estimates, not subscription bills.
+the public-input revision remains deferred. The previous four-worker queue
+remains disabled.
 
-## Latest checkpoint — September 17, 2026
+## Historical checkpoint — September 17, 2026
 
 Coverage is **57/112 reviewed local publications** (Astra 28, Sol 12, Terra 10,
 Luna 7); **55 remain**. No generation is active. The sequential authorization
@@ -354,7 +381,7 @@ the local commits and artifacts when reconciling future remote changes.
   [run-eval skill](../../.codex/skills/run-eval/SKILL.md), and
   [build-and-lint skill](../../.codex/skills/build-and-lint/SKILL.md)
 
-Final scoring versions: WordCount **1.0.4**, LAS **2.0.4**, GEDCOM **4.0.3**,
+Final scoring versions: WordCount **1.0.4**, LAS **2.0.5**, GEDCOM **4.0.3**,
 MARC21 **3.0.2**, BibTeX **1.2.5**, ICal **3.0.2**, IGES **1.0.19**. Their
 dated changelogs and linked validation notes explain source authority,
 reference results, negative controls, permitted alternatives, and exact
