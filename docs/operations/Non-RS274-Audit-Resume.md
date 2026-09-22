@@ -71,15 +71,30 @@ Ruff and independent review validate the extension. The separate
 preserves the original usage and complete previous publication; scores, source,
 generation bytes, token totals and costs are unchanged. No regrade was needed.
 
-Coverage is **59/112**, with 53 cells needing qualifying results: Sol 16, Terra 16
-and Luna 21. There are 47 unstarted cells and six retries (five quota, one provider
+Luna Max / LAS JavaScript completed normally after 53 minutes at **215/223**,
+UID `5f2d7e9d-aa02-4b3c-85d9-05b513d912ce`, generated from `d03c8d6` under
+unchanged LAS 2.0.4. Root and independent source/transcript review identify two
+defect families: requiring waveform descriptors/storage even for all-zero
+waveform points, and missing internal waveform packet interval checks. The
+eight observations cover four point formats plus two boundaries through both
+CLI actions; they are not eight independent bugs. The same families are already
+documented for Luna C++. No new test repair, regrade or accounting backfill was
+needed. Local all-format smoke claims are supported but always supplied waveform
+metadata; several negative probes targeted the wrong condition, and later source
+changes received focused checks rather than another all-format sweep. Preserved
+evidence establishes **73 tool calls** (72 canonical actions plus one rejected
+patch), 57,817 reasoning tokens within 103,077 output tokens, and a **$0.315449**
+API-equivalent estimate. The review notes retain these limitations.
+
+Coverage is **60/112**, with 52 cells needing qualifying results: Sol 16, Terra 16
+and Luna 20. There are 46 unstarted cells and six retries (five quota, one provider
 capacity); no earlier completed-review backlog. All 28 Astra cells are complete.
 Collection covers all seven non-RS274 tasks, including their tests-only repairs;
 the public-input revision remains deferred. The next selected pending cell is
-**Luna Max / LAS JavaScript**. Inspect its live ledger before dispatch. Finish each
+**Luna Max / LAS Rust**. Inspect its live ledger before dispatch. Finish each
 result's transcript, source, scoring and accounting review, then publish/commit
 before the next run. The previous four-worker queue remains disabled. Seven
-excluded attempts total **$54.862522**; qualifying estimates total **$274.379863**.
+excluded attempts total **$54.862522**; qualifying estimates total **$274.695312**.
 These are API-equivalent estimates, not subscription bills.
 
 ## Latest checkpoint — September 17, 2026
