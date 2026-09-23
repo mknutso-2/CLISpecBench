@@ -67,3 +67,53 @@ the eight previously published current-cohort sources and the fresh Python
 retry. Prior publication payloads and linked audit history remain preserved.
 The local migration ledger is `work/non-rs274-audit/ical-3.0.5-validation/`;
 generation review is in `work/non-rs274-audit/runs/ical-py-gpt-5.6-sol-max/`.
+
+## Retained-source results
+
+All nine official regrades use rubric commit `6bd747a` and the pinned image
+above. Every source preserves all 461 untouched outcomes. The eight prior
+publications also preserve all six changed-case outcomes; the fresh Sol Python
+retry gains exactly the three justified CANCEL positives. There are no errors
+or skips. Full prior publication payloads and linked audit history are retained.
+
+| Model / language | Prior 3.0.4 | Corrected 3.0.5 |
+| --- | ---: | ---: |
+| gpt-6-astra / cpp | 466/467 | 466/467 |
+| gpt-6-astra / js | 466/467 | 466/467 |
+| gpt-6-astra / py | 467/467 | 467/467 |
+| gpt-6-astra / rs | 465/467 | 465/467 |
+| gpt-5.6-sol / cpp | 464/467 | 464/467 |
+| gpt-5.6-sol / js | 462/467 | 462/467 |
+| gpt-5.6-sol / rs | 461/467 | 461/467 |
+| gpt-5.6-terra / py | 448/467 | 448/467 |
+| gpt-5.6-sol / py | 463/467 | 466/467 |
+
+Independent corrected-grade review approves Sol Python at **466/467**, with one
+supported ADD diagnostic defect family. Its final completeness claim exceeds
+the measured coverage. Actual schema, recurrence, DST, duration and CLI checks
+are corroborated; the last range-order edit was not followed by a targeted
+range regression. The official grader does exercise the final saved source.
+
+The generation retains **104,099 reasoning tokens within 202,566 output tokens**,
+35,463,654 input tokens including 34,944,896 cached tokens, and a **$20.104310**
+API-equivalent estimate. This is not a subscription charge. Accounting commit
+`f0f3dbb` recognizes the exact display-only exit-code template after one awaited
+command; it does not change the v2 definition. Independent evidence and the
+recomputed audit agree on **230 tool calls**: 229 canonical actions and one
+pre-process rejection. The raw null metric remains preserved, and every
+non-tool usage field is unchanged. The regression fails on the old parser;
+59 tests/58 subtests and 14 telemetry tests pass, alongside Ruff, strict
+Pyright and Node syntax validation. The earlier quota-interrupted Python
+attempt remains preserved and excluded.
+
+Both dashboards pass the full migration comparison: **1,845 runs and
+1,173,853 test rows**, with exactly one added run and 467 added rows. All
+unrelated rows are preserved except expected run-index shifts; unique test
+identities remain 20,550. The streamed validation takes 162.03 seconds, peaks
+at 55,152 KiB RSS under a 512 MiB address-space cap, and records zero swaps.
+The build takes 35.97 seconds and peaks at 37,264 KiB, also without swapping.
+All 65 validator controls pass, including an explicit SHA-bound allowance for
+the approved null-to-230 tool-count correction; every non-tool usage field
+remains fixed. Independent provenance review preserves 1,864 unrelated
+publication files, 955 prior audit files and all eight prior target payloads.
+The known ancillary CSV newline normalization is documented and untouched.

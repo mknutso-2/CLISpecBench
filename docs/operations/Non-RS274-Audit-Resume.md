@@ -1,5 +1,64 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 Sol Max iCalendar Python and 69-result checkpoint
+
+Sol Max iCalendar Python retry UID `01d6a652-c853-4e4c-82e6-675c1624cbe6`
+completed voluntarily from `deb5c75`. Its original **463/467** score under
+3.0.4 is preserved; the independently reviewed retained-source regrade is
+**466/467** under **ICal 3.0.5**, with one genuine missing VEVENT ADD diagnostic.
+Three original failures shared a zero-SEQUENCE CANCEL fixture prerequisite.
+The earlier quota-interrupted attempt `6e2b3003-39b1-4db7-ac50-1d93272be2a3`
+is preserved and remains excluded.
+
+Tests-only commit `6bd747a` corrects six CANCEL cases without changing their
+IDs or the 467-case denominator. The reference passes 467/467. A strict
+sequence control improves 3/6 to 6/6; three negative controls each fail their
+named property check even with an unrelated warning present. Nine serial
+regrades preserve all 461 untouched outcomes per source. All eight prior
+scores remain unchanged. All 28 model inputs and reference code are frozen;
+full previous publication payloads and audit chains remain available. See
+`docs/validation/ICal-3.0.5.md` and its scratch migration directory.
+
+The final source comprises six standard-library/local Python files. Actual
+schema, recurrence, DST, duration and CLI assertions are corroborated, but the
+last range-order edit lacks a targeted range regression afterward. The final
+complete-implementation claim exceeds measured coverage. Accounting commit
+`f0f3dbb` recognizes one exact display-only exit-code suffix after an awaited
+command, preserving the conservative evidence checks and v2 definition.
+The corrected count is **230 calls** (229 canonical actions plus one rejected
+command). Raw null usage remains preserved in the regrade audit. There are
+**104,099 reasoning tokens within 202,566 output tokens**, 35,463,654 input
+tokens including 34,944,896 cached tokens, and a **$20.104310** API-equivalent
+estimate. No inference cost is added by regrading.
+
+Coverage is **69/112** (Astra 28, Sol 20, Terra 12, Luna 9), leaving **43**
+cells: 39 pending and four quota retries. Qualifying estimates total
+**$397.708987**; excluded attempts remain **$54.862522**. These are not
+subscription charges. The checkpoint preserves all 60 unrelated completed
+rows and all seven excluded attempts; eight prior ICal rows change only the
+scoring version, publication hash and audit link.
+
+Both dashboards pass the full migration comparison: **1,845 runs and
+1,173,853 test rows**, with exactly one added run and 467 added rows. All
+unrelated rows are preserved except expected run-index shifts; unique test
+identities remain 20,550. The streamed validation takes 162.03 seconds, peaks
+at 55,152 KiB RSS under a 512 MiB address-space cap, and records zero swaps.
+The build takes 35.97 seconds and peaks at 37,264 KiB, also without swapping.
+All 65 validator controls pass, including an explicit SHA-bound allowance for
+the approved null-to-230 tool-count correction; every non-tool usage field
+remains fixed. Independent provenance review preserves 1,864 unrelated
+publication files, 955 prior audit files and all eight prior target payloads.
+The known ancillary CSV newline normalization is documented and untouched.
+
+The next selected cell is **Sol Max / IGES C++**. Use a fresh ordinary-usage
+check and the guarded serial launcher. Continue one submission through
+generation, grading, independent review, local publication, bounded dashboard
+validation and commit before starting another. Swap is deferred while the
+user is away. No recurring follow-up was created, and no reset credit,
+purchase or push is authorized. Generation evidence is in
+`work/non-rs274-audit/runs/ical-py-gpt-5.6-sol-max/`.
+
+
 ## September 22 Sol Max iCalendar Rust and 68-result checkpoint
 
 Sol Max iCalendar Rust completed voluntarily from `efc4799`, UID
