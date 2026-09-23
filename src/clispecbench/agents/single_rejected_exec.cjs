@@ -35,6 +35,17 @@ function inspect(source) {
     if (!node || node.type !== 'CallExpression' || node.callee.type !== 'Identifier' || node.callee.name !== 'text' || node.arguments.length !== 1) return false;
     const arg=node.arguments[0];
     if (awaitedTool(arg)) return true;
+    // Exact display of a command result's exit code, after its awaited call.
+    // Never evaluate interpolation, admit computed access, or allow a result
+    // redefinition/getter: the surrounding statement rules reject those.
+    if (!node.optional && tool === 'exec_command' && resultVariable !== null &&
+        arg.type === 'TemplateLiteral' && arg.quasis.length === 2 && arg.expressions.length === 1 &&
+        arg.quasis[0].value.cooked === 'exit=' && arg.quasis[1].value.cooked === '') {
+      const value = arg.expressions[0];
+      if (value.type === 'MemberExpression' && !value.computed && !value.optional &&
+          value.object.type === 'Identifier' && value.object.name === resultVariable &&
+          value.property.type === 'Identifier' && value.property.name === 'exit_code') return true;
+    }
     // This exact display-only ternary follows a direct awaited tool request.
     // Do not admit branches that choose whether (or which) tool gets called.
     if (arg.type === 'ConditionalExpression' && resultVariable !== null && resultVariable !== 'JSON' && literalVariable !== 'JSON') {

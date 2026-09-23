@@ -175,3 +175,19 @@ printed error text, unrecognized diagnostics, multi-call/loop wrappers and a
 mismatched tool. Independent session census and static review confirm the
 count and the unchanged uncertainty guards. This is an accounting correction
 under the existing v2 definition; no eval version, test suite or model input changes.
+
+## September 22, 2026: exit-code display after a rejected command
+
+The narrow wrapper parser now accepts exactly `` text(`exit=${r.exit_code}`) ``,
+where `r` is the existing result binding of one directly awaited `exec_command`.
+This untagged template display adds no invocation.
+Arbitrary interpolation, calls, computed access, getters, changed bindings and
+control flow remain unsupported; runtime rejection and canonical-overlap checks
+still determine whether the attempted command can be counted. JavaScript is
+parsed as data, never executed.
+
+Sol Max ICal Python retry `01d6a652-c853-4e4c-82e6-675c1624cbe6` has 229
+canonical actions and one explicitly rejected command with this suffix, yielding
+230 tool calls under the unchanged v2 definition. Its raw null metric is preserved;
+any published correction must retain the recomputed audit and leave all token,
+reasoning, cost and correctness fields unchanged.

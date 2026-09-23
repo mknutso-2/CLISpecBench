@@ -98,6 +98,84 @@ class CountingTests(unittest.TestCase):
         )
         self.assertEqual(supplement(self.audit([pair(source)]), 12)["corrected_tool_calls"], 13)
 
+    def test_exit_code_display_rejection_through_session_scan(self) -> None:
+        source = (
+            'const r=await tools.exec_command({cmd:"rm -f /tmp/test"}); '
+            "text(r.output); text(`exit=${r.exit_code}`);"
+        )
+        p = pair(source)
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            sessions = root / "sessions"
+            sessions.mkdir()
+            records = [
+                {"type": "response_item", "payload": p["requests"][0]["payload"]},
+                {"type": "response_item", "payload": p["rejection_output"]["payload"]},
+            ]
+            (sessions / "s.jsonl").write_text(
+                "\n".join(json.dumps(record) for record in records * 2)
+            )
+            events = root / "codex-events.jsonl"
+            events.write_text("")
+            result = supplement(scan(sessions, events), 229)
+            self.assertEqual(result["corrected_tool_calls"], 230)
+            self.assertEqual(result["additional_proven_rejections"], 1)
+            self.assertEqual(result["evidence"][0]["request_command"], "rm -f /tmp/test")
+
+            # The display suffix must not bypass the existing overlap guard.
+            events.write_text(
+                json.dumps(
+                    {
+                        "type": "item.completed",
+                        "item": {
+                            "id": "exec",
+                            "type": "command_execution",
+                            "command": "/bin/bash -lc 'rm -f /tmp/test'",
+                            "status": "failed",
+                        },
+                    }
+                )
+            )
+            self.assertIsNone(supplement(scan(sessions, events), 229)["corrected_tool_calls"])
+
+    def test_exit_code_display_rejects_effects_and_changed_bindings(self) -> None:
+        prefix = 'const r=await tools.exec_command({cmd:"rm -f /tmp/test"}); '
+        sources = [
+            prefix + f"text({display});"
+            for display in [
+                '`exit=${await tools.exec_command({cmd:"other"})}`',
+                "`exit=${r.exit_code()}`",
+                '`exit=${r["exit_code"]}`',
+                "`exit=${r?.exit_code}`",
+                "`exit=${other.exit_code}`",
+                "`exit=${r.output}`",
+                "`status=${r.exit_code}`",
+                "`exit=${r.exit_code}!`",
+                "`exit=${r.exit_code}${r.exit_code}`",
+                "String.raw`exit=${r.exit_code}`",
+            ]
+        ]
+        sources += [
+            prefix + 'Object.defineProperty(r,"exit_code",{get(){'
+            'return tools.exec_command({cmd:"other"});}}); text(`exit=${r.exit_code}`);',
+            prefix + '{const r={get exit_code(){return tools.exec_command({cmd:"other"});}}; '
+            "text(`exit=${r.exit_code}`);}",
+            prefix + 'r={get exit_code(){return tools.exec_command({cmd:"other"});}}; '
+            "text(`exit=${r.exit_code}`);",
+            'const text=await tools.exec_command({cmd:"x"}); text(`exit=${text.exit_code}`);',
+            'const r="not a tool result"; text(`exit=${r.exit_code}`);',
+            'text(`exit=${r.exit_code}`); const r=await tools.exec_command({cmd:"x"});',
+        ]
+        for source in sources:
+            with self.subTest(source=source):
+                self.assertIsNone(
+                    supplement(self.audit([pair(source)]), 12)["corrected_tool_calls"]
+                )
+        patch_source = 'const r=await tools.apply_patch("p"); text(`exit=${r.exit_code}`);'
+        self.assertIsNone(
+            supplement(self.audit([patch_pair(patch_source)]), 12)["corrected_tool_calls"]
+        )
+
     def test_duplicate_target_rejection_through_session_scan(self) -> None:
         # The runtime rejects one patch request containing two operations on
         # the same file before creating a canonical file-change item. Count
