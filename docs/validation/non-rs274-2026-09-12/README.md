@@ -1,8 +1,8 @@
 # Non-RS274 scoring audit and GPT coverage
 
-Checkpoint: 2026-09-23T00:39:53.702836+00:00. Local implementation revision `6bd747a0e69fd8f5080de8d4272580260b63eb33`. Results are in the local publication tree; no push has been made for this task.
+Checkpoint: 2026-09-23T01:18:51.227849+00:00. Local implementation revision `3330986bca154c387d60b51022fe173bfe3554da`. Results are in the local publication tree; no push has been made for this task.
 
-The user resumed work on September 16 with one submission at a time: finish each retained review before new generation, then finish and review each new run before starting another. The previous parallel queue remains disabled. See the [resume instructions](../../operations/Non-RS274-Audit-Resume.md).
+Collection is paused at the user’s request. Only the existing IGES C++ / Sol Max run may finish; do not launch more models until the user asks to resume. See the [resume instructions](../../operations/Non-RS274-Audit-Resume.md).
 
 All seven other tasks contained scoring weaknesses: invalid fixtures, unsupported hidden restrictions, missing focused coverage, or failure amplification. Fixes keep every assembled model input unchanged across all 28 task/language combinations. Patch versions, dated changelogs, public-spec comments and per-task validation records accompany the changes. Public prose ambiguities that cannot be resolved under its existing precedence or explicit permissions are deferred to a separate public-input revision.
 
@@ -38,7 +38,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |ical-js|466/467|462/467|Pending|Pending|
 |ical-py|467/467|466/467|448/467|Retry: quota|
 |ical-rs|465/467|461/467|Pending|Pending|
-|iges-cpp|247/249|Pending|Pending|Pending|
+|iges-cpp|247/249|Running|Pending|Pending|
 |iges-js|248/249|Pending|Pending|Pending|
 |iges-py|249/249|Retry: quota|Retry: quota|Pending|
 |iges-rs|247/249|Pending|Pending|Pending|
@@ -55,7 +55,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |wordcount-py|46/46|46/46|46/46|46/46|
 |wordcount-rs|46/46|46/46|46/46|46/46|
 
-43 cells still need a qualifying result, including active runs. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. Capacity subsequently became available again and collection resumed. The previous four-worker queue is disabled. Resumed collection processes one submission at a time, including review before the next generation. Every excluded retry gets a fresh generation and preserves its previous artifacts and ledger.
+43 cells still need a qualifying result, including active runs. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. Capacity subsequently became available again and collection resumed. The previous four-worker queue remains disabled. Collection was proceeding one submission at a time before the current user-requested pause; independent review remains required before publication. Every excluded retry gets a fresh generation and preserves its previous artifacts and ledger.
 
 Provider-capacity interruptions are tracked separately from account-quota interruptions. They are excluded from correctness scores, preserve partial usage, and require fresh attempts; see the excluded-attempt records for each cause.
 
@@ -83,5 +83,5 @@ Machine-readable records: [completed results](completed-results.json), [remainin
 
 ## Dispatch status
 
-New dispatch is paused: Serial dispatch gate: ical-py-gpt-5.6-sol-max selected. Verify its launch outcome, then finish grading, content/accounting review and publication before another submission. Do not restart the parallel queue.
+New dispatch is paused: User requested stopping future processing near the weekly usage allotment. Let only the already active IGES C++ / Sol Max submission finish; no further generation or queue restart until the user explicitly resumes.
 Active generations are allowed to finish and remain subject to full review.

@@ -1,5 +1,22 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 22 user-requested stop after the current run
+
+The user requested stopping future processing near the weekly usage allotment.
+**Do not launch any additional submissions or restart the queue until explicitly
+asked to resume.** The sole active submission, **IGES C++ / Sol Max**, launched
+at 2026-09-23 00:54 UTC from `3330986`, is allowed to finish generation and grading.
+Its local ledger is `work/non-rs274-audit/runs/iges-cpp-gpt-5.6-sol-max/`.
+Preserve the resulting source, transcript, usage and grade; independent review
+remains required before publication. The reviewed checkpoint remains **69/112**
+until that work is complete. Swap changes remain deferred.
+
+The scratch dispatch gate and continuation state record this explicit stop.
+Earlier serial-resume authorization is archived in `queue-history/user-stop-*`;
+all older next-run instructions below are historical and superseded by this stop.
+There is no recurring automation, and no reset-credit redemption, purchase or
+push is authorized.
+
 ## September 22 Sol Max iCalendar Python and 69-result checkpoint
 
 Sol Max iCalendar Python retry UID `01d6a652-c853-4e4c-82e6-675c1624cbe6`
