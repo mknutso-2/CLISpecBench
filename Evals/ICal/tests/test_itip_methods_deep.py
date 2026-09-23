@@ -306,10 +306,20 @@ def test_cancel_requires_sequence(submission_command: tuple[str, ...], tmp_path:
     body = (
         "UID:e1\nDTSTAMP:20260101T120000Z\nDTSTART:20260301T100000Z\n"
         "ORGANIZER:mailto:boss@example.com\n"
+        # RFC 5546 §3.2.5 permits uninviting this affected attendee without
+        # STATUS. Isolate missing SEQUENCE from an attendee-less CANCEL.
+        "ATTENDEE:mailto:jane@example.com\n"
         # deliberately missing SEQUENCE
     )
     out = run_parse(submission_command, _wrap("CANCEL", body), tmp_path)
-    assert "itip_missing_property" in _warn_kinds(out)
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    assert any(
+        warning.get("kind") == "itip_missing_property"
+        and warning.get("method") == "CANCEL"
+        and warning.get("component") == "VEVENT"
+        and warning.get("property") == "SEQUENCE"
+        for warning in warnings
+    )
 
 
 def test_request_allows_omitted_sequence(

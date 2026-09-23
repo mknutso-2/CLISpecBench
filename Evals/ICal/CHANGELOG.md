@@ -1,5 +1,17 @@
 # ICal Eval Changelog
 
+## v3.0.5 — 2026-09-22
+
+- Give the five CANCEL STATUS/ORGANIZER fixtures an incremented SEQUENCE.
+  RFC 5546 §§2.1.4 and 3.2.5 require it; the shared zero-valued initial
+  sequence caused three valid-cancellation checks to reject a correct warning.
+- Isolate the invalid-STATUS and missing-SEQUENCE diagnostics with their
+  public method/component/property metadata. Give the missing-SEQUENCE
+  fixture an affected attendee while preserving the missing property.
+- Keep all model-visible inputs and references unchanged. Six cases change,
+  with the same node IDs and 467-case denominator. See
+  `docs/validation/ICal-3.0.5.md` for controls and retained-source regrades.
+
 ## v3.0.4 — 2026-09-22
 
 - Replace three component-free calendar positives with valid VTIMEZONE-only

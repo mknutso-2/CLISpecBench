@@ -9,7 +9,7 @@ concrete occurrences over a date window, resolves zoned date-times
 through in-file VTIMEZONE definitions, and honors the iTIP
 scheduling layer.
 
-> **Status.** v3.0.4 — tests-only validity corrections over the completed
+> **Status.** v3.0.5 — tests-only validity corrections over the completed
 > v1.x/v2.x expansion and v3.0.0 contract. All v3.0.0 model-visible inputs
 > remain unchanged. Ships **9 authoritative RFCs** verbatim:
 > RFC 5545 (core) +
@@ -87,7 +87,7 @@ tests/
 reference-implementation-cpp/
   CMakeLists.txt
   src/                              # see below
-VERSION                             # 3.0.4
+VERSION                             # 3.0.5
 CHANGELOG.md
 ```
 
@@ -127,7 +127,7 @@ Tests use `.get()`-based helpers (`find_event`, `warnings_of`,
 uv run pytest Evals/ICal/tests --language=cpp
 ```
 
-The reference implementation passes all **465** tests. Run from the
+The reference implementation passes all **467** tests. Run from the
 repository root.
 
 ## Task IDs

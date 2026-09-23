@@ -191,13 +191,19 @@ def test_well_formed_reply_emits_no_itip_warning(
 # selected ATTENDEEs. Both fixtures name an affected attendee (§3.2.5).
 # ---------------------------------------------------------------------------
 
+# RFC 5546 §§2.1.4 and 3.2.5 require CANCEL to increment SEQUENCE;
+# RFC 5545 §3.8.7.4 starts it at zero. Keep that unrelated precondition
+# valid so the STATUS/ORGANIZER cases do not fail on SEQUENCE instead.
+_CANCEL_BASE = _BASE.replace("SEQUENCE:0\n", "SEQUENCE:1\n")
+_CANCEL_WITH_ORGANIZER = _CANCEL_BASE + "ORGANIZER:mailto:boss@example.com\n"
+
 
 def test_cancel_with_status_cancelled_is_valid(
     submission_command: tuple[str, ...], tmp_path: Path
 ) -> None:
     """METHOD:CANCEL with explicit STATUS:CANCELLED is unambiguously a
     valid cancellation — no `itip_missing_property` warning."""
-    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:CANCELLED\n"
+    body = _CANCEL_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:CANCELLED\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
@@ -209,7 +215,7 @@ def test_cancel_without_explicit_status_is_valid(
     """RFC 5546 §3.2.5 forbids STATUS when uninviting selected attendees.
     Name the affected ATTENDEE so this is that permitted form, without
     inferring whole-event cancellation from an attendee-less fixture."""
-    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\n"
+    body = _CANCEL_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
@@ -222,7 +228,7 @@ def test_cancel_missing_organizer_emits_itip_warning(
     the event being cancelled. ORGANIZER absent -> warning."""
     # Supply the cancellation status and affected attendee so only the
     # named ORGANIZER rule is violated. Public warning metadata identifies it.
-    body = _BASE + "ATTENDEE:mailto:jane@example.com\nSTATUS:CANCELLED\n"
+    body = _CANCEL_BASE + "ATTENDEE:mailto:jane@example.com\nSTATUS:CANCELLED\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
@@ -243,10 +249,19 @@ def test_cancel_status_if_present_must_be_cancelled(
     other than CANCELLED (e.g. TENTATIVE or CONFIRMED) is internally
     inconsistent — the METHOD says "cancel" but the STATUS does not.
     Validator must warn."""
-    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:TENTATIVE\n"
+    body = _CANCEL_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:TENTATIVE\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
-    assert "itip_missing_property" in _warn_kinds(out)
+    # Observe the named STATUS rule; an unrelated iTIP warning cannot
+    # satisfy this check and hide a missing status diagnostic.
+    warnings = cast(list[dict[str, Any]], out.get("warnings") or [])
+    assert any(
+        warning.get("kind") == "itip_missing_property"
+        and warning.get("method") == "CANCEL"
+        and warning.get("component") == "VEVENT"
+        and warning.get("property") == "STATUS"
+        for warning in warnings
+    )
 
 
 def test_cancel_status_cancelled_case_insensitive(
@@ -255,7 +270,7 @@ def test_cancel_status_cancelled_case_insensitive(
     """RFC 5545 property-value comparison for STATUS is case-insensitive
     in practice. STATUS:cancelled (lowercase) on a CANCEL should not
     trigger the "STATUS must be CANCELLED" warning."""
-    body = _BASE_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:cancelled\n"
+    body = _CANCEL_WITH_ORGANIZER + "ATTENDEE:mailto:jane@example.com\nSTATUS:cancelled\n"
     ics = _wrap_with_method("CANCEL", body)
     out = run_parse(submission_command, ics, tmp_path)
     assert "itip_missing_property" not in _warn_kinds(out)
