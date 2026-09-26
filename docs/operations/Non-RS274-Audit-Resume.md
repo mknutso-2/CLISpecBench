@@ -1,5 +1,54 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 26 serial resume and Sol Max IGES C++
+
+The user explicitly resumed collection on September 26. This supersedes the
+September 22 stop below. Continue **one submission at a time**, including
+review, local publication, bounded dashboard validation and a local commit
+before another generation. The previous parallel queue remains disabled.
+Ordinary account usage was available at resume (weekly 0% used); check fresh
+usage before each dispatch. No reset credit, purchase or push is authorized.
+
+The retained Sol Max IGES C++ run completed voluntarily, UID
+`3b6e00d7-4911-41ce-915d-2309db916a24`, in 115.94 minutes. Original 241/249 under
+1.0.19 remains immutable. Independent review found four invalid View fixture
+prerequisites, corrected in tests-only commit `09dfecc` / **IGES 1.0.20**.
+The unchanged submission scores **245/249** after regrading. Four remaining
+observations describe two families: offset direction differs from the explicit
+benchmark override (three cases), and a trailing Type408 scale is not defaulted
+(one appendix integration case). The physical IGES offset formula differs from
+the override; this is recorded for a later public-content revision.
+
+All four prior Astra sources were also regraded sequentially: C++ 247/249,
+Python 249/249, JavaScript 248/249 and Rust 247/249, all unchanged. Each of the five
+sources preserves all 245 untouched outcomes and all 249 case IDs. The reference
+passes 249/249. Independent controls preserve all 696 assertions, accept four
+legal fixture baselines and reject eleven targeted output mutations. All 28
+assembled model inputs and all reference/source artifacts remain unchanged.
+See [IGES 1.0.20 validation](../validation/IGES-1.0.20.md).
+
+Sol usage is 32,916,096 input including 32,201,728 cached, and 191,785 output
+including 64,617 reasoning tokens; total 33,107,881. Recorded-rate API-equivalent
+cost is **$19.573863**, not a subscription charge. Exact tool count remains
+unavailable: 315 canonical actions and two rejected calls are established, but
+the conservative parser cannot classify a third failed interpolated patch
+wrapper. The original null count is preserved, without losing token/cost data.
+A clean final build and focused checks are verified; no final 87/87 catalog
+conformance pass is established, and the complete-implementation claim is
+qualified accordingly.
+
+Reviewed coverage is **70/112**: Astra 28, Sol 21, Terra 12, Luna 9. There are 42
+remaining cells, including four excluded attempts requiring fresh retries.
+Qualifying API-equivalent estimates total **$417.282850**; excluded attempts
+remain **$54.862522**. The next selected cell is **Sol Max / IGES JavaScript**.
+Its ledger will be `work/non-rs274-audit/runs/iges-js-gpt-5.6-sol-max/`;
+inspect that ledger before any dispatch to avoid a duplicate. The five-source
+migration evidence is `work/non-rs274-audit/iges-1.0.20-validation/`.
+Swap remains 4 GiB and its increase is deferred; keep report processing bounded.
+Both dashboards pass full migration validation: 1,846 runs/1,174,102 test rows,
+with unrelated rows unchanged apart from run-index shifts. Peak validation RSS
+is 51,492 KiB under 512 MiB, with zero swaps. All 65 validator controls pass.
+
 ## September 22 user-requested stop after the current run
 
 The user requested stopping future processing near the weekly usage allotment.

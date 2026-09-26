@@ -51,11 +51,29 @@ one mismatch with the explicit benchmark-specific direct-direction rule.
 They are not three independent geometry defects, and the model's formula does
 match the underlying physical IGES specification.
 
-Five retained sources (four Astra languages and Sol C++) will be regraded
-sequentially after this rubric commit. Publication requires preserving all 245
-untouched outcomes, independent corrected-grade review, and verified dashboard
-migration. Original 1.0.19 observations and complete prior publications remain
-in the audit chain. Regrading adds no model calls or inference cost.
+Five retained sources were regraded sequentially under rubric commit `09dfecc`
+and the pinned image. Every source retains all 245 untouched outcomes, all
+249 node IDs, and immutable original source/result/session/accounting artifacts.
+
+| Saved submission | 1.0.19 | 1.0.20 |
+|---|---:|---:|
+| Astra Max C++ | 247/249 | 247/249 |
+| Astra Max Python | 249/249 | 249/249 |
+| Astra Max JavaScript | 248/249 | 248/249 |
+| Astra Max Rust | 247/249 | 247/249 |
+| Sol Max C++ | 241/249 | 245/249 |
+
+Sol gains exactly the four repaired fixture cases; all prior Astra scores and
+all four repaired-case outcomes for Astra are unchanged. The four remaining
+Sol failures represent two defect families described above. Original grades
+and complete prior publications remain in the audit chain. Regrading adds no
+model calls or inference cost. Independent corrected-grade review and the full dashboard migration checks
+passed. The dashboards contain **1,846 runs and 1,174,102 test rows**; all
+unrelated rows are preserved except expected run-index shifts. Unique test
+identities remain 20,550. Build/validation peak at 37,156/51,492 KiB RSS under
+512 MiB caps, with zero swaps. All 65 validator controls pass. Exact prior
+payloads are archived; 2,844 unrelated publication/audit files remain unchanged.
+See [machine-readable checks](IGES-1.0.20-checks.json).
 
 Local evidence: `work/non-rs274-audit/iges-1.0.20-validation/`, including
 `baseline.json`, `patch-baseline.json`, `patch-review.json`, reference report,
