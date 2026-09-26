@@ -1,5 +1,17 @@
 # IGES Changelog
 
+## v1.0.20 — 2026-09-26
+
+- Repair four hidden View/Drawing/DE-pointer fixtures to use the complete
+  canonical Form 0 View shape with zeroed unused perspective fields, as the
+  existing technical contract requires. Three fixtures had nonzero unused
+  vectors; a fourth omitted required fields. A strict conforming writer could
+  reject these shared prerequisites before any named observation was reached.
+- Preserve all assertions, all 249 case IDs, model-visible inputs, references,
+  and saved submission source. No new behavior or score weighting is added.
+- See `docs/validation/IGES-1.0.20.md` for independent review, reference checks,
+  retained-source regrades and unchanged-outcome evidence.
+
 ## v1.0.19 — 2026-09-17
 
 - Normalize the hidden appendix files' status fields to eight digits, as

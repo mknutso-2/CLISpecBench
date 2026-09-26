@@ -73,7 +73,27 @@ def test_drawing_form_one_roundtrips_angles_and_annotations(
                 make_entity(
                     de_index=index,
                     entity_type=410,
-                    data={"form": 0, "view_number": number, "scale": 1.0, "clip_planes": [0] * 6},
+                    # Technical requirements unused-field rule and Appendix A Type410:
+                    # retain the full canonical shape with defaulted perspective
+                    # fields, so View schema validation cannot mask Drawing data.
+                    data={
+                        "form": 0,
+                        "view_number": number,
+                        "scale": 1.0,
+                        "clip_planes": [0] * 6,
+                        "view_plane_normal": [0.0, 0.0, 0.0],
+                        "view_reference_point": [0.0, 0.0, 0.0],
+                        "center_of_projection": [0.0, 0.0, 0.0],
+                        "view_up_vector": [0.0, 0.0, 0.0],
+                        "view_plane_distance": 0.0,
+                        "umin": 0.0,
+                        "umax": 0.0,
+                        "vmin": 0.0,
+                        "vmax": 0.0,
+                        "depth_clipping": 0,
+                        "wmin": 0.0,
+                        "wmax": 0.0,
+                    },
                     directory_entry_overrides={
                         "xform_matrix": 9,
                         "status": context_status("annotation", "logically_dependent"),

@@ -558,6 +558,9 @@ def test_property_bool_values_serialize_as_logical(
 
 
 # §4.131 Drawing (Type 404, form 0 = no angle per DrawingView)
+# Technical requirements: form-dependent unused-field roundtrip and Appendix A
+# Type 410 require defaulted perspective fields for Form 0. Keep this legal
+# supporting View from rejecting the write before the named observation.
 def test_drawing_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     doc = wrap_entities(
         [
@@ -569,10 +572,10 @@ def test_drawing_roundtrip(submission_command: Sequence[str], tmp_path: Path) ->
                     "view_number": 1,
                     "scale": 1.0,
                     "clip_planes": [0, 0, 0, 0, 0, 0],
-                    "view_plane_normal": [0.0, 0.0, 1.0],
+                    "view_plane_normal": [0.0, 0.0, 0.0],
                     "view_reference_point": [0.0, 0.0, 0.0],
                     "center_of_projection": [0.0, 0.0, 0.0],
-                    "view_up_vector": [0.0, 1.0, 0.0],
+                    "view_up_vector": [0.0, 0.0, 0.0],
                     "view_plane_distance": 0.0,
                     "umin": 0.0,
                     "umax": 0.0,
@@ -604,16 +607,19 @@ def test_drawing_roundtrip(submission_command: Sequence[str], tmp_path: Path) ->
 
 
 # §4.134 View (Type 410, form 0) — clip plane DE list
+# Technical requirements: form-dependent unused-field roundtrip and Appendix A
+# Type 410 require defaulted perspective fields for Form 0. Keep this legal
+# supporting View from rejecting the write before the named observation.
 def test_view_roundtrip(submission_command: Sequence[str], tmp_path: Path) -> None:
     payload = {
         "form": 0,
         "view_number": 7,
         "scale": 2.5,
         "clip_planes": [0, 0, 0, 0, 0, 0],
-        "view_plane_normal": [0.0, 0.0, 1.0],
+        "view_plane_normal": [0.0, 0.0, 0.0],
         "view_reference_point": [0.0, 0.0, 0.0],
         "center_of_projection": [0.0, 0.0, 0.0],
-        "view_up_vector": [0.0, 1.0, 0.0],
+        "view_up_vector": [0.0, 0.0, 0.0],
         "view_plane_distance": 0.0,
         "umin": 0.0,
         "umax": 0.0,

@@ -157,6 +157,9 @@ def test_structure_as_negated_pointer_roundtrips(
     assert reparsed["entities"][1]["directory_entry"]["structure"] == -1
 
 
+# Technical requirements: form-dependent unused-field roundtrip and Appendix A
+# Type 410 require defaulted perspective fields for Form 0. Keep this legal
+# supporting View from rejecting the write before the named observation.
 def test_view_and_xform_and_label_display_pointers_roundtrip(
     submission_command: Sequence[str],
     tmp_path: Path,
@@ -174,10 +177,10 @@ def test_view_and_xform_and_label_display_pointers_roundtrip(
                     "view_number": 1,
                     "scale": 1.0,
                     "clip_planes": [0, 0, 0, 0, 0, 0],
-                    "view_plane_normal": [0.0, 0.0, 1.0],
+                    "view_plane_normal": [0.0, 0.0, 0.0],
                     "view_reference_point": [0.0, 0.0, 0.0],
                     "center_of_projection": [0.0, 0.0, 0.0],
-                    "view_up_vector": [0.0, 1.0, 0.0],
+                    "view_up_vector": [0.0, 0.0, 0.0],
                     "view_plane_distance": 0.0,
                     "umin": 0.0,
                     "umax": 0.0,
