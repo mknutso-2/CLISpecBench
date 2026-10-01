@@ -39,12 +39,36 @@ references. The unchanged C++ reference passes 249/249 in offline image
 Ruff check/format and strict Pyright pass. Pyright was run on the real host
 because the sandbox did not expose its installed pytest package.
 
-Six preserved submissions will be regraded sequentially after the rubric
-commit: four Astra languages and Sol C++/JavaScript. Publication requires all
-248 untouched outcomes per source to remain identical, independent corrected-
-grade review, and complete dashboard preservation checks. Regrades add no
-model calls or inference cost; raw results, source, sessions and usage remain
+Six preserved submissions were regraded sequentially under committed rubric
+`929195c` and the pinned image. All 248 untouched outcomes per source are
+identical. No cases were added or removed.
+
+| Submission | 1.0.20 | 1.0.21 |
+|---|---:|---:|
+| Astra Max C++ | 247/249 | 247/249 |
+| Astra Max Python | 249/249 | 249/249 |
+| Astra Max JavaScript | 248/249 | 248/249 |
+| Astra Max Rust | 247/249 | 247/249 |
+| Sol Max C++ | 245/249 | 245/249 |
+| Sol Max JavaScript | 245/249 | 246/249 |
+
+Only the intended Sol JavaScript appendix observation changes. Regrades add
+no model calls or inference cost; raw results, source, sessions and usage remain
 immutable and replacement audits retain complete previous publications.
+Independent corrected-grade and six-source preservation reviews approve the
+publication. The five previous publication payloads remain archived; all
+2,849 unrelated publication/audit files are byte-identical. Checkpoint checks
+preserve 65 non-IGES rows and all seven excluded attempts; five earlier IGES
+rows change only scoring version and publication/audit links.
+
+Both dashboards pass full migration validation: **1,847 runs**, **1,174,351 test
+rows**, and 20,550 unique test identities. Every unrelated row is unchanged
+apart from run-index shifts; all six targets match their actual publications
+and grader provenance. Peak validation RSS is 51,432 KiB under a
+512 MiB address-space cap, with zero swaps. The unchanged validator retains its
+previous 65-control validation; its new migration configuration is verified
+against the full real datasets. [Machine-readable evidence](IGES-1.0.21-checks.json)
+records the independent reviews, per-source comparisons and preservation checks.
 
 Local evidence is under `work/non-rs274-audit/iges-1.0.21-validation/` and
 `work/non-rs274-audit/runs/iges-js-gpt-5.6-sol-max/`.

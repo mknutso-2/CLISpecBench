@@ -1,5 +1,47 @@
 # Resume the non-RS274 audit and GPT collection
 
+## September 30 serial resume and Sol Max IGES JavaScript
+
+The user explicitly resumed collection on September 30. Continue **one
+submission at a time**, with source/transcript/accounting/scoring review,
+local publication, bounded dashboard validation and a local commit before
+another generation. The old parallel queue remains disabled. Ordinary account
+usage was available (weekly 54% used at the initial check); check fresh usage
+before dispatch. No reset-credit redemption, purchase or push is authorized.
+
+Retained Sol Max IGES JavaScript `613cdda8-16a8-40af-9de6-f4b39e80053b`
+completed normally in 46.41 minutes. Its original **245/249** under 1.0.20 is
+preserved. Independent review identified one invalid Real literal in a hidden
+appendix fixture. Tests-only commit `929195c` / **IGES 1.0.21** changes that
+literal from `0` to `0.0`, preserving its numeric value and record width.
+The unchanged submission now scores **246/249**. The three remaining failures
+are observations of one offset-direction mismatch with the explicit benchmark
+contract. All 248 other outcomes are unchanged. Five prior IGES submissions
+were regraded with unchanged scores, and the unchanged reference passes
+249/249. All 28 model inputs and all generated/reference sources are unchanged.
+See [IGES 1.0.21 validation](../validation/IGES-1.0.21.md).
+
+JavaScript usage is 22,242,964 input including 21,541,376 cached, and 130,215
+output including 54,823 reasoning tokens; total 22,373,179. The recorded count
+of **143 tool calls** is supported by 142 canonical actions and one explicitly
+rejected execution without a canonical counterpart. API-equivalent cost is
+**$14.027202**, not a subscription charge. The final syntax checks and focused
+line roundtrip/evaluation checks are supported; the earlier broad entity
+checks were not all repeated after the final edits.
+
+Reviewed coverage is **71/112**: Astra 28, Sol 22, Terra 12, Luna 9. There are
+41 remaining cells: 37 pending and four excluded attempts requiring retries.
+Qualifying API-equivalent estimates total **$431.310052**; excluded attempts
+remain **$54.862522**. The next selected cell is **Sol Max / IGES Rust**.
+Its ledger is `work/non-rs274-audit/runs/iges-rs-gpt-5.6-sol-max/`; inspect it
+before dispatch to avoid a duplicate. The migration evidence is under
+`work/non-rs274-audit/iges-1.0.21-validation/`. Swap remains 4 GiB and its
+increase is deferred; report processing remains capped at 512 MiB.
+Both dashboards pass full migration validation: 1,847 runs/1,174,351 test rows,
+with unrelated rows unchanged apart from run-index shifts. Peak validation RSS
+is 51,432 KiB and no swap was used.
+
+
 ## September 26 serial resume and Sol Max IGES C++
 
 The user explicitly resumed collection on September 26. This supersedes the
