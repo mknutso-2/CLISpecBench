@@ -1,5 +1,42 @@
 # Resume the non-RS274 audit and GPT collection
 
+## October 1 continued serial collection and Sol Max IGES Rust
+
+The user clarified that **one submission at a time means keep progressing
+sequentially**, not stop after each completed run waiting for another prompt.
+The serial gate prevents overlapping work; the active operator must review,
+publish, validate and commit each completion, then dispatch the next missing
+cell while ordinary usage remains available. Existing collection authorization
+remains in force. Do not restart the old parallel queue.
+
+Rust completed normally at **244/249** under unchanged IGES 1.0.21. Independent
+review confirms five fair observations in two semantic families: illegal `0H`
+reading/writing, and three correlated offset-direction cases. Final eight
+self-tests and release build are verified. Raw tool count remains unavailable
+because of a compound rejected wrapper; the token/reasoning/cost records are
+complete and preserved. See [Rust validation](../validation/IGES-Sol-Rust-2026-10-01.md).
+
+Coverage is **72/112**: Astra 28, Sol 23, Terra 12, Luna 9. Forty cells remain,
+including four excluded attempts requiring fresh retries. Qualifying estimated
+API-equivalent cost totals **$455.324642**; excluded attempts remain **$54.862522**.
+Both dashboards validate at 1,848 runs / 1,174,600 test rows. All 71 prior
+checkpoint rows and original publications remain unchanged.
+
+Next preferred cell: **Sol Max / IGES Python**, a fresh retry of excluded UID
+`6cb7068d-e782-49c6-b8e2-1ab6ea5c2bbb`. Inspect its current ledger before launch.
+Use the serial launcher's explicit excluded-retry flag and expected UID so the
+old attempt and ledger remain archived. Then complete Sol's four MARC21 cells
+before moving through remaining Terra/Luna coverage. Keep reports under 512 MiB,
+check fresh usage before every dispatch, and defer swap changes. No reset-credit
+redemption, purchase or push is authorized.
+
+Persistent unattended continuation was requested through the app but automatic
+approval review requires explicit user approval; a question is pending. Until
+that approval arrives, continue only within the active session and do not
+create a scheduler workaround. Check the live thread/automation state before
+assuming a recurring continuation exists.
+
+
 ## September 30 serial resume and Sol Max IGES JavaScript
 
 The user explicitly resumed collection on September 30. Continue **one
