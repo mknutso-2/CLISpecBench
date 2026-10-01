@@ -4,6 +4,8 @@ Ports ``Evals/IGES-SDK/tests/integration/test_reference_files.cpp`` to drive
 the ``iges parse`` CLI. ex1/ex2/ex3 are Burkardt-collection files from the
 IGES appendices. Hidden copies normalize status padding (§2.2.4.4.9) and
 ignored positive structure values (§2.2.4.4.3) to avoid public-contract conflicts.
+The ex1 Line Widening extension length uses a Real literal (0.0), as
+§4.101 and §2.2.2.2 require, even when its value is not used geometrically.
 
 Keep each file's observations together: five separately scored cases used to
 fail on the same initial parse, amplifying one defect fivefold. These are

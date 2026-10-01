@@ -1,5 +1,15 @@
 # IGES Changelog
 
+## v1.0.21 — 2026-09-30
+
+- Normalize one hidden ex1 appendix token: Type 406 Form 5 extension length
+  is Real under §4.101, so spell its zero as `0.0` under §2.2.2.2. The old
+  integer spelling could reject the whole positive integration fixture before
+  its intended observations. Preserve the numeric value, fixed-width record,
+  all other fields and lines, all 249 cases, and every model-visible input.
+- Keep generated sources, references, original grades and usage immutable.
+  See `docs/validation/IGES-1.0.21.md` for independent review and regrades.
+
 ## v1.0.20 — 2026-09-26
 
 - Repair four hidden View/Drawing/DE-pointer fixtures to use the complete
