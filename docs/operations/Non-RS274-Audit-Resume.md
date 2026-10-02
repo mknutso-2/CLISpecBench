@@ -1,5 +1,26 @@
 # Resume the non-RS274 audit and GPT collection
 
+## October 1 cross-computer handoff — read this first
+
+The user requested committing and pushing the current work for continuation on
+another computer. This authorizes this handoff push and supersedes earlier
+"no push" notes for that action. Read the self-contained
+[cross-computer handoff](Non-RS274-Cross-Computer-Handoff.md) before any launch;
+older instructions below refer to workstation-local helpers and historical state.
+
+There are **72 reviewed/published cells and 40 unfinished cells**. Sol Max IGES
+Python has now **completed at a provisional 244/249**, UID
+`672af3d3-3583-4bc6-a64b-882d79626ef4`, and is awaiting review, not another run.
+No evaluation worker is active at this snapshot. Thus **39 cells need generation
+and one needs review**. A Git pull provides the exact queue and reviewed results,
+but not the ignored transcripts/sources or Docker images. The handoff explains
+the small local artifact bundle needed to finish Python's review.
+
+No new run is launched as part of preparing this handoff. Before another machine
+starts collection, establish one active owner across machines; local lock files
+cannot prevent duplicate cross-machine work. No recurring automation was created.
+
+
 ## October 1 continued serial collection and Sol Max IGES Rust
 
 The user clarified that **one submission at a time means keep progressing

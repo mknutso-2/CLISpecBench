@@ -1,5 +1,7 @@
 # Non-RS274 scoring audit and GPT coverage
 
+**October 1 handoff update:** [Start here on another computer](../../operations/Non-RS274-Cross-Computer-Handoff.md). There are 72 reviewed results, 39 cells requiring generation and one completed Python submission awaiting review. No evaluation worker is active at this snapshot. This update supersedes the dispatch snapshot below.
+
 Checkpoint: 2026-10-01T11:39:00.784285+00:00. Local implementation revision `7e057755691e8bce24aef32b4f66adcd2487b8c2`. Results are in the local publication tree; no push has been made for this task.
 
 The user resumed work on September 30 with one submission at a time: finish each retained review before new generation, then finish and review each new run before starting another. The previous parallel queue remains disabled. See the [resume instructions](../../operations/Non-RS274-Audit-Resume.md).
@@ -40,7 +42,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |ical-rs|465/467|461/467|Pending|Pending|
 |iges-cpp|247/249|245/249|Pending|Pending|
 |iges-js|248/249|246/249|Pending|Pending|
-|iges-py|249/249|Retry: quota|Retry: quota|Pending|
+|iges-py|249/249|Review: 244/249 provisional|Retry: quota|Pending|
 |iges-rs|247/249|244/249|Pending|Pending|
 |las-cpp|223/223|223/223|222/223|219/223|
 |las-js|223/223|223/223|223/223|219/223|
