@@ -4,6 +4,34 @@ Snapshot: **October 1, 2026**, after local commit `954de39` and integration of
 remote `347fbab`. Read this document before older resume notes. The user
 requested committing/pushing the current state for a possible handoff.
 
+## If the source machine cannot push
+
+The initial HTTPS push failed because this workstation has no GitHub Git
+credentials configured. Local commits are preserved. A verified Git bundle is
+available beside the repository at
+`outputs/clispecbench-handoff-2026-10-01.bundle` (relative to the workspace
+parent). It carries the exact local commits, including their original hashes,
+and requires upstream history through `347fbab`. Unlike a patch or recreated
+commit, it preserves the commit IDs referenced by validation records.
+
+If the push has not subsequently succeeded, a plain pull will still miss this
+work. Transfer that Git bundle and the separate Python artifact archive to an
+authenticated computer. In its clean CLISpecBench checkout, after fetching the
+remote, import the bundle and fast-forward before pushing:
+
+```bash
+git fetch origin
+git bundle verify /path/to/clispecbench-handoff-2026-10-01.bundle
+git fetch /path/to/clispecbench-handoff-2026-10-01.bundle main:handoff-oct1
+git merge --ff-only handoff-oct1
+git push origin main
+```
+
+If fast-forward fails because the receiving machine has additional commits,
+review and merge those changes normally; do not reset or force-push. If the
+original machine authenticates and pushes successfully first, the bundle is
+unnecessary and a normal pull is sufficient for tracked files.
+
 ## What is done and what remains
 
 The target is **112 cells**: seven tasks × four languages × four models,
