@@ -1,5 +1,35 @@
 # Continue the non-RS274 collection on another computer
 
+## October 2 final source-machine review — collection complete
+
+**All 112/112 target cells are now reviewed and published.** Sol Max IGES Python
+UID `672af3d3-3583-4bc6-a64b-882d79626ef4` was available on this Linux machine,
+including source, transcript, session and raw report. Independent review approved
+its unchanged **244/249** under IGES 1.0.21. Exact accounting: 102 tool calls,
+41,315 reasoning tokens within 117,916 output, 17,986,708 total tokens, and
+$10.436163 API-equivalent estimated cost. No compaction events were found.
+The earlier quota-interrupted attempt remains excluded and preserved.
+
+Five failures describe two semantic families: illegal zero-count Hollerith in
+reader/writer, and three correlated Type130 offset-direction observations.
+Known frozen-fixture caveats do not explain these failures. Final source edits
+were not followed by functional self-tests; the official hidden suite graded
+the saved final source. Public inputs, tests, source, raw scores and all earlier
+111 checkpoint rows remain unchanged. A portable independent/objective/accounting
+review is committed at
+[the run review](../validation/non-rs274-2026-09-12/reviews/672af3d3-3583-4bc6-a64b-882d79626ef4.json).
+
+The remaining-work list is empty: Astra, Sol, Terra and Luna each have all 28
+Max cells. Qualifying API-equivalent estimates total **$614.856254**, with
+excluded attempts separately preserved at **$54.862522**. No new generation,
+source transfer or local helper reconstruction is needed to complete this
+collection. The previously offered artifact archive remains available for
+optional reinspection; it is no longer a blocker. The existing cross-image and
+future-test-revision caveats remain documented. No tests or public content were
+changed for this publication. All earlier pending/transfer-only instructions
+below are historical and superseded by this completion record.
+
+
 ## Windows continuation — October 1 evening
 
 **October 2 user decision:** document the [ICal raw-projection issue for a future

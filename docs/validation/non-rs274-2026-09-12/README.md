@@ -1,6 +1,6 @@
 # Non-RS274 scoring audit and GPT coverage
 
-**October 2 Windows update:** [Current handoff and ownership](../../operations/Non-RS274-Cross-Computer-Handoff.md). All 39 authorized Windows generation cells are reviewed and published in the canonical results tree. The checkpoint is 111/112; only the already-completed Sol IGES Python run awaits transferred artifacts. No evaluation worker remains active, and the same-chat collection heartbeat is paused. The user directed us to document the [ICal raw-projection issue for a future fix](ical-valarm-publication-hold.md) and continue with frozen scores and explicit caveats; the [IGES fixture/contract follow-up](iges-frozen-suite-followup.md) follows the same policy. This checkpoint includes the publications, portable reviews and main dashboard index; raw artifacts remain on the Windows workstation. This supersedes earlier dispatch and pause notes.
+**October 2 final publication:** All **112/112 target cells** are reviewed and published (Astra 28, Sol 28, Terra 28, Luna 28). The final Sol Max IGES Python artifacts were retained on the Linux source machine; independent review verified its unchanged **244/249** and complete accounting, and it is now published. No generation or artifact transfer remains necessary for this collection. See the [final Python review](reviews/672af3d3-3583-4bc6-a64b-882d79626ef4.json) and [completion handoff](../../operations/Non-RS274-Cross-Computer-Handoff.md). Earlier provisional/transfer-only notes below are historical. Preserve the documented [ICal](ical-valarm-publication-hold.md) and [IGES](iges-frozen-suite-followup.md) caveats for later revisions; no frozen scores or public inputs changed during finalization.
 
 Current machine-readable checkpoint timestamps are in `completed-results.json` and
 `remaining-coverage.json`. The Windows generations use revision `8807848`.
@@ -25,7 +25,14 @@ Failure amplification was material. One illegal shared IGES Global token caused 
 
 Independent subagents reviewed source/spec alignment and candidate changes, including counterexamples and explicit permissions. The September 12 ICal/BibTeX tests matched their reviewed candidates byte-for-byte. The subsequent BibTeX 1.2.5 EOF correction has independent source/oracle review, a 386/386 reference pass, and an EOF-flush mutation failing only its dedicated case; all eight retained-source official regrades were processed sequentially. The original IGES 1.0.17 candidate differed only by three import-format blank-line edits with identical ASTs; the separately reviewed 1.0.18 repair replaces a remaining invalid Face writer fixture with a legal context and focused boolean observation. The independently reviewed 1.0.19 patch normalizes conflicted appendix fields and consolidates repeated integration prerequisites, with three full reference passes and four deliberate mutation controls. Official Docker regrades reproduce the independently reviewed test outcomes. Reference and mutation-control results, limitations and source anchors appear in the linked records. The full applicable harness suite passed 359 tests plus 6 subtests; three host-Cargo cases were skipped and 23 Docker/model cases were deselected. The grader-image patch also passed a live offline image-identity probe and 119 independently rerun targeted checks. Strict Pyright and Ruff passed for the edited code. Rejected-tool evidence failures now leave authoritative token usage intact, and separate replacement guards verify prior audit contents as well as file hashes.
 
-## Coverage: 111 of 112 missing cells recorded
+Final publication checks pass for **1,888 dashboard runs and 1,215,984 test
+outcomes**. Every prior main row and per-test outcome is preserved, apart from
+expected per-test run-index shifts. All 111 prior checkpoint rows, 2,940 tracked
+publication/audit assets and historical exclusions are unchanged. The streamed
+comparison peaked at 34,120 KiB under a 512 MiB cap. See
+[final preservation evidence](final-publication-checks.json).
+
+## Coverage: 112 of 112 missing cells recorded
 
 The inventory already contained three runs per task/language for GPT-5.5, GPT-5.4, GPT-5.4-mini, GPT-5.3-Codex and GPT-5.2 at their configured top efforts. Astra, Sol, Terra and Luna had no published coverage on these tasks. This collection targets one Max run per missing cell; it does not imply three-repeat coverage, other reasoning efforts, or every possible GPT model. Earlier non-RS274 source artifacts were unavailable locally, so historical rows were not silently rescored.
 
@@ -45,7 +52,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |ical-rs|465/467|461/467|454/467 (raw-projection caveat)|442/467 (projection/fixture caveats)|
 |iges-cpp|247/249|245/249|244/249|231/249 (mapping/writer-test caveats)|
 |iges-js|248/249|246/249|228/249 (fixture/contract caveats)|243/249|
-|iges-py|249/249|Review: 244/249 provisional|247/249|245/249|
+|iges-py|249/249|244/249|247/249|245/249|
 |iges-rs|247/249|244/249|248/249|239/249 (mapping/writer-test caveats)|
 |las-cpp|223/223|223/223|222/223|219/223|
 |las-js|223/223|223/223|223/223|219/223|
@@ -60,7 +67,7 @@ The inventory already contained three runs per task/language for GPT-5.5, GPT-5.
 |wordcount-py|46/46|46/46|46/46|46/46|
 |wordcount-rs|46/46|46/46|46/46|46/46|
 
-1 cell still needs a qualifying publication: completed Sol IGES Python awaiting artifact transfer/review. All 39 authorized Windows generations are completed, reviewed and locally published; do not regenerate the transfer-only run. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. The old source-machine queue stays disabled. The Windows continuation used at most four concurrent slots, each held through substantive review. Excluded retries preserved their previous artifacts and ledgers.
+No cells remain outstanding. All 39 Windows generations and the retained Linux Sol IGES Python retry are reviewed and published; do not launch replacements for completed cells. The earlier weekly limit interrupted five generations; their raw grader percentages are excluded. One Astra BibTeX attempt used hosted GitHub tools and is quarantined. Its raw data remains preserved. The old source-machine queue stays disabled. The Windows continuation used at most four concurrent slots, each held through substantive review. Excluded retries preserved their previous artifacts and ledgers.
 
 Provider-capacity interruptions are tracked separately from account-quota interruptions. They are excluded from correctness scores, preserve partial usage, and require fresh attempts; see the excluded-attempt records for each cause.
 
@@ -70,7 +77,7 @@ The initial 35 valid completed runs predate explicit hosted-app disablement. The
 
 The v2 tool-call definition is unchanged. Session evidence exposed 19 rejected nested attempts across 17 of the initial 35 eligible completed generations that canonical items omitted. In that initial group, 12 exact totals were corrected; six totals are unavailable because other failed-wrapper evidence cannot establish an exact count (one such run had no explicit process rejection). Seventeen totals remain unchanged. Original token totals, reasoning, costs and generation-completion flags are preserved. Separate audits preserve complete prior publication bytes and existing regrade audit hash chains. The same omission was observed in one of 12 local historical RS274 attempts; its prior publication has not been silently rewritten. Subsequent generations use the corrected parser and are independently checked against their preserved sessions.
 
-Estimated API-equivalent generation cost for the 111 qualifying completed runs: **$604.420091**. Excluded attempted generations total **$54.862522** at the recorded estimates, including partial quota runs. These are estimates, not the subscription bill. Reasoning tokens are a subset of output tokens and are not charged or added twice. Unreviewed runs are not included. Terra IGES C++/Python, Luna BibTeX C++/JS/Rust, Luna ICal C++/Python/Rust and Luna IGES Python secondary cumulative telemetry each include a compaction request omitted by the existing canonical accounting basis; Luna ICal JavaScript and IGES Rust each include three, Luna IGES JavaScript four and Luna IGES C++ five. Their reviews document this limitation without changing the collection's counter policy.
+Estimated API-equivalent generation cost for the 112 qualifying completed runs: **$614.856254**. Excluded attempted generations total **$54.862522** at the recorded estimates, including partial quota runs. These are estimates, not the subscription bill. Reasoning tokens are a subset of output tokens and are not charged or added twice. Unreviewed runs are not included. Terra IGES C++/Python, Luna BibTeX C++/JS/Rust, Luna ICal C++/Python/Rust and Luna IGES Python secondary cumulative telemetry each include a compaction request omitted by the existing canonical accounting basis; Luna ICal JavaScript and IGES Rust each include three, Luna IGES JavaScript four and Luna IGES C++ five. Their reviews document this limitation without changing the collection's counter policy.
 
 Agent image: `sha256:af2c19c8f457977011653519905408e861235272007daca50b92fc685f1aef73` (Codex CLI 0.153.4). Grader/reference image: `sha256:9a4f1fe0219b50b94c4a7abeb8a48cedd6a9c17c1ab90d34cc4bb4d826a7c90c`. Saved-source regrades require no new inference or model cost. Normal grading now resolves, pins and records the actual grader image separately from the agent image; failed resolution preserves the completed generation and usage without inventing a score. Historical grader identity remains unknown unless explicitly recorded or supplied by a preserved regrade. The dashboard no longer substitutes an agent image for missing grader evidence.
 
@@ -129,7 +136,7 @@ reviewed/published. Its13 failures map to007 optional-length restrictions4,
 forbidden category fill1, omitted008 code checks4, and missing018$a4.
 Exact82tools are recovered publication-only; canonical$0.439627 reconciles
 without compaction. All39 Windows cells are finalized, with no active workers.
-The same-chat heartbeat is paused. Sol IGES Python is still transfer-only.
+The same-chat heartbeat is paused. Sol IGES Python was subsequently reviewed and published on the source machine, completing 112/112.
 The local offline IGES
 reference passed 249/249. Check the local
 `automation_logs/non-rs274-oct1/` launch/review ledgers and actual Docker state;

@@ -1,0 +1,1314 @@
+{
+  "schema_version": 1,
+  "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+  "approved": true,
+  "checked_at": "2026-10-03T02:04:50.231512+00:00",
+  "original_result": "transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/result.json",
+  "original_result_sha256": "4f926a9953c3ab72abdf71e005c87f11f8b8693db00f34146cb8ad3738dd46c1",
+  "source_content_sha": "0a7029f478ba3decb7b73938051adffe4f922725ecbf68a90a034b211cb6f7e5",
+  "independent_content_review": {
+    "schema_version": 1,
+    "reviewer": "independent subagent /root/iges_js_review",
+    "checked_at": "2026-10-03T02:03:18.907286+00:00",
+    "status": "approved",
+    "publication_approval": true,
+    "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+    "eval_version": "1.0.21",
+    "grade": {
+      "passed": 244,
+      "failed": 5,
+      "skipped": 0,
+      "error": 0,
+      "total": 249
+    },
+    "prompt_sha": "515e1248443138c4009e0065040d4a233ed0bd5e957516c5ce5fa708550bb344",
+    "test_sha": "ec84b63fbbbbf9a90c8d6e4a88cb5e29ab2e93424e7f25f96176569451382135",
+    "completion": "Voluntary completed turn with final message, successful harness build and completed 249-case grade. No quota, timeout or environment termination evident.",
+    "failure_families": [
+      {
+        "name": "Reader accepts zero-length Hollerith",
+        "cases": [
+          "test_data_types.py::test_zero_count_hollerith_is_rejected_after_defaulted_string_control"
+        ],
+        "authority": "Frozen specification \u00a72.2.2.3 requires a nonzero unsigned character count; \u00a72.2.3 permits a defaulted empty field.",
+        "source": "igeslib/fields.py:39-53 decode_hollerith checks length consistency but never count > 0; split_free_record likewise accepts zero.",
+        "observed": "The raw Global control first accepts a legal empty app_protocol, then replacing it with 0H still returns exit0. This reaches the intended rejection check, not a disputed packing prerequisite.",
+        "fairness": "Genuine reader defect; standalone fixture independent of submitted writer or geometry."
+      },
+      {
+        "name": "Uniform offset direction differs from explicit benchmark contract",
+        "cases": [
+          "test_geometric_eval.py::test_offset_curve_eval_at_start_is_displaced_base_start",
+          "test_geometric_eval.py::test_offset_curve_eval_at_midparam_follows_base",
+          "test_geometric_eval.py::test_offset_curve_eval_nonzero_offset_follows_base"
+        ],
+        "authority": "Technical requirements lines208-212 explicitly use (vx,vy,vz) directly as FLAG1 offset direction.",
+        "source": "igeslib/evaluate.py:269-286 computes _cross(direction, _unit(tangent)) then scales by distance.",
+        "observed": "Results[0,0,-2],[5,0,-2],[2.5,0,-5] instead of positiveY displacements match that source calculation.",
+        "fairness": "Genuine explicit-contract mismatch even though the fuller IGES text describes the plane-normal convention. The eval-specific override is supplied.",
+        "amplification": "Three correlated observations of one orientation bug, not three independent defect families. Preserve frozen249 weighting; no silent consolidation or score adjustment."
+      },
+      {
+        "name": "Writer emits zero-length Hollerith",
+        "cases": [
+          "test_writer_global.py::test_write_empty_document_roundtrips_default_global_values"
+        ],
+        "authority": "\u00a72.2.2.3 and default-field rule as above.",
+        "source": "igeslib/fields.py:56-65 encode_hollerith always returns lengthHvalue; document.py:630 invokes it for empty app_protocol.",
+        "observed": "Global payload ends11,0,,0H;. model_timestamp is a legal empty field; app_protocol supplies the illegal0H detected by the independent wire scanner before submitted parsing.",
+        "fairness": "Valid canonical empty document. Historical test comment mentions empty timestamp, but the general Global scanner correctly catches app_protocol here.",
+        "amplification": "Reader and writer share one conceptual misunderstanding but exercise distinct code paths and independently required behaviors. This does not create a many-test shared prerequisite cascade."
+      }
+    ],
+    "frozen_suite_caveats": {
+      "reviewed": "docs/validation/non-rs274-2026-09-12/iges-frozen-suite-followup.md",
+      "assessment": "The documented split numeric tokens, legal association/property tails, first physical P-line assumptions and absent AVDT mapping do not cause these five observed failures. Preserve all raw outcomes and existing suite; no repair or regrade requested/performed in this review."
+    },
+    "claims_review": {
+      "summary": "Substantial standard-library implementation with all five commands and87-entity catalog. Final broad verification claim is supported by smoke checks but overstates conformance and final-revision validation.",
+      "evidence": [
+        "item39 asserts supplied synthetic catalog exactly matches87 supported types, successfully parses87, prints fixed True and no changed data. Minimal/self-generated fixtures do not prove all legal forms or external conformance.",
+        "item38 drives CLI write/parse/eval/roundtrip and runs cmp; printed line point[2.5,5,7.5] supports evaluation. It is a newline-separated shell script without errexit, so overall exit0 alone does not prove silent cmp or every command.",
+        "item43 custom-delimiter/Hollerith test initially fails length handling; later item59 prints custom delimiter h, preserved string and roundtrip True. Do not treat the original failed check as passed.",
+        "item94 detailed entity/form codec probes print successful outcomes; item95 additional-property roundtrip prints True; item97 prints the expected ASCII-control diagnostic.",
+        "items64/65/79/80/100 print concrete composite, spline, offset-surface, revolution and constructed-curve numerical outputs. Many are observational prints rather than assertions. item100 offset curve uses the same cross-product convention, so it does not validate the explicit eval override.",
+        "item101 intends catalog/syntax/help checks, but recorded output is empty and overall shell exit0 alone is weak evidence of every intermediate step. Items103/104 subsequently tighten defaulted attribute values and permit null pointer references; only cache-directory search105 follows. No functional or syntax rerun after those final edits is shown.",
+        "The completed hidden grade evaluates the retained final submission and independently establishes244 passes, including all appendix workflows."
+      ],
+      "completion_claim": "No admission of incompleteness; implementation/support claims overstate compliance for Hollerith and Type130. Eight retained files, no dependency or remote code identified.",
+      "imports": [
+        ".document",
+        ".entities",
+        ".errors",
+        ".evaluate",
+        ".fields",
+        "__future__",
+        "argparse",
+        "copy",
+        "dataclasses",
+        "datetime",
+        "igeslib",
+        "igeslib.errors",
+        "json",
+        "math",
+        "os",
+        "pathlib",
+        "re",
+        "sys",
+        "tempfile",
+        "typing"
+      ]
+    },
+    "editorial_summary": "Claims implemented IGES CLI and broad codec/numerical checks; final grade244/249 exposes illegal0H acceptance/emission and a uniform-offset direction mismatch. Three offset failures share one cause. Final two edits were not followed by functional checks in the transcript.",
+    "scope": "Independent content, failure fairness and final-claim review. Root separately verifies usage/tool accounting and publication preservation. No generated code imported or executed on host; no Docker needed, no tests/source/publications edited.",
+    "bindings": {
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/result.json": "4f926a9953c3ab72abdf71e005c87f11f8b8693db00f34146cb8ad3738dd46c1",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/transcript.jsonl": "873e22d809af7ea8b81d2bb11341bb38b6238e82e17cae9463cace2bab3050c0",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/test-report.json": "c9b3258ab89e245768e3eb966b9f67c9543958cafefd432b5d2a0353ddf87fbd",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit/runs/iges-py-gpt-5.6-sol-max/evidence.json": "187ada6eef8a9bcbd04f8a97dbd31c246380c9411f86d3e456525fe065ea4f6c",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/docs/validation/non-rs274-2026-09-12/iges-frozen-suite-followup.md": "b9c6b64e471a18121464e975ce5fa7d26b60927deb0d065885b54661c71b7fc3",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/Evals/IGES/prompt/technical-requirements-prompt.md": "f7f3738cc9b5b494c5e49fa5f3e1c029f662ab804e82508694db24dbdb6313f5",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/Evals/IGES/prompt/docs/iges-5-3-specification.md": "793253c63211b5ac9617dd92b9af9c16090fd068b40d94efd219aae43f0164d7",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/Evals/IGES/tests/test_data_types.py": "2d61bcb0b693ef30e9b1d40a3ee04d7089f4005c09668dd1ea2ae746f3db6d0d",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/Evals/IGES/tests/test_writer_global.py": "f4abbf5e3b68708b8dfdaa7c5b2cabf039a5bcc650063c66b3650793fd60e51f",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/Evals/IGES/tests/hollerith_support.py": "eae2281dae5755e2641bc986f86ecc89f365f06a809a694bc512cbe05aef4960",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/Evals/IGES/tests/test_geometric_eval.py": "2fcc72958a0b087af8638cfdf9cda76dcc79eb0554aeef48ce6b12be5c786f5e",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/main.py": "67d59ab6969d6c59f37facb2ab679f72ff1307b7df116b2121ec2054d0d3a43c",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/iges": "05c41fddc2bbd0a26bc5351fc72cac24abc2f9449f72f6b5914cc1351324ab62",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/igeslib/entities.py": "c04023d2dea11d36d179296e4bd382af4332b2290e511a3c2cc870169667778b",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/igeslib/errors.py": "3294e50eb660706715223e59e841c46fdb1a1d19f8f4b8fd1906277de0812571",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/igeslib/evaluate.py": "25cff411db15b8c7b0ff62db12292cfc00254bd6e7df258b245d9c7d86d4a784",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/igeslib/fields.py": "cbe8337083ce8b32550a08a68bef128c7615cfea37554d85124201e39293b77c",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/igeslib/document.py": "a311fa86a518a38996efcb53e927638467460e7df8a6adeaf1f34992dbcb9486",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/source/igeslib/__init__.py": "099e6b6bd16f136c5c9984074817b0293adbedd1e9a3b79e94b44c5a4fe6bd0e"
+    }
+  },
+  "objective_review": {
+    "schema_version": 1,
+    "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+    "checked_at": "2026-10-03T02:01:05.024533+00:00",
+    "original_result_sha256": "4f926a9953c3ab72abdf71e005c87f11f8b8693db00f34146cb8ad3738dd46c1",
+    "source_content_sha": "0a7029f478ba3decb7b73938051adffe4f922725ecbf68a90a034b211cb6f7e5",
+    "generation_complete": true,
+    "grade": {
+      "passed": 244,
+      "failed": 5,
+      "skipped": 0,
+      "error": 0,
+      "total": 249
+    },
+    "all_case_ids_unique": true,
+    "pytest_exitcode": 1,
+    "model": "gpt-5.6-sol",
+    "effort": "max",
+    "eval_version": "1.0.21",
+    "prompt_sha": "515e1248443138c4009e0065040d4a233ed0bd5e957516c5ce5fa708550bb344",
+    "test_sha": "ec84b63fbbbbf9a90c8d6e4a88cb5e29ab2e93424e7f25f96176569451382135",
+    "agent_image": "sha256:af2c19c8f457977011653519905408e861235272007daca50b92fc685f1aef73",
+    "grader": {
+      "mode": "docker",
+      "docker_image_tag": "clispecbench-base",
+      "docker_image_sha": "sha256:9a4f1fe0219b50b94c4a7abeb8a48cedd6a9c17c1ab90d34cc4bb4d826a7c90c"
+    },
+    "comparison_cohort": "api-only-apps-disabled",
+    "usage_matches_preserved_events": true,
+    "usage": {
+      "input_tokens": 17868792,
+      "output_tokens": 117916,
+      "cache_read_input_tokens": 17610368,
+      "cache_creation_input_tokens": 0,
+      "tool_calls": 102,
+      "tool_calls_definition": "underlying_tool_invocations_v2",
+      "reasoning_output_tokens": 41315,
+      "reported_cost_usd": null,
+      "estimated_cost_usd": 10.436163,
+      "cost_estimate_blocked_reason": null,
+      "source": "codex_exec_turn_completed",
+      "is_partial": false,
+      "total_tokens": 17986708
+    },
+    "cost_recomputed_from_recorded_rates": true,
+    "recorded_rates_per_million": {
+      "input": 4.0,
+      "cached_input": 0.4,
+      "output": 20.0
+    },
+    "recorded_cache_write_rate_per_million": 5.0,
+    "pricing_code_sha256": "009ab2dfc568c2ef958a5493ed31fc39b6f4b58d6afc25e5076b413227d5ef56",
+    "pricing_launch_revision": "954de396ca566fac152ab917018638dc86e44a51",
+    "reasoning_is_subset_of_output": true,
+    "network_policy_verified": "api-only",
+    "canonical_tool_items": 102,
+    "canonical_item_types": {
+      "command_execution": 63,
+      "file_change": 39
+    },
+    "extra_rejected_tools": 0,
+    "tool_count_available": true,
+    "source_unchanged_during_review": true,
+    "content_review_status": "not_performed",
+    "publication_approval": "not_granted",
+    "prepared_evidence_sha256": "187ada6eef8a9bcbd04f8a97dbd31c246380c9411f86d3e456525fe065ea4f6c",
+    "input_sha256": {
+      "/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit/runs/iges-py-gpt-5.6-sol-max/evidence.json": "187ada6eef8a9bcbd04f8a97dbd31c246380c9411f86d3e456525fe065ea4f6c",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit/runs/iges-py-gpt-5.6-sol-max/launch.json": "5c25790a5cea48b8d4e032232c560b1d60f39d292d94e4a916422052b3b1c727",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/result.json": "4f926a9953c3ab72abdf71e005c87f11f8b8693db00f34146cb8ad3738dd46c1",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/transcript.jsonl": "873e22d809af7ea8b81d2bb11341bb38b6238e82e17cae9463cace2bab3050c0",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/codex-events.jsonl": "873e22d809af7ea8b81d2bb11341bb38b6238e82e17cae9463cace2bab3050c0",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/test-report.json": "c9b3258ab89e245768e3eb966b9f67c9543958cafefd432b5d2a0353ddf87fbd",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/sessions/2026/10/01/rollout-2026-10-01T11-44-53-01a0f748-1e42-75b3-bc55-c70862cd887b.jsonl": "d40948203058cb30799f2fd1350586332ca0ba31b2388feff9ac83f2fc399a78",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/src/clispecbench/harness/pricing.py": "009ab2dfc568c2ef958a5493ed31fc39b6f4b58d6afc25e5076b413227d5ef56",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit/external-tool-audits/672af3d3-3583-4bc6-a64b-882d79626ef4/7bd2199c5b363fae5618160c9e578e9b6bec12d427ab2acb065d816b115da68e.json": "7bd2199c5b363fae5618160c9e578e9b6bec12d427ab2acb065d816b115da68e",
+      "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/network-audit.jsonl": "3c29652e20b183ff8fd5c27901dc1b4e041b87e2bc55c514054ab2a08cb51a74"
+    }
+  },
+  "tool_count_review": {
+    "schema_version": 1,
+    "definition": "underlying_tool_invocations_v2",
+    "canonical_baseline": 102,
+    "additional_proven_rejections": 0,
+    "corrected_tool_calls": 102,
+    "available": true,
+    "evidence": [],
+    "confirmed_preexecution_syntax_rejections": [],
+    "problems": [],
+    "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+    "original_result_path": "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/result.json",
+    "original_result_sha256": "4f926a9953c3ab72abdf71e005c87f11f8b8693db00f34146cb8ad3738dd46c1",
+    "original_token_usage": {
+      "input_tokens": 17868792,
+      "output_tokens": 117916,
+      "cache_read_input_tokens": 17610368,
+      "cache_creation_input_tokens": 0,
+      "tool_calls": 102,
+      "tool_calls_definition": "underlying_tool_invocations_v2",
+      "reasoning_output_tokens": 41315,
+      "reported_cost_usd": null,
+      "estimated_cost_usd": 10.436163,
+      "cost_estimate_blocked_reason": null,
+      "source": "codex_exec_turn_completed",
+      "is_partial": false,
+      "total_tokens": 17986708
+    },
+    "corrected_token_usage": {
+      "input_tokens": 17868792,
+      "output_tokens": 117916,
+      "cache_read_input_tokens": 17610368,
+      "cache_creation_input_tokens": 0,
+      "tool_calls": 102,
+      "tool_calls_definition": "underlying_tool_invocations_v2",
+      "reasoning_output_tokens": 41315,
+      "reported_cost_usd": null,
+      "estimated_cost_usd": 10.436163,
+      "cost_estimate_blocked_reason": null,
+      "source": "codex_exec_turn_completed",
+      "is_partial": false,
+      "total_tokens": 17986708
+    },
+    "evidence_manifest": [
+      {
+        "path": "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/sessions/2026/10/01/rollout-2026-10-01T11-44-53-01a0f748-1e42-75b3-bc55-c70862cd887b.jsonl",
+        "sha256": "d40948203058cb30799f2fd1350586332ca0ba31b2388feff9ac83f2fc399a78"
+      },
+      {
+        "path": "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/codex-events.jsonl",
+        "sha256": "873e22d809af7ea8b81d2bb11341bb38b6238e82e17cae9463cace2bab3050c0"
+      }
+    ]
+  },
+  "root_publication_review": {
+    "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+    "reviewer": "root after independent iges_js_review",
+    "transcript_reviewed": true,
+    "final_event": "turn.completed",
+    "grading_complete": true,
+    "usage_matches_preserved_events": true,
+    "network_policy_verified": "api-only",
+    "editorial_summary": "Implemented all five Python CLI commands and scored 244/249. Failures concern illegal zero-count Hollerith in reader/writer and three correlated offset-direction cases. Earlier codec and geometry checks are supported, but final source edits were not followed by a functional rerun.",
+    "notes": "Completed voluntarily in 39.69 minutes, with successful harness build and 244/249 under frozen IGES 1.0.21; no errors or skips. Independent source/spec/transcript/report review supports all five failed observations. The reader accepts forbidden 0H and the writer emits it for empty app_protocol; the independent raw reader fixture passes its legal defaulted-string control, while the writer assertion observes the malformed output directly. Three Type 130 failures share one normal-cross-tangent formula in place of the explicit benchmark direct-vector override. These are two semantic families with separate reader/writer code paths, not five independent defects. The newly documented numeric packing, standard-tail, first-P-line and AVDT caveats do not explain these failures. Keep the frozen score; no test, prompt, reference or submitted-source changes were made. Earlier codec, fixed-width, custom delimiter/Hollerith, numerical and fixed-point checks substantiate the broad verification claims but are not exhaustive conformance proof. Final edits 103/104 to entities/document were followed only by a cache-directory search 105, not functional validation. The final multi-command compile/help invocation also lacks a success assertion for each intermediate step; overall exit 0 alone is insufficient. Accounting reconciles with preserved events/session: 17,868,792 input including 17,610,368 cached; 117,916 output including 41,315 reasoning; 17,986,708 total. All 102 tools are canonical: 63 commands and 39 file changes; no additional rejected tools or unresolved wrappers. No compaction events occurred. Recorded rates reproduce $10.436163 API-equivalent cost, not a subscription charge; reasoning is a subset of output. Raw accounting and source remain unchanged. The earlier quota-interrupted UID 6cb7068d-e782-49c6-b8e2-1ab6ea5c2bbb remains excluded; this publication is only the completed eval2 retry.\n\nRun conditions: apps explicitly disabled in the recorded launch; no external tool invocation observed.",
+    "external_tool_audit": {
+      "schema_version": 1,
+      "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+      "task": "iges-py",
+      "model": "gpt-5.6-sol",
+      "result_path": "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/result.json",
+      "publication_eligible": true,
+      "observed_external_invocations": [],
+      "nested_external_call_sites": [],
+      "verification_problems": [],
+      "unexecuted_syntax_rejections": [],
+      "canonical_item_types": {
+        "agent_message": 5,
+        "command_execution": 63,
+        "file_change": 39
+      },
+      "session_call_types": {
+        "custom_tool_call:exec": 102
+      },
+      "nested_local_call_sites": {
+        "exec_command": 63,
+        "apply_patch": 39
+      },
+      "evidence_manifest": [
+        {
+          "path": "codex-events.jsonl",
+          "sha256": "873e22d809af7ea8b81d2bb11341bb38b6238e82e17cae9463cace2bab3050c0"
+        },
+        {
+          "path": "sessions/2026/10/01/rollout-2026-10-01T11-44-53-01a0f748-1e42-75b3-bc55-c70862cd887b.jsonl",
+          "sha256": "d40948203058cb30799f2fd1350586332ca0ba31b2388feff9ac83f2fc399a78"
+        }
+      ],
+      "launch_condition_evidence": {
+        "path": "/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit/runs/iges-py-gpt-5.6-sol-max/launch.json",
+        "sha256": "5c25790a5cea48b8d4e032232c560b1d60f39d292d94e4a916422052b3b1c727",
+        "committed_invocation_evidence": {
+          "launch_revision": "954de396ca566fac152ab917018638dc86e44a51",
+          "completion_revision": "954de39",
+          "files": [
+            {
+              "path": "src/clispecbench/agents/codex_cli.py",
+              "launch_sha256": "551f4352f95c6990477ca58460a356e82c0e4e8b32d054b3143d6d997a36c184",
+              "completion_sha256": "551f4352f95c6990477ca58460a356e82c0e4e8b32d054b3143d6d997a36c184"
+            },
+            {
+              "path": "src/clispecbench/agents/base.py",
+              "launch_sha256": "68b4b3f535ab8c9a3b9ce5542a52055fdef796efaf27a0a0db08ad5486cba986",
+              "completion_sha256": "68b4b3f535ab8c9a3b9ce5542a52055fdef796efaf27a0a0db08ad5486cba986"
+            },
+            {
+              "path": "src/clispecbench/harness/runner.py",
+              "launch_sha256": "8b0b4f9489b0db0aceca1d25fb29aeb2a83854affaf43e7eef061c1f12e974f8",
+              "completion_sha256": "8b0b4f9489b0db0aceca1d25fb29aeb2a83854affaf43e7eef061c1f12e974f8"
+            },
+            {
+              "path": "docker/base.Dockerfile",
+              "launch_sha256": "a583e500180b998682b7afb1b7e7e7d5cab95dcb66298ecea5730335ed91358e",
+              "completion_sha256": "a583e500180b998682b7afb1b7e7e7d5cab95dcb66298ecea5730335ed91358e"
+            }
+          ],
+          "resolved_launch_revision": "954de396ca566fac152ab917018638dc86e44a51",
+          "resolved_completion_revision": "954de396ca566fac152ab917018638dc86e44a51"
+        }
+      },
+      "comparison_cohort_condition": "api-only-apps-disabled",
+      "conditions_note": "apps explicitly disabled in the recorded launch; no external tool invocation observed",
+      "audit_path": "/home/matthew/Documents/Codex/2026-09-05/ca/work/non-rs274-audit/external-tool-audits/672af3d3-3583-4bc6-a64b-882d79626ef4/7bd2199c5b363fae5618160c9e578e9b6bec12d427ab2acb065d816b115da68e.json"
+    },
+    "network_audit": {
+      "artifact_type": "clispecbench.network-audit-review",
+      "schema_version": 1,
+      "raw_log_sha256": "3c29652e20b183ff8fd5c27901dc1b4e041b87e2bc55c514054ab2a08cb51a74",
+      "raw_log_bytes": 15700,
+      "raw_log_lines": 134,
+      "policy": "api-only",
+      "allowed_events_conform": true,
+      "event_counts": {
+        "ready": 1,
+        "allowed": 123,
+        "denied": 10
+      },
+      "events": [
+        {
+          "event": "ready",
+          "timestamp": 1790855092.2956243,
+          "port": 3128,
+          "allowed_hosts": [
+            "chatgpt.com"
+          ]
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3274505,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3340006,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3343353,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3356724,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3357556,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3403566,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.3688524,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.674746,
+          "host": "sdmntprsouthcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6781428,
+          "host": "sdmntprsouthcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6804233,
+          "host": "sdmntprwestus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6826825,
+          "host": "sdmntprsouthcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6852503,
+          "host": "sdmntprsouthcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6880302,
+          "host": "sdmntprcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.690074,
+          "host": "sdmntprwestcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6925213,
+          "host": "sdmntprsouthcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6948211,
+          "host": "sdmntprcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "denied",
+          "timestamp": 1790855093.6974962,
+          "host": "sdmntprsouthcentralus.oaiusercontent.com",
+          "port": 443,
+          "method": "CONNECT",
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855093.9532182,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855094.031297,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855095.2916844,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855105.8594491,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855113.549731,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855116.8302872,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855120.085323,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855136.1427922,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855146.6266878,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855153.0017006,
+          "host": "ab.chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855193.5672243,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855196.9506335,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855269.5551243,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855279.4652214,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855298.4017198,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855303.2505934,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855315.6510541,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855318.286008,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855363.8382494,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855416.4586806,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855474.934133,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855480.251014,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855548.7622697,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855557.7988815,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855598.3620234,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855634.2944953,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855671.638301,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855793.9670548,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855799.1936336,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855904.7257593,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790855947.917495,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856047.5131211,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856062.4018872,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856102.3356514,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856175.2019198,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856302.0206265,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856350.6228862,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856355.1710596,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856370.677829,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856389.7464614,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856392.6799893,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856405.002343,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856425.5058372,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856445.7106867,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856490.9868057,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856507.826942,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856517.381109,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856541.9672587,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856555.3425226,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856565.298499,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856576.1615,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856587.8583605,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856600.631801,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856607.6481001,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856641.6351058,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856648.7531867,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856664.2475395,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856702.7002661,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856709.5835953,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856716.1347387,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856730.563516,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856739.2470288,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856774.684013,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856786.6466231,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856801.3362467,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856814.5011685,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856819.456005,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856826.7510724,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856844.3710523,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856864.1514184,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856872.8369462,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856886.255184,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856901.1501627,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856913.8385873,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856927.2356184,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856938.142849,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856949.5565076,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856973.504347,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856986.6037488,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790856997.008567,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857003.754768,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857034.06338,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857037.490869,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857040.7924778,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857048.9228616,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857061.0429616,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857094.6751878,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857104.0799227,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857113.3954475,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857123.0886164,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857131.6840146,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857166.7840464,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857171.5670369,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857180.6585681,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857188.5840132,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857197.1864796,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857215.0509048,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857245.283174,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857248.824852,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857257.0905445,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857260.2239385,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857309.4208536,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857323.3592827,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857339.2200954,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857346.8835504,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857353.3643482,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857365.834999,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857381.996033,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857388.2679298,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857394.2132688,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857441.8806853,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857451.2884495,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857465.303935,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857472.702422,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857473.0392175,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        },
+        {
+          "event": "allowed",
+          "timestamp": 1790857473.3845532,
+          "host": "chatgpt.com",
+          "port": 443,
+          "client": "172.18.0.3"
+        }
+      ],
+      "diagnostics": [],
+      "unclassified_spans": [],
+      "run_uid": "672af3d3-3583-4bc6-a64b-882d79626ef4",
+      "source_result": "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/result.json",
+      "raw_log_path": "/home/matthew/Documents/Codex/2026-09-05/ca/CLISpecBench/transient_results/iges-py/codex-cli/gpt-5.6-sol_max/eval2/run1/network-audit.jsonl",
+      "original_result_sha256": "4f926a9953c3ab72abdf71e005c87f11f8b8693db00f34146cb8ad3738dd46c1",
+      "committed_proxy_evidence": null
+    }
+  },
+  "session_compaction_events": 0,
+  "artifacts_locally_available": true,
+  "original_artifact_manifest": "docs/validation/non-rs274-2026-09-12/pending-python-review.json"
+}
