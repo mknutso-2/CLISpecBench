@@ -15,6 +15,7 @@ const AXIS_OPTIONS = [
 ];
 
 const COLOR_MODE_OPTIONS = [
+  { id: 'model', label: 'Model (efforts connected)' },
   { id: 'pair', label: 'Agent / Model / Effort' },
   { id: 'language', label: 'Language' },
   { id: 'agent', label: 'Agent' },
@@ -37,6 +38,18 @@ const REPORT_TYPE_OPTIONS = [
   { id: 'median', label: 'Median' },
   { id: 'mean', label: 'Mean' },
 ];
+
+const AXIS_SCALE_OPTIONS = [
+  { id: 'linear', label: 'Linear' },
+  { id: 'log', label: 'Log' },
+];
+
+// Reasoning-effort levels from least to most compute. Used to connect a
+// model's effort levels in order and to pick a model's highest effort.
+const EFFORT_ORDER = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+
+// Fewer runs than this in any selected eval/language cell draws a hollow marker.
+const LOW_RUN_COUNT_THRESHOLD = 3;
 
 const ERROR_BAR_OPTIONS = [
   { id: 'range', label: 'Range' },
@@ -197,6 +210,14 @@ const PALETTE = [
   '#f97316',
   '#db2777',
   '#0891b2',
+  '#a16207',
+  '#65a30d',
+  '#9f1239',
+  '#1e3a8a',
+  '#14b8a6',
+  '#a855f7',
+  '#78716c',
+  '#eab308',
 ];
 
 const LAST_MESSAGE_CACHE = new Map();
@@ -211,7 +232,9 @@ const STATE = {
   viewMode: 'graph',
   xAxis: 'cost',
   yAxis: 'percent',
-  colorMode: 'pair',
+  xScaleMode: 'linear',
+  yScaleMode: 'linear',
+  colorMode: 'model',
   labelMode: 'all',
   nameMode: 'short',
   reportType: 'mean',
@@ -237,6 +260,8 @@ const evalSelectAllButton = document.getElementById('eval-select-all');
 const evalClearButton = document.getElementById('eval-clear');
 const xAxisSelect = document.getElementById('x-axis');
 const yAxisSelect = document.getElementById('y-axis');
+const xScaleSelect = document.getElementById('x-scale');
+const yScaleSelect = document.getElementById('y-scale');
 const reportTypeSelect = document.getElementById('report-type');
 const errorBarsSelect = document.getElementById('error-bars');
 const colorModeSelect = document.getElementById('color-mode');
@@ -325,6 +350,7 @@ function initializeDashboard(data, sourceName, { preserveView = false } = {}) {
   STATE.rows = dataset.rows;
   LAST_MESSAGE_CACHE.clear();
   initSelectionDefaults({ preserveView });
+  if (!preserveView) applyUrlState();
   buildControls();
   render();
   statusEl.textContent = `Loaded ${STATE.rows.length} official runs from ${sourceName || DATA_PATH}.`;
@@ -336,6 +362,8 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     ? {
         xAxis: STATE.xAxis,
         yAxis: STATE.yAxis,
+        xScaleMode: STATE.xScaleMode,
+        yScaleMode: STATE.yScaleMode,
         colorMode: STATE.colorMode,
         labelMode: STATE.labelMode,
         nameMode: STATE.nameMode,
@@ -392,6 +420,8 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     );
     STATE.xAxis = previousView.xAxis;
     STATE.yAxis = previousView.yAxis;
+    STATE.xScaleMode = previousView.xScaleMode;
+    STATE.yScaleMode = previousView.yScaleMode;
     STATE.colorMode = previousView.colorMode;
     STATE.labelMode = previousView.labelMode;
     STATE.nameMode = previousView.nameMode;
@@ -407,7 +437,9 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.viewMode = 'graph';
     STATE.xAxis = 'cost';
     STATE.yAxis = 'percent';
-    STATE.colorMode = 'agent';
+    STATE.xScaleMode = 'linear';
+    STATE.yScaleMode = 'linear';
+    STATE.colorMode = 'model';
     STATE.labelMode = 'all';
     STATE.nameMode = 'short';
     STATE.reportType = 'mean';
@@ -424,14 +456,101 @@ function getDefaultSelectedEvals(evals) {
   return evals.includes('RS274') ? ['RS274'] : evals;
 }
 
+// Default selection: the newest model in each model line (for example the
+// latest Claude Opus, or GPT-5.6 Sol) at its highest effort, among base-cohort
+// pairs with at least one run in every selected eval and language. If no pair
+// covers every cell (common when many evals are selected), pairs with any runs
+// are used instead. Points with missing or few runs render as hollow markers
+// rather than being hidden.
 function getDefaultSelectedPairs(pairs, selectedEvals, selectedLanguages) {
-  return getEligiblePairsForEvalLanguages(pairs, selectedEvals, selectedLanguages);
+  const baseCohort = (pairId) => !parsePairModel(pairId).cohort;
+  let covered = getPairsWithRunCount(pairs, selectedEvals, selectedLanguages, 1).filter(baseCohort);
+  if (!covered.length) {
+    covered = getPairsWithAnyRuns(pairs, selectedEvals, selectedLanguages).filter(baseCohort);
+  }
+  const newestByLine = new Map();
+  covered.forEach((pairId) => {
+    const { agent, baseModel, effort } = parsePairModel(pairId);
+    const { line, version } = getModelLine(baseModel);
+    const lineKey = `${agent} / ${line}`;
+    const candidate = { pairId, version, effortRank: getEffortRank(effort) };
+    const current = newestByLine.get(lineKey);
+    if (!current || compareModelCandidates(candidate, current) > 0) {
+      newestByLine.set(lineKey, candidate);
+    }
+  });
+  return Array.from(newestByLine.values()).map((candidate) => candidate.pairId);
 }
 
-function getEligiblePairsForEvalLanguages(pairs, selectedEvals, selectedLanguages) {
+function compareModelCandidates(a, b) {
+  const length = Math.max(a.version.length, b.version.length);
+  for (let index = 0; index < length; index += 1) {
+    const diff = (a.version[index] || 0) - (b.version[index] || 0);
+    if (diff) return diff;
+  }
+  return a.effortRank - b.effortRank;
+}
+
+// Groups a model id into a release line plus a comparable version, so that
+// claude-opus-4-8 supersedes claude-opus-4-1-20250805 and gpt-5.6-sol is its
+// own line. Unrecognized ids form single-model lines.
+function getModelLine(baseModel) {
+  const normalized = String(baseModel || '').toLowerCase().split('/').pop();
+  const claudeMatch = normalized.match(/^claude-([a-z]+)-(\d+)(?:-(\d+))?/);
+  if (claudeMatch) {
+    const minor = claudeMatch[3] && claudeMatch[3].length < 8 ? Number(claudeMatch[3]) : 0;
+    return { line: `claude-${claudeMatch[1]}`, version: [Number(claudeMatch[2]), minor] };
+  }
+  const gptMatch = normalized.match(/^gpt-(\d+)(?:\.(\d+))?(?:-([a-z][a-z0-9]*))?/);
+  if (gptMatch) {
+    return {
+      line: `gpt-${gptMatch[3] || ''}`,
+      version: [Number(gptMatch[1]), Number(gptMatch[2] || 0)],
+    };
+  }
+  const geminiMatch = normalized.match(/^gemini-(\d+)(?:\.(\d+))?(?:-([a-z]+))?/);
+  if (geminiMatch) {
+    return {
+      line: `gemini-${geminiMatch[3] || ''}`,
+      version: [Number(geminiMatch[1]), Number(geminiMatch[2] || 0)],
+    };
+  }
+  return { line: normalized, version: [0] };
+}
+
+function getEffortRank(effort) {
+  return EFFORT_ORDER.indexOf(String(effort || '').trim().toLowerCase());
+}
+
+// Splits a pair id into agent, base model, effort and comparison-cohort suffix.
+function parsePairModel(pairId) {
+  const { agent, model } = splitPairId(rowPairId(pairId));
+  const cohortMatch = model.match(/^(.*?)( \[[^\]]+\])$/);
+  const modelWithoutCohort = cohortMatch ? cohortMatch[1] : model;
+  const { baseModel, effort } = splitModelEffortLabel(modelWithoutCohort);
+  return { agent, baseModel, effort, cohort: cohortMatch ? cohortMatch[2] : '' };
+}
+
+function getModelFamilyKey(pairId) {
+  const { agent, baseModel, cohort } = parsePairModel(pairId);
+  return `${agent} / ${baseModel}${cohort}`;
+}
+
+function getPairsWithAnyRuns(pairs, selectedEvals, selectedLanguages) {
+  const selectedEvalSet = new Set(selectedEvals);
+  const selectedLanguageSet = new Set(selectedLanguages);
+  const withRuns = new Set();
+  STATE.rows.forEach((row) => {
+    if (!selectedEvalSet.has(row.eval) || !selectedLanguageSet.has(row.language)) return;
+    if (!isRowVersionSelected(row)) return;
+    withRuns.add(rowPairId(row));
+  });
+  return pairs.filter((pairId) => withRuns.has(pairId));
+}
+
+function getPairsWithRunCount(pairs, selectedEvals, selectedLanguages, requiredCount) {
   if (!selectedEvals.length || !selectedLanguages.length) return [];
 
-  const requiredCount = 3;
   const selectedEvalSet = new Set(selectedEvals);
   const selectedLanguageSet = new Set(selectedLanguages);
   const countsByPairEvalLanguage = new Map();
@@ -461,7 +580,7 @@ function syncSelectedPairsForCurrentEvalLanguages() {
   if (STATE.pairEligibilitySyncKey === nextKey) return false;
 
   const nextSelectedPairs = new Set(
-    getEligiblePairsForEvalLanguages(getPairs(), selectedEvals, selectedLanguages),
+    getDefaultSelectedPairs(getPairs(), selectedEvals, selectedLanguages),
   );
   const changed = !setsHaveSameMembers(STATE.selectedPairs, nextSelectedPairs);
   STATE.selectedPairs = nextSelectedPairs;
@@ -510,6 +629,27 @@ function buildControls() {
   updateAxisSelectors();
   syncViewModeControls();
   syncControlsColumn();
+}
+
+function renderAxisScaleSelectors() {
+  [
+    [xScaleSelect, 'xScaleMode', STATE.xAxis],
+    [yScaleSelect, 'yScaleMode', STATE.yAxis],
+  ].forEach(([select, stateKey, axisId]) => {
+    if (!select) return;
+    select.replaceChildren();
+    AXIS_SCALE_OPTIONS.forEach((mode) => {
+      const option = document.createElement('option');
+      option.value = mode.id;
+      option.textContent = mode.label;
+      select.appendChild(option);
+    });
+    const allowed = canUseLogScale(axisId);
+    if (!allowed || STATE[stateKey] !== 'log') STATE[stateKey] = 'linear';
+    select.value = STATE[stateKey];
+    select.disabled = !allowed;
+    select.title = allowed ? '' : 'Log scale applies to positive numeric metrics only.';
+  });
 }
 
 function attachEvents() {
@@ -638,11 +778,23 @@ function attachEvents() {
     STATE.xAxis = xAxisSelect.value;
     syncErrorBarModeWithDefaults();
     renderColorModeSelector();
+    renderAxisScaleSelectors();
     render();
   });
   yAxisSelect.addEventListener('change', () => {
     STATE.yAxis = yAxisSelect.value;
+    renderAxisScaleSelectors();
     render();
+  });
+  [
+    [xScaleSelect, 'xScaleMode'],
+    [yScaleSelect, 'yScaleMode'],
+  ].forEach(([select, stateKey]) => {
+    if (!select) return;
+    select.addEventListener('change', () => {
+      STATE[stateKey] = select.value === 'log' ? 'log' : 'linear';
+      render();
+    });
   });
   reportTypeSelect.addEventListener('change', () => {
     STATE.reportType = normalizeReportType(reportTypeSelect.value);
@@ -857,6 +1009,7 @@ function updateAxisSelectors() {
     STATE.yAxis = 'percent';
   }
   yAxisSelect.value = STATE.yAxis;
+  renderAxisScaleSelectors();
 }
 
 function renderColorModeSelector() {
@@ -1021,10 +1174,115 @@ function syncErrorBarModeWithDefaults() {
   }
 }
 
+// Shareable view state: every render mirrors the current selection into the
+// query string, and a page load with a query string restores it.
+function writeUrlState() {
+  if (!window.history?.replaceState) return;
+  const params = new URLSearchParams();
+  params.set('view', STATE.viewMode);
+  params.set('x', STATE.xAxis);
+  params.set('y', STATE.yAxis);
+  if (STATE.xScaleMode === 'log') params.set('xs', 'log');
+  if (STATE.yScaleMode === 'log') params.set('ys', 'log');
+  params.set('report', STATE.reportType);
+  params.set('err', STATE.errorBarMode);
+  params.set('color', STATE.colorMode);
+  params.set('labels', STATE.labelMode);
+  params.set('names', STATE.nameMode);
+  params.set('evals', getSelectedEvalNames().join(','));
+  getSelectedEvalNames().forEach((evalName) => {
+    const versions = Array.from(STATE.selectedEvalVersions.get(evalName) || []);
+    params.append('ver', `${evalName}:${versions.join('|')}`);
+  });
+  params.set('langs', getSelectedLanguageNames().join(','));
+  const pairs = getPairs().filter((pairId) => STATE.selectedPairs.has(pairId));
+  if (pairs.length) {
+    pairs.forEach((pairId) => params.append('pair', pairId));
+  } else {
+    params.set('pair', '');
+  }
+  STATE.hiddenColorKeys.forEach((key) => params.append('hide', key));
+  if (STATE.viewMode === 'table') {
+    params.set('tmode', STATE.tableMode);
+    params.set('tgroup', STATE.tableGroupBy);
+    if (STATE.tableSortBy) params.set('tsort', STATE.tableSortBy);
+    params.set('tdir', STATE.tableSortDirection);
+  }
+  if (STATE.controlsCollapsed) params.set('controls', 'hidden');
+  const nextUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
+  try {
+    window.history.replaceState(null, '', nextUrl);
+  } catch (error) {
+    // Some embedded or file:// contexts reject replaceState; the view still works.
+  }
+}
+
+function applyUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  if (![...params.keys()].length) return;
+  const pick = (key, options) => {
+    const value = params.get(key);
+    return options.includes(value) ? value : null;
+  };
+  const listParam = (key, available) =>
+    String(params.get(key) || '')
+      .split(',')
+      .filter((value) => available.includes(value));
+
+  const view = pick('view', ['graph', 'table']);
+  if (view) STATE.viewMode = view;
+  const axisIds = AXIS_OPTIONS.map((axis) => axis.id);
+  STATE.xAxis = pick('x', axisIds) || STATE.xAxis;
+  STATE.yAxis = pick('y', axisIds.filter((id) => METRICS[id])) || STATE.yAxis;
+  STATE.xScaleMode = params.get('xs') === 'log' ? 'log' : 'linear';
+  STATE.yScaleMode = params.get('ys') === 'log' ? 'log' : 'linear';
+  STATE.reportType = pick('report', REPORT_TYPE_OPTIONS.map((o) => o.id)) || STATE.reportType;
+  STATE.errorBarMode = pick('err', ERROR_BAR_OPTIONS.map((o) => o.id)) || STATE.errorBarMode;
+  STATE.colorMode = pick('color', COLOR_MODE_OPTIONS.map((o) => o.id)) || STATE.colorMode;
+  STATE.labelMode = pick('labels', LABEL_MODE_OPTIONS.map((o) => o.id)) || STATE.labelMode;
+  STATE.nameMode = pick('names', NAME_MODE_OPTIONS.map((o) => o.id)) || STATE.nameMode;
+
+  const evals = listParam('evals', getEvals());
+  if (evals.length) STATE.selectedEvals = new Set(evals);
+  params.getAll('ver').forEach((entry) => {
+    const separator = entry.indexOf(':');
+    if (separator < 0) return;
+    const evalName = entry.slice(0, separator);
+    const available = new Set(getEvalVersions(evalName).map(versionKey));
+    const versions = entry
+      .slice(separator + 1)
+      .split('|')
+      .filter((version) => available.has(versionKey(version)));
+    if (versions.length) STATE.selectedEvalVersions.set(evalName, new Set(versions));
+  });
+  const languages = listParam('langs', getLanguages());
+  if (languages.length) STATE.selectedLanguages = new Set(languages);
+
+  const selectedEvals = getSelectedEvalNames();
+  const selectedLanguages = getSelectedLanguageNames();
+  if (params.has('pair')) {
+    const available = new Set(getPairs());
+    STATE.selectedPairs = new Set(params.getAll('pair').filter((pairId) => available.has(pairId)));
+  } else {
+    STATE.selectedPairs = new Set(getDefaultSelectedPairs(getPairs(), selectedEvals, selectedLanguages));
+  }
+  STATE.pairEligibilitySyncKey = getEvalLanguageSelectionKey(selectedEvals, selectedLanguages);
+  STATE.hiddenColorKeys = new Set(params.getAll('hide'));
+
+  const tableMode = pick('tmode', ['summary', 'runs']);
+  if (tableMode) STATE.tableMode = tableMode;
+  STATE.tableGroupBy =
+    pick('tgroup', ['pair', 'pair_language', 'pair_eval', 'pair_eval_language']) || STATE.tableGroupBy;
+  if (params.has('tsort')) STATE.tableSortBy = params.get('tsort');
+  STATE.tableSortDirection = pick('tdir', ['asc', 'desc']) || STATE.tableSortDirection;
+  STATE.controlsCollapsed = params.get('controls') === 'hidden';
+}
+
 function render() {
   if (syncSelectedPairsForCurrentEvalLanguages()) {
     renderPairList();
   }
+  writeUrlState();
 
   clearError();
   syncViewModeControls();
@@ -1151,6 +1409,10 @@ function getColorMap() {
       agentSet.add(agent || 'Unknown Agent');
     });
     colorKeys = Array.from(agentSet).sort();
+  } else if (STATE.colorMode === 'model') {
+    colorKeys = Array.from(
+      new Set(Array.from(STATE.selectedPairs).map((pairId) => getModelFamilyKey(pairId))),
+    ).sort();
   } else {
     colorKeys = Array.from(STATE.selectedPairs).sort();
   }
@@ -1666,7 +1928,38 @@ function formatAgentModelShort(pairId) {
   // Abbreviated mode stays clean (no inline CLI version) — the version is
   // surfaced on hover via the column `title` (see pairTitleWithVersion).
   const { agent, model } = splitPairId(pairId);
-  return `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+  const short = `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+  // Never let two different pairs share a label; fall back to the full model id.
+  return getAmbiguousShortLabels().has(short) ? `${abbreviateAgent(agent)} / ${model}` : short;
+}
+
+let _ambiguousShortLabels = new Set();
+let _ambiguousShortLabelsRows = null;
+
+function getAmbiguousShortLabels() {
+  if (_ambiguousShortLabelsRows !== STATE.rows) {
+    const counts = new Map();
+    getPairs().forEach((pairId) => {
+      const { agent, model } = splitPairId(pairId);
+      const short = `${abbreviateAgent(agent)} / ${abbreviateModel(model)}`;
+      counts.set(short, (counts.get(short) || 0) + 1);
+    });
+    _ambiguousShortLabels = new Set(
+      Array.from(counts.entries())
+        .filter(([, count]) => count > 1)
+        .map(([short]) => short),
+    );
+    _ambiguousShortLabelsRows = STATE.rows;
+  }
+  return _ambiguousShortLabels;
+}
+
+function formatModelFamilyDisplay(familyKey) {
+  const { agent, model } = splitPairId(familyKey);
+  if (normalizeNameMode(STATE.nameMode) === 'full') return `${agent} / ${model}`;
+  const cohortMatch = model.match(/^(.*?)( \[[^\]]+\])$/);
+  const baseModel = cohortMatch ? cohortMatch[1] : model;
+  return `${abbreviateAgent(agent)} / ${abbreviateModel(baseModel)}${cohortMatch ? cohortMatch[2] : ''}`;
 }
 
 function formatAgentModelFull(pairId) {
@@ -1719,18 +2012,29 @@ function abbreviateModel(model) {
   const cohortLabel = String(model || '').match(/^(.*)( \[[^\]]+\])$/);
   if (cohortLabel) return `${abbreviateModel(cohortLabel[1])}${cohortLabel[2]}`;
   const { baseModel, effort } = splitModelEffortLabel(model);
-  const normalized = String(baseModel || '').toLowerCase();
+  // Drop routing prefixes such as "openrouter/moonshotai/".
+  const normalized = String(baseModel || '').toLowerCase().split('/').pop();
   const withEffort = (label) => (effort ? `${label} (${abbreviateEffort(effort)})` : label);
-  const claudeMatch = normalized.match(/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)/);
+  const claudeMatch = normalized.match(/^claude-(opus|sonnet|haiku|fable)-(\d+)(?:-(\d+))?/);
   if (claudeMatch) {
-    // If the third group is an 8-digit date (e.g. 20250514), treat the model as
-    // major.0 — e.g. claude-opus-4-20250514 → O-4.0, not O-4.20250514.
-    const minor = claudeMatch[3].length === 8 ? '0' : claudeMatch[3];
-    return withEffort(`${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}.${minor}`);
+    // An 8-digit third group is a date (e.g. 20250514), so the model is
+    // major.0 — claude-opus-4-20250514 → O-4.0. Without a minor: S-5.
+    const minorGroup = claudeMatch[3];
+    const minor = !minorGroup ? '' : minorGroup.length === 8 ? '.0' : `.${minorGroup}`;
+    return withEffort(`${claudeMatch[1][0].toUpperCase()}-${claudeMatch[2]}${minor}`);
   }
-  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-(mini|codex))?/);
+  const gptMatch = normalized.match(/^gpt-(\d+(?:\.\d+)?)(?:-([a-z][a-z0-9]*))?/);
   if (gptMatch) {
-    const suffix = gptMatch[2] === 'mini' ? '-m' : gptMatch[2] === 'codex' ? '-c' : '';
+    // Keep named variants (gpt-5.6-sol → 5.6 Sol) so sibling models stay distinct.
+    const variant = gptMatch[2] || '';
+    const suffix =
+      variant === 'mini'
+        ? '-m'
+        : variant === 'codex'
+          ? '-c'
+          : variant
+            ? ` ${variant[0].toUpperCase()}${variant.slice(1)}`
+            : '';
     return withEffort(`${gptMatch[1]}${suffix}`);
   }
   const geminiMatch = normalized.match(/^gemini-(\d+(?:\.\d+)?)(?:-(flash|pro))?/);
@@ -1740,7 +2044,7 @@ function abbreviateModel(model) {
     if (geminiMatch[2] === 'pro') return withEffort(`${version}-p`);
     return withEffort(version);
   }
-  return withEffort(baseModel || 'n/a');
+  return withEffort(normalized || 'n/a');
 }
 
 function splitModelEffortLabel(model) {
@@ -1953,6 +2257,7 @@ function getColorModeKey(pairId, language) {
     const { agent } = splitPairId(pairId);
     return agent || 'Unknown Agent';
   }
+  if (STATE.colorMode === 'model') return getModelFamilyKey(pairId);
   return pairId;
 }
 
@@ -1961,8 +2266,14 @@ function summarizePoint(pairId, color, rows, language, options) {
   const ySummary = summarizeMetric(rows, options.yAxis);
   if (!xSummary.hasData || !ySummary.hasData) return null;
 
+  const cellEvals = options.xAxis === 'eval' ? [options.xCategoryValue] : getSelectedEvalNames();
+  const cellLanguages = language ? [language] : getSelectedLanguageNames();
+  const minRunsPerCell = getMinRunsPerCell(rows, cellEvals, cellLanguages);
+
   return {
     pairId,
+    minRunsPerCell,
+    lowRunCount: minRunsPerCell < LOW_RUN_COUNT_THRESHOLD,
     pairLabel: rowPairId(pairId),
     color,
     language,
@@ -1980,6 +2291,23 @@ function summarizePoint(pairId, color, rows, language, options) {
     xAxis: options.xAxis,
     yAxis: options.yAxis,
   };
+}
+
+// Smallest run count across the eval × language cells a point aggregates;
+// 0 means at least one cell has no runs at all.
+function getMinRunsPerCell(rows, evals, languages) {
+  const counts = new Map();
+  rows.forEach((row) => {
+    const key = `${row.eval}\u0000${row.language}`;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  let min = Infinity;
+  evals.forEach((evalName) => {
+    languages.forEach((language) => {
+      min = Math.min(min, counts.get(`${evalName}\u0000${language}`) || 0);
+    });
+  });
+  return Number.isFinite(min) ? min : 0;
 }
 
 function summarizeMetric(rows, metricId) {
@@ -2271,6 +2599,7 @@ function renderLegend(points, colorMap) {
 function getColorModeLabel(key) {
   if (STATE.colorMode === 'agent') return formatAgentDisplay(key);
   if (STATE.colorMode === 'language') return key;
+  if (STATE.colorMode === 'model') return formatModelFamilyDisplay(key);
   return formatAgentModelDisplay(key);
 }
 
@@ -2287,6 +2616,44 @@ function drawFrontierConnector(points, frontierSet, xScale, yScale, layer) {
   line.setAttribute('points', coords.join(' '));
   line.setAttribute('fill', 'none');
   layer.appendChild(line);
+}
+
+// In model color mode, link each model's effort levels (low → max) so a
+// model's cost/quality trade-off reads as one curve.
+function drawEffortConnectors(points, xScale, yScale, layer) {
+  if (STATE.colorMode !== 'model') return;
+  if (isCategoricalXAxis(STATE.xAxis)) return;
+  const byFamily = new Map();
+  points.forEach((point) => {
+    if (!Number.isFinite(point.xValue) || !Number.isFinite(point.yValue)) return;
+    const key = point.colorModeKey;
+    if (!byFamily.has(key)) byFamily.set(key, []);
+    byFamily.get(key).push(point);
+  });
+  byFamily.forEach((familyPoints) => {
+    if (familyPoints.length < 2) return;
+    const ordered = familyPoints
+      .slice()
+      .sort(
+        (a, b) =>
+          getEffortRank(parsePairModel(a.pairId).effort) -
+          getEffortRank(parsePairModel(b.pairId).effort),
+      );
+    const line = createSvgElement('polyline');
+    line.setAttribute('class', 'effort-line');
+    line.setAttribute('points', ordered.map((p) => `${xScale(p.xValue)},${yScale(p.yValue)}`).join(' '));
+    line.setAttribute('fill', 'none');
+    line.style.stroke = ordered[0].color;
+    layer.appendChild(line);
+  });
+}
+
+// Marker size encodes effort in model color mode (larger = more effort).
+function getPointRadius(point) {
+  if (STATE.colorMode !== 'model') return 7.3;
+  const rank = getEffortRank(parsePairModel(point.pairId).effort);
+  if (rank < 0) return 7.3;
+  return 5.4 + (rank / (EFFORT_ORDER.length - 1)) * 3.6;
 }
 
 function computeParetoFrontier(points, xAxis, yAxis) {
@@ -2328,11 +2695,13 @@ function renderPlot(points) {
   const innerHeightWithPad = Math.max(1, innerHeight - AXIS_PADDING.top - AXIS_PADDING.bottom);
   const innerWidthWithPad = Math.max(1, innerWidth - AXIS_PADDING.left - AXIS_PADDING.right);
 
-  const xDomain = buildDomain(points, STATE.xAxis);
-  const yDomain = buildDomain(points, STATE.yAxis);
+  const xIsLog = isLogAxis('x');
+  const yIsLog = isLogAxis('y');
+  const xDomain = buildPlotDomain(points, STATE.xAxis, 'x', xIsLog);
+  const yDomain = buildPlotDomain(points, STATE.yAxis, 'y', yIsLog);
   const xCategories = getSelectedAxisCategories(STATE.xAxis);
-  const xScale = createXScale(xDomain, xCategories, plotLeft, plotRight);
-  const yScale = createYScale(yDomain, plotTop, plotHeight);
+  const xScale = createXScale(xDomain, xCategories, plotLeft, plotRight, xIsLog);
+  const yScale = createYScale(yDomain, plotTop, plotHeight, yIsLog);
 
   const panel = createSvgElement('rect');
   panel.setAttribute('class', 'chart-bg-panel');
@@ -2356,16 +2725,20 @@ function renderPlot(points) {
     xDomain,
     yDomain,
     xCategories,
+    xIsLog,
+    yIsLog,
   });
 
   const defs = createSvgElement('defs');
   const clipPath = createSvgElement('clipPath');
   clipPath.setAttribute('id', 'plot-clip');
+  // Pad the clip so markers at the domain edge (e.g. 100% pass rate) draw whole.
+  const clipPad = 11;
   const clipRect = createSvgElement('rect');
-  clipRect.setAttribute('x', String(plotLeft));
-  clipRect.setAttribute('y', String(plotTop));
-  clipRect.setAttribute('width', String(plotWidth));
-  clipRect.setAttribute('height', String(plotHeight));
+  clipRect.setAttribute('x', String(plotLeft - clipPad));
+  clipRect.setAttribute('y', String(plotTop - clipPad));
+  clipRect.setAttribute('width', String(plotWidth + 2 * clipPad));
+  clipRect.setAttribute('height', String(plotHeight + 2 * clipPad));
   clipPath.appendChild(clipRect);
   defs.appendChild(clipPath);
   chartSvg.appendChild(defs);
@@ -2380,11 +2753,12 @@ function renderPlot(points) {
 
   const frontierSet = computeParetoFrontier(points, STATE.xAxis, STATE.yAxis);
   drawFrontierConnector(points, frontierSet, xScale, yScale, dataLayer);
+  drawEffortConnectors(points, xScale, yScale, dataLayer);
 
   points.forEach((point) => {
     const isOnFrontier = frontierSet.has(point);
-    const baseRadius = 7.3;
-    const hoverRadius = 8.8;
+    const baseRadius = getPointRadius(point);
+    const hoverRadius = baseRadius + 1.5;
 
     const x = point.xAsCategory
       ? xScale(xCategories.indexOf(point.xCategoryValue))
@@ -2435,10 +2809,12 @@ function renderPlot(points) {
 
     const pointCircle = createSvgElement('circle');
     pointCircle.setAttribute('r', String(baseRadius));
-    pointCircle.setAttribute('fill', point.color);
-    const pointClass = isOnFrontier
-      ? 'point point-marker point-frontier'
-      : 'point point-marker';
+    // Hollow markers flag points backed by fewer runs than the threshold.
+    pointCircle.setAttribute('fill', point.lowRunCount ? '#ffffff' : point.color);
+    if (point.lowRunCount) pointCircle.style.stroke = point.color;
+    const pointClass = `point point-marker${isOnFrontier ? ' point-frontier' : ''}${
+      point.lowRunCount ? ' point-low-n' : ''
+    }`;
     pointCircle.setAttribute('class', pointClass);
     pointCircle.setAttribute('data-base-radius', String(baseRadius));
     pointCircle.setAttribute('tabindex', '0');
@@ -3045,21 +3421,18 @@ function drawAxes({
   xDomain,
   yDomain,
   xCategories,
+  xIsLog = false,
+  yIsLog = false,
 }) {
   const xAxisY = plotBottom;
   const xAxisLeft = typeof xScale.axisLeft === 'number' ? xScale.axisLeft : plotLeft;
   const xAxisRight = typeof xScale.axisRight === 'number' ? xScale.axisRight : plotRight;
   const yAxisX = xAxisLeft;
-  const yTicks = buildNiceAxisTicks(
-    yDomain.min,
-    yDomain.max,
-    AXIS_TICK_SEGMENTS,
-    STATE.yAxis,
-  );
+  const yTicks = getAxisTicks(yDomain, STATE.yAxis, yIsLog);
   const xTicks =
     isCategoricalXAxis(STATE.xAxis)
       ? xCategories.map((_, index) => index)
-      : buildNiceAxisTicks(xDomain.min, xDomain.max, AXIS_TICK_SEGMENTS, STATE.xAxis);
+      : getAxisTicks(xDomain, STATE.xAxis, xIsLog);
   const safeYTicks = yTicks.length ? yTicks : [yDomain.min, yDomain.max];
   const safeXTicks = xTicks.length ? xTicks : [xDomain.min, xDomain.max];
 
@@ -3079,7 +3452,7 @@ function drawAxes({
     label.setAttribute('y', String(y + 4));
     label.setAttribute('text-anchor', 'end');
     label.setAttribute('class', 'axis-text');
-    label.textContent = formatAxisValue(STATE.yAxis, value);
+    label.textContent = formatAxisTick(STATE.yAxis, value);
     chartSvg.appendChild(label);
   }
 
@@ -3145,21 +3518,89 @@ function drawAxes({
       text.setAttribute('y', String(xAxisY + 24));
       text.setAttribute('text-anchor', 'middle');
       text.setAttribute('class', 'axis-text');
-      text.textContent = formatAxisValue(STATE.xAxis, value);
+      text.textContent = formatAxisTick(STATE.xAxis, value);
       chartSvg.appendChild(text);
     }
   }
 }
 
-function buildDomain(points, axisId) {
+function isLogAxis(which) {
+  const axisId = which === 'x' ? STATE.xAxis : STATE.yAxis;
+  const mode = which === 'x' ? STATE.xScaleMode : STATE.yScaleMode;
+  return mode === 'log' && canUseLogScale(axisId);
+}
+
+function canUseLogScale(axisId) {
+  return !isCategoricalXAxis(axisId) && axisId !== 'percent' && Boolean(METRICS[axisId]);
+}
+
+// Linear axes snap their domain outward to tick boundaries so no tick falls
+// outside the plot (out-of-domain ticks used to be clamped onto the edge and
+// collide with their neighbours). Log axes span the positive data range.
+function buildPlotDomain(points, axisId, which, isLog) {
+  if (isLog) return buildLogDomain(points, axisId, which);
+  const domain = buildDomain(points, axisId, which);
+  if (isCategoricalXAxis(axisId)) return domain;
+  const ticks = buildNiceAxisTicks(domain.min, domain.max, AXIS_TICK_SEGMENTS, axisId);
+  if (ticks.length < 2) return domain;
+  return { min: ticks[0], max: ticks[ticks.length - 1] };
+}
+
+function buildLogDomain(points, axisId, which) {
+  const values = [];
+  points.forEach((point) => {
+    const summary = which === 'x' ? point.xSummary : point.ySummary;
+    if (!summary?.hasData) return;
+    [summary.min, summary.max].forEach((value) => {
+      if (Number.isFinite(value) && value > 0) values.push(value);
+    });
+  });
+  if (!values.length) return { min: 1, max: 10 };
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  // Pad by a fixed ratio on each side; a single value still gets a span.
+  const pad = max / min < 1.5 ? 1.5 : 1.15;
+  return { min: min / pad, max: max * pad };
+}
+
+function getAxisTicks(domain, axisId, isLog) {
+  const ticks = isLog
+    ? buildLogAxisTicks(domain.min, domain.max)
+    : buildNiceAxisTicks(domain.min, domain.max, AXIS_TICK_SEGMENTS, axisId);
+  const tolerance = Math.abs(domain.max - domain.min) * 1e-9;
+  const inDomain = ticks.filter(
+    (value) => value >= domain.min - tolerance && value <= domain.max + tolerance,
+  );
+  return inDomain.length ? inDomain : [domain.min, domain.max];
+}
+
+// 1-2-5 ticks per decade, thinned to at most about eight labels.
+function buildLogAxisTicks(min, max) {
+  if (!(min > 0) || !(max > min)) return [];
+  const ticks = [];
+  for (let exponent = Math.floor(Math.log10(min)); exponent <= Math.ceil(Math.log10(max)); exponent += 1) {
+    [1, 2, 5].forEach((multiplier) => {
+      const value = fixFloat(multiplier * Math.pow(10, exponent));
+      if (value >= min && value <= max) ticks.push(value);
+    });
+  }
+  if (ticks.length <= 8) return ticks;
+  const decades = ticks.filter(
+    (value) => Math.abs(Math.log10(value) - Math.round(Math.log10(value))) < 1e-9,
+  );
+  return decades.length >= 2 ? decades : ticks.filter((_, index) => index % 2 === 0);
+}
+
+function buildDomain(points, axisId, which) {
   if (isCategoricalXAxis(axisId)) {
     const count = getSelectedAxisCategories(axisId).length;
     if (count <= 1) return { min: 0, max: 1 };
     return { min: 0, max: count - 1 };
   }
 
+  const useX = which ? which === 'x' : axisId === STATE.xAxis;
   const summaries = points
-    .map((point) => (axisId === STATE.xAxis ? point.xSummary : point.ySummary))
+    .map((point) => (useX ? point.xSummary : point.ySummary))
     .filter((summary) => summary?.hasData);
   if (!summaries.length) return { min: 0, max: 1 };
 
@@ -3308,7 +3749,18 @@ function getCategoryAxisSpan(plotLeft, plotRight, categories) {
   return { left, right };
 }
 
-function createXScale(domain, categories, plotLeft, plotRight) {
+// Maps a value to [0, 1] within the domain on a linear or log10 scale.
+function domainFraction(domain, value, isLog) {
+  const safe = Math.min(domain.max, Math.max(domain.min, value));
+  if (isLog) {
+    const low = Math.log10(domain.min);
+    const high = Math.log10(domain.max);
+    return high === low ? 0.5 : (Math.log10(safe) - low) / (high - low);
+  }
+  return (safe - domain.min) / (domain.max - domain.min);
+}
+
+function createXScale(domain, categories, plotLeft, plotRight, isLog = false) {
   const left = plotLeft;
   const right = plotRight;
 
@@ -3333,19 +3785,17 @@ function createXScale(domain, categories, plotLeft, plotRight) {
   return (value) => {
     if (!Number.isFinite(value)) return (left + right) / 2;
     if (domain.max === domain.min) return (left + right) / 2;
-    const safe = Math.min(domain.max, Math.max(domain.min, value));
-    return left + ((safe - domain.min) / (domain.max - domain.min)) * (right - left);
+    return left + domainFraction(domain, value, isLog) * (right - left);
   };
 }
 
-function createYScale(domain, plotTop, plotHeight) {
+function createYScale(domain, plotTop, plotHeight, isLog = false) {
   const top = plotTop;
   const height = plotHeight;
   return (value) => {
     if (!Number.isFinite(value)) return top + height / 2;
     if (domain.max === domain.min) return top + height / 2;
-    const safe = Math.min(domain.max, Math.max(domain.min, value));
-    return top + ((domain.max - safe) / (domain.max - domain.min)) * height;
+    return top + (1 - domainFraction(domain, value, isLog)) * height;
   };
 }
 
@@ -3366,6 +3816,16 @@ function formatAxisValue(axisId, value) {
   if (axisId === 'tools' || axisId === 'files') return formatCount(value);
   if (axisId === 'cost') return formatMoney(value);
   return String(value.toFixed(2));
+}
+
+// Tick labels keep a uniform money format ($0.10, $1.00) so neighbouring ticks
+// read consistently; sub-cent ticks on log axes keep one significant digit.
+function formatAxisTick(axisId, value) {
+  if (axisId === 'cost' && Number.isFinite(value)) {
+    if (value > 0 && value < 0.01) return `$${Number(value.toPrecision(1))}`;
+    return `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+  return formatAxisValue(axisId, value);
 }
 
 function formatAxisValueWithDecimalPlaces(axisId, value, decimalPlaces) {
@@ -3585,6 +4045,11 @@ function buildTooltip(point) {
     languages.length > 1 ? `Languages: ${languages.join(', ')}` : null,
     evals.length > 1 && point.xAxis !== 'eval' ? `Evals: ${evals.join(', ')}` : null,
     runCountLabel,
+    point.lowRunCount
+      ? point.minRunsPerCell === 0
+        ? '<em>Hollow marker: no runs for at least one selected eval/language</em>'
+        : `<em>Hollow marker: only ${point.minRunsPerCell} run${point.minRunsPerCell === 1 ? '' : 's'} for at least one selected eval/language</em>`
+      : null,
     isCategoricalXAxis(point.xAxis)
       ? `${xMeta.label}: ${point.xCategoryLabel}`
       : `${xMeta.label} (${reportTypeLabel}): ${formatAxisReportValue(point.xAxis, point.xSummary)}`,
