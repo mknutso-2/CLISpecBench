@@ -140,6 +140,29 @@ Unreferenced optional xrefs and the explicitly required family-to-individual
 backlinks were already defined in the public source. They may deserve more
 prominent examples, but their repairs do not require a new semantic decision.
 
+3. **Decision — canonical JSON representation of a VOID pointer (October 2).**
+   The generic technical tree permits `payload` as string or null, but does not
+   explicitly state whether the legal GEDCOM spelling `@VOID@` must remain that
+   string or may become JSON null. Luna Max C++ implements the latter convention
+   and can render null back to `@VOID@`; three frozen observations require the
+   literal-string convention, including rendering that string. These are
+   canonicalization incompatibilities, not evidence that void pointers are
+   entirely unsupported. **Proposed wording:** specify the inspect output and
+   accepted render input for both an absent payload and a present VOID pointer.
+   Retain the frozen score with this caveat; no new requirement or rescore is
+   applied to the saved submission. See its
+   [independent review and raw evidence audit](reviews/636a830d-18b9-49c7-b7eb-f417d45e949c.json).
+
+4. **Future coverage repair — isolate render datatype negatives (October 2).**
+   Luna Max Rust passes `test_render_rejects_invalid_datatype_payloads` without
+   implementing the intended datatype checks: its shared sample fixture first
+   rejects a valid `BIRT.SNOTE` child. The same prerequisite amplifies eight
+   failed sample/schema/ZIP/escaping observations. In the next eval revision,
+   use minimal valid datatype-specific contexts and require each unmutated
+   context to succeed before checking the invalid mutation. Retain current
+   scores; a passing negative test is not proof of the intended validator.
+   See the [Rust source/spec and accounting review](reviews/3f232efc-92b9-49a0-93e4-e682309cbf92.json).
+
 ## MARC21 3.0.2
 
 Evidence: [MARC21 validation][marc-validation].
