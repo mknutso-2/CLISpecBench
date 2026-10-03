@@ -8,9 +8,9 @@
     />
     <title>CLISpecBench Results Explorer</title>
     <link rel="icon" href="../assets/clispecbench-logo.png" />
-    <link rel="stylesheet" href="results-dashboard.css?v=20261003-model-colors-log-scale" />
+    <link rel="stylesheet" href="results-dashboard.css?v=20261003-explorer-layout" />
   </head>
-  <body>
+  <body class="results-explorer">
     <main class="page">
       <header class="page-header">
         <img
@@ -52,8 +52,9 @@
         <div id="controls-column" class="controls-column">
           <section class="card">
             <h2>View</h2>
-            <div id="view-mode" class="segmented-control" role="group" aria-label="View mode">
+            <div id="view-mode" class="segmented-control segmented-control-3" role="group" aria-label="View mode">
               <button type="button" data-view-mode="graph" aria-pressed="true">Graph</button>
+              <button type="button" data-view-mode="heatmap" aria-pressed="false">Heatmap</button>
               <button type="button" data-view-mode="table" aria-pressed="false">Table</button>
             </div>
             <div class="axis-row">
@@ -61,7 +62,6 @@
               <select id="name-mode"></select>
             </div>
           </section>
-
           <section class="card table-control hidden">
             <h2>Table</h2>
             <div class="axis-row">
@@ -92,91 +92,144 @@
               </select>
             </div>
           </section>
-
+          <section class="card heatmap-control hidden">
+            <h2>Heatmap</h2>
+            <div class="axis-row">
+              <label for="heatmap-metric">Metric</label>
+              <select id="heatmap-metric"></select>
+            </div>
+            <div class="axis-row">
+              <label for="heatmap-sort">Sort rows</label>
+              <select id="heatmap-sort">
+                <option value="name">By name</option>
+                <option value="value">By overall value</option>
+              </select>
+            </div>
+            <p class="hint">
+              Rows are the selected models; columns are eval × language cells. Each cell uses the
+              report type from the graph options (mean by default). Empty cells have no runs.
+            </p>
+          </section>
           <section class="card">
-            <h2>Agent/model/effort</h2>
+            <h2>Models</h2>
             <p class="hint">Defaults show the newest model in each line at its highest effort.
               Hollow markers have fewer than three runs for at least one selected eval and language.</p>
-            <div class="selection-actions">
-              <button id="pair-select-all" type="button" class="selection-action">Select all</button>
-              <button id="pair-unselect-all" type="button" class="selection-action">Unselect all</button>
+            <div class="model-picker-toolbar">
+              <input
+                id="pair-search"
+                class="text-input"
+                type="search"
+                placeholder="Filter models (e.g. sol, opus, max)"
+                aria-label="Filter models"
+              />
+              <div class="selection-actions">
+                <button id="pair-preset-newest" type="button" class="selection-action">Newest</button>
+                <button id="pair-preset-top-effort" type="button" class="selection-action"
+                  title="Every model at its highest effort">All at top effort</button>
+                <button id="pair-select-all" type="button" class="selection-action"
+                  title="Select every visible, available configuration">Select shown</button>
+                <button id="pair-unselect-all" type="button" class="selection-action">Clear</button>
+              </div>
+              <label class="toggle-row">
+                <input id="show-cohorts" type="checkbox" />
+                Show older prompt and grading cohorts
+              </label>
             </div>
-            <div id="pair-list" class="checkbox-grid"></div>
+            <div id="pair-list" class="model-tree"></div>
             <p id="pair-unavailable-hint" class="hint pair-unavailable-hint"></p>
           </section>
-
           <section class="card">
-            <h2>Languages</h2>
-            <p class="hint">
-              Language filters apply to graph and table aggregate values.
-            </p>
-            <div id="language-list" class="checkbox-grid"></div>
-          </section>
-
-          <section class="card">
-            <h2>Eval</h2>
+            <h2>Eval versions</h2>
+            <p class="hint">Toggle evals with the chips above the chart; choose scoring versions here.</p>
             <div class="selection-actions">
               <button id="eval-select-all" type="button" class="selection-action">Select all</button>
               <button id="eval-clear" type="button" class="selection-action">Clear</button>
             </div>
             <div id="eval-list" class="checkbox-grid eval-checkbox-grid"></div>
           </section>
-
-          <section class="card graph-control">
-            <h2>Axes</h2>
-            <div class="axis-row">
-              <label for="x-axis">X axis</label>
-              <select id="x-axis"></select>
-            </div>
-            <div class="axis-row">
-              <label for="x-scale">X scale</label>
-              <select id="x-scale"></select>
-            </div>
-            <div class="axis-row">
-              <label for="y-axis">Y axis</label>
-              <select id="y-axis"></select>
-            </div>
-            <div class="axis-row">
-              <label for="y-scale">Y scale</label>
-              <select id="y-scale"></select>
-            </div>
-            <p class="axis-hint">Log scale is available for positive metrics such as cost, tokens and time.</p>
-            <div class="axis-row">
-              <label for="report-type">Report type</label>
-              <select id="report-type"></select>
-            </div>
-            <p class="axis-hint">How to aggregate each pair's runs into a single value.</p>
-            <div class="axis-row">
-              <label for="error-bars">Error bars</label>
-              <select id="error-bars"></select>
-            </div>
-            <p class="axis-hint">Range = min/max across runs. Std Dev = ±σ around the mean.</p>
-            <p id="validation-message" class="hint"></p>
-          </section>
-
-          <section class="card graph-control">
-            <h2>Display</h2>
-            <div class="axis-row">
-              <label for="color-mode">Color by</label>
-              <select id="color-mode"></select>
-            </div>
-            <div class="axis-row">
-              <label for="label-mode">Labels</label>
-              <select id="label-mode"></select>
-            </div>
-          </section>
-
         </div>
 
         <div class="chart-column">
+          <section id="filter-bar" class="card filter-bar" aria-label="Eval and language filters">
+            <div class="filter-row">
+              <span class="filter-label">Evals</span>
+              <div id="eval-chips" class="chip-row" role="group" aria-label="Evals"></div>
+            </div>
+            <div class="filter-row">
+              <span class="filter-label">Languages</span>
+              <div id="language-list" class="chip-row" role="group" aria-label="Languages"></div>
+            </div>
+          </section>
+
           <section id="graph-panel" class="card chart-card view-panel">
-            <h2 id="graph-title">XY Scatter Plot</h2>
+            <div class="panel-header">
+              <h2 id="graph-title">XY Scatter Plot</h2>
+            </div>
+            <div class="chart-toolbar">
+              <label class="toolbar-field">
+                <span>X axis</span>
+                <select id="x-axis"></select>
+              </label>
+              <label class="toolbar-field">
+                <span>X scale</span>
+                <select id="x-scale"></select>
+              </label>
+              <label class="toolbar-field">
+                <span>Y axis</span>
+                <select id="y-axis"></select>
+              </label>
+              <label class="toolbar-field">
+                <span>Y scale</span>
+                <select id="y-scale"></select>
+              </label>
+              <label class="toolbar-field">
+                <span>Color by</span>
+                <select id="color-mode"></select>
+              </label>
+              <label class="toolbar-field">
+                <span>Labels</span>
+                <select id="label-mode"></select>
+              </label>
+              <details class="more-options">
+                <summary>More options</summary>
+                <div class="more-options-body">
+                  <label class="toolbar-field">
+                    <span>Report type</span>
+                    <select id="report-type"></select>
+                  </label>
+                  <p class="axis-hint">How to aggregate each configuration's runs into a single value.</p>
+                  <label class="toolbar-field">
+                    <span>Error bars</span>
+                    <select id="error-bars"></select>
+                  </label>
+                  <p class="axis-hint">Range = min/max across runs. Std Dev = ±σ around the mean.
+                    Log scale applies to positive metrics such as cost, tokens and time.</p>
+                  <label class="toggle-row">
+                    <input id="facet-toggle" type="checkbox" checked />
+                    Split into one chart per eval when several evals are selected
+                  </label>
+                </div>
+              </details>
+            </div>
+            <p id="validation-message" class="hint"></p>
             <div id="chart-empty" class="chart-empty hidden">No data to plot yet.</div>
-            <div class="chart-wrap">
+            <div id="chart-wrap" class="chart-wrap">
               <svg id="scatter-svg" viewBox="0 0 980 560" preserveAspectRatio="xMidYMid meet"></svg>
+              <div id="facet-grid" class="facet-grid hidden"></div>
               <div id="tooltip" class="tooltip" aria-hidden="true"></div>
             </div>
             <div id="legend" class="legend"></div>
+          </section>
+
+          <section id="heatmap-panel" class="card heatmap-card view-panel hidden">
+            <div class="table-header">
+              <h2 id="heatmap-title">Heatmap</h2>
+              <div id="heatmap-scale" class="heatmap-scale" aria-hidden="true"></div>
+            </div>
+            <div id="heatmap-empty" class="chart-empty hidden">No cells to show.</div>
+            <div class="table-wrap heatmap-wrap">
+              <table id="heatmap-table" class="results-table heatmap-table"></table>
+            </div>
           </section>
 
           <section id="table-panel" class="card table-card view-panel hidden">
@@ -196,6 +249,6 @@
       </div>
     </main>
 
-    <script src="results-dashboard.js?v=20261003-model-colors-log-scale"></script>
+    <script src="results-dashboard.js?v=20261003-explorer-layout"></script>
   </body>
 </html>

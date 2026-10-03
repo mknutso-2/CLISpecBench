@@ -21,7 +21,11 @@ const COLOR_MODE_OPTIONS = [
   { id: 'agent', label: 'Agent' },
 ];
 
+// Above this many visible points, 'auto' labels only the Pareto frontier.
+const AUTO_LABEL_POINT_LIMIT = 12;
+
 const LABEL_MODE_OPTIONS = [
+  { id: 'auto', label: 'Auto' },
   { id: 'all', label: 'All' },
   { id: 'none', label: 'None' },
   { id: 'pareto', label: 'Pareto' },
@@ -235,7 +239,7 @@ const STATE = {
   xScaleMode: 'linear',
   yScaleMode: 'linear',
   colorMode: 'model',
-  labelMode: 'all',
+  labelMode: 'auto',
   nameMode: 'short',
   reportType: 'mean',
   errorBarMode: 'std',
@@ -245,6 +249,12 @@ const STATE = {
   tableSortDirection: 'asc',
   controlsCollapsed: false,
   hiddenColorKeys: new Set(),
+  pairSearch: '',
+  showCohorts: false,
+  collapsedAgents: new Set(),
+  heatmapMetric: 'percent',
+  heatmapSort: 'name',
+  facetByEval: true,
 };
 
 const dashboardLayout = document.getElementById('dashboard-layout');
@@ -278,7 +288,25 @@ const tableRunsControls = Array.from(document.querySelectorAll('.table-runs-cont
 const validationEl = document.getElementById('validation-message');
 const statusEl = document.getElementById('status');
 const errorBanner = document.getElementById('error-banner');
-const chartSvg = document.getElementById('scatter-svg');
+const mainChartSvg = document.getElementById('scatter-svg');
+// Points at the SVG being drawn; swapped per facet when charts are split by eval.
+let chartSvg = mainChartSvg;
+const chartWrapEl = document.getElementById('chart-wrap');
+const facetGridEl = document.getElementById('facet-grid');
+const facetToggleInput = document.getElementById('facet-toggle');
+const evalChipsEl = document.getElementById('eval-chips');
+const pairSearchInput = document.getElementById('pair-search');
+const showCohortsInput = document.getElementById('show-cohorts');
+const pairPresetNewestButton = document.getElementById('pair-preset-newest');
+const pairPresetTopEffortButton = document.getElementById('pair-preset-top-effort');
+const heatmapPanel = document.getElementById('heatmap-panel');
+const heatmapTableEl = document.getElementById('heatmap-table');
+const heatmapEmptyEl = document.getElementById('heatmap-empty');
+const heatmapTitleEl = document.getElementById('heatmap-title');
+const heatmapScaleEl = document.getElementById('heatmap-scale');
+const heatmapMetricSelect = document.getElementById('heatmap-metric');
+const heatmapSortSelect = document.getElementById('heatmap-sort');
+const heatmapControls = Array.from(document.querySelectorAll('.heatmap-control'));
 const chartEmpty = document.getElementById('chart-empty');
 const graphTitleEl = document.getElementById('graph-title');
 const graphPanel = document.getElementById('graph-panel');
@@ -440,7 +468,7 @@ function initSelectionDefaults({ preserveView = false } = {}) {
     STATE.xScaleMode = 'linear';
     STATE.yScaleMode = 'linear';
     STATE.colorMode = 'model';
-    STATE.labelMode = 'all';
+    STATE.labelMode = 'auto';
     STATE.nameMode = 'short';
     STATE.reportType = 'mean';
     STATE.errorBarMode = getDefaultErrorBarMode();
@@ -458,28 +486,81 @@ function getDefaultSelectedEvals(evals) {
 
 // Default selection: the newest model in each model line (for example the
 // latest Claude Opus, or GPT-5.6 Sol) at its highest effort, among base-cohort
-// pairs with at least one run in every selected eval and language. If no pair
-// covers every cell (common when many evals are selected), pairs with any runs
-// are used instead. Points with missing or few runs render as hollow markers
-// rather than being hidden.
+// pairs with at least one run in every selected eval and language (or, if no
+// pair covers every cell, any runs). When a line's pick has no runs for a
+// selected eval, the line's newest cohort variant with runs there is added, so
+// data recorded under a separate cohort (for example a network-access
+// condition) still appears. Points with missing or few runs render as hollow
+// markers rather than being hidden.
 function getDefaultSelectedPairs(pairs, selectedEvals, selectedLanguages) {
-  const baseCohort = (pairId) => !parsePairModel(pairId).cohort;
-  let covered = getPairsWithRunCount(pairs, selectedEvals, selectedLanguages, 1).filter(baseCohort);
-  if (!covered.length) {
-    covered = getPairsWithAnyRuns(pairs, selectedEvals, selectedLanguages).filter(baseCohort);
-  }
+  const evalsByPair = getEvalsWithRunsByPair(selectedEvals, selectedLanguages);
+  const withRuns = pairs.filter((pairId) => evalsByPair.has(pairId));
+  const fullCoverage = new Set(getPairsWithRunCount(pairs, selectedEvals, selectedLanguages, 1));
+  const base = withRuns.filter((pairId) => !parsePairModel(pairId).cohort);
+  const basePool = base.some((pairId) => fullCoverage.has(pairId))
+    ? base.filter((pairId) => fullCoverage.has(pairId))
+    : base;
+  const selected = new Set(pickNewestPerLine(basePool).values());
+
+  selectedEvals.forEach((evalName) => {
+    const linesWithEval = () =>
+      new Set(
+        Array.from(selected)
+          .filter((pairId) => evalsByPair.get(pairId)?.has(evalName))
+          .map(getModelLineKey),
+      );
+    // Prefer a line's base-cohort pair with partial coverage, then a cohort variant.
+    [false, true].forEach((wantCohort) => {
+      const covered = linesWithEval();
+      const fillers = withRuns.filter(
+        (pairId) =>
+          Boolean(parsePairModel(pairId).cohort) === wantCohort &&
+          evalsByPair.get(pairId).has(evalName) &&
+          !covered.has(getModelLineKey(pairId)),
+      );
+      pickNewestPerLine(fillers).forEach((pairId) => selected.add(pairId));
+    });
+  });
+  return Array.from(selected);
+}
+
+function getModelLineKey(pairId) {
+  const { agent, baseModel } = parsePairModel(pairId);
+  return `${agent} / ${getModelLine(baseModel).line}`;
+}
+
+// Map of model line → newest pair (highest version, then highest effort).
+function pickNewestPerLine(pairIds) {
   const newestByLine = new Map();
-  covered.forEach((pairId) => {
-    const { agent, baseModel, effort } = parsePairModel(pairId);
-    const { line, version } = getModelLine(baseModel);
-    const lineKey = `${agent} / ${line}`;
-    const candidate = { pairId, version, effortRank: getEffortRank(effort) };
+  pairIds.forEach((pairId) => {
+    const { baseModel, effort } = parsePairModel(pairId);
+    const candidate = {
+      pairId,
+      version: getModelLine(baseModel).version,
+      effortRank: getEffortRank(effort),
+    };
+    const lineKey = getModelLineKey(pairId);
     const current = newestByLine.get(lineKey);
     if (!current || compareModelCandidates(candidate, current) > 0) {
       newestByLine.set(lineKey, candidate);
     }
   });
-  return Array.from(newestByLine.values()).map((candidate) => candidate.pairId);
+  return new Map(Array.from(newestByLine.entries()).map(([key, candidate]) => [key, candidate.pairId]));
+}
+
+// Map of pair id → set of selected evals with at least one selected-version run.
+function getEvalsWithRunsByPair(selectedEvals, selectedLanguages) {
+  const evalSet = new Set(selectedEvals);
+  const languageSet = new Set(selectedLanguages);
+  const evalsByPair = new Map();
+  STATE.rows.forEach((row) => {
+    if (!evalSet.has(row.eval) || !languageSet.has(row.language)) return;
+    if (!isRowVersionSelected(row)) return;
+    const pairId = rowPairId(row);
+    if (!evalsByPair.has(pairId)) evalsByPair.set(pairId, new Set());
+    evalsByPair.get(pairId).add(row.eval);
+  });
+  return evalsByPair;
 }
 
 function compareModelCandidates(a, b) {
@@ -534,18 +615,6 @@ function parsePairModel(pairId) {
 function getModelFamilyKey(pairId) {
   const { agent, baseModel, cohort } = parsePairModel(pairId);
   return `${agent} / ${baseModel}${cohort}`;
-}
-
-function getPairsWithAnyRuns(pairs, selectedEvals, selectedLanguages) {
-  const selectedEvalSet = new Set(selectedEvals);
-  const selectedLanguageSet = new Set(selectedLanguages);
-  const withRuns = new Set();
-  STATE.rows.forEach((row) => {
-    if (!selectedEvalSet.has(row.eval) || !selectedLanguageSet.has(row.language)) return;
-    if (!isRowVersionSelected(row)) return;
-    withRuns.add(rowPairId(row));
-  });
-  return pairs.filter((pairId) => withRuns.has(pairId));
 }
 
 function getPairsWithRunCount(pairs, selectedEvals, selectedLanguages, requiredCount) {
@@ -626,7 +695,11 @@ function buildControls() {
   renderReportTypeSelector();
   renderErrorBarSelector();
   renderTableControls();
+  renderHeatmapControls();
   updateAxisSelectors();
+  if (pairSearchInput) pairSearchInput.value = STATE.pairSearch;
+  if (showCohortsInput) showCohortsInput.checked = STATE.showCohorts;
+  if (facetToggleInput) facetToggleInput.checked = STATE.facetByEval;
   syncViewModeControls();
   syncControlsColumn();
 }
@@ -656,6 +729,7 @@ function attachEvents() {
   controlsToggleButton.addEventListener('click', () => {
     STATE.controlsCollapsed = !STATE.controlsCollapsed;
     syncControlsColumn();
+    writeUrlState();
     if (STATE.rows.length) {
       window.requestAnimationFrame(() => render());
     }
@@ -664,20 +738,18 @@ function attachEvents() {
   viewModeEl.addEventListener('click', (event) => {
     const button = event.target.closest('button[data-view-mode]');
     if (!button) return;
-    STATE.viewMode = button.dataset.viewMode === 'table' ? 'table' : 'graph';
+    STATE.viewMode = normalizeViewMode(button.dataset.viewMode);
     syncViewModeControls();
     render();
   });
 
   if (pairSelectAllButton) {
     pairSelectAllButton.addEventListener('click', () => {
-      const selectablePairInputs = Array.from(
+      // Adds every visible (search- and cohort-filtered), available configuration.
+      const visibleInputs = Array.from(
         pairListEl.querySelectorAll('input[data-group="pair"]:not(:disabled)'),
-      );
-      STATE.selectedPairs = new Set(selectablePairInputs.map((input) => input.value));
-      selectablePairInputs.forEach((input) => {
-        input.checked = true;
-      });
+      ).filter((input) => !input.closest('.hidden'));
+      visibleInputs.forEach((input) => STATE.selectedPairs.add(input.value));
       render();
     });
   }
@@ -698,6 +770,81 @@ function attachEvents() {
     STATE.selectedPairs = new Set(selected);
     render();
   });
+
+  pairListEl.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-action="toggle-family"]');
+    if (!button) return;
+    const inputs = Array.from(
+      button.closest('.model-family').querySelectorAll('input[data-group="pair"]:not(:disabled)'),
+    );
+    const allSelected = inputs.length && inputs.every((input) => STATE.selectedPairs.has(input.value));
+    inputs.forEach((input) => {
+      if (allSelected) STATE.selectedPairs.delete(input.value);
+      else STATE.selectedPairs.add(input.value);
+    });
+    render();
+  });
+
+  if (pairSearchInput) {
+    pairSearchInput.addEventListener('input', () => {
+      STATE.pairSearch = pairSearchInput.value;
+      renderPairList();
+    });
+  }
+
+  if (showCohortsInput) {
+    showCohortsInput.addEventListener('change', () => {
+      STATE.showCohorts = showCohortsInput.checked;
+      render();
+    });
+  }
+
+  if (pairPresetNewestButton) {
+    pairPresetNewestButton.addEventListener('click', () => {
+      STATE.selectedPairs = new Set(
+        getDefaultSelectedPairs(getPairs(), getSelectedEvalNames(), getSelectedLanguageNames()),
+      );
+      render();
+    });
+  }
+
+  if (pairPresetTopEffortButton) {
+    pairPresetTopEffortButton.addEventListener('click', () => {
+      STATE.selectedPairs = new Set(getTopEffortPairs());
+      render();
+    });
+  }
+
+  if (evalChipsEl) {
+    evalChipsEl.addEventListener('change', () => {
+      STATE.selectedEvals = new Set(getCheckedValues(evalChipsEl, 'eval-chip'));
+      renderEvalList();
+      updateAxisSelectors();
+      syncErrorBarModeWithDefaults();
+      render();
+    });
+  }
+
+  if (heatmapMetricSelect) {
+    heatmapMetricSelect.addEventListener('change', () => {
+      STATE.heatmapMetric = normalizeHeatmapMetric(heatmapMetricSelect.value);
+      render();
+    });
+  }
+
+  if (heatmapSortSelect) {
+    heatmapSortSelect.addEventListener('change', () => {
+      STATE.heatmapSort = heatmapSortSelect.value === 'value' ? 'value' : 'name';
+      render();
+    });
+  }
+
+  if (facetToggleInput) {
+    facetToggleInput.addEventListener('change', () => {
+      STATE.facetByEval = facetToggleInput.checked;
+      render();
+    });
+  }
 
   languageListEl.addEventListener('change', () => {
     const selected = getCheckedValues(languageListEl, 'language');
@@ -863,35 +1010,73 @@ function attachEvents() {
   }
 }
 
+// Model picker: agents → model families → effort chips. Every pair keeps a
+// checkbox input (data-group="pair") so selection still reads from the DOM;
+// filtering and collapsed groups only hide rows.
 function renderPairList(canRenderPairById) {
   pairListEl.replaceChildren();
   const rowsByPair = getRowsByPairForCurrentSelection();
   const availabilityMap = canRenderPairById || getPairAvailability(rowsByPair);
   const unavailableLabels = [];
+  const search = STATE.pairSearch.trim().toLowerCase();
+  const evals = getSelectedEvalNames();
+  const languages = getSelectedLanguageNames();
+
+  const agents = new Map();
   getPairs().forEach((pairId) => {
-    const isSelectable = availabilityMap.get(pairId) ?? true;
-    const { agent, model } = splitPairId(pairId);
-
-    if (!isSelectable && STATE.selectedPairs.has(pairId)) {
-      unavailableLabels.push(`${agent} / ${model}`);
+    const { agent, effort, cohort } = parsePairModel(pairId);
+    const familyKey = getModelFamilyKey(pairId);
+    if (!agents.has(agent)) agents.set(agent, new Map());
+    const families = agents.get(agent);
+    if (!families.has(familyKey)) families.set(familyKey, { cohort, pairs: [] });
+    families.get(familyKey).pairs.push({ pairId, effort });
+    if (!(availabilityMap.get(pairId) ?? true) && STATE.selectedPairs.has(pairId)) {
+      unavailableLabels.push(pairId);
     }
+  });
 
-    const row = document.createElement('label');
-    row.classList.toggle('unavailable-option', !isSelectable);
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.group = 'pair';
-    cb.value = pairId;
-    cb.checked = STATE.selectedPairs.has(pairId);
-    cb.disabled = !isSelectable;
-    row.appendChild(cb);
-    row.appendChild(document.createTextNode(`${agent} / ${model}`));
-    pairListEl.appendChild(row);
+  agents.forEach((families, agent) => {
+    const group = document.createElement('details');
+    group.className = 'model-group';
+    group.open = !STATE.collapsedAgents.has(agent) || Boolean(search);
+    group.addEventListener('toggle', () => {
+      if (search) return;
+      if (group.open) STATE.collapsedAgents.delete(agent);
+      else STATE.collapsedAgents.add(agent);
+    });
+    const summary = document.createElement('summary');
+    const selectedInAgent = Array.from(families.values())
+      .flatMap((family) => family.pairs)
+      .filter(({ pairId }) => STATE.selectedPairs.has(pairId)).length;
+    summary.appendChild(document.createTextNode(agent));
+    const count = document.createElement('span');
+    count.className = 'model-group-count';
+    count.textContent = selectedInAgent ? `${selectedInAgent} selected` : '';
+    summary.appendChild(count);
+    group.appendChild(summary);
+
+    let visibleFamilies = 0;
+    Array.from(families.entries())
+      .sort(([a], [b]) => compareFamiliesNewestFirst(a, b))
+      .forEach(([familyKey, family]) => {
+        const row = buildModelFamilyRow(familyKey, family, availabilityMap, rowsByPair, evals, languages);
+        const anySelected = family.pairs.some(({ pairId }) => STATE.selectedPairs.has(pairId));
+        const haystack = `${familyKey} ${formatModelFamilyDisplay(familyKey)} ${family.pairs
+          .map(({ effort }) => effort)
+          .join(' ')}`.toLowerCase();
+        const matchesSearch = !search || search.split(/\s+/).every((term) => haystack.includes(term));
+        const cohortHidden = family.cohort && !STATE.showCohorts && !anySelected;
+        if (!matchesSearch || cohortHidden) row.classList.add('hidden');
+        else visibleFamilies += 1;
+        group.appendChild(row);
+      });
+    if (!visibleFamilies) group.classList.add('hidden');
+    pairListEl.appendChild(group);
   });
 
   if (pairUnavailableHintEl) {
     if (unavailableLabels.length) {
-      const noun = unavailableLabels.length === 1 ? 'pair has' : 'pairs have';
+      const noun = unavailableLabels.length === 1 ? 'selection has' : 'selections have';
       pairUnavailableHintEl.textContent =
         `${unavailableLabels.length} ${noun} no data for this view: ${unavailableLabels.join(', ')}.`;
     } else {
@@ -902,22 +1087,124 @@ function renderPairList(canRenderPairById) {
   return availabilityMap;
 }
 
+// Newest model versions first within an agent; cohort variants follow their base model.
+function compareFamiliesNewestFirst(aKey, bKey) {
+  const aModel = splitPairId(aKey).model;
+  const bModel = splitPairId(bKey).model;
+  const aCohort = / \[[^\]]+\]$/.test(aModel);
+  const bCohort = / \[[^\]]+\]$/.test(bModel);
+  const aLine = getModelLine(aModel.replace(/ \[[^\]]+\]$/, ''));
+  const bLine = getModelLine(bModel.replace(/ \[[^\]]+\]$/, ''));
+  const versionDiff = compareModelCandidates(
+    { version: bLine.version, effortRank: 0 },
+    { version: aLine.version, effortRank: 0 },
+  );
+  if (versionDiff) return versionDiff;
+  if (aLine.line !== bLine.line) return aLine.line.localeCompare(bLine.line);
+  if (aCohort !== bCohort) return aCohort ? 1 : -1;
+  return aKey.localeCompare(bKey);
+}
+
+function buildModelFamilyRow(familyKey, family, availabilityMap, rowsByPair, evals, languages) {
+  const row = document.createElement('div');
+  row.className = 'model-family';
+  if (family.cohort) row.classList.add('model-family-cohort');
+
+  const name = document.createElement('button');
+  name.type = 'button';
+  name.className = 'model-family-name';
+  name.dataset.action = 'toggle-family';
+  name.dataset.family = familyKey;
+  name.textContent = formatModelFamilyDisplay(familyKey);
+  name.title = `${familyKey}\nClick to select or clear every available effort.`;
+  const selectable = family.pairs.filter(({ pairId }) => availabilityMap.get(pairId) ?? true);
+  const selectedCount = family.pairs.filter(({ pairId }) => STATE.selectedPairs.has(pairId)).length;
+  name.setAttribute(
+    'aria-pressed',
+    selectedCount && selectedCount === selectable.length ? 'true' : selectedCount ? 'mixed' : 'false',
+  );
+  name.disabled = !selectable.length;
+  row.appendChild(name);
+
+  const chips = document.createElement('div');
+  chips.className = 'effort-chips';
+  family.pairs
+    .slice()
+    .sort((a, b) => getEffortRank(a.effort) - getEffortRank(b.effort))
+    .forEach(({ pairId, effort }) => {
+      const isSelectable = availabilityMap.get(pairId) ?? true;
+      const chip = document.createElement('label');
+      chip.className = 'effort-chip';
+      const minRuns = getMinRunsPerCell(rowsByPair.get(pairId) || [], evals, languages);
+      if (isSelectable && minRuns < LOW_RUN_COUNT_THRESHOLD) chip.classList.add('effort-chip-low-n');
+      chip.classList.toggle('unavailable-option', !isSelectable);
+      chip.title = isSelectable
+        ? `${pairTitleWithVersion(pairId)}\nFewest runs in a selected eval/language cell: ${minRuns}`
+        : `${pairId}\nNo data for this view`;
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset.group = 'pair';
+      input.value = pairId;
+      input.checked = STATE.selectedPairs.has(pairId);
+      input.disabled = !isSelectable;
+      chip.appendChild(input);
+      chip.appendChild(document.createTextNode(effort ? abbreviateEffort(effort) : 'default'));
+      chips.appendChild(chip);
+    });
+  row.appendChild(chips);
+  return row;
+}
+
+// Highest effort of every model family with data for the current view.
+function getTopEffortPairs() {
+  const availability = getPairAvailability(getRowsByPairForCurrentSelection());
+  const best = new Map();
+  getPairs().forEach((pairId) => {
+    if (!availability.get(pairId)) return;
+    const { effort, cohort } = parsePairModel(pairId);
+    if (cohort && !STATE.showCohorts) return;
+    const key = getModelFamilyKey(pairId);
+    const rank = getEffortRank(effort);
+    const current = best.get(key);
+    if (!current || rank > current.rank) best.set(key, { pairId, rank });
+  });
+  return Array.from(best.values()).map((entry) => entry.pairId);
+}
+
 function renderLanguageList() {
   languageListEl.replaceChildren();
   getLanguages().forEach((language) => {
-    const row = document.createElement('label');
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.dataset.group = 'language';
-    cb.value = language;
-    cb.checked = STATE.selectedLanguages.has(language);
-    row.appendChild(cb);
-    row.appendChild(document.createTextNode(language));
-    languageListEl.appendChild(row);
+    languageListEl.appendChild(
+      buildFilterChip('language', language, language, STATE.selectedLanguages.has(language)),
+    );
   });
 }
 
+function renderEvalChips() {
+  if (!evalChipsEl) return;
+  evalChipsEl.replaceChildren();
+  getEvals().forEach((evalName) => {
+    evalChipsEl.appendChild(
+      buildFilterChip('eval-chip', evalName, evalName, STATE.selectedEvals.has(evalName)),
+    );
+  });
+}
+
+function buildFilterChip(group, value, text, checked) {
+  const chip = document.createElement('label');
+  chip.className = 'filter-chip';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.dataset.group = group;
+  input.value = value;
+  input.checked = checked;
+  chip.appendChild(input);
+  chip.appendChild(document.createTextNode(text));
+  return chip;
+}
+
 function renderEvalList() {
+  renderEvalChips();
   evalListEl.replaceChildren();
   getEvals().forEach((evalName) => {
     const item = document.createElement('div');
@@ -1045,7 +1332,7 @@ function normalizeLabelMode(mode) {
   const normalized = String(mode || '').trim().toLowerCase();
   return LABEL_MODE_OPTIONS.some((option) => option.id === normalized)
     ? normalized
-    : 'all';
+    : 'auto';
 }
 
 function renderNameModeSelector() {
@@ -1135,8 +1422,18 @@ function getTableSortOptions(tableMode = STATE.tableMode) {
   );
 }
 
+const VIEW_MODES = ['graph', 'heatmap', 'table'];
+
+function normalizeViewMode(mode) {
+  return VIEW_MODES.includes(mode) ? mode : 'graph';
+}
+
 function syncViewModeControls() {
   document.body.classList.toggle('table-view-active', STATE.viewMode === 'table');
+  heatmapControls.forEach((el) => {
+    el.classList.toggle('hidden', STATE.viewMode !== 'heatmap');
+  });
+  if (heatmapPanel) heatmapPanel.classList.toggle('hidden', STATE.viewMode !== 'heatmap');
   viewModeEl.querySelectorAll('button[data-view-mode]').forEach((button) => {
     const pressed = button.dataset.viewMode === STATE.viewMode;
     button.setAttribute('aria-pressed', pressed ? 'true' : 'false');
@@ -1208,6 +1505,12 @@ function writeUrlState() {
     if (STATE.tableSortBy) params.set('tsort', STATE.tableSortBy);
     params.set('tdir', STATE.tableSortDirection);
   }
+  if (STATE.viewMode === 'heatmap') {
+    params.set('hm', STATE.heatmapMetric);
+    if (STATE.heatmapSort !== 'name') params.set('hs', STATE.heatmapSort);
+  }
+  if (!STATE.facetByEval) params.set('facet', 'off');
+  if (STATE.showCohorts) params.set('cohorts', 'show');
   if (STATE.controlsCollapsed) params.set('controls', 'hidden');
   const nextUrl = `${window.location.pathname}?${params.toString()}${window.location.hash}`;
   try {
@@ -1229,7 +1532,7 @@ function applyUrlState() {
       .split(',')
       .filter((value) => available.includes(value));
 
-  const view = pick('view', ['graph', 'table']);
+  const view = pick('view', VIEW_MODES);
   if (view) STATE.viewMode = view;
   const axisIds = AXIS_OPTIONS.map((axis) => axis.id);
   STATE.xAxis = pick('x', axisIds) || STATE.xAxis;
@@ -1276,6 +1579,10 @@ function applyUrlState() {
   if (params.has('tsort')) STATE.tableSortBy = params.get('tsort');
   STATE.tableSortDirection = pick('tdir', ['asc', 'desc']) || STATE.tableSortDirection;
   STATE.controlsCollapsed = params.get('controls') === 'hidden';
+  STATE.heatmapMetric = normalizeHeatmapMetric(params.get('hm'));
+  STATE.heatmapSort = params.get('hs') === 'value' ? 'value' : 'name';
+  STATE.facetByEval = params.get('facet') !== 'off';
+  STATE.showCohorts = params.get('cohorts') === 'show';
 }
 
 function render() {
@@ -1298,15 +1605,25 @@ function render() {
   const colorMap = getColorMap();
   const rowsByPair = getRowsByPairForCurrentSelection();
   const canRenderPairById =
-    STATE.viewMode === 'table'
-      ? getPairAvailabilityForRows(rowsByPair)
-      : getPairAvailability(rowsByPair);
+    STATE.viewMode === 'graph'
+      ? getPairAvailability(rowsByPair)
+      : getPairAvailabilityForRows(rowsByPair);
   renderPairList(canRenderPairById);
 
   if (STATE.viewMode === 'table') {
     renderTableView();
     return;
   }
+  if (STATE.viewMode === 'heatmap') {
+    renderHeatmapView(rowsByPair);
+    return;
+  }
+
+  if (shouldFacetByEval()) {
+    renderFacetedGraph(colorMap, rowsByPair);
+    return;
+  }
+  showSingleChart();
 
   const points = buildPoints(colorMap, rowsByPair);
   if (!points.length) {
@@ -1320,6 +1637,7 @@ function render() {
 
   legendEl.innerHTML = '';
   clearChart();
+  resetSeriesHandles();
   renderLegend(points, colorMap);
   if (!visiblePoints.length) {
     chartEmpty.textContent =
@@ -1451,7 +1769,14 @@ function validateSelection() {
 }
 
 function showNoData(message) {
+  showSingleChart();
   clearChart();
+  heatmapTableEl?.replaceChildren();
+  if (heatmapScaleEl) heatmapScaleEl.replaceChildren();
+  if (heatmapEmptyEl) {
+    heatmapEmptyEl.textContent = message;
+    heatmapEmptyEl.classList.remove('hidden');
+  }
   chartEmpty.textContent = message;
   chartEmpty.classList.remove('hidden');
   legendEl.innerHTML = '';
@@ -1497,6 +1822,320 @@ function renderTableView() {
   tableEmpty.classList.add('hidden');
   const noun = sortedRows.length === 1 ? 'row' : 'rows';
   tableCountEl.textContent = `${sortedRows.length} ${noun}`;
+}
+
+const HEATMAP_METRIC_OPTIONS = [
+  { id: 'percent', label: 'Pass rate' },
+  { id: 'cost', label: 'Cost (USD)' },
+  { id: 'tokens_total', label: 'Tokens Total' },
+  { id: 'wall', label: 'Wall Clock Time' },
+];
+
+function normalizeHeatmapMetric(metric) {
+  return HEATMAP_METRIC_OPTIONS.some((option) => option.id === metric) ? metric : 'percent';
+}
+
+function renderHeatmapControls() {
+  if (!heatmapMetricSelect || !heatmapSortSelect) return;
+  heatmapMetricSelect.replaceChildren();
+  HEATMAP_METRIC_OPTIONS.forEach((metric) => {
+    const option = document.createElement('option');
+    option.value = metric.id;
+    option.textContent = metric.label;
+    heatmapMetricSelect.appendChild(option);
+  });
+  STATE.heatmapMetric = normalizeHeatmapMetric(STATE.heatmapMetric);
+  heatmapMetricSelect.value = STATE.heatmapMetric;
+  heatmapSortSelect.value = STATE.heatmapSort;
+}
+
+// Models × (eval, language) matrix of one metric. Pass rate is colored on a
+// fixed 0–100% scale; the other metrics use a log scale over the visible
+// cells, where lower is better.
+function renderHeatmapView(rowsByPair) {
+  clearChart();
+  heatmapTableEl.replaceChildren();
+  heatmapScaleEl.replaceChildren();
+  const metricId = normalizeHeatmapMetric(STATE.heatmapMetric);
+  const metric = METRICS[metricId];
+  const evals = getSelectedEvalNames();
+  const languages = getSelectedLanguageNames();
+  const columns = evals.flatMap((evalName) => languages.map((language) => ({ evalName, language })));
+  heatmapTitleEl.textContent = `${metric.label} by eval and language (${getReportTypeLabel(
+    STATE.reportType,
+  ).toLowerCase()})`;
+
+  const rows = getPairs()
+    .filter((pairId) => STATE.selectedPairs.has(pairId) && (rowsByPair.get(pairId) || []).length)
+    .map((pairId) => {
+      const pairRows = rowsByPair.get(pairId) || [];
+      const cells = columns.map(({ evalName, language }) => {
+        const subset = pairRows.filter((row) => row.eval === evalName && row.language === language);
+        const summary = summarizeMetric(subset, metricId);
+        return {
+          evalName,
+          language,
+          runs: subset.length,
+          summary,
+          value: summary.hasData ? getReportValue(summary, STATE.reportType) : NaN,
+        };
+      });
+      const values = cells.map((cell) => cell.value).filter(Number.isFinite);
+      const overall = values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : NaN;
+      return { pairId, cells, overall, covered: values.length };
+    });
+
+  if (!rows.length) {
+    heatmapEmptyEl.textContent = 'No selected configuration has runs for these evals and languages.';
+    heatmapEmptyEl.classList.remove('hidden');
+    return;
+  }
+  heatmapEmptyEl.classList.add('hidden');
+
+  if (STATE.heatmapSort === 'value') {
+    const direction = metric.higherIsBetter ? -1 : 1;
+    rows.sort((a, b) => {
+      if (!Number.isFinite(a.overall)) return 1;
+      if (!Number.isFinite(b.overall)) return -1;
+      return direction * (a.overall - b.overall);
+    });
+  } else {
+    rows.sort((a, b) =>
+      formatAgentModelDisplay(a.pairId).localeCompare(formatAgentModelDisplay(b.pairId), undefined, {
+        numeric: true,
+      }),
+    );
+  }
+
+  const allValues = rows.flatMap((row) => row.cells.map((cell) => cell.value)).filter(Number.isFinite);
+  const colorFor = buildHeatmapColorScale(metricId, allValues);
+
+  const thead = document.createElement('thead');
+  const evalHeader = document.createElement('tr');
+  const corner = document.createElement('th');
+  corner.textContent = 'Configuration';
+  corner.rowSpan = languages.length > 1 ? 2 : 1;
+  corner.className = 'heatmap-row-header';
+  evalHeader.appendChild(corner);
+  evals.forEach((evalName) => {
+    const th = document.createElement('th');
+    th.colSpan = languages.length;
+    th.className = 'heatmap-eval-header';
+    th.textContent = languages.length > 1 ? evalName : `${evalName} · ${languages[0]}`;
+    evalHeader.appendChild(th);
+  });
+  const overallHeader = document.createElement('th');
+  overallHeader.rowSpan = languages.length > 1 ? 2 : 1;
+  overallHeader.className = 'numeric heatmap-overall-header';
+  overallHeader.textContent = 'Mean of cells';
+  overallHeader.title = 'Average of the cells that have runs; Coverage shows how many cells that is.';
+  evalHeader.appendChild(overallHeader);
+  thead.appendChild(evalHeader);
+  if (languages.length > 1) {
+    const languageHeader = document.createElement('tr');
+    columns.forEach(({ language }) => {
+      const th = document.createElement('th');
+      th.className = 'heatmap-language-header';
+      th.textContent = language;
+      languageHeader.appendChild(th);
+    });
+    thead.appendChild(languageHeader);
+  }
+  heatmapTableEl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  rows.forEach((row) => {
+    const tr = document.createElement('tr');
+    const label = document.createElement('th');
+    label.scope = 'row';
+    label.className = 'heatmap-row-header';
+    label.textContent = formatAgentModelDisplay(row.pairId);
+    label.title = pairTitleWithVersion(row.pairId);
+    tr.appendChild(label);
+    row.cells.forEach((cell) => {
+      const td = document.createElement('td');
+      td.className = 'heatmap-cell';
+      if (!Number.isFinite(cell.value)) {
+        td.classList.add('heatmap-cell-empty');
+        td.textContent = '—';
+        td.title = `${cell.evalName} · ${cell.language}: no runs`;
+      } else {
+        td.style.background = colorFor(cell.value);
+        const value = document.createElement('span');
+        value.className = 'heatmap-value';
+        value.textContent = metric.formatMean(cell.value);
+        const runs = document.createElement('span');
+        runs.className = 'heatmap-runs';
+        runs.textContent = `n=${cell.runs}`;
+        td.append(value, runs);
+        if (cell.runs < LOW_RUN_COUNT_THRESHOLD) td.classList.add('heatmap-cell-low-n');
+        td.title = `${row.pairId}\n${cell.evalName} · ${cell.language}\n${metric.formatSummary(
+          cell.summary,
+        )}\nRuns: ${cell.runs}`;
+      }
+      tr.appendChild(td);
+    });
+    const overall = document.createElement('td');
+    overall.className = 'numeric heatmap-overall';
+    overall.textContent = Number.isFinite(row.overall)
+      ? `${metric.formatMean(row.overall)} (${row.covered}/${columns.length})`
+      : '—';
+    tr.appendChild(overall);
+    tbody.appendChild(tr);
+  });
+  heatmapTableEl.appendChild(tbody);
+  renderHeatmapScale(metricId, allValues, colorFor);
+}
+
+function buildHeatmapColorScale(metricId, values) {
+  const metric = METRICS[metricId];
+  // Map "goodness" in [0, 1] to a red → amber → green ramp.
+  const ramp = (goodness) => {
+    const g = Math.min(1, Math.max(0, goodness));
+    return `hsl(${Math.round(4 + g * 128)}, 62%, ${Math.round(80 + g * 4)}%)`;
+  };
+  if (metric.isPercent) return (value) => ramp(value / 100);
+  const positive = values.filter((value) => value > 0);
+  if (!positive.length) return () => ramp(0.5);
+  const low = Math.log10(Math.min(...positive));
+  const high = Math.log10(Math.max(...positive));
+  return (value) => {
+    if (!(value > 0) || high === low) return ramp(0.5);
+    const fraction = (Math.log10(value) - low) / (high - low);
+    return ramp(metric.higherIsBetter ? fraction : 1 - fraction);
+  };
+}
+
+function renderHeatmapScale(metricId, values, colorFor) {
+  const metric = METRICS[metricId];
+  const finite = values.filter(Number.isFinite);
+  if (!finite.length) return;
+  const low = metric.isPercent ? 0 : Math.min(...finite);
+  const high = metric.isPercent ? 100 : Math.max(...finite);
+  const lowLabel = document.createElement('span');
+  lowLabel.textContent = metric.formatMean(low);
+  const bar = document.createElement('span');
+  bar.className = 'heatmap-scale-bar';
+  const stops = [0, 0.25, 0.5, 0.75, 1].map((t) => {
+    const value = metric.isPercent ? t * 100 : Math.pow(10, Math.log10(low || 1e-9) + t * (Math.log10(high || 1) - Math.log10(low || 1e-9)));
+    return colorFor(value);
+  });
+  bar.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
+  const highLabel = document.createElement('span');
+  highLabel.textContent = metric.formatMean(high);
+  const note = document.createElement('span');
+  note.className = 'heatmap-scale-note';
+  note.textContent = metric.isPercent ? '' : 'log scale, lower is greener';
+  heatmapScaleEl.append(lowLabel, bar, highLabel, note);
+}
+
+// ---- Faceted graph: one scatter per selected eval -------------------------
+
+// The eval whose facet is being drawn; scopes run-coverage checks to it.
+let CURRENT_FACET_EVAL = null;
+let plotClipCounter = 0;
+
+function shouldFacetByEval() {
+  return (
+    STATE.viewMode === 'graph' &&
+    STATE.facetByEval &&
+    getSelectedEvalNames().length > 1 &&
+    !isCategoricalXAxis(STATE.xAxis)
+  );
+}
+
+function showSingleChart() {
+  if (facetGridEl) {
+    facetGridEl.replaceChildren();
+    facetGridEl.classList.add('hidden');
+  }
+  mainChartSvg.classList.remove('hidden');
+  chartWrapEl?.classList.remove('chart-wrap-faceted');
+  chartSvg = mainChartSvg;
+}
+
+function renderFacetedGraph(colorMap, rowsByPair) {
+  clearChart();
+  mainChartSvg.classList.add('hidden');
+  chartWrapEl?.classList.add('chart-wrap-faceted');
+  facetGridEl.replaceChildren();
+  facetGridEl.classList.remove('hidden');
+  legendEl.innerHTML = '';
+  chartEmpty.classList.add('hidden');
+  resetSeriesHandles();
+
+  const allPoints = [];
+  getSelectedEvalNames().forEach((evalName) => {
+    const facet = document.createElement('figure');
+    facet.className = 'facet';
+    const title = document.createElement('figcaption');
+    title.textContent = `${evalName} · ${formatVersionSummary(evalName).replace(/^Versions?:\s*/, 'v')}`;
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    facet.append(title, svg);
+    facetGridEl.appendChild(facet);
+
+    const facetRows = new Map();
+    rowsByPair.forEach((rows, pairId) => {
+      const subset = rows.filter((row) => row.eval === evalName);
+      if (subset.length) facetRows.set(pairId, subset);
+    });
+    CURRENT_FACET_EVAL = evalName;
+    try {
+      const points = buildPoints(colorMap, facetRows);
+      allPoints.push(...points);
+      const visible = points.filter((point) => !STATE.hiddenColorKeys.has(point.colorModeKey));
+      if (!visible.length) {
+        const empty = document.createElement('p');
+        empty.className = 'chart-empty';
+        empty.textContent = points.length ? 'All series hidden.' : 'No runs for the selected models.';
+        facet.replaceChild(empty, svg);
+        return;
+      }
+      chartSvg = svg;
+      renderPlot(visible);
+    } finally {
+      chartSvg = mainChartSvg;
+      CURRENT_FACET_EVAL = null;
+    }
+  });
+
+  if (!allPoints.length) {
+    showNoData('No matching results for the current filters.');
+    return;
+  }
+  renderLegend(allPoints, colorMap);
+  validationEl.textContent = '';
+}
+
+// ---- Legend hover highlighting --------------------------------------------
+
+let SERIES_HANDLES = [];
+
+function resetSeriesHandles() {
+  SERIES_HANDLES = [];
+}
+
+function highlightSeries(key) {
+  if (!chartWrapEl) return;
+  chartWrapEl.classList.add('highlighting');
+  chartWrapEl.querySelectorAll('[data-color-key]').forEach((el) => {
+    el.classList.toggle('series-active', el.dataset.colorKey === key);
+  });
+  SERIES_HANDLES.filter((handle) => handle.key === key).forEach((handle) => handle.show());
+}
+
+function clearSeriesHighlight() {
+  if (!chartWrapEl) return;
+  chartWrapEl.classList.remove('highlighting');
+  chartWrapEl.querySelectorAll('.series-active').forEach((el) => el.classList.remove('series-active'));
+  SERIES_HANDLES.forEach((handle) => handle.hide());
+}
+
+function resolveLabelMode(pointCount) {
+  const mode = normalizeLabelMode(STATE.labelMode);
+  if (mode !== 'auto') return mode;
+  return pointCount <= AUTO_LABEL_POINT_LIMIT ? 'all' : 'pareto';
 }
 
 function buildSummaryTableRows() {
@@ -1959,7 +2598,8 @@ function formatModelFamilyDisplay(familyKey) {
   if (normalizeNameMode(STATE.nameMode) === 'full') return `${agent} / ${model}`;
   const cohortMatch = model.match(/^(.*?)( \[[^\]]+\])$/);
   const baseModel = cohortMatch ? cohortMatch[1] : model;
-  return `${abbreviateAgent(agent)} / ${abbreviateModel(baseModel)}${cohortMatch ? cohortMatch[2] : ''}`;
+  const cohort = cohortMatch ? ` [${abbreviateCohort(cohortMatch[2].slice(2, -1))}]` : '';
+  return `${abbreviateAgent(agent)} / ${abbreviateModel(baseModel)}${cohort}`;
 }
 
 function formatAgentModelFull(pairId) {
@@ -2009,8 +2649,8 @@ function abbreviateAgent(agent) {
 }
 
 function abbreviateModel(model) {
-  const cohortLabel = String(model || '').match(/^(.*)( \[[^\]]+\])$/);
-  if (cohortLabel) return `${abbreviateModel(cohortLabel[1])}${cohortLabel[2]}`;
+  const cohortLabel = String(model || '').match(/^(.*) \[([^\]]+)\]$/);
+  if (cohortLabel) return `${abbreviateModel(cohortLabel[1])} [${abbreviateCohort(cohortLabel[2])}]`;
   const { baseModel, effort } = splitModelEffortLabel(model);
   // Drop routing prefixes such as "openrouter/moonshotai/".
   const normalized = String(baseModel || '').toLowerCase().split('/').pop();
@@ -2045,6 +2685,22 @@ function abbreviateModel(model) {
     return withEffort(version);
   }
   return withEffort(normalized || 'n/a');
+}
+
+// Short cohort tag for abbreviated labels: drops commit hashes and anything
+// after ';', then keeps whole words up to about 12 characters.
+function abbreviateCohort(cohort) {
+  const cleaned = String(cohort || '')
+    .split(';')[0]
+    .replace(/[0-9a-f]{8,}/gi, '')
+    .trim();
+  if (cleaned.length <= 12) return cleaned;
+  let result = '';
+  for (const match of cleaned.matchAll(/[^\s-]+[\s-]?/g)) {
+    if ((result + match[0]).trimEnd().length > 12) break;
+    result += match[0];
+  }
+  return `${result.replace(/[\s-]+$/, '') || cleaned.slice(0, 11)}…`;
 }
 
 function splitModelEffortLabel(model) {
@@ -2266,7 +2922,12 @@ function summarizePoint(pairId, color, rows, language, options) {
   const ySummary = summarizeMetric(rows, options.yAxis);
   if (!xSummary.hasData || !ySummary.hasData) return null;
 
-  const cellEvals = options.xAxis === 'eval' ? [options.xCategoryValue] : getSelectedEvalNames();
+  const cellEvals =
+    options.xAxis === 'eval'
+      ? [options.xCategoryValue]
+      : CURRENT_FACET_EVAL
+        ? [CURRENT_FACET_EVAL]
+        : getSelectedEvalNames();
   const cellLanguages = language ? [language] : getSelectedLanguageNames();
   const minRunsPerCell = getMinRunsPerCell(rows, cellEvals, cellLanguages);
 
@@ -2584,6 +3245,12 @@ function renderLegend(points, colorMap) {
     swatch.style.background = colorMap.get(key) || PALETTE[index % PALETTE.length];
     row.appendChild(swatch);
     row.appendChild(document.createTextNode(getColorModeLabel(key)));
+    if (!hidden) {
+      row.addEventListener('mouseenter', () => highlightSeries(key));
+      row.addEventListener('focus', () => highlightSeries(key));
+      row.addEventListener('mouseleave', clearSeriesHighlight);
+      row.addEventListener('blur', clearSeriesHighlight);
+    }
     row.addEventListener('click', () => {
       if (STATE.hiddenColorKeys.has(key)) {
         STATE.hiddenColorKeys.delete(key);
@@ -2641,6 +3308,7 @@ function drawEffortConnectors(points, xScale, yScale, layer) {
       );
     const line = createSvgElement('polyline');
     line.setAttribute('class', 'effort-line');
+    line.dataset.colorKey = ordered[0].colorModeKey || '';
     line.setAttribute('points', ordered.map((p) => `${xScale(p.xValue)},${yScale(p.yValue)}`).join(' '));
     line.setAttribute('fill', 'none');
     line.style.stroke = ordered[0].color;
@@ -2680,6 +3348,7 @@ function computeParetoFrontier(points, xAxis, yAxis) {
 
 function renderPlot(points) {
   chartEmpty.classList.add('hidden');
+  const svgForTooltip = chartSvg;
 
   const { width, height } = getChartSize();
   chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
@@ -2731,7 +3400,9 @@ function renderPlot(points) {
 
   const defs = createSvgElement('defs');
   const clipPath = createSvgElement('clipPath');
-  clipPath.setAttribute('id', 'plot-clip');
+  plotClipCounter += 1;
+  const clipId = `plot-clip-${plotClipCounter}`;
+  clipPath.setAttribute('id', clipId);
   // Pad the clip so markers at the domain edge (e.g. 100% pass rate) draw whole.
   const clipPad = 11;
   const clipRect = createSvgElement('rect');
@@ -2744,12 +3415,12 @@ function renderPlot(points) {
   chartSvg.appendChild(defs);
 
   const dataLayer = createSvgElement('g');
-  dataLayer.setAttribute('clip-path', 'url(#plot-clip)');
+  dataLayer.setAttribute('clip-path', `url(#${clipId})`);
   const labelsLayer = createSvgElement('g');
   labelsLayer.setAttribute('class', 'labels-layer');
   const markerLabels = [];
   const errorBarLines = [];
-  const labelMode = normalizeLabelMode(STATE.labelMode);
+  const labelMode = resolveLabelMode(points.length);
 
   const frontierSet = computeParetoFrontier(points, STATE.xAxis, STATE.yAxis);
   drawFrontierConnector(points, frontierSet, xScale, yScale, dataLayer);
@@ -2767,6 +3438,7 @@ function renderPlot(points) {
 
     const g = createSvgElement('g');
     g.setAttribute('transform', `translate(${x}, ${y})`);
+    g.dataset.colorKey = point.colorModeKey || '';
 
     const canShowErrorBars =
       !isCategoricalXAxis(STATE.xAxis) && STATE.errorBarMode !== 'none';
@@ -2839,13 +3511,16 @@ function renderPlot(points) {
     const leader = createSvgElement('line');
     leader.setAttribute('class', 'point-leader');
     leader.setAttribute('visibility', 'hidden');
+    label.dataset.colorKey = point.colorModeKey || '';
+    leader.dataset.colorKey = point.colorModeKey || '';
     labelsLayer.appendChild(label);
     labelsLayer.appendChild(leader);
 
     const showTooltipAt = (clientX, clientY) => {
       tooltip.style.display = 'block';
       tooltip.innerHTML = buildTooltip(point);
-      const rect = chartSvg.getBoundingClientRect();
+      // Tooltip is positioned inside the chart wrapper, which also holds facets.
+      const rect = (chartWrapEl || svgForTooltip).getBoundingClientRect();
       const tooltipX = clientX - rect.left + 12;
       const tooltipY = clientY - rect.top + 12;
       const tooltipWidth = tooltip.offsetWidth || 280;
@@ -2892,6 +3567,7 @@ function renderPlot(points) {
     pointCircle.addEventListener('focusin', onFocus);
     pointCircle.addEventListener('blur', hideMarker);
     pointCircle.addEventListener('focusout', hideMarker);
+    SERIES_HANDLES.push({ key: point.colorModeKey, show: showMarker, hide: hideMarker });
 
     dataLayer.appendChild(g);
 
