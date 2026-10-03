@@ -4,11 +4,56 @@ This file records cross-agent operational findings that affect how CLISpecBench
 runs should be interpreted. Eval-specific prompt, test, and version changes
 still belong in each eval's `CHANGELOG.md`.
 
+## GPT-6.1 Sol setup (2026-10-02)
+
+Use `--agent codex-cli --model gpt-6.1-sol` with an explicit `--effort`.
+OpenAI documents `low`, `medium`, `high`, `xhigh`, and `max`; `none` and
+`minimal` are unsupported. The current setup preserves the `api-only` network
+condition, disabled hosted web search/apps, and all frozen eval inputs.
+
+The previous Codex CLI 0.153.4 image failed a minimal `max` smoke test with
+missing model metadata and HTTP 400 (model not supported with a ChatGPT
+account). OpenAI added the model catalog entry in 0.159.1. The image is now
+pinned to **0.160.0**, npm's stable `latest` on the setup date; only the Codex
+agent image was rebuilt, leaving the base/grader unchanged. The new image
+passed the same authenticated `max` smoke test, returning `hello` and normal
+completed-turn token accounting. No full benchmark evaluation was launched.
+
+Validation passed: 103 pricing/adapter tests, Ruff, Pyright, and seven live
+Docker checks (restricted egress plus shell/web-search/app-connector probes
+for both GPT-5.6 Luna and GPT-6.1 Sol at `max`). Non-API content-CDN requests
+seen during startup were denied; the network allowlist was not expanded.
+
+- Local new agent image: `sha256:1a4d6b630b2b29b341b2c9cd3364fa7be3ac9168a0c17071d9437d4bb827178a`.
+- Prior local 0.153.4 image: `sha256:e7784a9f63c319fe9b86b591402f5991fdb15814a42db3d87d2050408a65c5c7`.
+- Unchanged local base/grader: `sha256:922c3bc7435e5546e737bf77b5bc8c07d15f86c9bad7f6fc68555cf8fbf04dc5`.
+
+These are local image identities, not the source-machine handoff images.
+New runs cross a CLI-version boundary relative to the earlier collection;
+preserve each result's actual CLI/image metadata and do not relabel old runs.
+
+Pricing in `harness/pricing.py` is standard short-context USD per million
+tokens: input **$2**, cached input **$0.10**, cache write **$2.50**, output
+**$10**. Existing results and other model prices were not rewritten. Costs
+remain estimates: aggregate telemetry cannot reliably apply the per-request
+surcharge above 272K input tokens (2x input/cache and 1.5x output), and does
+not establish Fast/regional processing premiums.
+
+Example first evaluation, when collection is authorized:
+
+```powershell
+$env:DOCKER_HOST = 'tcp://localhost:2375'
+uv run clispecbench run --task wordcount-py --agent codex-cli --model gpt-6.1-sol --effort max --runs 1
+```
+
+Sources: [model and pricing](https://developers.openai.com/api/docs/models/gpt-6.1-sol),
+[Codex release history](https://learn.chatgpt.com/docs/changelog).
+
 ## GPT-6 Astra on Native Ubuntu Linux
 
 The 2026-09-05 setup check found that Codex CLI 0.151.0 cannot run
 `gpt-6-astra`: OpenAI returns HTTP 400 requesting a newer CLI. The Codex image
-is now pinned to 0.153.4. An isolated `gpt-6-astra` / `max` authentication
+was then pinned to 0.153.4. An isolated `gpt-6-astra` / `max` authentication
 smoke test passed with that version and audited `chatgpt.com` connections.
 Runs record the changed CLI version in their metadata.
 

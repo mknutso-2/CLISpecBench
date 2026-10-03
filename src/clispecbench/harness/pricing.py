@@ -65,7 +65,7 @@ class ModelPricing:
 # ---------------------------------------------------------------------------
 # Pricing tables
 # Anthropic rows last verified 2026-04-19
-# OpenAI rows last verified 2026-08-29
+# OpenAI rows last verified 2026-08-29 unless dated individually below
 # Google rows last verified 2026-04-02
 # OpenRouter rows last verified 2026-05-08
 # ---------------------------------------------------------------------------
@@ -105,16 +105,18 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 
 # OpenAI GPT / Codex
 # https://developers.openai.com/api/docs/models/compare
-# Cache writes for GPT-6 Astra and GPT-5.6 are billed at 1.25x uncached input. Codex CLI does
-# not currently report cache-creation tokens, but retain the published rate
-# for telemetry that does expose them.
-# GPT-6 Astra and GPT-5.6 requests with prompts over 272K input tokens are billed at 2x input
-# and 1.5x output for the full request. Codex CLI reports session aggregates,
+# Cache writes for GPT-6.1 Sol, GPT-6 Astra, and GPT-5.6 cost 1.25x uncached input.
+# Older Codex telemetry omitted cache-creation tokens; newer streams expose
+# cache_write_input_tokens, which the adapter maps to cache creation.
+# These models' requests with prompts over 272K input tokens are billed at
+# 2x input/cache rates and 1.5x output for the full request. Codex CLI reports aggregates,
 # not the per-request prompt sizes needed to apply that surcharge reliably, so
 # these rows contain the standard rates.
-# OpenAI describes the current Sol rate as promotional through at least
+# OpenAI describes the current GPT-5.6 Sol rate as promotional through at least
 # 2026-11-21; verify it again before using the table after that date.
 OPENAI_PRICING: dict[str, ModelPricing] = {
+    # Verified 2026-10-02: https://developers.openai.com/api/docs/models/gpt-6.1-sol
+    "gpt-6.1-sol": ModelPricing(input=2.00, output=10.00, cached_input=0.10, cache_write=2.50),
     # Verified 2026-09-05: https://developers.openai.com/api/docs/models/gpt-6-astra
     "gpt-6-astra": ModelPricing(input=10.00, output=50.00, cached_input=1.00, cache_write=12.50),
     "gpt-5.6-sol": ModelPricing(input=4.00, output=20.00, cached_input=0.40, cache_write=5.00),  # noqa: E501

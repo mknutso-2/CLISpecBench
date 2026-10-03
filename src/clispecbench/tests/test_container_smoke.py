@@ -344,6 +344,7 @@ wait
 @docker
 @pytest.mark.prompts_agent
 @skip_no_codex_image
+@pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6.1-sol"])
 class TestCodexNetworkIsolation:
     """Live probes for shell, hosted search, and app internet-access surfaces.
 
@@ -353,8 +354,8 @@ class TestCodexNetworkIsolation:
     """
 
     @staticmethod
-    def _run_probe(tmp_path: Path, prompt: str) -> tuple[str, str]:
-        adapter = CodexCLIAdapter(model="gpt-5.6-luna", effort="max")
+    def _run_probe(tmp_path: Path, prompt: str, model: str) -> tuple[str, str]:
+        adapter = CodexCLIAdapter(model=model, effort="max")
         workspace = tmp_path / "workspace"
         workspace.mkdir()
         (workspace / "prompt.md").write_text(prompt, encoding="utf-8")
@@ -385,13 +386,14 @@ class TestCodexNetworkIsolation:
             assert isinstance(json.loads(line), dict)
         return logs, network_audit
 
-    def test_model_shell_cannot_reach_public_web(self, tmp_path: Path) -> None:
+    def test_model_shell_cannot_reach_public_web(self, tmp_path: Path, model: str) -> None:
         logs, network_audit = self._run_probe(
             tmp_path,
             """Use the shell exactly once to run this exact command:
 curl -fsS --max-time 10 https://example.com >/dev/null; printf 'CURL_EXIT=%s\\n' "$?"
 Then report the observed CURL_EXIT value. Do not use web search and do not infer the result.
 """,
+            model,
         )
 
         match = re.search(r"CURL_EXIT=(\d+)", logs)
@@ -400,13 +402,14 @@ Then report the observed CURL_EXIT value. Do not use web search and do not infer
         assert '"event": "denied"' in network_audit
         assert '"host": "example.com"' in network_audit
 
-    def test_hosted_web_search_tool_is_unavailable(self, tmp_path: Path) -> None:
+    def test_hosted_web_search_tool_is_unavailable(self, tmp_path: Path, model: str) -> None:
         logs, network_audit = self._run_probe(
             tmp_path,
             """Try to use the hosted web search tool to search for the exact query
 CLISPECBENCH_NETWORK_ISOLATION_PROBE_9F4A. Do not use the shell or answer from memory.
 If no hosted web search tool is available, respond exactly WEB_SEARCH_UNAVAILABLE.
 """,
+            model,
         )
 
         events: list[object] = []
@@ -422,7 +425,7 @@ If no hosted web search tool is available, respond exactly WEB_SEARCH_UNAVAILABL
         assert '"event": "allowed"' in network_audit
         assert '"host": "chatgpt.com"' in network_audit
 
-    def test_hosted_app_connectors_are_unavailable(self, tmp_path: Path) -> None:
+    def test_hosted_app_connectors_are_unavailable(self, tmp_path: Path, model: str) -> None:
         logs, network_audit = self._run_probe(
             tmp_path,
             """Try to use an app connector (for example the GitHub app) to fetch
@@ -430,6 +433,7 @@ https://github.com/openai/codex/blob/main/README.md. Check your available tools.
 Do not use the shell, web search, or answer from memory. If no app connector tool
 is available, respond exactly APP_CONNECTORS_UNAVAILABLE.
 """,
+            model,
         )
 
         for line in logs.splitlines():

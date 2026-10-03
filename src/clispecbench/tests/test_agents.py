@@ -348,8 +348,12 @@ class TestModelAndEffort:
         assert '--model "o3"' in bash_script
         assert 'model_reasoning_effort="high"' in bash_script
 
-    def test_codex_uses_external_sandbox_and_disables_hosted_network_tools(self) -> None:
-        adapter = CodexCLIAdapter(model="gpt-5.6-luna", effort="max")
+    @pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6.1-sol"])
+    @pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
+    def test_codex_uses_external_sandbox_and_disables_hosted_network_tools(
+        self, model: str, effort: str
+    ) -> None:
+        adapter = CodexCLIAdapter(model=model, effort=effort)
         cmd = adapter.invoke_command(
             PurePosixPath("/workspace/prompt.md"),
             PurePosixPath("/workspace"),
@@ -362,6 +366,10 @@ class TestModelAndEffort:
         assert 'web_search="disabled"' in bash_script
         assert "tools.web_search=false" in bash_script
         assert "--disable apps" in bash_script
+        assert f'--model "{model}"' in bash_script
+        assert f'model_reasoning_effort="{effort}"' in bash_script
+        assert adapter.network_policy == "api-only"
+        assert adapter.allowed_hosts == ["chatgpt.com"]
 
     def test_gemini_model_in_command(self) -> None:
         adapter = GeminiCLIAdapter(model="gemini-2.5-pro")
