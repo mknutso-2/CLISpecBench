@@ -8,7 +8,7 @@
     />
     <title>CLISpecBench Results Explorer</title>
     <link rel="icon" href="../assets/clispecbench-logo.png" />
-    <link rel="stylesheet" href="results-dashboard.css?v=20261003-explorer-layout" />
+    <link rel="stylesheet" href="results-dashboard.css?v=20261004-mobile-languages" />
   </head>
   <body class="results-explorer">
     <main class="page">
@@ -52,9 +52,10 @@
         <div id="controls-column" class="controls-column">
           <section class="card">
             <h2>View</h2>
-            <div id="view-mode" class="segmented-control segmented-control-3" role="group" aria-label="View mode">
+            <div id="view-mode" class="segmented-control segmented-control-4" role="group" aria-label="View mode">
               <button type="button" data-view-mode="graph" aria-pressed="true">Graph</button>
               <button type="button" data-view-mode="heatmap" aria-pressed="false">Heatmap</button>
+              <button type="button" data-view-mode="languages" aria-pressed="false">Languages</button>
               <button type="button" data-view-mode="table" aria-pressed="false">Table</button>
             </div>
             <div class="axis-row">
@@ -108,6 +109,38 @@
             <p class="hint">
               Rows are the selected models; columns are eval × language cells. Each cell uses the
               report type from the graph options (mean by default). Empty cells have no runs.
+            </p>
+          </section>
+          <section class="card languages-control hidden">
+            <h2>Languages</h2>
+            <div class="axis-row">
+              <label for="lang-metric">Metric</label>
+              <select id="lang-metric"></select>
+            </div>
+            <div class="axis-row">
+              <label for="lang-configs">Configurations</label>
+              <select id="lang-configs">
+                <option value="all">All configurations</option>
+                <option value="selected">Selected models only</option>
+              </select>
+            </div>
+            <div class="axis-row">
+              <label for="lang-cohorts">Cohorts</label>
+              <select id="lang-cohorts">
+                <option value="merge">Combine network conditions (api-…)</option>
+                <option value="separate">Keep separate</option>
+              </select>
+            </div>
+            <div class="axis-row">
+              <label for="lang-min-runs">Min runs per language</label>
+              <select id="lang-min-runs">
+                <option value="1">1 (any run)</option>
+                <option value="3">3 (full repetitions)</option>
+              </select>
+            </div>
+            <p class="hint">
+              A configuration counts for an eval only when it has the minimum runs in every
+              selected language, so each language is compared on the same models.
             </p>
           </section>
           <section class="card">
@@ -165,6 +198,8 @@
             <div class="panel-header">
               <h2 id="graph-title">XY Scatter Plot</h2>
             </div>
+            <details id="chart-settings" class="chart-settings" open>
+            <summary id="chart-settings-summary">Chart settings</summary>
             <div class="chart-toolbar">
               <label class="toolbar-field">
                 <span>X axis</span>
@@ -211,6 +246,7 @@
                 </div>
               </details>
             </div>
+            </details>
             <p id="validation-message" class="hint"></p>
             <div id="chart-empty" class="chart-empty hidden">No data to plot yet.</div>
             <div id="chart-wrap" class="chart-wrap">
@@ -218,7 +254,17 @@
               <div id="facet-grid" class="facet-grid hidden"></div>
               <div id="tooltip" class="tooltip" aria-hidden="true"></div>
             </div>
+            <div class="chart-footer">
+              <p class="chart-gesture-hint">Tap a point or row to keep its details open. Pinch or ctrl + scroll to zoom; drag to pan when zoomed.</p>
+              <div id="zoom-controls" class="zoom-controls hidden" role="group" aria-label="Zoom">
+                <button type="button" data-zoom="out" aria-label="Zoom out">−</button>
+                <button type="button" data-zoom="in" aria-label="Zoom in">+</button>
+                <button type="button" data-zoom="reset">Reset</button>
+              </div>
+            </div>
+            <div id="point-details" class="point-details hidden" aria-live="polite"></div>
             <div id="legend" class="legend"></div>
+            <div id="chart-model-list" class="model-list hidden"></div>
           </section>
 
           <section id="heatmap-panel" class="card heatmap-card view-panel hidden">
@@ -230,6 +276,19 @@
             <div class="table-wrap heatmap-wrap">
               <table id="heatmap-table" class="results-table heatmap-table"></table>
             </div>
+          </section>
+
+          <section id="languages-panel" class="card languages-card view-panel hidden">
+            <div class="table-header">
+              <h2 id="languages-title">Performance by language</h2>
+            </div>
+            <p id="languages-method" class="hint languages-method"></p>
+            <div id="languages-summary" class="language-cards"></div>
+            <div id="languages-empty" class="chart-empty hidden">No balanced data.</div>
+            <div class="table-wrap languages-wrap">
+              <table id="languages-table" class="results-table languages-table"></table>
+            </div>
+            <div id="languages-excluded"></div>
           </section>
 
           <section id="table-panel" class="card table-card view-panel hidden">
@@ -249,6 +308,6 @@
       </div>
     </main>
 
-    <script src="results-dashboard.js?v=20261003-explorer-layout"></script>
+    <script src="results-dashboard.js?v=20261004-mobile-languages"></script>
   </body>
 </html>

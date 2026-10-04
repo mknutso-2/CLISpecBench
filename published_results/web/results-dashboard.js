@@ -23,6 +23,10 @@ const COLOR_MODE_OPTIONS = [
 
 // Above this many visible points, 'auto' labels only the Pareto frontier.
 const AUTO_LABEL_POINT_LIMIT = 12;
+const AUTO_LABEL_POINT_LIMIT_COMPACT = 6;
+// Charts narrower than this (phones) use compact margins and type.
+const COMPACT_CHART_WIDTH = 560;
+let currentTickSegments = 5;
 
 const LABEL_MODE_OPTIONS = [
   { id: 'auto', label: 'Auto' },
@@ -255,6 +259,17 @@ const STATE = {
   heatmapMetric: 'percent',
   heatmapSort: 'name',
   facetByEval: true,
+  chartZoom: null,
+  zoomSignature: '',
+  pinnedPoint: null,
+  modelListSort: { key: 'y', dir: 'desc' },
+  langMetric: 'percent',
+  langConfigs: 'all',
+  langMinRuns: 1,
+  // Network-condition cohorts (api-…) are combined by default; prompt and
+  // grading cohorts always stay separate.
+  langMergeCohorts: true,
+  langExpanded: new Set(),
 };
 
 const dashboardLayout = document.getElementById('dashboard-layout');
@@ -307,6 +322,23 @@ const heatmapScaleEl = document.getElementById('heatmap-scale');
 const heatmapMetricSelect = document.getElementById('heatmap-metric');
 const heatmapSortSelect = document.getElementById('heatmap-sort');
 const heatmapControls = Array.from(document.querySelectorAll('.heatmap-control'));
+const pointDetailsEl = document.getElementById('point-details');
+const modelListEl = document.getElementById('chart-model-list');
+const zoomControlsEl = document.getElementById('zoom-controls');
+const chartSettingsEl = document.getElementById('chart-settings');
+const chartSettingsSummaryEl = document.getElementById('chart-settings-summary');
+const languagesPanel = document.getElementById('languages-panel');
+const languageControls = Array.from(document.querySelectorAll('.languages-control'));
+const languageMetricSelect = document.getElementById('lang-metric');
+const languageConfigsSelect = document.getElementById('lang-configs');
+const languageMinRunsSelect = document.getElementById('lang-min-runs');
+const languageCohortsSelect = document.getElementById('lang-cohorts');
+const languageTitleEl = document.getElementById('languages-title');
+const languageMethodEl = document.getElementById('languages-method');
+const languageSummaryEl = document.getElementById('languages-summary');
+const languageTableEl = document.getElementById('languages-table');
+const languageEmptyEl = document.getElementById('languages-empty');
+const languageExcludedEl = document.getElementById('languages-excluded');
 const chartEmpty = document.getElementById('chart-empty');
 const graphTitleEl = document.getElementById('graph-title');
 const graphPanel = document.getElementById('graph-panel');
@@ -696,6 +728,7 @@ function buildControls() {
   renderErrorBarSelector();
   renderTableControls();
   renderHeatmapControls();
+  renderLanguageControls();
   updateAxisSelectors();
   if (pairSearchInput) pairSearchInput.value = STATE.pairSearch;
   if (showCohortsInput) showCohortsInput.checked = STATE.showCohorts;
@@ -835,6 +868,31 @@ function attachEvents() {
   if (heatmapSortSelect) {
     heatmapSortSelect.addEventListener('change', () => {
       STATE.heatmapSort = heatmapSortSelect.value === 'value' ? 'value' : 'name';
+      render();
+    });
+  }
+
+  if (languageMetricSelect) {
+    languageMetricSelect.addEventListener('change', () => {
+      STATE.langMetric = normalizeLanguageMetric(languageMetricSelect.value);
+      render();
+    });
+  }
+  if (languageConfigsSelect) {
+    languageConfigsSelect.addEventListener('change', () => {
+      STATE.langConfigs = languageConfigsSelect.value === 'selected' ? 'selected' : 'all';
+      render();
+    });
+  }
+  if (languageCohortsSelect) {
+    languageCohortsSelect.addEventListener('change', () => {
+      STATE.langMergeCohorts = languageCohortsSelect.value === 'merge';
+      render();
+    });
+  }
+  if (languageMinRunsSelect) {
+    languageMinRunsSelect.addEventListener('change', () => {
+      STATE.langMinRuns = languageMinRunsSelect.value === '3' ? 3 : 1;
       render();
     });
   }
@@ -995,6 +1053,10 @@ function attachEvents() {
     STATE.tableSortDirection = tableSortDirectionSelect.value === 'asc' ? 'asc' : 'desc';
     render();
   });
+
+  attachChartGestures();
+  syncChartSettingsDisclosure();
+  window.matchMedia('(max-width: 760px)').addEventListener?.('change', syncChartSettingsDisclosure);
 
   let resizeTimer = null;
   const requestRerender = () => {
@@ -1422,7 +1484,7 @@ function getTableSortOptions(tableMode = STATE.tableMode) {
   );
 }
 
-const VIEW_MODES = ['graph', 'heatmap', 'table'];
+const VIEW_MODES = ['graph', 'heatmap', 'languages', 'table'];
 
 function normalizeViewMode(mode) {
   return VIEW_MODES.includes(mode) ? mode : 'graph';
@@ -1434,6 +1496,10 @@ function syncViewModeControls() {
     el.classList.toggle('hidden', STATE.viewMode !== 'heatmap');
   });
   if (heatmapPanel) heatmapPanel.classList.toggle('hidden', STATE.viewMode !== 'heatmap');
+  languageControls.forEach((el) => {
+    el.classList.toggle('hidden', STATE.viewMode !== 'languages');
+  });
+  if (languagesPanel) languagesPanel.classList.toggle('hidden', STATE.viewMode !== 'languages');
   viewModeEl.querySelectorAll('button[data-view-mode]').forEach((button) => {
     const pressed = button.dataset.viewMode === STATE.viewMode;
     button.setAttribute('aria-pressed', pressed ? 'true' : 'false');
@@ -1509,6 +1575,12 @@ function writeUrlState() {
     params.set('hm', STATE.heatmapMetric);
     if (STATE.heatmapSort !== 'name') params.set('hs', STATE.heatmapSort);
   }
+  if (STATE.viewMode === 'languages') {
+    params.set('lm', STATE.langMetric);
+    if (STATE.langConfigs !== 'all') params.set('lc', STATE.langConfigs);
+    if (STATE.langMinRuns !== 1) params.set('lr', String(STATE.langMinRuns));
+    if (!STATE.langMergeCohorts) params.set('lco', 'separate');
+  }
   if (!STATE.facetByEval) params.set('facet', 'off');
   if (STATE.showCohorts) params.set('cohorts', 'show');
   if (STATE.controlsCollapsed) params.set('controls', 'hidden');
@@ -1583,6 +1655,10 @@ function applyUrlState() {
   STATE.heatmapSort = params.get('hs') === 'value' ? 'value' : 'name';
   STATE.facetByEval = params.get('facet') !== 'off';
   STATE.showCohorts = params.get('cohorts') === 'show';
+  STATE.langMetric = normalizeLanguageMetric(params.get('lm'));
+  STATE.langConfigs = params.get('lc') === 'selected' ? 'selected' : 'all';
+  STATE.langMinRuns = params.get('lr') === '3' ? 3 : 1;
+  STATE.langMergeCohorts = params.get('lco') !== 'separate';
 }
 
 function render() {
@@ -1590,6 +1666,22 @@ function render() {
     renderPairList();
   }
   writeUrlState();
+  const zoomSignature = getZoomSignature();
+  if (zoomSignature !== STATE.zoomSignature) {
+    STATE.chartZoom = null;
+    STATE.zoomSignature = zoomSignature;
+  }
+  PINNED_POINT = null;
+  LAST_PLOT = null;
+  modelListEl?.classList.add('hidden');
+  renderViews();
+  if (!PINNED_POINT) STATE.pinnedPoint = null;
+  syncPinnedPoint();
+  syncZoomControls();
+  syncChartSettingsSummary();
+}
+
+function renderViews() {
 
   clearError();
   syncViewModeControls();
@@ -1616,6 +1708,10 @@ function render() {
   }
   if (STATE.viewMode === 'heatmap') {
     renderHeatmapView(rowsByPair);
+    return;
+  }
+  if (STATE.viewMode === 'languages') {
+    renderLanguagesView();
     return;
   }
 
@@ -1646,7 +1742,9 @@ function render() {
     validationEl.textContent = '';
     return;
   }
+  LAST_CHART_POINTS = visiblePoints;
   renderPlot(visiblePoints);
+  renderModelList(visiblePoints);
   chartEmpty.classList.add('hidden');
   validationEl.textContent = '';
 }
@@ -1749,7 +1847,7 @@ function validateSelection() {
   if (!getSelectedEvalVersionCount()) {
     return { ok: false, message: 'Choose at least one version for the selected evals.' };
   }
-  if (!STATE.selectedPairs.size) {
+  if (!STATE.selectedPairs.size && !(STATE.viewMode === 'languages' && STATE.langConfigs === 'all')) {
     return { ok: false, message: 'Choose at least one agent/model/effort pair.' };
   }
   if (!STATE.selectedLanguages.size) {
@@ -1791,7 +1889,7 @@ function getChartSize() {
   const rect = chartSvg.getBoundingClientRect();
   const width = rect.width > 0 ? Math.round(rect.width) : 980;
   const height = rect.height > 0 ? Math.round(rect.height) : 560;
-  return { width: Math.max(480, width), height: Math.max(320, height) };
+  return { width: Math.max(260, width), height: Math.max(240, height) };
 }
 
 function clearChart() {
@@ -2068,6 +2166,7 @@ function renderFacetedGraph(colorMap, rowsByPair) {
   getSelectedEvalNames().forEach((evalName) => {
     const facet = document.createElement('figure');
     facet.className = 'facet';
+    facet.dataset.eval = evalName;
     const title = document.createElement('figcaption');
     title.textContent = `${evalName} · ${formatVersionSummary(evalName).replace(/^Versions?:\s*/, 'v')}`;
     const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -2132,10 +2231,818 @@ function clearSeriesHighlight() {
   SERIES_HANDLES.forEach((handle) => handle.hide());
 }
 
-function resolveLabelMode(pointCount) {
+function resolveLabelMode(pointCount, compact = false) {
   const mode = normalizeLabelMode(STATE.labelMode);
   if (mode !== 'auto') return mode;
-  return pointCount <= AUTO_LABEL_POINT_LIMIT ? 'all' : 'pareto';
+  const limit = compact ? AUTO_LABEL_POINT_LIMIT_COMPACT : AUTO_LABEL_POINT_LIMIT;
+  return pointCount <= limit ? 'all' : 'pareto';
+}
+
+// ---- Point pinning, details card and the synced model list -----------------
+
+// Geometry and domains of the last single (non-facet) chart, used by zoom.
+let LAST_PLOT = null;
+// Points of the last single chart, re-used to redraw while zooming.
+let LAST_CHART_POINTS = [];
+// The point object behind STATE.pinnedPoint in the current render, if any.
+let PINNED_POINT = null;
+// Set after a drag so the click that ends it doesn't pin or unpin a point.
+let suppressNextChartClick = false;
+
+function getPointPinKey(point) {
+  return [
+    point.pairId,
+    point.facetEval || '',
+    point.language || '',
+    point.xCategoryValue || '',
+  ].join('|');
+}
+
+function togglePinnedPoint(point) {
+  const key = getPointPinKey(point);
+  if (STATE.pinnedPoint === key) {
+    clearPinnedPoint();
+    return;
+  }
+  STATE.pinnedPoint = key;
+  PINNED_POINT = point;
+  syncPinnedPoint();
+}
+
+function clearPinnedPoint() {
+  STATE.pinnedPoint = null;
+  PINNED_POINT = null;
+  syncPinnedPoint();
+}
+
+function syncPinnedPoint() {
+  const pinnedPairId = PINNED_POINT ? PINNED_POINT.pairId : null;
+  chartWrapEl?.querySelectorAll('.point-group').forEach((group) => {
+    group.classList.remove('point-pinned');
+  });
+  if (PINNED_POINT) {
+    const groups = Array.from(chartWrapEl?.querySelectorAll('.point-group') || []);
+    // Match on pair id within the facet the point belongs to.
+    const facetCaption = PINNED_POINT.facetEval;
+    groups
+      .filter((group) => group.dataset.pairId === pinnedPairId)
+      .filter((group) => !facetCaption || group.closest('.facet')?.dataset.eval === facetCaption)
+      .forEach((group) => group.classList.add('point-pinned'));
+  }
+  if (modelListEl) {
+    modelListEl.querySelectorAll('tr[data-pin-key]').forEach((row) => {
+      row.classList.toggle('model-list-pinned', row.dataset.pinKey === STATE.pinnedPoint);
+    });
+  }
+  renderPointDetails();
+}
+
+function renderPointDetails() {
+  if (!pointDetailsEl) return;
+  if (!PINNED_POINT || STATE.viewMode !== 'graph') {
+    pointDetailsEl.classList.add('hidden');
+    pointDetailsEl.replaceChildren();
+    return;
+  }
+  pointDetailsEl.classList.remove('hidden');
+  pointDetailsEl.innerHTML = buildTooltip(PINNED_POINT);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'point-details-close';
+  close.setAttribute('aria-label', 'Close details');
+  close.textContent = '×';
+  close.addEventListener('click', clearPinnedPoint);
+  pointDetailsEl.prepend(close);
+}
+
+// Dim everything except one configuration and show its hover labels.
+function highlightPair(pairId) {
+  if (!chartWrapEl) return;
+  chartWrapEl.classList.add('highlighting');
+  chartWrapEl.querySelectorAll('[data-color-key]').forEach((el) => {
+    el.classList.toggle('series-active', el.dataset.pairId === pairId);
+  });
+  SERIES_HANDLES.filter((handle) => handle.pairId === pairId).forEach((handle) => handle.show());
+}
+
+const MODEL_LIST_COLUMNS = [
+  { id: 'name', label: 'Model' },
+  { id: 'y', label: 'Y' },
+  { id: 'x', label: 'X' },
+  { id: 'runs', label: 'Runs' },
+];
+
+function renderModelList(points) {
+  if (!modelListEl) return;
+  modelListEl.replaceChildren();
+  if (!points.length || isCategoricalXAxis(STATE.xAxis)) {
+    modelListEl.classList.add('hidden');
+    return;
+  }
+  modelListEl.classList.remove('hidden');
+
+  const heading = document.createElement('div');
+  heading.className = 'model-list-heading';
+  heading.innerHTML = `<strong>Models in this chart</strong><span>${points.length} point${
+    points.length === 1 ? '' : 's'
+  } · tap a row or point to keep its details open</span>`;
+  modelListEl.appendChild(heading);
+
+  const sort = STATE.modelListSort;
+  const yMetric = METRICS[STATE.yAxis];
+  const xMetric = METRICS[STATE.xAxis];
+  const rows = points.map((point) => ({
+    point,
+    name: formatAgentModelDisplay(point.pairLabel || point.pairId) +
+      (point.language && STATE.colorMode === 'language' ? ` · ${point.language}` : ''),
+    y: point.yValue,
+    x: point.xValue,
+    runs: point.ySummary?.count || 0,
+  }));
+  const direction = sort.dir === 'asc' ? 1 : -1;
+  rows.sort((a, b) => {
+    const av = a[sort.key];
+    const bv = b[sort.key];
+    if (sort.key === 'name') return direction * String(av).localeCompare(String(bv), undefined, { numeric: true });
+    if (!Number.isFinite(av)) return 1;
+    if (!Number.isFinite(bv)) return -1;
+    return direction * (av - bv);
+  });
+
+  const table = document.createElement('table');
+  table.className = 'model-list-table';
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  MODEL_LIST_COLUMNS.forEach((column) => {
+    const th = document.createElement('th');
+    if (column.id !== 'name') th.className = 'numeric';
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'table-sort-button';
+    const label =
+      column.id === 'y' ? yMetric?.label || 'Y' : column.id === 'x' ? xMetric?.label || 'X' : column.label;
+    button.textContent = `${label}${sort.key === column.id ? (sort.dir === 'asc' ? ' ↑' : ' ↓') : ''}`;
+    th.setAttribute('aria-sort', sort.key === column.id ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none');
+    button.addEventListener('click', () => {
+      if (STATE.modelListSort.key === column.id) {
+        STATE.modelListSort = { key: column.id, dir: STATE.modelListSort.dir === 'asc' ? 'desc' : 'asc' };
+      } else {
+        STATE.modelListSort = { key: column.id, dir: column.id === 'name' ? 'asc' : 'desc' };
+      }
+      renderModelList(points);
+    });
+    th.appendChild(button);
+    headRow.appendChild(th);
+  });
+  thead.appendChild(headRow);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  rows.forEach(({ point, name, y, x, runs }) => {
+    const tr = document.createElement('tr');
+    const pinKey = getPointPinKey(point);
+    tr.dataset.pinKey = pinKey;
+    tr.tabIndex = 0;
+    if (STATE.pinnedPoint === pinKey) tr.classList.add('model-list-pinned');
+    const nameCell = document.createElement('td');
+    const dot = document.createElement('span');
+    dot.className = 'model-list-dot';
+    dot.style.background = point.lowRunCount ? '#ffffff' : point.color;
+    dot.style.borderColor = point.color;
+    nameCell.append(dot, document.createTextNode(name));
+    nameCell.title = point.pairLabel || point.pairId;
+    tr.appendChild(nameCell);
+    [
+      [y, STATE.yAxis],
+      [x, STATE.xAxis],
+    ].forEach(([value, axisId]) => {
+      const td = document.createElement('td');
+      td.className = 'numeric';
+      td.textContent = Number.isFinite(value) ? METRICS[axisId]?.formatMean(value) ?? String(value) : '—';
+      tr.appendChild(td);
+    });
+    const runsCell = document.createElement('td');
+    runsCell.className = 'numeric';
+    runsCell.textContent = String(runs);
+    if (point.lowRunCount) runsCell.title = 'Fewer than three runs in at least one eval/language cell';
+    tr.appendChild(runsCell);
+    tr.addEventListener('pointerenter', (event) => {
+      if (event.pointerType !== 'touch') highlightPair(point.pairId);
+    });
+    tr.addEventListener('pointerleave', clearSeriesHighlight);
+    tr.addEventListener('click', () => togglePinnedPoint(point));
+    tr.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        togglePinnedPoint(point);
+      }
+    });
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  const wrap = document.createElement('div');
+  wrap.className = 'model-list-scroll';
+  wrap.appendChild(table);
+  modelListEl.appendChild(wrap);
+}
+
+// ---- Zoom and pan (single chart only) -------------------------------------
+
+function toAxisSpace(value, isLog) {
+  return isLog ? Math.log10(value) : value;
+}
+
+function fromAxisSpace(value, isLog) {
+  return isLog ? Math.pow(10, value) : value;
+}
+
+function canZoomChart() {
+  return STATE.viewMode === 'graph' && !shouldFacetByEval() && !isCategoricalXAxis(STATE.xAxis) && LAST_PLOT;
+}
+
+// Returns a domain zoomed by `factor` (>1 zooms in) around `center` (data
+// units), kept inside the base domain; null means "back at the full view".
+function zoomDomain(current, base, factor, center, isLog) {
+  const c = toAxisSpace(center, isLog);
+  const min = toAxisSpace(current.min, isLog);
+  const max = toAxisSpace(current.max, isLog);
+  const baseMin = toAxisSpace(base.min, isLog);
+  const baseMax = toAxisSpace(base.max, isLog);
+  const baseSpan = baseMax - baseMin;
+  let nextMin = c - (c - min) / factor;
+  let nextMax = c + (max - c) / factor;
+  const span = nextMax - nextMin;
+  if (span >= baseSpan * 0.999) return null;
+  if (span < baseSpan / 50) return { min: current.min, max: current.max };
+  if (nextMin < baseMin) [nextMin, nextMax] = [baseMin, baseMin + span];
+  if (nextMax > baseMax) [nextMin, nextMax] = [baseMax - span, baseMax];
+  return { min: fromAxisSpace(nextMin, isLog), max: fromAxisSpace(nextMax, isLog) };
+}
+
+function panDomain(current, base, deltaFraction, isLog) {
+  const min = toAxisSpace(current.min, isLog);
+  const max = toAxisSpace(current.max, isLog);
+  const span = max - min;
+  const baseMin = toAxisSpace(base.min, isLog);
+  const baseMax = toAxisSpace(base.max, isLog);
+  let nextMin = min - deltaFraction * span;
+  nextMin = Math.min(Math.max(nextMin, baseMin), baseMax - span);
+  return { min: fromAxisSpace(nextMin, isLog), max: fromAxisSpace(nextMin + span, isLog) };
+}
+
+function svgPointFromClient(clientX, clientY) {
+  const rect = mainChartSvg.getBoundingClientRect();
+  const viewBox = mainChartSvg.viewBox.baseVal;
+  const scaleX = viewBox && rect.width ? viewBox.width / rect.width : 1;
+  const scaleY = viewBox && rect.height ? viewBox.height / rect.height : 1;
+  return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+}
+
+function dataPointFromSvg(svgX, svgY, plot = LAST_PLOT) {
+  const fx = (svgX - plot.plotLeft) / Math.max(1, plot.plotRight - plot.plotLeft);
+  const fy = (plot.plotBottom - svgY) / Math.max(1, plot.plotBottom - plot.plotTop);
+  const lerp = (domain, f, isLog) =>
+    fromAxisSpace(
+      toAxisSpace(domain.min, isLog) + f * (toAxisSpace(domain.max, isLog) - toAxisSpace(domain.min, isLog)),
+      isLog,
+    );
+  return { x: lerp(plot.xDomain, fx, plot.xIsLog), y: lerp(plot.yDomain, fy, plot.yIsLog) };
+}
+
+function setChartZoom(zoom) {
+  STATE.chartZoom = zoom && zoom.x && zoom.y ? zoom : null;
+  scheduleZoomRedraw();
+}
+
+function zoomAt(factor, svgX, svgY, plot = LAST_PLOT) {
+  if (!plot) return;
+  const center = dataPointFromSvg(svgX, svgY, plot);
+  const x = zoomDomain(plot.xDomain, plot.baseXDomain, factor, center.x, plot.xIsLog);
+  const y = zoomDomain(plot.yDomain, plot.baseYDomain, factor, center.y, plot.yIsLog);
+  setChartZoom(x || y ? { x: x || plot.baseXDomain, y: y || plot.baseYDomain } : null);
+}
+
+let zoomRedrawQueued = false;
+
+function scheduleZoomRedraw() {
+  if (zoomRedrawQueued) return;
+  zoomRedrawQueued = true;
+  const redraw = () => {
+    zoomRedrawQueued = false;
+    if (!canZoomChart()) return;
+    clearChart();
+    resetSeriesHandles();
+    PINNED_POINT = null;
+    renderPlot(LAST_CHART_POINTS);
+    if (!PINNED_POINT) STATE.pinnedPoint = null;
+    syncPinnedPoint();
+    syncZoomControls();
+  };
+  if (typeof window.requestAnimationFrame === 'function' && !document.hidden) {
+    window.requestAnimationFrame(redraw);
+  } else {
+    setTimeout(redraw, 0);
+  }
+}
+
+function syncZoomControls() {
+  if (!zoomControlsEl) return;
+  const available = canZoomChart();
+  zoomControlsEl.classList.toggle('hidden', !available);
+  const resetButton = zoomControlsEl.querySelector('[data-zoom="reset"]');
+  if (resetButton) resetButton.disabled = !STATE.chartZoom;
+  const outButton = zoomControlsEl.querySelector('[data-zoom="out"]');
+  if (outButton) outButton.disabled = !STATE.chartZoom;
+}
+
+// Selection that, when changed, invalidates the zoomed view.
+function getZoomSignature() {
+  return JSON.stringify([
+    STATE.xAxis,
+    STATE.yAxis,
+    STATE.xScaleMode,
+    STATE.yScaleMode,
+    STATE.reportType,
+    getSelectedEvalNames(),
+    getSelectedLanguageNames(),
+    Array.from(STATE.selectedPairs).sort(),
+    Array.from(STATE.hiddenColorKeys).sort(),
+  ]);
+}
+
+function attachChartGestures() {
+  if (!mainChartSvg) return;
+  const pointers = new Map();
+  let gesture = null;
+
+  const startGesture = () => {
+    if (!LAST_PLOT) return;
+    const list = Array.from(pointers.values());
+    const plot = { ...LAST_PLOT };
+    if (list.length >= 2) {
+      const [a, b] = list;
+      gesture = {
+        type: 'pinch',
+        plot,
+        distance: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 },
+      };
+    } else if (list.length === 1) {
+      gesture = { type: 'pan', plot, start: { ...list[0] }, moved: false };
+    }
+  };
+
+  mainChartSvg.addEventListener('pointerdown', (event) => {
+    if (!canZoomChart()) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    pointers.set(event.pointerId, svgPointFromClient(event.clientX, event.clientY));
+    startGesture();
+  });
+
+  mainChartSvg.addEventListener('pointermove', (event) => {
+    if (!pointers.has(event.pointerId) || !gesture) return;
+    pointers.set(event.pointerId, svgPointFromClient(event.clientX, event.clientY));
+    const list = Array.from(pointers.values());
+    const plot = gesture.plot;
+    if (gesture.type === 'pinch' && list.length >= 2) {
+      const [a, b] = list;
+      const factor = (Math.hypot(a.x - b.x, a.y - b.y) || 1) / gesture.distance;
+      const center = dataPointFromSvg(gesture.mid.x, gesture.mid.y, plot);
+      const x = zoomDomain(plot.xDomain, plot.baseXDomain, factor, center.x, plot.xIsLog);
+      const y = zoomDomain(plot.yDomain, plot.baseYDomain, factor, center.y, plot.yIsLog);
+      setChartZoom(x || y ? { x: x || plot.baseXDomain, y: y || plot.baseYDomain } : null);
+      suppressNextChartClick = true;
+      return;
+    }
+    if (gesture.type === 'pan' && STATE.chartZoom) {
+      const dx = list[0].x - gesture.start.x;
+      const dy = list[0].y - gesture.start.y;
+      if (!gesture.moved && Math.hypot(dx, dy) < 5) return;
+      if (!gesture.moved && event.pointerType === 'mouse') {
+        mainChartSvg.setPointerCapture?.(event.pointerId);
+      }
+      gesture.moved = true;
+      suppressNextChartClick = true;
+      const width = Math.max(1, plot.plotRight - plot.plotLeft);
+      const height = Math.max(1, plot.plotBottom - plot.plotTop);
+      setChartZoom({
+        x: panDomain(plot.xDomain, plot.baseXDomain, dx / width, plot.xIsLog),
+        y: panDomain(plot.yDomain, plot.baseYDomain, -dy / height, plot.yIsLog),
+      });
+    }
+  });
+
+  const endPointer = (event) => {
+    if (!pointers.has(event.pointerId)) return;
+    pointers.delete(event.pointerId);
+    if (pointers.size) {
+      startGesture();
+    } else {
+      gesture = null;
+      // Let the click that ends a drag through the handlers, then re-enable clicks.
+      setTimeout(() => {
+        suppressNextChartClick = false;
+      }, 0);
+    }
+  };
+  mainChartSvg.addEventListener('pointerup', endPointer);
+  mainChartSvg.addEventListener('pointercancel', endPointer);
+
+  // Trackpad pinch (and ctrl/cmd + wheel) zooms; plain wheel keeps scrolling the page.
+  mainChartSvg.addEventListener(
+    'wheel',
+    (event) => {
+      if (!canZoomChart() || !(event.ctrlKey || event.metaKey)) return;
+      event.preventDefault();
+      const point = svgPointFromClient(event.clientX, event.clientY);
+      zoomAt(Math.exp(-event.deltaY * 0.01), point.x, point.y);
+    },
+    { passive: false },
+  );
+
+  zoomControlsEl?.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-zoom]');
+    if (!button || !LAST_PLOT) return;
+    event.stopPropagation();
+    const centerX = (LAST_PLOT.plotLeft + LAST_PLOT.plotRight) / 2;
+    const centerY = (LAST_PLOT.plotTop + LAST_PLOT.plotBottom) / 2;
+    if (button.dataset.zoom === 'in') zoomAt(1.6, centerX, centerY);
+    else if (button.dataset.zoom === 'out') zoomAt(1 / 1.6, centerX, centerY);
+    else setChartZoom(null);
+  });
+
+  // Tapping empty chart space closes the pinned details.
+  chartWrapEl?.addEventListener('click', (event) => {
+    if (suppressNextChartClick) return;
+    if (event.target.closest('.point-group, .zoom-controls, .point-details')) return;
+    if (STATE.pinnedPoint) clearPinnedPoint();
+  });
+}
+
+// On phones the chart settings collapse behind a summary so the chart shows first.
+function syncChartSettingsDisclosure() {
+  if (!chartSettingsEl) return;
+  const narrow = window.matchMedia('(max-width: 760px)').matches;
+  chartSettingsEl.open = !narrow;
+  chartSettingsEl.classList.toggle('chart-settings-collapsible', narrow);
+}
+
+function syncChartSettingsSummary() {
+  if (!chartSettingsSummaryEl) return;
+  const xLabel = getAxisMeta(STATE.xAxis).label;
+  const yLabel = getAxisMeta(STATE.yAxis).label;
+  chartSettingsSummaryEl.textContent = `Chart settings · ${yLabel} vs ${xLabel}`;
+}
+
+// ---- Languages view: performance by language, balanced across configurations
+
+const LANGUAGE_METRIC_OPTIONS = [
+  { id: 'percent', label: 'Pass rate' },
+  { id: 'cost', label: 'Cost (USD)' },
+  { id: 'tokens_total', label: 'Tokens Total' },
+  { id: 'wall', label: 'Wall Clock Time' },
+];
+
+function normalizeLanguageMetric(metric) {
+  return LANGUAGE_METRIC_OPTIONS.some((option) => option.id === metric) ? metric : 'percent';
+}
+
+function renderLanguageControls() {
+  if (!languageMetricSelect) return;
+  languageMetricSelect.replaceChildren();
+  LANGUAGE_METRIC_OPTIONS.forEach((metric) => {
+    const option = document.createElement('option');
+    option.value = metric.id;
+    option.textContent = metric.label;
+    languageMetricSelect.appendChild(option);
+  });
+  STATE.langMetric = normalizeLanguageMetric(STATE.langMetric);
+  languageMetricSelect.value = STATE.langMetric;
+  if (languageConfigsSelect) languageConfigsSelect.value = STATE.langConfigs;
+  if (languageMinRunsSelect) languageMinRunsSelect.value = String(STATE.langMinRuns);
+  if (languageCohortsSelect) languageCohortsSelect.value = STATE.langMergeCohorts ? 'merge' : 'separate';
+}
+
+// Pass rate effects are differences in percentage points; the other metrics
+// are compared as ratios on a log scale (geometric means), lower is better.
+function computeLanguageComparison({ mergeCohorts = STATE.langMergeCohorts } = {}) {
+  const metricId = normalizeLanguageMetric(STATE.langMetric);
+  const metric = METRICS[metricId];
+  const isRatio = !metric.isPercent;
+  const languages = getSelectedLanguageNames();
+  const evals = getSelectedEvalNames();
+  const useSelectedOnly = STATE.langConfigs === 'selected';
+  const minRuns = STATE.langMinRuns;
+
+  const cells = new Map();
+  STATE.rows.forEach((row) => {
+    if (!STATE.selectedEvals.has(row.eval) || !STATE.selectedLanguages.has(row.language)) return;
+    if (!isRowVersionSelected(row)) return;
+    const rowPair = rowPairId(row);
+    if (useSelectedOnly && !STATE.selectedPairs.has(rowPair)) return;
+    // Optionally treat network-condition cohorts (labels starting "api-") as the
+    // same configuration. Prompt and grading cohorts stay separate because they
+    // change what is being measured.
+    const pairId =
+      mergeCohorts && /^api-/.test(row.comparison_cohort || '')
+        ? rowPair.replace(/ \[[^\]]+\]$/, '')
+        : rowPair;
+    const key = `${row.eval}\u0000${pairId}`;
+    if (!cells.has(key)) cells.set(key, { evalName: row.eval, pairId, byLanguage: new Map() });
+    const byLanguage = cells.get(key).byLanguage;
+    if (!byLanguage.has(row.language)) byLanguage.set(row.language, []);
+    byLanguage.get(row.language).push(row);
+  });
+
+  const toSpace = (value) => (isRatio ? Math.log(value) : value);
+  const fromSpace = (value) => (isRatio ? Math.exp(value) : value);
+  const average = (values) => values.reduce((sum, value) => sum + value, 0) / values.length;
+
+  const evalResults = evals.map((evalName) => {
+    const included = [];
+    const excluded = [];
+    cells.forEach((cell) => {
+      if (cell.evalName !== evalName) return;
+      const values = {};
+      const missing = [];
+      languages.forEach((language) => {
+        const rows = cell.byLanguage.get(language) || [];
+        const summary = summarizeMetric(rows, metricId);
+        const value = summary.hasData ? getReportValue(summary, STATE.reportType) : NaN;
+        const usable = rows.length >= minRuns && Number.isFinite(value) && (!isRatio || value > 0);
+        if (usable) values[language] = { value, runs: rows.length };
+        else missing.push(`${language} (${rows.length} run${rows.length === 1 ? '' : 's'})`);
+      });
+      if (missing.length) excluded.push({ pairId: cell.pairId, missing });
+      else included.push({ pairId: cell.pairId, values });
+    });
+
+    const perLanguage = {};
+    languages.forEach((language) => {
+      perLanguage[language] = { effects: [], raws: [], wins: 0 };
+    });
+    included.forEach((config) => {
+      const transformed = languages.map((language) => toSpace(config.values[language].value));
+      const center = average(transformed);
+      const best = metric.higherIsBetter ? Math.max(...transformed) : Math.min(...transformed);
+      const winners = languages.filter((_, index) => transformed[index] === best);
+      languages.forEach((language, index) => {
+        perLanguage[language].effects.push(transformed[index] - center);
+        perLanguage[language].raws.push(transformed[index]);
+        if (winners.includes(language)) perLanguage[language].wins += 1 / winners.length;
+      });
+    });
+
+    const summary = {};
+    languages.forEach((language) => {
+      const entry = perLanguage[language];
+      summary[language] = entry.effects.length
+        ? {
+            effect: isRatio ? Math.exp(average(entry.effects)) : average(entry.effects),
+            raw: fromSpace(average(entry.raws)),
+            min: isRatio ? Math.exp(Math.min(...entry.effects)) : Math.min(...entry.effects),
+            max: isRatio ? Math.exp(Math.max(...entry.effects)) : Math.max(...entry.effects),
+            wins: entry.wins,
+          }
+        : null;
+    });
+    return { evalName, included, excluded, summary };
+  });
+
+  const withData = evalResults.filter((result) => result.included.length);
+  const overall = {};
+  languages.forEach((language) => {
+    const effects = withData.map((result) => result.summary[language]).filter(Boolean);
+    overall[language] = effects.length
+      ? {
+          effect: isRatio
+            ? Math.exp(average(effects.map((entry) => Math.log(entry.effect))))
+            : average(effects.map((entry) => entry.effect)),
+          raw: isRatio
+            ? Math.exp(average(effects.map((entry) => Math.log(entry.raw))))
+            : average(effects.map((entry) => entry.raw)),
+          wins: effects.reduce((sum, entry) => sum + entry.wins, 0),
+        }
+      : null;
+  });
+
+  const configEvalCount = withData.reduce((sum, result) => sum + result.included.length, 0);
+  return { metricId, metric, isRatio, languages, evals, evalResults, withData, overall, minRuns, configEvalCount };
+}
+
+function formatLanguageEffect(effect, isRatio) {
+  if (!Number.isFinite(effect)) return '—';
+  if (isRatio) return `×${effect.toFixed(effect >= 10 ? 1 : 2)}`;
+  const rounded = Math.abs(effect) < 0.05 ? 0 : effect;
+  return `${rounded > 0 ? '+' : rounded < 0 ? '−' : '±'}${Math.abs(rounded).toFixed(1)} pts`;
+}
+
+// Diverging background: green when the language does better than the
+// configuration average, red when worse; saturates at ±5 pts or ×1.4.
+function languageEffectColor(effect, comparison) {
+  if (!Number.isFinite(effect)) return '';
+  const goodness = comparison.isRatio
+    ? -Math.log(effect) / Math.log(1.4)
+    : effect / 5;
+  const g = Math.max(-1, Math.min(1, goodness));
+  const hue = g >= 0 ? 140 : 6;
+  return `hsl(${hue}, 62%, ${Math.round(96 - Math.abs(g) * 16)}%)`;
+}
+
+function renderLanguagesView() {
+  clearChart();
+  languageTableEl.replaceChildren();
+  languageSummaryEl.replaceChildren();
+  languageExcludedEl.replaceChildren();
+  const comparison = computeLanguageComparison();
+  const { metric, isRatio, languages, evalResults, withData, overall, minRuns } = comparison;
+
+  languageTitleEl.textContent = `${metric.label} by language`;
+  languageMethodEl.textContent =
+    `Each configuration is compared with its own average across ${languages.join(', ')}, and those ` +
+    `differences are averaged (${isRatio ? 'geometric mean of ratios' : 'percentage points'}). ` +
+    `A configuration counts for an eval only if it has at least ${minRuns} run${minRuns === 1 ? '' : 's'} ` +
+    `in every selected language, so every language is measured on the same models. ` +
+    `${STATE.langConfigs === 'selected' ? 'Only the models selected in the picker are used.' : 'All configurations are used, regardless of the model picker.'}` +
+    `${STATE.langMergeCohorts ? ' Network-condition cohorts (api-…) of the same model and effort are combined; prompt and grading cohorts stay separate.' : ''}`;
+
+  if (languages.length < 2) {
+    languageEmptyEl.textContent = 'Select at least two languages to compare.';
+    languageEmptyEl.classList.remove('hidden');
+    return;
+  }
+  if (!withData.length) {
+    languageEmptyEl.textContent =
+      'No configuration has runs in every selected language for the selected evals. Try fewer languages or a lower minimum.';
+    languageEmptyEl.classList.remove('hidden');
+  } else {
+    languageEmptyEl.classList.add('hidden');
+  }
+
+  // Summary cards: one per language, averaged across evals with equal weight.
+  const configEvalCount = withData.reduce((sum, result) => sum + result.included.length, 0);
+  languages.forEach((language) => {
+    const entry = overall[language];
+    const card = document.createElement('div');
+    card.className = 'language-card';
+    if (entry) card.style.background = languageEffectColor(entry.effect, comparison);
+    const name = document.createElement('span');
+    name.className = 'language-card-name';
+    name.textContent = language;
+    const value = document.createElement('strong');
+    value.textContent = entry ? formatLanguageEffect(entry.effect, isRatio) : '—';
+    const detail = document.createElement('span');
+    detail.className = 'language-card-detail';
+    detail.textContent = entry
+      ? `avg ${metric.formatMean(entry.raw)} · best in ${entry.wins.toFixed(entry.wins % 1 ? 1 : 0)} of ${configEvalCount}`
+      : 'no balanced data';
+    card.append(name, value, detail);
+    languageSummaryEl.appendChild(card);
+  });
+  const scope = document.createElement('p');
+  scope.className = 'hint language-scope';
+  scope.textContent = withData.length
+    ? `Averaged over ${withData.length} eval${withData.length === 1 ? '' : 's'} with equal weight; ${configEvalCount} configuration × eval pairs. Effects are relative to each configuration's own average.`
+    : '';
+  if (!STATE.langMergeCohorts) {
+    const merged = computeLanguageComparison({ mergeCohorts: true });
+    const gain = merged.configEvalCount - configEvalCount;
+    if (gain > 0) {
+      scope.textContent += ` Combining network-condition cohorts (Languages panel) would add ${gain} configuration × eval pair${gain === 1 ? '' : 's'} whose languages are split across those cohorts.`;
+    }
+  }
+  languageSummaryEl.appendChild(scope);
+
+  // Eval × language table.
+  const thead = document.createElement('thead');
+  const head = document.createElement('tr');
+  ['Eval', 'Configs', ...languages, 'Excluded'].forEach((label, index) => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    if (index > 0) th.className = 'numeric';
+    head.appendChild(th);
+  });
+  thead.appendChild(head);
+  languageTableEl.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+  const addRow = (label, result, entries, isOverall = false) => {
+    const tr = document.createElement('tr');
+    if (isOverall) tr.className = 'language-overall-row';
+    const name = document.createElement('th');
+    name.scope = 'row';
+    if (!isOverall && result.included.length) {
+      const toggle = document.createElement('button');
+      toggle.type = 'button';
+      toggle.className = 'language-expand';
+      const expanded = STATE.langExpanded.has(result.evalName);
+      toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      toggle.textContent = `${expanded ? '▾' : '▸'} ${label}`;
+      toggle.addEventListener('click', () => {
+        if (STATE.langExpanded.has(result.evalName)) STATE.langExpanded.delete(result.evalName);
+        else STATE.langExpanded.add(result.evalName);
+        renderLanguagesView();
+      });
+      name.appendChild(toggle);
+    } else {
+      name.textContent = label;
+    }
+    tr.appendChild(name);
+    const configs = document.createElement('td');
+    configs.className = 'numeric';
+    configs.textContent = isOverall ? String(configEvalCount) : String(result.included.length);
+    tr.appendChild(configs);
+    languages.forEach((language) => {
+      const td = document.createElement('td');
+      td.className = 'numeric language-cell';
+      const entry = entries[language];
+      if (!entry) {
+        td.textContent = '—';
+        td.classList.add('language-cell-empty');
+      } else {
+        td.style.background = languageEffectColor(entry.effect, comparison);
+        const effect = document.createElement('span');
+        effect.className = 'language-effect';
+        effect.textContent = formatLanguageEffect(entry.effect, isRatio);
+        const raw = document.createElement('span');
+        raw.className = 'language-raw';
+        raw.textContent = `avg ${metric.formatMean(entry.raw)}`;
+        td.append(effect, raw);
+        if (!isOverall) {
+          td.title = `${result.evalName} · ${language}\nAverage across ${result.included.length} configurations: ${metric.formatMean(entry.raw)}\nEffect range across configurations: ${formatLanguageEffect(entry.min, isRatio)} to ${formatLanguageEffect(entry.max, isRatio)}\nBest language for ${entry.wins.toFixed(entry.wins % 1 ? 1 : 0)} of ${result.included.length} configurations`;
+        }
+      }
+      tr.appendChild(td);
+    });
+    const excludedCell = document.createElement('td');
+    excludedCell.className = 'numeric';
+    if (isOverall) {
+      excludedCell.textContent = String(evalResults.reduce((sum, r) => sum + r.excluded.length, 0));
+    } else {
+      excludedCell.textContent = String(result.excluded.length);
+      if (result.excluded.length) {
+        excludedCell.title = result.excluded
+          .map((entry) => `${entry.pairId}: missing ${entry.missing.join(', ')}`)
+          .join('\n');
+      }
+    }
+    tr.appendChild(excludedCell);
+    tbody.appendChild(tr);
+
+    if (!isOverall && STATE.langExpanded.has(result.evalName)) {
+      result.included
+        .slice()
+        .sort((a, b) => formatAgentModelDisplay(a.pairId).localeCompare(formatAgentModelDisplay(b.pairId)))
+        .forEach((config) => {
+          const detail = document.createElement('tr');
+          detail.className = 'language-detail-row';
+          const label = document.createElement('th');
+          label.scope = 'row';
+          label.textContent = formatAgentModelDisplay(config.pairId);
+          label.title = config.pairId;
+          detail.appendChild(label);
+          detail.appendChild(document.createElement('td'));
+          const values = languages.map((language) => config.values[language].value);
+          const best = metric.higherIsBetter ? Math.max(...values) : Math.min(...values);
+          languages.forEach((language) => {
+            const td = document.createElement('td');
+            td.className = 'numeric';
+            const { value, runs } = config.values[language];
+            td.textContent = metric.formatMean(value);
+            td.title = `${runs} run${runs === 1 ? '' : 's'}`;
+            if (value === best) td.classList.add('language-best');
+            detail.appendChild(td);
+          });
+          detail.appendChild(document.createElement('td'));
+          tbody.appendChild(detail);
+        });
+    }
+  };
+
+  if (withData.length > 1) addRow('All evals (equal weight)', null, overall, true);
+  evalResults.forEach((result) => addRow(result.evalName, result, result.summary));
+  languageTableEl.appendChild(tbody);
+
+  // Excluded configurations, listed so coverage gaps are visible.
+  const excludedTotal = evalResults.reduce((sum, result) => sum + result.excluded.length, 0);
+  if (excludedTotal) {
+    const details = document.createElement('details');
+    details.className = 'language-excluded-details';
+    const summary = document.createElement('summary');
+    summary.textContent = `${excludedTotal} configuration × eval pair${excludedTotal === 1 ? '' : 's'} excluded for missing languages`;
+    details.appendChild(summary);
+    const list = document.createElement('ul');
+    evalResults.forEach((result) => {
+      result.excluded.forEach((entry) => {
+        const item = document.createElement('li');
+        item.textContent = `${result.evalName} · ${formatAgentModelDisplay(entry.pairId)}: missing ${entry.missing.join(', ')}`;
+        item.title = entry.pairId;
+        list.appendChild(item);
+      });
+    });
+    details.appendChild(list);
+    languageExcludedEl.appendChild(details);
+  }
 }
 
 function buildSummaryTableRows() {
@@ -2933,6 +3840,7 @@ function summarizePoint(pairId, color, rows, language, options) {
 
   return {
     pairId,
+    facetEval: CURRENT_FACET_EVAL,
     minRunsPerCell,
     lowRunCount: minRunsPerCell < LOW_RUN_COUNT_THRESHOLD,
     pairLabel: rowPairId(pairId),
@@ -3352,7 +4260,14 @@ function renderPlot(points) {
 
   const { width, height } = getChartSize();
   chartSvg.setAttribute('viewBox', `0 0 ${width} ${height}`);
-  const margin = { top: 42, right: 34, bottom: 72, left: 88 };
+  // The viewBox matches the rendered pixel size, so phones get readable text
+  // instead of a shrunken desktop chart; narrow charts use tighter margins.
+  const compact = width < COMPACT_CHART_WIDTH;
+  chartSvg.classList.toggle('compact-chart', compact);
+  currentTickSegments = compact ? 4 : AXIS_TICK_SEGMENTS;
+  const margin = compact
+    ? { top: 20, right: 14, bottom: 52, left: 58 }
+    : { top: 42, right: 34, bottom: 72, left: 88 };
   const innerWidth = width - margin.left - margin.right;
   const innerHeight = height - margin.top - margin.bottom;
   const plotLeft = margin.left + AXIS_PADDING.left;
@@ -3366,11 +4281,30 @@ function renderPlot(points) {
 
   const xIsLog = isLogAxis('x');
   const yIsLog = isLogAxis('y');
-  const xDomain = buildPlotDomain(points, STATE.xAxis, 'x', xIsLog);
-  const yDomain = buildPlotDomain(points, STATE.yAxis, 'y', yIsLog);
+  const baseXDomain = buildPlotDomain(points, STATE.xAxis, 'x', xIsLog);
+  const baseYDomain = buildPlotDomain(points, STATE.yAxis, 'y', yIsLog);
+  const isMainChart = chartSvg === mainChartSvg;
+  const zoom = isMainChart && !isCategoricalXAxis(STATE.xAxis) ? STATE.chartZoom : null;
+  const xDomain = zoom ? zoom.x : baseXDomain;
+  const yDomain = zoom ? zoom.y : baseYDomain;
   const xCategories = getSelectedAxisCategories(STATE.xAxis);
-  const xScale = createXScale(xDomain, xCategories, plotLeft, plotRight, xIsLog);
-  const yScale = createYScale(yDomain, plotTop, plotHeight, yIsLog);
+  // When zoomed, points outside the view are clipped rather than pinned to the edge.
+  const xScale = createXScale(xDomain, xCategories, plotLeft, plotRight, xIsLog, !zoom);
+  const yScale = createYScale(yDomain, plotTop, plotHeight, yIsLog, !zoom);
+  if (isMainChart) {
+    LAST_PLOT = {
+      plotLeft,
+      plotRight,
+      plotTop,
+      plotBottom,
+      baseXDomain,
+      baseYDomain,
+      xDomain,
+      yDomain,
+      xIsLog,
+      yIsLog,
+    };
+  }
 
   const panel = createSvgElement('rect');
   panel.setAttribute('class', 'chart-bg-panel');
@@ -3420,7 +4354,7 @@ function renderPlot(points) {
   labelsLayer.setAttribute('class', 'labels-layer');
   const markerLabels = [];
   const errorBarLines = [];
-  const labelMode = resolveLabelMode(points.length);
+  const labelMode = resolveLabelMode(points.length, compact);
 
   const frontierSet = computeParetoFrontier(points, STATE.xAxis, STATE.yAxis);
   drawFrontierConnector(points, frontierSet, xScale, yScale, dataLayer);
@@ -3435,10 +4369,15 @@ function renderPlot(points) {
       ? xScale(xCategories.indexOf(point.xCategoryValue))
       : xScale(point.xValue);
     const y = yScale(point.yValue);
+    const inView = x >= plotLeft - 2 && x <= plotRight + 2 && y >= plotTop - 2 && y <= plotBottom + 2;
+    const pinKey = getPointPinKey(point);
 
     const g = createSvgElement('g');
     g.setAttribute('transform', `translate(${x}, ${y})`);
     g.dataset.colorKey = point.colorModeKey || '';
+    g.dataset.pairId = point.pairId;
+    g.classList.add('point-group');
+    if (STATE.pinnedPoint === pinKey) g.classList.add('point-pinned');
 
     const canShowErrorBars =
       !isCategoricalXAxis(STATE.xAxis) && STATE.errorBarMode !== 'none';
@@ -3492,11 +4431,16 @@ function renderPlot(points) {
     pointCircle.setAttribute('tabindex', '0');
     pointCircle.setAttribute('role', 'img');
     pointCircle.setAttribute('aria-label', buildMarkerAriaLabel(point));
+    // Invisible larger circle so points are easy to tap on touch screens.
+    const hitTarget = createSvgElement('circle');
+    hitTarget.setAttribute('r', String(Math.max(14, baseRadius + 6)));
+    hitTarget.setAttribute('class', 'point-hit');
+    g.appendChild(hitTarget);
     g.appendChild(pointCircle);
 
     const label = createSvgElement('text');
     const shouldPlaceLabel =
-      labelMode === 'all' || (labelMode === 'pareto' && isOnFrontier);
+      inView && (labelMode === 'all' || (labelMode === 'pareto' && isOnFrontier));
     const fullLabel = point.pairLabel || rowPairId(point.pairId);
     const labelText = formatAgentModelDisplay(fullLabel);
     const labelClass = shouldPlaceLabel
@@ -3513,6 +4457,8 @@ function renderPlot(points) {
     leader.setAttribute('visibility', 'hidden');
     label.dataset.colorKey = point.colorModeKey || '';
     leader.dataset.colorKey = point.colorModeKey || '';
+    label.dataset.pairId = point.pairId;
+    leader.dataset.pairId = point.pairId;
     labelsLayer.appendChild(label);
     labelsLayer.appendChild(leader);
 
@@ -3553,21 +4499,39 @@ function renderPlot(points) {
 
     const onPointerEnter = (event) => {
       showMarker();
-      onPointer(event);
+      // Touch has no hover; a tap pins the details card instead.
+      if (event.pointerType !== 'touch') onPointer(event);
     };
     const onFocus = () => {
       showMarker();
       const [cx, cy] = markerCenter();
       showTooltipAt(cx, cy);
     };
-    pointCircle.addEventListener('pointerenter', onPointerEnter);
-    pointCircle.addEventListener('pointermove', onPointer);
-    pointCircle.addEventListener('pointerleave', hideMarker);
+    g.addEventListener('pointerenter', onPointerEnter);
+    g.addEventListener('pointermove', (event) => {
+      if (event.pointerType !== 'touch') onPointer(event);
+    });
+    g.addEventListener('pointerleave', hideMarker);
+    g.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (suppressNextChartClick) return;
+      togglePinnedPoint(point);
+    });
     pointCircle.addEventListener('focus', onFocus);
-    pointCircle.addEventListener('focusin', onFocus);
     pointCircle.addEventListener('blur', hideMarker);
-    pointCircle.addEventListener('focusout', hideMarker);
-    SERIES_HANDLES.push({ key: point.colorModeKey, show: showMarker, hide: hideMarker });
+    pointCircle.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        togglePinnedPoint(point);
+      }
+    });
+    SERIES_HANDLES.push({
+      key: point.colorModeKey,
+      pairId: point.pairId,
+      show: showMarker,
+      hide: hideMarker,
+    });
+    if (STATE.pinnedPoint === pinKey) PINNED_POINT = point;
 
     dataLayer.appendChild(g);
 
@@ -3597,18 +4561,19 @@ function renderPlot(points) {
 
   const xLabel = createSvgElement('text');
   xLabel.setAttribute('x', String(width / 2));
-  xLabel.setAttribute('y', String(height - 20));
+  xLabel.setAttribute('y', String(height - (compact ? 10 : 20)));
   xLabel.setAttribute('text-anchor', 'middle');
   xLabel.setAttribute('class', 'axis-title');
   xLabel.textContent = getAxisMeta(STATE.xAxis).label;
   chartSvg.appendChild(xLabel);
 
   const yLabel = createSvgElement('text');
-  yLabel.setAttribute('x', '20');
+  const yTitleX = compact ? 13 : 20;
+  yLabel.setAttribute('x', String(yTitleX));
   yLabel.setAttribute('y', String(height / 2));
   yLabel.setAttribute('text-anchor', 'middle');
   yLabel.setAttribute('class', 'axis-title');
-  yLabel.setAttribute('transform', `rotate(-90 20 ${height / 2})`);
+  yLabel.setAttribute('transform', `rotate(-90 ${yTitleX} ${height / 2})`);
   yLabel.textContent = getAxisMeta(STATE.yAxis).label;
   chartSvg.appendChild(yLabel);
 
@@ -4217,7 +5182,7 @@ function buildPlotDomain(points, axisId, which, isLog) {
   if (isLog) return buildLogDomain(points, axisId, which);
   const domain = buildDomain(points, axisId, which);
   if (isCategoricalXAxis(axisId)) return domain;
-  const ticks = buildNiceAxisTicks(domain.min, domain.max, AXIS_TICK_SEGMENTS, axisId);
+  const ticks = buildNiceAxisTicks(domain.min, domain.max, currentTickSegments, axisId);
   if (ticks.length < 2) return domain;
   return { min: ticks[0], max: ticks[ticks.length - 1] };
 }
@@ -4242,7 +5207,7 @@ function buildLogDomain(points, axisId, which) {
 function getAxisTicks(domain, axisId, isLog) {
   const ticks = isLog
     ? buildLogAxisTicks(domain.min, domain.max)
-    : buildNiceAxisTicks(domain.min, domain.max, AXIS_TICK_SEGMENTS, axisId);
+    : buildNiceAxisTicks(domain.min, domain.max, currentTickSegments, axisId);
   const tolerance = Math.abs(domain.max - domain.min) * 1e-9;
   const inDomain = ticks.filter(
     (value) => value >= domain.min - tolerance && value <= domain.max + tolerance,
@@ -4426,8 +5391,12 @@ function getCategoryAxisSpan(plotLeft, plotRight, categories) {
 }
 
 // Maps a value to [0, 1] within the domain on a linear or log10 scale.
-function domainFraction(domain, value, isLog) {
-  const safe = Math.min(domain.max, Math.max(domain.min, value));
+function domainFraction(domain, value, isLog, clamp = true) {
+  const safe = clamp
+    ? Math.min(domain.max, Math.max(domain.min, value))
+    : isLog
+      ? Math.max(value, Number.MIN_VALUE)
+      : value;
   if (isLog) {
     const low = Math.log10(domain.min);
     const high = Math.log10(domain.max);
@@ -4436,7 +5405,7 @@ function domainFraction(domain, value, isLog) {
   return (safe - domain.min) / (domain.max - domain.min);
 }
 
-function createXScale(domain, categories, plotLeft, plotRight, isLog = false) {
+function createXScale(domain, categories, plotLeft, plotRight, isLog = false, clamp = true) {
   const left = plotLeft;
   const right = plotRight;
 
@@ -4461,17 +5430,17 @@ function createXScale(domain, categories, plotLeft, plotRight, isLog = false) {
   return (value) => {
     if (!Number.isFinite(value)) return (left + right) / 2;
     if (domain.max === domain.min) return (left + right) / 2;
-    return left + domainFraction(domain, value, isLog) * (right - left);
+    return left + domainFraction(domain, value, isLog, clamp) * (right - left);
   };
 }
 
-function createYScale(domain, plotTop, plotHeight, isLog = false) {
+function createYScale(domain, plotTop, plotHeight, isLog = false, clamp = true) {
   const top = plotTop;
   const height = plotHeight;
   return (value) => {
     if (!Number.isFinite(value)) return top + height / 2;
     if (domain.max === domain.min) return top + height / 2;
-    return top + (1 - domainFraction(domain, value, isLog)) * height;
+    return top + (1 - domainFraction(domain, value, isLog, clamp)) * height;
   };
 }
 
