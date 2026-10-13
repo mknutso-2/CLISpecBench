@@ -1,0 +1,3500 @@
+{
+  "schema_version": "2.3",
+  "metadata": {
+    "run_uid": "d96f2107-d36d-4dcc-b2ad-90a89203b4af",
+    "task": "rs274-js",
+    "agent": "claude-code",
+    "agent_version": "2.1.289",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-10-11T09:55:39.798652+00:00",
+    "test_suite_version": "5cffe5d",
+    "eval_version": "3.2.2",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:899480aee4bcdca79c13837a5fbd60fd1aec55b8b7ce01071d2a910dd9015022",
+    "wall_clock_seconds": 1622.3590000000004,
+    "exit_reason": "completed",
+    "network_policy": "web-enabled",
+    "model": "claude-sonnet-5-5",
+    "served_model": "claude-sonnet-5-5",
+    "effort": "high",
+    "notes": null,
+    "benchmark_cost_preference": "estimated",
+    "prompt_content_sha": "a768fd2f621d88780b7dd7fb66615ba5247558c4a9d4ede6a043e9e0850ec16d",
+    "test_suite_sha": "3d096665fab1578444b0c0a0f7bfa1975e389a9398a34e265820305b300eca11",
+    "agent_last_message": "I've built the simulator in `/workspace/output/`, entry point `output/main.js`, with Node's standard library only. It reproduces your three trace examples exactly: the G1 move, the G81 cycle and the G43 H99 error.\n\nI also ran the three sample programs from the spec (hello world, expression test, canned cycles), and they complete without errors. About 20,000 random programs produced no internal crashes, and replaying a trace's entries onto its `initial_state` gave the same final state as `--output` on every successful case. I did not test cutter radius compensation against the spec's Table 12/13 programs. Those use NIST-style I/J offsets, which `Clarifications.md` overrides, so I tested compensation on my own small programs instead.\n\nEverything in your argument list is implemented, including all three trace stepping modes. Exit codes are 0 success, 1 program or input error, 2 internal error. Both JSON files are written on success and on error.\n\nThe spec leaves several points open. These are the choices that could change your results:\n\n- **Tool length offset:** `G43`/`G49` don't move the tool. `machine_position` is the work position plus the coordinate-system offset, any G92 offset, and the tool length offset on Z. A `G53` move sets that position directly.\n- **`parameters` payload:** it lists only parameters that were loaded, assigned, or written by the program. That includes 5220 on G54\u2013G59.3 and M2/M30, 5211\u20135216 on G92, and 5061\u20135066 on a G38.2 trip.\n- **Compensation D number:** `cutter_radius_compensation_number` is the D word as programmed, so `G41` without D reports `null`, although the radius still comes from the tool in the spindle.\n- **Canned-cycle dwell:** a dwell inside a G82/G86/G88/G89 cycle emits one trace entry with no `motion_kind`. The spec doesn't say whether it should emit one at all.\n- **Spindle in G84/G86/G87:** the spindle stop and restart show up as state changes in the trace. G88 keeps its direction, per the clarification.\n- **Zero feed rate:**",
+    "exit_class": "completed",
+    "agent_exit_reason": "completed",
+    "grading_status": "completed",
+    "grading_error": null
+  },
+  "token_usage": {
+    "input_tokens": 13276731,
+    "output_tokens": 215907,
+    "cache_read_input_tokens": 12897715,
+    "cache_creation_input_tokens": 378918,
+    "tool_calls": 50,
+    "tool_calls_definition": null,
+    "reasoning_output_tokens": null,
+    "reported_cost_usd": 6.254481,
+    "estimated_cost_usd": 6.254481,
+    "cost_estimate_blocked_reason": null,
+    "source": null,
+    "is_partial": false,
+    "total_tokens": 13492638
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.023908949999167817,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-1-g1]",
+      "outcome": "passed",
+      "duration_seconds": 0.11557587800416513,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-2-g18_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.02680832000260125,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-2-g18_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.025144715000351425,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-2-g19]",
+      "outcome": "passed",
+      "duration_seconds": 0.023579120002978016,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-3-g91_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.026432556001964258,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-3-g91_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.02553175500361249,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-3-g90]",
+      "outcome": "passed",
+      "duration_seconds": 0.027623841004242422,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-5-g93_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.025786537997191772,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-5-g93_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0255637599984766,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-5-g94]",
+      "outcome": "passed",
+      "duration_seconds": 0.02670056500210194,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-6-g21_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.029336877996684052,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-6-g21_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.02367602199956309,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-6-g21_2]",
+      "outcome": "passed",
+      "duration_seconds": 0.023193424003693508,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-7-g41]",
+      "outcome": "passed",
+      "duration_seconds": 0.025799023002036847,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-8-g43]",
+      "outcome": "passed",
+      "duration_seconds": 0.026679847003833856,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-10-g99]",
+      "outcome": "passed",
+      "duration_seconds": 0.02489632799552055,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-12-g55]",
+      "outcome": "passed",
+      "duration_seconds": 0.026099189999513328,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-12-g54_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.02159815700360923,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-12-g54_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.027024206003261497,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-13-g64_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.021083149997139117,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-13-g61]",
+      "outcome": "passed",
+      "duration_seconds": 0.022607145001529716,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-13-g61.1_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.02519426699655014,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-13-g61.1_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.029599090998090105,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-13-g64_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.02785302399934153,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_application_tracks_active_gcode_groups[group-13-g64_2]",
+      "outcome": "passed",
+      "duration_seconds": 0.024450287000945536,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g54]",
+      "outcome": "passed",
+      "duration_seconds": 0.02669209099985892,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g55]",
+      "outcome": "passed",
+      "duration_seconds": 0.03276764999827719,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g56]",
+      "outcome": "passed",
+      "duration_seconds": 0.029642065997904865,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g57]",
+      "outcome": "passed",
+      "duration_seconds": 0.02316711599996779,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g58]",
+      "outcome": "passed",
+      "duration_seconds": 0.02395981000154279,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g59]",
+      "outcome": "passed",
+      "duration_seconds": 0.0229778190041543,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g59.1]",
+      "outcome": "passed",
+      "duration_seconds": 0.02573756399578997,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g59.2]",
+      "outcome": "passed",
+      "duration_seconds": 0.024734848004300147,
+      "message": null
+    },
+    {
+      "node_id": "test_active_gcode_groups.py::test_coordinate_system_selection_codes_activate_the_expected_system[g59.3]",
+      "outcome": "passed",
+      "duration_seconds": 0.026394372998765903,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-4-m0]",
+      "outcome": "passed",
+      "duration_seconds": 0.023673767998843687,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-4-m1_0]",
+      "outcome": "passed",
+      "duration_seconds": 0.023713421996944817,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-4-m60]",
+      "outcome": "passed",
+      "duration_seconds": 0.02217030999599956,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-4-m1_1]",
+      "outcome": "passed",
+      "duration_seconds": 0.025245062995963963,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-6-m6]",
+      "outcome": "passed",
+      "duration_seconds": 0.02317573300024378,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-7-m5]",
+      "outcome": "passed",
+      "duration_seconds": 0.027370503998099593,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-8-m7]",
+      "outcome": "passed",
+      "duration_seconds": 0.02412265300154104,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-8-m8]",
+      "outcome": "passed",
+      "duration_seconds": 0.023056587000610307,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-8-m9]",
+      "outcome": "passed",
+      "duration_seconds": 0.025023037000210024,
+      "message": null
+    },
+    {
+      "node_id": "test_active_mcode_groups.py::test_application_tracks_active_mcode_groups[group-9-m49]",
+      "outcome": "passed",
+      "duration_seconds": 0.024762066001130734,
+      "message": null
+    },
+    {
+      "node_id": "test_arc_errors.py::test_application_rejects_invalid_arc_commands[g17-radius-format-omits-selected-plane-axes]",
+      "outcome": "passed",
+      "duration_seconds": 0.031495162002102006,
+      "message": null
+    },
+    {
+      "node_id": "test_arc_errors.py::test_application_rejects_invalid_arc_commands[g18-center-format-omits-center-offsets]",
+      "outcome": "passed",
+      "duration_seconds": 0.025766050999664003,
+      "message": null
+    },
+    {
+      "node_id": "test_arc_errors.py::test_application_rejects_invalid_arc_commands[g19-radius-format-reuses-current-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.027984322998236166,
+      "message": null
+    },
+    {
+      "node_id": "test_arc_errors.py::test_application_rejects_invalid_arc_commands[g2-inverse-time-motion-missing-f]",
+      "outcome": "passed",
+      "duration_seconds": 0.02677508800115902,
+      "message": null
+    },
+    {
+      "node_id": "test_arc_errors.py::test_application_rejects_invalid_arc_commands[implicit-g3-inverse-time-motion-missing-f]",
+      "outcome": "passed",
+      "duration_seconds": 0.025145588002487784,
+      "message": null
+    },
+    {
+      "node_id": "test_block_prefixes.py::test_application_supports_optional_block_prefixes[line-number-prefixes]",
+      "outcome": "passed",
+      "duration_seconds": 0.025853428993286798,
+      "message": null
+    },
+    {
+      "node_id": "test_block_prefixes.py::test_application_supports_optional_block_prefixes[block-delete-prefixes]",
+      "outcome": "passed",
+      "duration_seconds": 0.02431100999820046,
+      "message": null
+    },
+    {
+      "node_id": "test_block_prefixes.py::test_application_supports_optional_block_prefixes[block-delete-and-line-number-prefixes]",
+      "outcome": "passed",
+      "duration_seconds": 0.02379818099871045,
+      "message": null
+    },
+    {
+      "node_id": "test_block_prefixes.py::test_application_skips_slash_prefixed_blocks_when_block_delete_is_on",
+      "outcome": "passed",
+      "duration_seconds": 0.022433808000641875,
+      "message": null
+    },
+    {
+      "node_id": "test_block_prefixes.py::test_application_rejects_block_delete_character_mid_line",
+      "outcome": "passed",
+      "duration_seconds": 0.026776497994433157,
+      "message": null
+    },
+    {
+      "node_id": "test_block_prefixes.py::test_application_rejects_out_of_range_line_numbers",
+      "outcome": "passed",
+      "duration_seconds": 0.025016849001985975,
+      "message": null
+    },
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.023908949999167817,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g80-rejects-axis-words-without-a-group-0-axis-gcode]",
+      "outcome": "passed",
+      "duration_seconds": 0.026432958999066614,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g81-requires-r-on-first-use]",
+      "outcome": "passed",
+      "duration_seconds": 0.029270822000398766,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g81-requires-the-depth-word-on-first-use]",
+      "outcome": "passed",
+      "duration_seconds": 0.02812817499943776,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g81-rejects-r-below-depth]",
+      "outcome": "passed",
+      "duration_seconds": 0.027412602001277264,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g18-canned-cycle-requires-y-on-first-use]",
+      "outcome": "passed",
+      "duration_seconds": 0.02717018899784307,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g18-canned-cycle-rejects-r-below-y]",
+      "outcome": "passed",
+      "duration_seconds": 0.027209394000237808,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g19-canned-cycle-requires-x-on-first-use]",
+      "outcome": "passed",
+      "duration_seconds": 0.02698755799428909,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g19-canned-cycle-rejects-r-below-x]",
+      "outcome": "passed",
+      "duration_seconds": 0.026276317999872845,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[explicit-g81-rejects-a-following-line-without-x-y-or-z]",
+      "outcome": "passed",
+      "duration_seconds": 0.02745412900185329,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycles-reject-a-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.026805310997588094,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycles-reject-b-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.027424746003816836,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycles-reject-c-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.025757659001101274,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycles-reject-inverse-time-mode]",
+      "outcome": "passed",
+      "duration_seconds": 0.024542161998397205,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycles-reject-cutter-radius-compensation]",
+      "outcome": "passed",
+      "duration_seconds": 0.026417380999191664,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycle-l-must-be-positive]",
+      "outcome": "passed",
+      "duration_seconds": 0.02530596900396631,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[canned-cycle-l-must-be-an-integer]",
+      "outcome": "passed",
+      "duration_seconds": 0.025039912001375342,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g82-requires-nonnegative-p]",
+      "outcome": "passed",
+      "duration_seconds": 0.024889055999665288,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g83-requires-positive-q]",
+      "outcome": "passed",
+      "duration_seconds": 0.026215409001451917,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g84-requires-clockwise-spindle-not-off]",
+      "outcome": "passed",
+      "duration_seconds": 0.02777859600246302,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g84-requires-clockwise-spindle-not-counterclockwise]",
+      "outcome": "passed",
+      "duration_seconds": 0.025257133002014598,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g86-requires-the-spindle-to-be-turning]",
+      "outcome": "passed",
+      "duration_seconds": 0.029020573005254846,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g86-requires-p]",
+      "outcome": "failed",
+      "duration_seconds": 0.02805475399873103,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\\nG54\\nG17\\nG94\\nG90\\nG98\\nS100 M3\\nG0 X1.0 Y2.0 Z3.0\\nG86 X4.0 Y5.0 Z1.5 R2.8 F7.0\\n'\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_rejects_inval26')\n\n    @pytest.mark.parametrize(\n        \"input_gcode\",\n        [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],\n        ids=[case_id for case_id, _ in CANNNED_CYCLE_ERROR_CASES],\n    )\n    def test_application_rejects_invalid_canned_cycle_usage(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        tmp_path: Path,\n    ) -> None:\n>       run_rs274_invalid_input(\n            submission_command,\n            input_gcode=input_gcode,\n            tmp_path=tmp_path,\n        )\n\n/tmp/tests/test_canned_cycle_errors.py:309: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\n\n    def run_rs274_invalid_input(\n        submission_command: Sequence[str],\n        *,\n        block_delete: bool = False,\n        carousel_slots: int | None = None,\n        input_gcode: str,\n        parameter_input_content: str | None = None,\n        pass_parameter_output: bool = False,\n        probe_box: ProbeBox | None = None,\n        probe_tool: int | None = None,\n        tool_table_content: str | None = None,\n        tmp_path: Path,\n    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:\n        completed, payload = run_rs274(\n            submission_command,\n            block_delete=block_delete,\n            carousel_slots=carousel_slots,\n            input_gcode=input_gcode,\n            parameter_input_content=parameter_input_content,\n            pass_parameter_output=pass_parameter_output,\n            probe_box=probe_box,\n            probe_tool=probe_tool,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 1, completed.stderr\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError\n\n/tmp/tests/rs274_support.py:249: AssertionError"
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g86-requires-nonnegative-p]",
+      "outcome": "passed",
+      "duration_seconds": 0.027345159996912116,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g88-requires-p]",
+      "outcome": "failed",
+      "duration_seconds": 0.022169433999806643,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\\nG54\\nG17\\nG94\\nG90\\nG98\\nS100 M3\\nG0 X1.0 Y2.0 Z3.0\\nG88 X4.0 Y5.0 Z1.5 R2.8 F7.0\\n'\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_rejects_inval28')\n\n    @pytest.mark.parametrize(\n        \"input_gcode\",\n        [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],\n        ids=[case_id for case_id, _ in CANNNED_CYCLE_ERROR_CASES],\n    )\n    def test_application_rejects_invalid_canned_cycle_usage(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        tmp_path: Path,\n    ) -> None:\n>       run_rs274_invalid_input(\n            submission_command,\n            input_gcode=input_gcode,\n            tmp_path=tmp_path,\n        )\n\n/tmp/tests/test_canned_cycle_errors.py:309: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\n\n    def run_rs274_invalid_input(\n        submission_command: Sequence[str],\n        *,\n        block_delete: bool = False,\n        carousel_slots: int | None = None,\n        input_gcode: str,\n        parameter_input_content: str | None = None,\n        pass_parameter_output: bool = False,\n        probe_box: ProbeBox | None = None,\n        probe_tool: int | None = None,\n        tool_table_content: str | None = None,\n        tmp_path: Path,\n    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:\n        completed, payload = run_rs274(\n            submission_command,\n            block_delete=block_delete,\n            carousel_slots=carousel_slots,\n            input_gcode=input_gcode,\n            parameter_input_content=parameter_input_content,\n            pass_parameter_output=pass_parameter_output,\n            probe_box=probe_box,\n            probe_tool=probe_tool,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 1, completed.stderr\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError\n\n/tmp/tests/rs274_support.py:249: AssertionError"
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g88-requires-nonnegative-p]",
+      "outcome": "passed",
+      "duration_seconds": 0.02448697100044228,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g89-requires-p]",
+      "outcome": "failed",
+      "duration_seconds": 0.025389711998286657,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G10 L2 P1 X0.0 Y0.0 Z0.0 A0.0 B0.0 C0.0\\nG54\\nG17\\nG94\\nG90\\nG98\\nG0 X1.0 Y2.0 Z3.0\\nG89 X4.0 Y5.0 Z1.5 R2.8 F7.0\\n'\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_rejects_inval30')\n\n    @pytest.mark.parametrize(\n        \"input_gcode\",\n        [input_gcode for _, input_gcode in CANNNED_CYCLE_ERROR_CASES],\n        ids=[case_id for case_id, _ in CANNNED_CYCLE_ERROR_CASES],\n    )\n    def test_application_rejects_invalid_canned_cycle_usage(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        tmp_path: Path,\n    ) -> None:\n>       run_rs274_invalid_input(\n            submission_command,\n            input_gcode=input_gcode,\n            tmp_path=tmp_path,\n        )\n\n/tmp/tests/test_canned_cycle_errors.py:309: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\n\n    def run_rs274_invalid_input(\n        submission_command: Sequence[str],\n        *,\n        block_delete: bool = False,\n        carousel_slots: int | None = None,\n        input_gcode: str,\n        parameter_input_content: str | None = None,\n        pass_parameter_output: bool = False,\n        probe_box: ProbeBox | None = None,\n        probe_tool: int | None = None,\n        tool_table_content: str | None = None,\n        tmp_path: Path,\n    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:\n        completed, payload = run_rs274(\n            submission_command,\n            block_delete=block_delete,\n            carousel_slots=carousel_slots,\n            input_gcode=input_gcode,\n            parameter_input_content=parameter_input_content,\n            pass_parameter_output=pass_parameter_output,\n            probe_box=probe_box,\n            probe_tool=probe_tool,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 1, completed.stderr\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError\n\n/tmp/tests/rs274_support.py:249: AssertionError"
+    },
+    {
+      "node_id": "test_canned_cycle_errors.py::test_application_rejects_invalid_canned_cycle_usage[g89-requires-nonnegative-p]",
+      "outcome": "passed",
+      "duration_seconds": 0.02651386399884359,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-g98-returns-to-old-z]",
+      "outcome": "passed",
+      "duration_seconds": 0.02174799000567873,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-g99-returns-to-r]",
+      "outcome": "passed",
+      "duration_seconds": 0.0253757009995752,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-allows-stationary-rotary-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.02603381000153604,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g83-allows-stationary-rotary-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.028701827002805658,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-reuses-sticky-r-and-z-on-following-line]",
+      "outcome": "passed",
+      "duration_seconds": 0.025000584002555115,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-g91-l-repeats-advance-xy]",
+      "outcome": "passed",
+      "duration_seconds": 0.0240090719962609,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g82-accepts-p-and-retracts-like-g81]",
+      "outcome": "passed",
+      "duration_seconds": 0.02504858099928242,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g83-accepts-q-and-retracts-to-r-under-g99]",
+      "outcome": "passed",
+      "duration_seconds": 0.0243990550043236,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-g18-uses-y-as-the-depth-axis]",
+      "outcome": "passed",
+      "duration_seconds": 0.02472788299928652,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g81-g19-uses-x-as-the-depth-axis]",
+      "outcome": "passed",
+      "duration_seconds": 0.024169834996428108,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g84-restores-clockwise-spindle-after-the-cycle]",
+      "outcome": "passed",
+      "duration_seconds": 0.023668351001106203,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g85-retracts-like-g81-at-line-end]",
+      "outcome": "passed",
+      "duration_seconds": 0.02506130500114523,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g86-restores-the-prior-spindle-direction]",
+      "outcome": "passed",
+      "duration_seconds": 0.025087783000344643,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g87-restores-clockwise-spindle-and-returns-to-r-under-g99]",
+      "outcome": "passed",
+      "duration_seconds": 0.024456011004076572,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g87-restores-counterclockwise-spindle-and-returns-to-old-z-under-g98]",
+      "outcome": "passed",
+      "duration_seconds": 0.028001017999486066,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g89-retracts-like-g82-at-line-end]",
+      "outcome": "passed",
+      "duration_seconds": 0.02701158600029885,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_application_tracks_initial_canned_cycle_behavior[g80-cancels-canned-cycle-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.024902686996938428,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines[g84-reuses-sticky-r-and-z-on-following-line]",
+      "outcome": "passed",
+      "duration_seconds": 0.025154894996376242,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_supported_canned_cycles_reuse_sticky_r_and_depth_words_on_later_lines[g85-reuses-sticky-r-and-z-on-following-line]",
+      "outcome": "passed",
+      "duration_seconds": 0.02331525499903364,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_g88_restores_the_prior_spindle_direction_after_the_cycle[g88-restores-clockwise-spindle-in-the-observable-success-path]",
+      "outcome": "passed",
+      "duration_seconds": 0.024347993999981554,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_g88_restores_the_prior_spindle_direction_after_the_cycle[g88-restores-counterclockwise-spindle-in-the-observable-success-path]",
+      "outcome": "passed",
+      "duration_seconds": 0.023796039997250773,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_g80_allows_axis_words_when_supported_group_zero_gcodes_use_them",
+      "outcome": "passed",
+      "duration_seconds": 0.022236910997889936,
+      "message": null
+    },
+    {
+      "node_id": "test_canned_cycles.py::test_return_mode_change_affects_later_repeats_of_an_active_canned_cycle",
+      "outcome": "passed",
+      "duration_seconds": 0.02480729200397036,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_errors.py::test_application_rejects_invalid_parenthetical_comments[nested-parenthetical-comment]",
+      "outcome": "passed",
+      "duration_seconds": 0.026033786998596042,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_errors.py::test_application_rejects_invalid_parenthetical_comments[unterminated-parenthetical-comment]",
+      "outcome": "passed",
+      "duration_seconds": 0.02487625099820434,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_errors.py::test_application_rejects_invalid_parenthetical_comments[unmatched-right-parenthesis]",
+      "outcome": "passed",
+      "duration_seconds": 0.028027087999362266,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_parsing.py::test_application_accepts_well_formed_parenthetical_comments[empty-parenthetical-comments]",
+      "outcome": "passed",
+      "duration_seconds": 0.024364314002013998,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_parsing.py::test_application_accepts_well_formed_parenthetical_comments[end-of-line-parenthetical-comments]",
+      "outcome": "passed",
+      "duration_seconds": 0.023497289999795612,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_parsing.py::test_application_accepts_well_formed_parenthetical_comments[leading-comments-before-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.02481560299929697,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_parsing.py::test_application_accepts_well_formed_parenthetical_comments[multiple-comments-on-one-line]",
+      "outcome": "passed",
+      "duration_seconds": 0.023821524999220856,
+      "message": null
+    },
+    {
+      "node_id": "test_comment_parsing.py::test_application_accepts_well_formed_parenthetical_comments[message-comment-syntax-is-accepted]",
+      "outcome": "passed",
+      "duration_seconds": 0.021567793999565765,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-first-straight-move-left]",
+      "outcome": "passed",
+      "duration_seconds": 0.02269021500251256,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-first-straight-move-right]",
+      "outcome": "passed",
+      "duration_seconds": 0.02530856400335324,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-omitted-d-uses-tool-in-spindle]",
+      "outcome": "passed",
+      "duration_seconds": 0.02593078900099499,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-first-rapid-move-left]",
+      "outcome": "passed",
+      "duration_seconds": 0.025149650002276758,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-d0-keeps-spindle-center-on-programmed-path]",
+      "outcome": "passed",
+      "duration_seconds": 0.023135210998589173,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-d0-keeps-spindle-center-on-programmed-path]",
+      "outcome": "passed",
+      "duration_seconds": 0.023415436000504997,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-colinear-follow-on-move-left]",
+      "outcome": "passed",
+      "duration_seconds": 0.0246257870021509,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-colinear-follow-on-move-right]",
+      "outcome": "passed",
+      "duration_seconds": 0.024272550996101927,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g40-on-motion-line-disables-comp-before-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.0235815839987481,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g40-then-g42-restarts-with-a-first-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.02124260799610056,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g40-follow-on-move-starts-from-current-spindle-center]",
+      "outcome": "passed",
+      "duration_seconds": 0.021971146001305897,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-convex-corner-follow-on-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.023491318002925254,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g41-convex-90-degree-corner-follow-on-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.022760842002753634,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-convex-corner-follow-on-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.0266862430034962,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[g42-convex-90-degree-corner-follow-on-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.02330932399854646,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_spindle_center[tool-change-while-comp-on-keeps-original-radius]",
+      "outcome": "passed",
+      "duration_seconds": 0.025432262002141215,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g42-ccw-first-center-format-arc-move-tangent-outside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.02303543800007901,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g41-ccw-first-center-format-arc-move-tangent-inside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.022694382998452056,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g42-ccw-first-radius-format-arc-move-tangent-outside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.02396127799511305,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g41-ccw-first-radius-format-arc-move-tangent-inside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.022860669003421208,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g42-subsequent-arc-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.024973728995973943,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g42-subsequent-radius-format-arc-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.023915033998491708,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g41-cw-first-center-format-arc-move-tangent-outside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.023900374999357155,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g42-cw-first-center-format-arc-move-tangent-inside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.027802411997981835,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g41-cw-first-radius-format-arc-move-tangent-outside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.02459280699986266,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g42-cw-first-radius-format-arc-move-tangent-inside-arc]",
+      "outcome": "passed",
+      "duration_seconds": 0.02429824199862196,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g41-subsequent-arc-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.024480861000483856,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation.py::test_application_tracks_cutter_radius_compensated_arc_endpoints[g41-subsequent-radius-format-arc-move]",
+      "outcome": "passed",
+      "duration_seconds": 0.02461025200318545,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-rejects-d-larger-than-carousel-slots]",
+      "outcome": "passed",
+      "duration_seconds": 0.026151854002819164,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-rejects-negative-d-number]",
+      "outcome": "passed",
+      "duration_seconds": 0.029902317000960466,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[d-word-without-g41-or-g42]",
+      "outcome": "passed",
+      "duration_seconds": 0.02429647700409987,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g42-when-compensation-is-already-on]",
+      "outcome": "passed",
+      "duration_seconds": 0.025387846002558945,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-when-g41-is-already-on]",
+      "outcome": "passed",
+      "duration_seconds": 0.02341351900031441,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g42-when-g42-is-already-on]",
+      "outcome": "passed",
+      "duration_seconds": 0.02583634100301424,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[first-move-gouging-error]",
+      "outcome": "passed",
+      "duration_seconds": 0.030644582002423704,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[concave-corner-after-entry-with-g42]",
+      "outcome": "passed",
+      "duration_seconds": 0.026298283999494743,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[concave-corner-after-entry-with-g41]",
+      "outcome": "passed",
+      "duration_seconds": 0.026366130001406418,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[concave-90-degree-corner-with-g41]",
+      "outcome": "passed",
+      "duration_seconds": 0.03349196200360893,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[concave-90-degree-corner-with-g42]",
+      "outcome": "passed",
+      "duration_seconds": 0.02432503800082486,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-tool-radius-not-less-than-arc-radius-with-comp]",
+      "outcome": "passed",
+      "duration_seconds": 0.028569309994054493,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g42-tool-radius-not-less-than-arc-radius-with-comp]",
+      "outcome": "passed",
+      "duration_seconds": 0.029165706000640057,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-tool-radius-greater-than-arc-radius-with-comp]",
+      "outcome": "passed",
+      "duration_seconds": 0.028783090005163103,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g42-tool-radius-greater-than-arc-radius-with-comp]",
+      "outcome": "passed",
+      "duration_seconds": 0.025069435003388207,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-degenerate-radius-format-crc-arc-zero-length]",
+      "outcome": "passed",
+      "duration_seconds": 0.026500239000597503,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g42-degenerate-radius-format-crc-arc-zero-length]",
+      "outcome": "passed",
+      "duration_seconds": 0.02763525700356695,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g41-impossible-radius-format-crc-arc-chord-too-short]",
+      "outcome": "passed",
+      "duration_seconds": 0.02613434599697939,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_invalid_cutter_radius_compensation_usage[g42-impossible-radius-format-crc-arc-chord-too-short]",
+      "outcome": "passed",
+      "duration_seconds": 0.02696377000393113,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_turning_on_cutter_compensation_out_of_xy_plane[enable-g41-while-g18-is-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.026568598997982917,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_turning_on_cutter_compensation_out_of_xy_plane[enable-g42-while-g18-is-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02439560899802018,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_turning_on_cutter_compensation_out_of_xy_plane[enable-g41-while-g19-is-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.03771306800263119,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_turning_on_cutter_compensation_out_of_xy_plane[enable-g42-while-g19-is-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.028076263999537332,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_accepts_non_xy_plane_selection_when_cutter_radius_compensation_is_off[g18-is-valid-when-cutter-radius-compensation-is-not-being-enabled]",
+      "outcome": "passed",
+      "duration_seconds": 0.02728887099874555,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_accepts_non_xy_plane_selection_when_cutter_radius_compensation_is_off[g19-is-valid-when-cutter-radius-compensation-is-not-being-enabled]",
+      "outcome": "passed",
+      "duration_seconds": 0.026109890000952873,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g18-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02885142199738766,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g19-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.027837575999001274,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g20-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.027266744004009524,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g21-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02700868099782383,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g53-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02502999499483849,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g28-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.025659312999778194,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g30-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.026042908004455967,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g38-2-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.027263495001534466,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g81-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.033293973003310384,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g92-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02786176500012516,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g54-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02668911900036619,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g55-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.0247976619975816,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g56-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.029077470000629546,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g57-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.023868594002124155,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g58-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.02417411200076458,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g59-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.025497452999843517,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g59-1-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.024291175002872478,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g59-2-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.025935216996003874,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_gcodes_that_are_invalid_while_cutter_compensation_is_active[g59-3-with-cutter-radius-compensation-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.025406914999621222,
+      "message": null
+    },
+    {
+      "node_id": "test_cutter_radius_compensation_errors.py::test_application_rejects_axis_offset_changes_while_cutter_compensation_is_active",
+      "outcome": "passed",
+      "duration_seconds": 0.024942227002611617,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_errors.py::test_application_rejects_negative_spindle_speed",
+      "outcome": "passed",
+      "duration_seconds": 0.025772864995815326,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_state.py::test_application_tracks_feed_and_spindle_state[tracks-latest-feed-rate]",
+      "outcome": "passed",
+      "duration_seconds": 0.028343589998257812,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_state.py::test_application_tracks_feed_and_spindle_state[tracks-spindle-speed-and-direction]",
+      "outcome": "passed",
+      "duration_seconds": 0.024653522999869892,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_state.py::test_application_tracks_feed_and_spindle_state[tracks-spindle-stop-with-latest-speed]",
+      "outcome": "passed",
+      "duration_seconds": 0.022715239003446186,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_state.py::test_application_tracks_feed_and_spindle_state[tracks-feed-and-spindle-state-from-parameter-values]",
+      "outcome": "passed",
+      "duration_seconds": 0.02295931200205814,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_state.py::test_application_tracks_feed_and_spindle_state[tracks-feed-and-spindle-state-from-expressions]",
+      "outcome": "passed",
+      "duration_seconds": 0.026143336999666644,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_and_spindle_state.py::test_application_tracks_feed_and_spindle_state[tracks-feed-and-spindle-state-from-repeated-parameters-and-unary-ops]",
+      "outcome": "passed",
+      "duration_seconds": 0.02380241900027613,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_rate_mode.py::test_application_tracks_feed_rate_mode_behavior[g93-accepts-g1-motion-with-f]",
+      "outcome": "passed",
+      "duration_seconds": 0.021226856999419397,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_rate_mode.py::test_application_tracks_feed_rate_mode_behavior[g93-does-not-affect-g0-motions]",
+      "outcome": "passed",
+      "duration_seconds": 0.023430388999258867,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_rate_mode.py::test_application_tracks_feed_rate_mode_behavior[g93-accepts-g2-motion-with-f]",
+      "outcome": "passed",
+      "duration_seconds": 0.02263982500153361,
+      "message": null
+    },
+    {
+      "node_id": "test_feed_rate_mode.py::test_application_tracks_feed_rate_mode_behavior[g94-restores-units-per-minute-mode-after-g93]",
+      "outcome": "passed",
+      "duration_seconds": 0.021686099004000425,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[g10-sets-coordinate-system-1-offsets]",
+      "outcome": "passed",
+      "duration_seconds": 0.021026688002166338,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[g10-sets-coordinate-system-1-rotary-offsets]",
+      "outcome": "passed",
+      "duration_seconds": 0.02441112499582232,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[g10-accepts-parameter-values-in-g-l-p-and-axis-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.022802465995482635,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[g10-accepts-expressions-in-g-l-p-and-axis-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.025537697998515796,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[offsets-serialize-in-the-currently-active-length-units]",
+      "outcome": "passed",
+      "duration_seconds": 0.027706973003660096,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[g10-updates-only-programmed-axes]",
+      "outcome": "passed",
+      "duration_seconds": 0.023672350002016174,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_application_tracks_g10_coordinate_system_offsets[g10-keeps-coordinate-systems-independent]",
+      "outcome": "passed",
+      "duration_seconds": 0.024419527002464747,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_coordinate_system_offset_parameters_remain_raw_across_unit_changes[g20-to-g21]",
+      "outcome": "failed",
+      "duration_seconds": 0.045633393001480727,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G20\\nG10 L2 P1 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\\nG21\\n'\nexpected_offset = {'a': 10.0, 'b': 20.0, 'c': 30.0, 'x': 25.4, ...}\nexpected_parameter_values = {'a': 10.0, 'b': 20.0, 'c': 30.0, 'x': 1.0, ...}\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_coordinate_system_offset_0')\n\n    @pytest.mark.parametrize(\n        (\"input_gcode\", \"expected_offset\", \"expected_parameter_values\"),\n        [\n            (\n                # In preliminary testing, no model passes this test.\n                # Section 4.3.3.3: \"All other stored values which involve length\n                # units are not changed, including: coordinate system offsets.\"\n                # Section 4.3.3.2: \"The effective location of the program origin\n                # should not change when units change.\"\n                # The serialization expectation (25.4/50.8/76.2 after G21) comes\n                # from the harness contract (\"Serialize coordinate_system_offsets\n                # in the currently active RS274 length units\"), not RS274 alone.\n                # This is intentional: the benchmark tests the full prompt, not\n                # just the spec in isolation.\n                \"G20\\nG10 L2 P1 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\\nG21\\n\",\n                {\"x\": 25.4, \"y\": 50.8, \"z\": 76.2, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n                {\"x\": 1.0, \"y\": 2.0, \"z\": 3.0, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n            ),\n            (\n                \"G21\\nG10 L2 P1 X25.4 Y50.8 Z76.2 A10.0 B20.0 C30.0\\nG20\\n\",\n                {\"x\": 1.0, \"y\": 2.0, \"z\": 3.0, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n                {\"x\": 25.4, \"y\": 50.8, \"z\": 76.2, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n            ),\n        ],\n        ids=[\"g20-to-g21\", \"g21-to-g20\"],\n    )\n    def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        expected_offset: dict[str, float],\n        expected_parameter_values: dict[str, float],\n        tmp_path: Path,\n    ) -> None:\n        # RS274 section 4.3.3.2 says the effective program-origin location should\n        # not change when units change, while section 4.3.3.3 says stored\n        # coordinate-system offsets are not numerically changed by a unit switch.\n        # The harness contract in technical-requirements-prompt.md serializes\n        # coordinate_system_offsets in the currently active length units, while the\n        # backing parameters remain at their raw stored values from RS274.\n        completed, payload, parameter_output = run_rs274_with_parameter_output(\n            submission_command,\n            input_gcode=input_gcode,\n            tmp_path=tmp_path,\n        )\n    \n        cs1_x_parameter, cs1_y_parameter, cs1_z_parameter = coordinate_system_xyz_parameter_indices(1)\n        (_, _, _, cs1_a_parameter, cs1_b_parameter, cs1_c_parameter) = (\n            coordinate_system_xyzabc_parameter_indices(1)\n        )\n    \n        assert completed.returncode == 0, completed.stderr\n        assert payload.get(\"error\") is None\n        # Serialized offsets undergo conversion, while backing parameters below\n        # must keep their original values. A low historical pass rate did not\n        # justify the former exact-float assertion: 25.4 / 25.4 need not be\n        # serialized as exactly 1.0 after an implementation's internal round trip.\n        assert_numeric_mapping_close(\n            mapping_field(payload, \"coordinate_system_offsets\").get(\"1\"),\n            with_default_rotary_axes(expected_offset),\n        )\n        # Snapshot parameters may be sparse; the optional file-output contract\n        # explicitly requires the loaded/set values, including these raw offsets.\n        persisted = dict(parameter_output_entries(parameter_output))\n>       assert persisted[cs1_x_parameter] == expected_parameter_values[\"x\"]\nE       assert 25.4 == 1.0\n\n/tmp/tests/test_g10_coordinate_system_offsets.py:188: AssertionError"
+    },
+    {
+      "node_id": "test_g10_coordinate_system_offsets.py::test_coordinate_system_offset_parameters_remain_raw_across_unit_changes[g21-to-g20]",
+      "outcome": "failed",
+      "duration_seconds": 0.043721624999307096,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G21\\nG10 L2 P1 X25.4 Y50.8 Z76.2 A10.0 B20.0 C30.0\\nG20\\n'\nexpected_offset = {'a': 10.0, 'b': 20.0, 'c': 30.0, 'x': 1.0, ...}\nexpected_parameter_values = {'a': 10.0, 'b': 20.0, 'c': 30.0, 'x': 25.4, ...}\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_coordinate_system_offset_1')\n\n    @pytest.mark.parametrize(\n        (\"input_gcode\", \"expected_offset\", \"expected_parameter_values\"),\n        [\n            (\n                # In preliminary testing, no model passes this test.\n                # Section 4.3.3.3: \"All other stored values which involve length\n                # units are not changed, including: coordinate system offsets.\"\n                # Section 4.3.3.2: \"The effective location of the program origin\n                # should not change when units change.\"\n                # The serialization expectation (25.4/50.8/76.2 after G21) comes\n                # from the harness contract (\"Serialize coordinate_system_offsets\n                # in the currently active RS274 length units\"), not RS274 alone.\n                # This is intentional: the benchmark tests the full prompt, not\n                # just the spec in isolation.\n                \"G20\\nG10 L2 P1 X1.0 Y2.0 Z3.0 A10.0 B20.0 C30.0\\nG21\\n\",\n                {\"x\": 25.4, \"y\": 50.8, \"z\": 76.2, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n                {\"x\": 1.0, \"y\": 2.0, \"z\": 3.0, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n            ),\n            (\n                \"G21\\nG10 L2 P1 X25.4 Y50.8 Z76.2 A10.0 B20.0 C30.0\\nG20\\n\",\n                {\"x\": 1.0, \"y\": 2.0, \"z\": 3.0, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n                {\"x\": 25.4, \"y\": 50.8, \"z\": 76.2, \"a\": 10.0, \"b\": 20.0, \"c\": 30.0},\n            ),\n        ],\n        ids=[\"g20-to-g21\", \"g21-to-g20\"],\n    )\n    def test_coordinate_system_offset_parameters_remain_raw_across_unit_changes(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        expected_offset: dict[str, float],\n        expected_parameter_values: dict[str, float],\n        tmp_path: Path,\n    ) -> None:\n        # RS274 section 4.3.3.2 says the effective program-origin location should\n        # not change when units change, while section 4.3.3.3 says stored\n        # coordinate-system offsets are not numerically changed by a unit switch.\n        # The harness contract in technical-requirements-prompt.md serializes\n        # coordinate_system_offsets in the currently active length units, while the\n        # backing parameters remain at their raw stored values from RS274.\n        completed, payload, parameter_output = run_rs274_with_parameter_output(\n            submission_command,\n            input_gcode=input_gcode,\n            tmp_path=tmp_path,\n        )\n    \n        cs1_x_parameter, cs1_y_parameter, cs1_z_parameter = coordinate_system_xyz_parameter_indices(1)\n        (_, _, _, cs1_a_parameter, cs1_b_parameter, cs1_c_parameter) = (\n            coordinate_system_xyzabc_parameter_indices(1)\n        )\n    \n        assert completed.returncode == 0, completed.stderr\n        assert payload.get(\"error\") is None\n        # Serialized offsets undergo conversion, while backing parameters below\n        # must keep their original values. A low historical pass rate did not\n        # justify the former exact-float assertion: 25.4 / 25.4 need not be\n        # serialized as exactly 1.0 after an implementation's internal round trip.\n        assert_numeric_mapping_close(\n            mapping_field(payload, \"coordinate_system_offsets\").get(\"1\"),\n            with_default_rotary_axes(expected_offset),\n        )\n        # Snapshot parameters may be sparse; the optional file-output contract\n        # explicitly requires the loaded/set values, including these raw offsets.\n        persisted = dict(parameter_output_entries(parameter_output))\n>       assert persisted[cs1_x_parameter] == expected_parameter_values[\"x\"]\nE       assert 1.0 == 25.4\n\n/tmp/tests/test_g10_coordinate_system_offsets.py:188: AssertionError"
+    },
+    {
+      "node_id": "test_g10_errors.py::test_application_rejects_invalid_g10_commands[g10-rejects-out-of-range-p]",
+      "outcome": "passed",
+      "duration_seconds": 0.061392817999148974,
+      "message": null
+    },
+    {
+      "node_id": "test_g10_errors.py::test_application_rejects_invalid_g10_commands[g10-rejects-non-integer-p]",
+      "outcome": "passed",
+      "duration_seconds": 0.07335499200053164,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g28_home_set_by_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.030740015998162562,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g28_home_after_intermediate_programmed_position",
+      "outcome": "passed",
+      "duration_seconds": 0.03431793799973093,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g30_secondary_home_set_by_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.02505122799993842,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g30_secondary_home_without_axis_words",
+      "outcome": "passed",
+      "duration_seconds": 0.022634328001004178,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g28_rotary_home_set_by_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.02437017900592764,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g28_rotary_home_without_axis_words",
+      "outcome": "passed",
+      "duration_seconds": 0.03322106999985408,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g30_rotary_home_without_axis_words",
+      "outcome": "passed",
+      "duration_seconds": 0.040797231002215995,
+      "message": null
+    },
+    {
+      "node_id": "test_g28_g30.py::test_application_returns_to_g30_rotary_home_after_intermediate_programmed_position",
+      "outcome": "passed",
+      "duration_seconds": 0.038394950999645516,
+      "message": null
+    },
+    {
+      "node_id": "test_g4_dwell.py::test_application_accepts_g4_dwell",
+      "outcome": "passed",
+      "duration_seconds": 0.023955043998284964,
+      "message": null
+    },
+    {
+      "node_id": "test_g4_errors.py::test_application_rejects_negative_g4_p",
+      "outcome": "passed",
+      "duration_seconds": 0.032244539997918764,
+      "message": null
+    },
+    {
+      "node_id": "test_g53_errors.py::test_application_rejects_invalid_g53_usage[g53-without-g0-or-g1-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.025189435000356752,
+      "message": null
+    },
+    {
+      "node_id": "test_g53_errors.py::test_application_rejects_invalid_g53_usage[g53-omits-all-axis-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.02469029500207398,
+      "message": null
+    },
+    {
+      "node_id": "test_g87_submotions.py::test_g87_accepts_omitted_clearance_and_counterbore_words",
+      "outcome": "passed",
+      "duration_seconds": 0.02473806399939349,
+      "message": null
+    },
+    {
+      "node_id": "test_g87_submotions.py::test_g87_explicit_clearance_and_counterbore_path",
+      "outcome": "passed",
+      "duration_seconds": 0.03344475399717339,
+      "message": null
+    },
+    {
+      "node_id": "test_g87_submotions.py::test_g87_incremental_k_is_relative_to_resolved_depth",
+      "outcome": "passed",
+      "duration_seconds": 0.028137075001723133,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_errors.py::test_application_rejects_invalid_g92_usage[g92-without-axis-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.023268160002771765,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_sets_offsets_and_backing_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.02284186200631666,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_ignores_incremental_distance_mode",
+      "outcome": "passed",
+      "duration_seconds": 0.026205554000625852,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_accumulates_existing_offsets",
+      "outcome": "passed",
+      "duration_seconds": 0.02521715399780078,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_affects_all_coordinate_systems",
+      "outcome": "passed",
+      "duration_seconds": 0.021476759000506718,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_1_cancels_offsets_and_zeros_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.021869742002309067,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_2_cancels_offsets_without_zeroing_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.024050527001236333,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_3_restores_offsets_from_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.023976284999662312,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_sets_rotary_offsets_and_backing_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.027526841004146263,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_1_cancels_rotary_offsets_and_zeros_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.02512381399719743,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_2_cancels_rotary_offsets_without_zeroing_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.023051614003634313,
+      "message": null
+    },
+    {
+      "node_id": "test_g92_offsets.py::test_g92_3_restores_rotary_offsets_from_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.026315719998819986,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-0-non-modal-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.025406159002159256,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-1-motion-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.025706964999699267,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-2-plane-selection-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.025747894003870897,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-3-distance-mode-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.026914170000964077,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-5-feed-rate-mode-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.02553307099515223,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-6-units-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.027329401003953535,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-7-cutter-radius-compensation-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.02685529299924383,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-8-tool-length-offset-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.028271763996599475,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-10-return-mode-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.03073807800319628,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-12-coordinate-system-selection-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.02412070599893923,
+      "message": null
+    },
+    {
+      "node_id": "test_gcode_group_errors.py::test_application_rejects_multiple_g_words_from_the_same_group[group-13-path-control-mode-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.027180804005183745,
+      "message": null
+    },
+    {
+      "node_id": "test_linear_motion_errors.py::test_application_rejects_invalid_linear_motion_commands[g0-omits-all-axis-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.026680962000682484,
+      "message": null
+    },
+    {
+      "node_id": "test_linear_motion_errors.py::test_application_rejects_invalid_linear_motion_commands[g1-omits-all-axis-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.026588598997477675,
+      "message": null
+    },
+    {
+      "node_id": "test_linear_motion_errors.py::test_application_rejects_invalid_linear_motion_commands[g1-inverse-time-motion-missing-f]",
+      "outcome": "passed",
+      "duration_seconds": 0.031148381996899843,
+      "message": null
+    },
+    {
+      "node_id": "test_linear_motion_errors.py::test_application_rejects_invalid_linear_motion_commands[implicit-g1-inverse-time-motion-missing-f]",
+      "outcome": "passed",
+      "duration_seconds": 0.02809371699913754,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_group_errors.py::test_application_rejects_multiple_m_words_from_the_same_group[group-4-stopping-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.02617232999909902,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_group_errors.py::test_application_rejects_multiple_m_words_from_the_same_group[group-6-tool-change-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.025465833001362626,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_group_errors.py::test_application_rejects_multiple_m_words_from_the_same_group[group-7-spindle-turning-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.027586654003243893,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_group_errors.py::test_application_rejects_multiple_m_words_from_the_same_group[group-8-coolant-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.027369650997570716,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_group_errors.py::test_application_rejects_multiple_m_words_from_the_same_group[group-9-override-switches-group]",
+      "outcome": "passed",
+      "duration_seconds": 0.029161321002902696,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_group_errors.py::test_application_rejects_more_than_four_m_words_on_one_line",
+      "outcome": "passed",
+      "duration_seconds": 0.02695065199804958,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_line_acceptance.py::test_application_accepts_up_to_four_m_words_on_one_line[one-m-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.024575699004344642,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_line_acceptance.py::test_application_accepts_up_to_four_m_words_on_one_line[two-m-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.02158286399935605,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_line_acceptance.py::test_application_accepts_up_to_four_m_words_on_one_line[three-m-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.023959534999448806,
+      "message": null
+    },
+    {
+      "node_id": "test_mcode_line_acceptance.py::test_application_accepts_up_to_four_m_words_on_one_line[four-m-words]",
+      "outcome": "passed",
+      "duration_seconds": 0.02495024899690179,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_success_output_payload_has_required_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.02428847100236453,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_error_output_payload_has_required_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.02529852999941795,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_success_trace_payload_has_required_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.02420706099655945,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_error_trace_payload_has_required_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.027893391001271084,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-setting-index-too-low]",
+      "outcome": "passed",
+      "duration_seconds": 0.024900799999159062,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-setting-index-too-high]",
+      "outcome": "passed",
+      "duration_seconds": 0.02471844000319834,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-setting-index-non-integer]",
+      "outcome": "passed",
+      "duration_seconds": 0.02630859800046892,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-setting-expression-index-too-low]",
+      "outcome": "passed",
+      "duration_seconds": 0.023069655002473155,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-read-index-too-low]",
+      "outcome": "passed",
+      "duration_seconds": 0.026219874001981225,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-read-index-too-high]",
+      "outcome": "passed",
+      "duration_seconds": 0.026363412998762215,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-read-index-non-integer]",
+      "outcome": "passed",
+      "duration_seconds": 0.030878343000949826,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[expression-missing-closing-bracket]",
+      "outcome": "passed",
+      "duration_seconds": 0.02640095200331416,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[binary-operation-outside-expression]",
+      "outcome": "passed",
+      "duration_seconds": 0.025230660005036043,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[atan-missing-second-expression]",
+      "outcome": "passed",
+      "duration_seconds": 0.023837765998905525,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[unary-operation-missing-expression]",
+      "outcome": "passed",
+      "duration_seconds": 0.02435449000040535,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-read-indirection-index-non-integer]",
+      "outcome": "passed",
+      "duration_seconds": 0.02556574600021122,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[parameter-setting-index-not-close-enough-to-integer]",
+      "outcome": "passed",
+      "duration_seconds": 0.024886955998226767,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[g-code-not-close-enough-to-supported-value]",
+      "outcome": "passed",
+      "duration_seconds": 0.025704083003802225,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[m-code-not-close-enough-to-integer]",
+      "outcome": "passed",
+      "duration_seconds": 0.02734979500019108,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[expression-division-by-zero]",
+      "outcome": "passed",
+      "duration_seconds": 0.023905337999167386,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[acos-argument-out-of-range]",
+      "outcome": "passed",
+      "duration_seconds": 0.02375849799864227,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[asin-argument-out-of-range]",
+      "outcome": "passed",
+      "duration_seconds": 0.025138508008240024,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[ln-zero]",
+      "outcome": "passed",
+      "duration_seconds": 0.024368151996895904,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[ln-negative]",
+      "outcome": "passed",
+      "duration_seconds": 0.02526857600241783,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_errors.py::test_application_rejects_invalid_parameter_usage[sqrt-negative]",
+      "outcome": "passed",
+      "duration_seconds": 0.026096464996953728,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[precedence]",
+      "outcome": "passed",
+      "duration_seconds": 0.023943173000589013,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[power]",
+      "outcome": "passed",
+      "duration_seconds": 0.040094600000884384,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[modulo]",
+      "outcome": "passed",
+      "duration_seconds": 0.02224225199825014,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[modulo-real]",
+      "outcome": "passed",
+      "duration_seconds": 0.022087816996645415,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[logical-or]",
+      "outcome": "passed",
+      "duration_seconds": 0.026743940001324518,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[logical-and]",
+      "outcome": "passed",
+      "duration_seconds": 0.025512406002235366,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[logical-xor]",
+      "outcome": "passed",
+      "duration_seconds": 0.02930805399955716,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[logical-reals]",
+      "outcome": "passed",
+      "duration_seconds": 0.02641785700325272,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[nested]",
+      "outcome": "passed",
+      "duration_seconds": 0.02736905700294301,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[left-to-right-group1]",
+      "outcome": "passed",
+      "duration_seconds": 0.026957253998261876,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[left-to-right-group2]",
+      "outcome": "passed",
+      "duration_seconds": 0.03010316199652152,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[left-to-right-group3]",
+      "outcome": "passed",
+      "duration_seconds": 0.02305876900209114,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[spec-example-precedence]",
+      "outcome": "passed",
+      "duration_seconds": 0.026546917997620767,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_binary_expressions_in_axis_words[power-before-group2]",
+      "outcome": "passed",
+      "duration_seconds": 0.023840977999498136,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[abs]",
+      "outcome": "passed",
+      "duration_seconds": 0.02484702600122546,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[acos]",
+      "outcome": "passed",
+      "duration_seconds": 0.03197092000118573,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[asin]",
+      "outcome": "passed",
+      "duration_seconds": 0.025140543995803455,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[atan]",
+      "outcome": "passed",
+      "duration_seconds": 0.02369104600074934,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[cos]",
+      "outcome": "passed",
+      "duration_seconds": 0.02438146799977403,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[exp]",
+      "outcome": "passed",
+      "duration_seconds": 0.024528393005311955,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[fix-positive]",
+      "outcome": "passed",
+      "duration_seconds": 0.022246399999858113,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[fix]",
+      "outcome": "passed",
+      "duration_seconds": 0.023533744999440387,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[fup-positive]",
+      "outcome": "passed",
+      "duration_seconds": 0.02447080099955201,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[fup]",
+      "outcome": "passed",
+      "duration_seconds": 0.023698818004049826,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[ln]",
+      "outcome": "passed",
+      "duration_seconds": 0.023485431000153767,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[round]",
+      "outcome": "passed",
+      "duration_seconds": 0.023047001002851175,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[sin]",
+      "outcome": "passed",
+      "duration_seconds": 0.026510015999519965,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[sqrt]",
+      "outcome": "passed",
+      "duration_seconds": 0.025694433999888133,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_operation_values[tan]",
+      "outcome": "passed",
+      "duration_seconds": 0.02444423299675691,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_supports_expression_based_parameter_indices",
+      "outcome": "passed",
+      "duration_seconds": 0.022736581002391176,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_supports_expression_valued_parameter_settings",
+      "outcome": "passed",
+      "duration_seconds": 0.02614293399892631,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_supports_bracketed_parameter_reads",
+      "outcome": "passed",
+      "duration_seconds": 0.024203373002819717,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_supports_repeated_parameter_indirection",
+      "outcome": "passed",
+      "duration_seconds": 0.022916928999620723,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_expressions_before_parameter_settings_take_effect",
+      "outcome": "passed",
+      "duration_seconds": 0.02334889300254872,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_accepts_close_to_integer_parameter_indices",
+      "outcome": "passed",
+      "duration_seconds": 0.023806105000403477,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_accepts_close_to_integer_g_and_m_codes_from_expressions",
+      "outcome": "passed",
+      "duration_seconds": 0.02445820000139065,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_expressions.py::test_application_evaluates_unary_values_inside_expressions",
+      "outcome": "passed",
+      "duration_seconds": 0.025794040004257113,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_accepts_parameter_file_cli_arguments[parameter-input-only]",
+      "outcome": "failed",
+      "duration_seconds": 0.0255935290006164,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\nparameter_input_content = 'RS274 parameter file\\n\\n1 4.25\\n5161 0.0\\n5162 0.0\\n5163 0.0\\n5164 0.0\\n5165 0.0\\n5166 0.0\\n5181 0.0\\n5182 0.0\\n5183 ...62 0.0\\n5363 0.0\\n5364 0.0\\n5365 0.0\\n5366 0.0\\n5381 0.0\\n5382 0.0\\n5383 0.0\\n5384 0.0\\n5385 0.0\\n5386 0.0\\n5400 7.5\\n'\npass_parameter_output = False\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_accepts_param0')\n\n    @pytest.mark.parametrize(\n        (\"parameter_input_content\", \"pass_parameter_output\"),\n        [\n            (parameter_input_content, pass_parameter_output)\n            for _, parameter_input_content, pass_parameter_output in CLI_CASES\n        ],\n        ids=[case_id for case_id, _, _ in CLI_CASES],\n    )\n    def test_application_accepts_parameter_file_cli_arguments(\n        submission_command: tuple[str, ...],\n        parameter_input_content: str | None,\n        pass_parameter_output: bool,\n        tmp_path: Path,\n    ) -> None:\n        completed, payload = run_rs274(\n            submission_command,\n            input_gcode=\"G90\\nG0 X1.0 Y2.0 Z3.0\\n\",\n            parameter_input_content=parameter_input_content,\n            pass_parameter_output=pass_parameter_output,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 0, completed.stderr\nE       AssertionError: Parameter number 5400 out of range in parameter file\nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...s_param0/parameters-in.var'], returncode=1, stdout='', stderr='Parameter number 5400 out of range in parameter file\\n').returncode\n\n/tmp/tests/test_parameter_file_cli.py:57: AssertionError"
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_accepts_parameter_file_cli_arguments[parameter-output-only]",
+      "outcome": "passed",
+      "duration_seconds": 0.02386095199835836,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_accepts_parameter_file_cli_arguments[parameter-input-and-output]",
+      "outcome": "passed",
+      "duration_seconds": 0.027553560001251753,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_initializes_startup_state_from_parameter_input_file",
+      "outcome": "passed",
+      "duration_seconds": 0.029211504002887523,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-non-ascending-indices]",
+      "outcome": "passed",
+      "duration_seconds": 0.02537516700249398,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-out-of-range-index]",
+      "outcome": "passed",
+      "duration_seconds": 0.02508320999913849,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-index-below-one]",
+      "outcome": "passed",
+      "duration_seconds": 0.025644684003054863,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-invalid-5220]",
+      "outcome": "passed",
+      "duration_seconds": 0.024672681996889878,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-fractional-5220]",
+      "outcome": "passed",
+      "duration_seconds": 0.02405479100343655,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-missing-required-linear-entry]",
+      "outcome": "passed",
+      "duration_seconds": 0.0413742730015656,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_file_cli.py::test_application_rejects_invalid_parameter_input_files[parameter-file-rejects-missing-required-rotary-entry]",
+      "outcome": "failed",
+      "duration_seconds": 0.022970202000578865,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\nparameter_input_content = 'RS274 parameter file\\n\\n5161 0.0\\n5162 0.0\\n5163 0.0\\n5165 0.0\\n5166 0.0\\n5181 0.0\\n5182 0.0\\n5183 0.0\\n5184 0.0\\n518...61 0.0\\n5362 0.0\\n5363 0.0\\n5364 0.0\\n5365 0.0\\n5366 0.0\\n5381 0.0\\n5382 0.0\\n5383 0.0\\n5384 0.0\\n5385 0.0\\n5386 0.0\\n'\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_rejects_inval90')\n\n    @pytest.mark.parametrize(\n        \"parameter_input_content\",\n        [parameter_input_content for _, parameter_input_content in PARAMETER_FILE_ERROR_CASES],\n        ids=[case_id for case_id, _ in PARAMETER_FILE_ERROR_CASES],\n    )\n    def test_application_rejects_invalid_parameter_input_files(\n        submission_command: tuple[str, ...],\n        parameter_input_content: str,\n        tmp_path: Path,\n    ) -> None:\n>       run_rs274_invalid_input(\n            submission_command,\n            input_gcode=\"\",\n            parameter_input_content=parameter_input_content,\n            tmp_path=tmp_path,\n        )\n\n/tmp/tests/test_parameter_file_cli.py:169: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\n\n    def run_rs274_invalid_input(\n        submission_command: Sequence[str],\n        *,\n        block_delete: bool = False,\n        carousel_slots: int | None = None,\n        input_gcode: str,\n        parameter_input_content: str | None = None,\n        pass_parameter_output: bool = False,\n        probe_box: ProbeBox | None = None,\n        probe_tool: int | None = None,\n        tool_table_content: str | None = None,\n        tmp_path: Path,\n    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:\n        completed, payload = run_rs274(\n            submission_command,\n            block_delete=block_delete,\n            carousel_slots=carousel_slots,\n            input_gcode=input_gcode,\n            parameter_input_content=parameter_input_content,\n            pass_parameter_output=pass_parameter_output,\n            probe_box=probe_box,\n            probe_tool=probe_tool,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 1, completed.stderr\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError\n\n/tmp/tests/rs274_support.py:249: AssertionError"
+    },
+    {
+      "node_id": "test_parameter_output_file.py::test_application_writes_required_parameter_output_file_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.024634432997117983,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_output_file.py::test_application_preserves_input_parameters_in_output_file",
+      "outcome": "passed",
+      "duration_seconds": 0.027523285996721825,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_output_file.py::test_application_writes_execution_updates_to_output_parameter_file",
+      "outcome": "passed",
+      "duration_seconds": 0.021449666004627943,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_values.py::test_application_applies_parameter_settings",
+      "outcome": "passed",
+      "duration_seconds": 0.022450201999163255,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_values.py::test_parameter_settings_are_buffered_until_after_line_execution",
+      "outcome": "passed",
+      "duration_seconds": 0.0262134300028265,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_values.py::test_repeated_parameter_setting_uses_the_last_value",
+      "outcome": "passed",
+      "duration_seconds": 0.023697556000115583,
+      "message": null
+    },
+    {
+      "node_id": "test_parameter_values.py::test_startup_uses_the_default_selected_coordinate_system_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.025301853998826118,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[absolute-xyz]",
+      "outcome": "passed",
+      "duration_seconds": 0.02225995500339195,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[absolute-abc-does-not-normalize-rotary-values]",
+      "outcome": "passed",
+      "duration_seconds": 0.02270150899857981,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[absolute-xyz-from-parameter-values]",
+      "outcome": "passed",
+      "duration_seconds": 0.02245115500409156,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[absolute-xyz-from-expressions]",
+      "outcome": "passed",
+      "duration_seconds": 0.024563049999414943,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[absolute-abc-from-parameter-values-and-expressions]",
+      "outcome": "passed",
+      "duration_seconds": 0.02863254800104187,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g20-converts-current-position-numerically-without-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.02740392499617883,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g21-converts-current-position-numerically-without-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.023515608001616783,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g21-converts-xyz-but-leaves-abc-unchanged]",
+      "outcome": "passed",
+      "duration_seconds": 0.027318753996951273,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[motion-after-unit-change-preserves-program-origin-location]",
+      "outcome": "passed",
+      "duration_seconds": 0.026790659998368938,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g10-on-active-cs-does-not-move-machine]",
+      "outcome": "passed",
+      "duration_seconds": 0.023812880001059966,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g53-uses-machine-coordinates]",
+      "outcome": "passed",
+      "duration_seconds": 0.024122180002450477,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g53-uses-machine-coordinates-for-rotary-axes]",
+      "outcome": "passed",
+      "duration_seconds": 0.023121197998989373,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g53-is-not-modal]",
+      "outcome": "passed",
+      "duration_seconds": 0.023888950003311038,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g53-may-omit-g0-or-g1-when-linear-motion-is-active]",
+      "outcome": "passed",
+      "duration_seconds": 0.023301239005377283,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[absolute-updates-only-programmed-axes]",
+      "outcome": "passed",
+      "duration_seconds": 0.022822759005066473,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[implicit-g1-continues-active-linear-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.02374494799732929,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[incremental-xyz]",
+      "outcome": "passed",
+      "duration_seconds": 0.024754297999606933,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[incremental-abc]",
+      "outcome": "passed",
+      "duration_seconds": 0.0237000259985507,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g1-updates-rotary-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.024083545002213214,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[incremental-accumulates-from-current-position]",
+      "outcome": "passed",
+      "duration_seconds": 0.02393623400348588,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-updates-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.025011672001710394,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-updates-simultaneous-rotary-endpoints]",
+      "outcome": "passed",
+      "duration_seconds": 0.024091806000797078,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-accepts-parameter-values-in-i-and-j]",
+      "outcome": "passed",
+      "duration_seconds": 0.02354305600238149,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-updates-g18-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.02418180699896766,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-accepts-expressions-in-i-and-k]",
+      "outcome": "passed",
+      "duration_seconds": 0.022895894002431305,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g3-updates-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.02416827099295915,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g3-updates-g19-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.024692562998097856,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g3-accepts-parameter-values-in-j-and-k]",
+      "outcome": "passed",
+      "duration_seconds": 0.026540885999565944,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-center-format-full-circle-explicit-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.023538826000731206,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g3-center-format-full-circle-explicit-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.02661201400042046,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-radius-format-updates-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.0326667549998092,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-radius-format-accepts-expressions-in-r]",
+      "outcome": "passed",
+      "duration_seconds": 0.02357923599993228,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g2-radius-format-updates-g18-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.03552890699938871,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g3-radius-format-updates-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.06728535000002012,
+      "message": null
+    },
+    {
+      "node_id": "test_position_tracking.py::test_application_tracks_machine_position[g3-radius-format-updates-g19-arc-endpoint]",
+      "outcome": "passed",
+      "duration_seconds": 0.06098702800227329,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_reports_probe_trip_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.11059602000386803,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[x-probe-without-tlc]",
+      "outcome": "passed",
+      "duration_seconds": 0.03106133300025249,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[y-probe-without-tlc]",
+      "outcome": "passed",
+      "duration_seconds": 0.05516440100109321,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[x-probe-without-tlc-in-g21-converts-inch-box-extents]",
+      "outcome": "passed",
+      "duration_seconds": 0.06139039599656826,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[z-probe-without-tlc]",
+      "outcome": "passed",
+      "duration_seconds": 0.06169549099649885,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[selected-tool-does-not-change-the-probe-in-spindle-until-m6]",
+      "outcome": "passed",
+      "duration_seconds": 0.039384325998980785,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[x-probe-with-tlc]",
+      "outcome": "failed",
+      "duration_seconds": 0.03322503399976995,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\nprobe_box = (12.0, 20.0, 0.0, 10.0, 0.0, 1.0)\ninput_gcode = 'G20\\nG90 G94\\nT2 M6\\nG0 X0.0 Y5.0 Z2.5\\nG43 H2\\nF10.0\\nG38.2 X15.0\\n'\nexpected_machine_position = {'a': 0.0, 'b': 0.0, 'c': 0.0, 'x': 12.0, ...}\ntool_table_content = 'POCKET FMS TLO DIAMETER COMMENT\\n\\n2 2 1.5 0.25 probe\\n'\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_stops_probe_a5')\n\n    @pytest.mark.parametrize(\n        (\"probe_box\", \"input_gcode\", \"expected_machine_position\", \"tool_table_content\"),\n        [\n            (\n                probe_box,\n                input_gcode,\n                trip_parameters_to_machine_position(expected_trip_parameters),\n                tool_table_content,\n            )\n            for (\n                _,\n                probe_box,\n                input_gcode,\n                expected_trip_parameters,\n                tool_table_content,\n            ) in PROBE_SUCCESS_CASES\n        ],\n        ids=[case_id for case_id, _, _, _, _ in PROBE_SUCCESS_CASES],\n    )\n    def test_application_stops_probe_at_trip_point(\n        submission_command: tuple[str, ...],\n        probe_box: ProbeBox,\n        input_gcode: str,\n        expected_machine_position: dict[str, float],\n        tool_table_content: str,\n        tmp_path: Path,\n    ) -> None:\n        completed, payload = run_rs274(\n            submission_command,\n            input_gcode=input_gcode,\n            probe_box=probe_box,\n            probe_tool=PROBE_TOOL,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 0, completed.stderr\nE       AssertionError: Probe move finished without the probe tripping\nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...lication_stops_probe_a5/tool.tbl'], returncode=1, stdout='', stderr='Probe move finished without the probe tripping\\n').returncode\n\n/tmp/tests/test_probing.py:285: AssertionError"
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[y-probe-with-tlc]",
+      "outcome": "failed",
+      "duration_seconds": 0.028162607999547618,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\nprobe_box = (0.0, 10.0, 12.0, 20.0, 0.0, 1.0)\ninput_gcode = 'G20\\nG90 G94\\nT2 M6\\nG0 X5.0 Y5.0 Z2.5\\nG43 H2\\nF10.0\\nG38.2 Y15.0\\n'\nexpected_machine_position = {'a': 0.0, 'b': 0.0, 'c': 0.0, 'x': 5.0, ...}\ntool_table_content = 'POCKET FMS TLO DIAMETER COMMENT\\n\\n2 2 1.5 0.25 probe\\n'\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_stops_probe_a6')\n\n    @pytest.mark.parametrize(\n        (\"probe_box\", \"input_gcode\", \"expected_machine_position\", \"tool_table_content\"),\n        [\n            (\n                probe_box,\n                input_gcode,\n                trip_parameters_to_machine_position(expected_trip_parameters),\n                tool_table_content,\n            )\n            for (\n                _,\n                probe_box,\n                input_gcode,\n                expected_trip_parameters,\n                tool_table_content,\n            ) in PROBE_SUCCESS_CASES\n        ],\n        ids=[case_id for case_id, _, _, _, _ in PROBE_SUCCESS_CASES],\n    )\n    def test_application_stops_probe_at_trip_point(\n        submission_command: tuple[str, ...],\n        probe_box: ProbeBox,\n        input_gcode: str,\n        expected_machine_position: dict[str, float],\n        tool_table_content: str,\n        tmp_path: Path,\n    ) -> None:\n        completed, payload = run_rs274(\n            submission_command,\n            input_gcode=input_gcode,\n            probe_box=probe_box,\n            probe_tool=PROBE_TOOL,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 0, completed.stderr\nE       AssertionError: Probe move finished without the probe tripping\nE         \nE       assert 1 == 0\nE        +  where 1 = CompletedProcess(args=['/usr/bin/node', '/tmp/submission/output/main.js', '--input', '/tmp/pytest-of-root/pytest-0/tes...lication_stops_probe_a6/tool.tbl'], returncode=1, stdout='', stderr='Probe move finished without the probe tripping\\n').returncode\n\n/tmp/tests/test_probing.py:285: AssertionError"
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[z-probe-with-tlc]",
+      "outcome": "passed",
+      "duration_seconds": 0.02888597999844933,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[x-probe-g91-g21-incremental-metric]",
+      "outcome": "passed",
+      "duration_seconds": 0.02636219000123674,
+      "message": null
+    },
+    {
+      "node_id": "test_probing.py::test_application_stops_probe_at_trip_point[probe-accepts-stationary-rotary-words-and-reports-rotary-trip-parameters]",
+      "outcome": "passed",
+      "duration_seconds": 0.025249330999940867,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_explicit_invalid_g38_2_uses[g38-2-requires-linear-axis-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.034124360001442255,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_explicit_invalid_g38_2_uses[g38-2-rejects-inverse-time-feed-rate-mode]",
+      "outcome": "passed",
+      "duration_seconds": 0.028534929999295855,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_explicit_invalid_g38_2_uses[g38-2-rejects-programmed-point-that-is-too-close]",
+      "outcome": "passed",
+      "duration_seconds": 0.028029092998622218,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_explicit_invalid_g38_2_uses[g38-2-rejects-a-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.02986212500036345,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_explicit_invalid_g38_2_uses[g38-2-rejects-b-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.028713417996186763,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_explicit_invalid_g38_2_uses[g38-2-rejects-c-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.029205017002823297,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_requires_the_probe_tool_in_the_spindle",
+      "outcome": "passed",
+      "duration_seconds": 0.028564249001647113,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_requires_the_probe_tool_to_be_loaded_not_just_selected",
+      "outcome": "passed",
+      "duration_seconds": 0.028543872002046555,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_probing_with_the_spindle_turning",
+      "outcome": "failed",
+      "duration_seconds": 0.02794518099835841,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_rejects_probi0')\n\n    def test_application_rejects_probing_with_the_spindle_turning(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n    ) -> None:\n>       run_rs274_invalid_input(\n            submission_command,\n            input_gcode=(\"G20\\nG90 G94\\nT2 M6\\nG0 X5.0 Y5.0 Z5.0\\nS500.0 M3\\nF10.0\\nG38.2 Z0.0\\n\"),\n            probe_box=PROBE_BOX,\n            probe_tool=PROBE_TOOL,\n            tool_table_content=PROBE_TOOL_TABLE,\n            tmp_path=tmp_path,\n        )\n\n/tmp/tests/test_probing_errors.py:115: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\n\n    def run_rs274_invalid_input(\n        submission_command: Sequence[str],\n        *,\n        block_delete: bool = False,\n        carousel_slots: int | None = None,\n        input_gcode: str,\n        parameter_input_content: str | None = None,\n        pass_parameter_output: bool = False,\n        probe_box: ProbeBox | None = None,\n        probe_tool: int | None = None,\n        tool_table_content: str | None = None,\n        tmp_path: Path,\n    ) -> tuple[subprocess.CompletedProcess[str], dict[str, Any]]:\n        completed, payload = run_rs274(\n            submission_command,\n            block_delete=block_delete,\n            carousel_slots=carousel_slots,\n            input_gcode=input_gcode,\n            parameter_input_content=parameter_input_content,\n            pass_parameter_output=pass_parameter_output,\n            probe_box=probe_box,\n            probe_tool=probe_tool,\n            tool_table_content=tool_table_content,\n            tmp_path=tmp_path,\n        )\n    \n>       assert completed.returncode == 1, completed.stderr\n               ^^^^^^^^^^^^^^^^^^^^^^^^^\nE       AssertionError\n\n/tmp/tests/rs274_support.py:249: AssertionError"
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_probing_when_the_probe_is_already_tripped",
+      "outcome": "passed",
+      "duration_seconds": 0.035443680004391354,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_probing_when_no_trip_occurs[x-probe-no-hit]",
+      "outcome": "passed",
+      "duration_seconds": 0.03537718400184531,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_probing_when_no_trip_occurs[y-probe-no-hit]",
+      "outcome": "passed",
+      "duration_seconds": 0.032384989004640374,
+      "message": null
+    },
+    {
+      "node_id": "test_probing_errors.py::test_application_rejects_probing_when_no_trip_occurs[z-probe-no-hit]",
+      "outcome": "passed",
+      "duration_seconds": 0.02769019299739739,
+      "message": null
+    },
+    {
+      "node_id": "test_program_delimiters.py::test_application_handles_percent_delimited_files[second-percent-ends-useful-content]",
+      "outcome": "passed",
+      "duration_seconds": 0.02208344500468229,
+      "message": null
+    },
+    {
+      "node_id": "test_program_delimiters.py::test_application_handles_percent_delimited_files[percent-opener-requires-closer]",
+      "outcome": "passed",
+      "duration_seconds": 0.031611515001714,
+      "message": null
+    },
+    {
+      "node_id": "test_program_end_reset.py::test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_invalid_trailing_lines[M2]",
+      "outcome": "passed",
+      "duration_seconds": 0.029319998997380026,
+      "message": null
+    },
+    {
+      "node_id": "test_program_end_reset.py::test_application_resets_explicit_modal_state_on_m2_and_m30_and_ignores_invalid_trailing_lines[M30]",
+      "outcome": "passed",
+      "duration_seconds": 0.029166402000555536,
+      "message": null
+    },
+    {
+      "node_id": "test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30[M2]",
+      "outcome": "passed",
+      "duration_seconds": 0.030765203999180812,
+      "message": null
+    },
+    {
+      "node_id": "test_program_end_reset.py::test_application_turns_cutter_compensation_off_on_m2_and_m30[M30]",
+      "outcome": "passed",
+      "duration_seconds": 0.03184710400091717,
+      "message": null
+    },
+    {
+      "node_id": "test_program_end_reset.py::test_application_preserves_g92_parameters_on_m2_and_m30_like_g92_2[M2]",
+      "outcome": "passed",
+      "duration_seconds": 0.030789281001489144,
+      "message": null
+    },
+    {
+      "node_id": "test_program_end_reset.py::test_application_preserves_g92_parameters_on_m2_and_m30_like_g92_2[M30]",
+      "outcome": "passed",
+      "duration_seconds": 0.03220649299692013,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_length_compensation.py::test_application_applies_tool_length_compensation_to_current_position[g43-adjusts-current-z-without-axis-motion]",
+      "outcome": "failed",
+      "duration_seconds": 0.029185786999732954,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G20\\nG90\\nG0 Z3.0\\nG43 H2\\n'\nexpected_machine_position = {'x': 0.0, 'y': 0.0, 'z': 1.5}\nexpected_tool_length_offset_index = 2\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_applies_tool_0')\n\n    @pytest.mark.parametrize(\n        (\"input_gcode\", \"expected_machine_position\", \"expected_tool_length_offset_index\"),\n        [\n            (\n                input_gcode,\n                expected_machine_position,\n                expected_tool_length_offset_index,\n            )\n            for (\n                _,\n                input_gcode,\n                expected_machine_position,\n                expected_tool_length_offset_index,\n            ) in TOOL_LENGTH_COMPENSATION_CASES\n        ],\n        ids=[case_id for case_id, _, _, _ in TOOL_LENGTH_COMPENSATION_CASES],\n    )\n    def test_application_applies_tool_length_compensation_to_current_position(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        expected_machine_position: dict[str, float],\n        expected_tool_length_offset_index: int | None,\n        tmp_path: Path,\n    ) -> None:\n        completed, payload = run_rs274(\n            submission_command,\n            input_gcode=input_gcode,\n            tool_table_content=TOOL_TABLE,\n            tmp_path=tmp_path,\n        )\n    \n        assert completed.returncode == 0, completed.stderr\n        assert payload.get(\"error\") is None\n>       assert payload.get(\"machine_position\") == with_default_rotary_axes(expected_machine_position)\nE       AssertionError: assert {'a': 0.0, 'b...'x': 0.0, ...} == {'a': 0.0, 'b...'x': 0.0, ...}\nE         \nE         Omitting 5 identical items, use -vv to show\nE         Differing items:\nE         {'z': 3.0} != {'z': 1.5}\nE         Use -v to get more diff\n\n/tmp/tests/test_tool_length_compensation.py:89: AssertionError"
+    },
+    {
+      "node_id": "test_tool_length_compensation.py::test_application_applies_tool_length_compensation_to_current_position[changing-g43-offsets-adjusts-current-z-by-the-offset-difference]",
+      "outcome": "failed",
+      "duration_seconds": 0.024288450000312878,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G20\\nG90\\nG0 Z3.0\\nG43 H2\\nG43 H4\\n'\nexpected_machine_position = {'x': 0.0, 'y': 0.0, 'z': 2.5}\nexpected_tool_length_offset_index = 4\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_applies_tool_1')\n\n    @pytest.mark.parametrize(\n        (\"input_gcode\", \"expected_machine_position\", \"expected_tool_length_offset_index\"),\n        [\n            (\n                input_gcode,\n                expected_machine_position,\n                expected_tool_length_offset_index,\n            )\n            for (\n                _,\n                input_gcode,\n                expected_machine_position,\n                expected_tool_length_offset_index,\n            ) in TOOL_LENGTH_COMPENSATION_CASES\n        ],\n        ids=[case_id for case_id, _, _, _ in TOOL_LENGTH_COMPENSATION_CASES],\n    )\n    def test_application_applies_tool_length_compensation_to_current_position(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        expected_machine_position: dict[str, float],\n        expected_tool_length_offset_index: int | None,\n        tmp_path: Path,\n    ) -> None:\n        completed, payload = run_rs274(\n            submission_command,\n            input_gcode=input_gcode,\n            tool_table_content=TOOL_TABLE,\n            tmp_path=tmp_path,\n        )\n    \n        assert completed.returncode == 0, completed.stderr\n        assert payload.get(\"error\") is None\n>       assert payload.get(\"machine_position\") == with_default_rotary_axes(expected_machine_position)\nE       AssertionError: assert {'a': 0.0, 'b...'x': 0.0, ...} == {'a': 0.0, 'b...'x': 0.0, ...}\nE         \nE         Omitting 5 identical items, use -vv to show\nE         Differing items:\nE         {'z': 3.0} != {'z': 2.5}\nE         Use -v to get more diff\n\n/tmp/tests/test_tool_length_compensation.py:89: AssertionError"
+    },
+    {
+      "node_id": "test_tool_length_compensation.py::test_application_applies_tool_length_compensation_to_current_position[g49-cancels-tool-length-compensation-without-axis-motion]",
+      "outcome": "passed",
+      "duration_seconds": 0.02411213199957274,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_length_compensation.py::test_application_applies_tool_length_compensation_to_current_position[g43-remains-active-during-ordinary-motion]",
+      "outcome": "failed",
+      "duration_seconds": 0.025480055999651086,
+      "message": "submission_command = ('/usr/bin/node', '/tmp/submission/output/main.js')\ninput_gcode = 'G20\\nG90\\nG0 Z3.0\\nG43 H2\\nG1 X4.0 Y5.0 F2.0\\n'\nexpected_machine_position = {'x': 4.0, 'y': 5.0, 'z': 1.5}\nexpected_tool_length_offset_index = 2\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_application_applies_tool_3')\n\n    @pytest.mark.parametrize(\n        (\"input_gcode\", \"expected_machine_position\", \"expected_tool_length_offset_index\"),\n        [\n            (\n                input_gcode,\n                expected_machine_position,\n                expected_tool_length_offset_index,\n            )\n            for (\n                _,\n                input_gcode,\n                expected_machine_position,\n                expected_tool_length_offset_index,\n            ) in TOOL_LENGTH_COMPENSATION_CASES\n        ],\n        ids=[case_id for case_id, _, _, _ in TOOL_LENGTH_COMPENSATION_CASES],\n    )\n    def test_application_applies_tool_length_compensation_to_current_position(\n        submission_command: tuple[str, ...],\n        input_gcode: str,\n        expected_machine_position: dict[str, float],\n        expected_tool_length_offset_index: int | None,\n        tmp_path: Path,\n    ) -> None:\n        completed, payload = run_rs274(\n            submission_command,\n            input_gcode=input_gcode,\n            tool_table_content=TOOL_TABLE,\n            tmp_path=tmp_path,\n        )\n    \n        assert completed.returncode == 0, completed.stderr\n        assert payload.get(\"error\") is None\n>       assert payload.get(\"machine_position\") == with_default_rotary_axes(expected_machine_position)\nE       AssertionError: assert {'a': 0.0, 'b...'x': 4.0, ...} == {'a': 0.0, 'b...'x': 4.0, ...}\nE         \nE         Omitting 5 identical items, use -vv to show\nE         Differing items:\nE         {'z': 3.0} != {'z': 1.5}\nE         Use -v to get more diff\n\n/tmp/tests/test_tool_length_compensation.py:89: AssertionError"
+    },
+    {
+      "node_id": "test_tool_length_compensation_errors.py::test_application_rejects_invalid_tool_length_compensation_usage[g43-rejects-non-integer-h]",
+      "outcome": "passed",
+      "duration_seconds": 0.028630847002204973,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_length_compensation_errors.py::test_application_rejects_invalid_tool_length_compensation_usage[g43-rejects-negative-h]",
+      "outcome": "passed",
+      "duration_seconds": 0.02662929999860353,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_length_compensation_errors.py::test_application_rejects_invalid_tool_length_compensation_usage[g43-rejects-h-larger-than-carousel-slots]",
+      "outcome": "passed",
+      "duration_seconds": 0.027004913001292152,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_selection_errors.py::test_application_rejects_invalid_tool_selection_words[t-rejects-non-integer-tool-number]",
+      "outcome": "passed",
+      "duration_seconds": 0.026227775000734255,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_selection_errors.py::test_application_rejects_invalid_tool_selection_words[t-rejects-negative-tool-number]",
+      "outcome": "passed",
+      "duration_seconds": 0.0276150459976634,
+      "message": null
+    },
+    {
+      "node_id": "test_tool_selection_errors.py::test_application_rejects_invalid_tool_selection_words[t-rejects-slot-number-larger-than-carousel-slots]",
+      "outcome": "passed",
+      "duration_seconds": 0.032116993999807164,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-explicit-zero-cutter-radius-compensation-number]",
+      "outcome": "passed",
+      "duration_seconds": 0.026629250998666976,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-cutter-radius-compensation-number]",
+      "outcome": "passed",
+      "duration_seconds": 0.025953005995688727,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[clears-cutter-radius-compensation-number-on-g40]",
+      "outcome": "passed",
+      "duration_seconds": 0.027714258001651615,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-tool-length-offset-index]",
+      "outcome": "passed",
+      "duration_seconds": 0.025371676998474868,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[clears-tool-length-offset-index-on-g49]",
+      "outcome": "passed",
+      "duration_seconds": 0.026179030999628594,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-selected-tool]",
+      "outcome": "passed",
+      "duration_seconds": 0.023293043996091,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-tool-in-spindle-after-m6]",
+      "outcome": "passed",
+      "duration_seconds": 0.026679205999244004,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-selected-tool-separately-from-tool-in-spindle]",
+      "outcome": "passed",
+      "duration_seconds": 0.026470093998796074,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-empty-spindle-after-t0-m6]",
+      "outcome": "passed",
+      "duration_seconds": 0.024582303001807304,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[accepts-d-h-and-t-equal-to-carousel-slot-count]",
+      "outcome": "passed",
+      "duration_seconds": 0.02500434600005974,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[m6-stops-the-spindle]",
+      "outcome": "passed",
+      "duration_seconds": 0.027395438999519683,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-all-tooling-state-together]",
+      "outcome": "passed",
+      "duration_seconds": 0.02408132500204374,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-tooling-state-from-parameter-values]",
+      "outcome": "passed",
+      "duration_seconds": 0.02309835200139787,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-tooling-state-from-expressions]",
+      "outcome": "passed",
+      "duration_seconds": 0.026355405007052468,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_application_tracks_tooling_state[tracks-tooling-state-from-repeated-parameters-and-unary-ops]",
+      "outcome": "passed",
+      "duration_seconds": 0.026503434994083364,
+      "message": null
+    },
+    {
+      "node_id": "test_tooling_state.py::test_m6_stops_spindle_without_clearing_unrelated_observable_state",
+      "outcome": "passed",
+      "duration_seconds": 0.028554248998261755,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_trace_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.028706320001219865,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_initial_state_matches_output_payload_shape",
+      "outcome": "passed",
+      "duration_seconds": 0.02555530600147904,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_initial_state_has_all_nine_coordinate_systems",
+      "outcome": "passed",
+      "duration_seconds": 0.026404711003124248,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_initial_state_machine_position_has_six_axes",
+      "outcome": "passed",
+      "duration_seconds": 0.024534109001251636,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_success_trace_has_null_error_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.026337160998082254,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_m2_only_produces_state_only_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.026306010000553215,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_comment_only_produces_no_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.02765992500280845,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_error_trace_sets_error_line_number",
+      "outcome": "passed",
+      "duration_seconds": 0.03232846899845754,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_error_trace_has_correct_entries_from_completed_blocks",
+      "outcome": "passed",
+      "duration_seconds": 0.028931859997101128,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_error_block_segment_index_null_for_simple_block",
+      "outcome": "passed",
+      "duration_seconds": 0.028181585996208014,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_no_entry_at_time_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.025296021998656215,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_entries_do_not_contain_error_field",
+      "outcome": "passed",
+      "duration_seconds": 0.025284929004556034,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_reconstructed_final_state_matches_output_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.025520832001348026,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_delta_encoding_omits_unchanged_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.023480174997530412,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_machine_position_is_sparse_in_delta",
+      "outcome": "passed",
+      "duration_seconds": 0.024854357998265186,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_trace_output_without_stepping_flag_exits_1",
+      "outcome": "passed",
+      "duration_seconds": 0.02709585699994932,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_stepping_flag_without_trace_output_exits_1",
+      "outcome": "passed",
+      "duration_seconds": 0.026678883004933596,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_multiple_stepping_flags_exits_1",
+      "outcome": "passed",
+      "duration_seconds": 0.025207834005414043,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_spec_example_1_linear_motion_time_stepping",
+      "outcome": "passed",
+      "duration_seconds": 0.024643029002618277,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_spec_example_2_g81_canned_cycle_distance_stepping",
+      "outcome": "passed",
+      "duration_seconds": 0.024828188001265517,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_spec_example_3_error_case",
+      "outcome": "passed",
+      "duration_seconds": 0.03661473600004683,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_modal_only_line_produces_state_only_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.025035557999217417,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_feed_rate_only_line_produces_state_only_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.032073057005618466,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_nullable_fields_can_be_explicit_null_in_delta",
+      "outcome": "passed",
+      "duration_seconds": 0.028152560000307858,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_motion_plus_m2_same_line_final_entry_time",
+      "outcome": "passed",
+      "duration_seconds": 0.02657451699997182,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_cs_offsets_sparse_two_level_delta",
+      "outcome": "passed",
+      "duration_seconds": 0.029923086000053445,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_cs_offset_delta_uses_active_units",
+      "outcome": "passed",
+      "duration_seconds": 0.02725671300140675,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_trace_coordinates_are_absolute_machine_coordinates",
+      "outcome": "passed",
+      "duration_seconds": 0.02590201599741704,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_m2_resets_produce_correct_delta",
+      "outcome": "passed",
+      "duration_seconds": 0.03684796900051879,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_m2_parameter_delta_includes_selected_cs_reset",
+      "outcome": "passed",
+      "duration_seconds": 0.02813155900366837,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_initial_state_includes_loaded_parameters",
+      "outcome": "passed",
+      "duration_seconds": 0.03657213100086665,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_initial_state_includes_tool_table",
+      "outcome": "passed",
+      "duration_seconds": 0.057266316001914674,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_block_deleted_line_produces_no_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.024354376997507643,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_crc_trace_reports_compensated_path",
+      "outcome": "passed",
+      "duration_seconds": 0.02417757999864989,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_error_in_canned_cycle_preserves_completed_sms",
+      "outcome": "passed",
+      "duration_seconds": 0.026728118002210977,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_modal_g_codes_sparse_in_delta",
+      "outcome": "passed",
+      "duration_seconds": 0.023281209003471304,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_parameters_sparse_in_delta",
+      "outcome": "passed",
+      "duration_seconds": 0.02493742699516588,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_parameter_output_not_written_on_error",
+      "outcome": "passed",
+      "duration_seconds": 0.02823404499940807,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_probe_no_trip_records_commanded_endpoint",
+      "outcome": "passed",
+      "duration_seconds": 0.027674897999531822,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_format.py::test_zero_length_g28_suppresses_nonmodal_label",
+      "outcome": "passed",
+      "duration_seconds": 0.023997151001822203,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g53_label_on_first_entry_of_motion",
+      "outcome": "passed",
+      "duration_seconds": 0.023771240001224214,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g28_label_on_both_sub_motions",
+      "outcome": "passed",
+      "duration_seconds": 0.02884192700003041,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g28_zero_intermediate_no_label_on_zero_sm",
+      "outcome": "passed",
+      "duration_seconds": 0.02987055700214114,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g30_label_on_both_sub_motions",
+      "outcome": "passed",
+      "duration_seconds": 0.02527287299744785,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g10_label_on_state_only_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.026724746996478643,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g92_label_on_state_only_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.023700767003902,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g92_1_label",
+      "outcome": "passed",
+      "duration_seconds": 0.023394780004309723,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g92_2_label",
+      "outcome": "passed",
+      "duration_seconds": 0.02781602800314431,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g92_3_label",
+      "outcome": "passed",
+      "duration_seconds": 0.025174521000735695,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g4_dwell_carries_nonmodal_label",
+      "outcome": "passed",
+      "duration_seconds": 0.03626896900095744,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_nonmodal_g_codes_omitted_when_none_fired",
+      "outcome": "passed",
+      "duration_seconds": 0.033373024001775775,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_nonmodal_g_codes_alphabetically_sorted",
+      "outcome": "passed",
+      "duration_seconds": 0.026015180996182607,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_motion_kind_absent_outside_canned_cycles",
+      "outcome": "passed",
+      "duration_seconds": 0.024828678997437237,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_nonmodal.py::test_g4_p0_with_modal_change_emits_state_only",
+      "outcome": "passed",
+      "duration_seconds": 0.024903382003685692,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_time_step_correct_number_of_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.02589889199953177,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_time_step_positions_are_linearly_interpolated",
+      "outcome": "passed",
+      "duration_seconds": 0.025628898001741618,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_time_step_larger_than_motion_only_final_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.025338077004562365,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_time_step_exactly_divides_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.02682124599959934,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_time_step_last_interior_not_duplicated_with_final",
+      "outcome": "passed",
+      "duration_seconds": 0.03857264500038582,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_distance_step_correct_number_of_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.04083118600101443,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_distance_step_positions",
+      "outcome": "passed",
+      "duration_seconds": 0.042778617000294616,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_distance_step_larger_than_path_only_final",
+      "outcome": "passed",
+      "duration_seconds": 0.024540638998587383,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_distance_step_diagonal_move",
+      "outcome": "passed",
+      "duration_seconds": 0.02904339500310016,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_rapid_duration_at_1000_ipm",
+      "outcome": "passed",
+      "duration_seconds": 0.021998068998072995,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_time_resets_per_line",
+      "outcome": "passed",
+      "duration_seconds": 0.024971792998258024,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_arc_g2_produces_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.026184812999417773,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_arc_positions_stay_on_circle",
+      "outcome": "passed",
+      "duration_seconds": 0.027052584999182727,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_canned_cycle_sub_motions_stepped_independently",
+      "outcome": "passed",
+      "duration_seconds": 0.04944507700201939,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_canned_cycle_motion_kind_only_on_first_entry_per_sm",
+      "outcome": "passed",
+      "duration_seconds": 0.04008906300441595,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_canned_cycle_zero_duration_sm_skipped",
+      "outcome": "passed",
+      "duration_seconds": 0.023698971002886537,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_dwell_entry_at_time_p",
+      "outcome": "passed",
+      "duration_seconds": 0.02203473899862729,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_dwell_p_zero_no_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.022589276999497088,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g93_inverse_time_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.024381518003792735,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g21_mm_mode_trace_coordinates",
+      "outcome": "passed",
+      "duration_seconds": 0.026144084997213213,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_canned_cycle_l2_produces_double_sub_motions",
+      "outcome": "passed",
+      "duration_seconds": 0.026002048998634564,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_helical_arc_duration_includes_axial",
+      "outcome": "passed",
+      "duration_seconds": 0.02327491299729445,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_helical_arc_z_varies_during_arc",
+      "outcome": "passed",
+      "duration_seconds": 0.025183758996718097,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_full_circle_arc_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.022412658003304387,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_full_circle_arc_with_explicit_axis_words_returns_to_start",
+      "outcome": "passed",
+      "duration_seconds": 0.025212404998455895,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_tolerance_stepping_linear_single_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.023258551002072636,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_tolerance_stepping_arc_produces_intermediate_samples",
+      "outcome": "passed",
+      "duration_seconds": 0.022427659001550637,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_tolerance_stepping_arc_deviation_within_tolerance",
+      "outcome": "passed",
+      "duration_seconds": 0.02334307599812746,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_probe_trip_point_in_trace",
+      "outcome": "passed",
+      "duration_seconds": 0.023213884996948764,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g84_tap_spindle_reversal_in_trace",
+      "outcome": "passed",
+      "duration_seconds": 0.036775213997316314,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g84_g99_spindle_reversal_visible",
+      "outcome": "passed",
+      "duration_seconds": 0.02263708700047573,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g83_peck_drill_decomposition",
+      "outcome": "passed",
+      "duration_seconds": 0.023580062999826623,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g93_inverse_time_multi_line",
+      "outcome": "passed",
+      "duration_seconds": 0.024519025995687116,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_distance_step_in_inches_under_g21",
+      "outcome": "passed",
+      "duration_seconds": 0.0224329470001976,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_pending_modal_deltas_ride_first_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.02200087199889822,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g93_inverse_time_arc_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.023469184998248238,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_tolerance_stepping_helical_arc",
+      "outcome": "passed",
+      "duration_seconds": 0.03186479099895223,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g18_xz_plane_arc_trace",
+      "outcome": "passed",
+      "duration_seconds": 0.025131852002232336,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g19_yz_plane_arc_trace",
+      "outcome": "passed",
+      "duration_seconds": 0.02762874899781309,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g82_drill_with_dwell_trace",
+      "outcome": "passed",
+      "duration_seconds": 0.028486638999311253,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g85_boring_feed_retract",
+      "outcome": "passed",
+      "duration_seconds": 0.026466793999134097,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g86_boring_rapid_retract",
+      "outcome": "passed",
+      "duration_seconds": 0.03154360099870246,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g87_back_boring_sub_motions",
+      "outcome": "passed",
+      "duration_seconds": 0.027051744000345934,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g89_boring_dwell_feed_retract",
+      "outcome": "passed",
+      "duration_seconds": 0.0256200389994774,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_unit_switch_mid_program_trace_coordinates",
+      "outcome": "passed",
+      "duration_seconds": 0.025136432002909714,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g21_arc_distance_stepping",
+      "outcome": "passed",
+      "duration_seconds": 0.026291807000234257,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_linear_plus_rotary_duration_uses_xyz_path_only",
+      "outcome": "passed",
+      "duration_seconds": 0.027158424996741815,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_rotary_only_g21_feed_rate_not_converted",
+      "outcome": "passed",
+      "duration_seconds": 0.028358964002109133,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g88_boring_rapid_retract",
+      "outcome": "passed",
+      "duration_seconds": 0.025052499997400446,
+      "message": null
+    },
+    {
+      "node_id": "test_trace_stepping.py::test_g28_stepping_applied_per_sub_motion",
+      "outcome": "passed",
+      "duration_seconds": 0.022151054999994813,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[a-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.023777924994647037,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[b-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.025550041998940287,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[c-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.025463072997808922,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[d-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.026376126003015088,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[f-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.026017366999440128,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[h-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.041726956002094084,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[i-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.03661543199996231,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[j-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.029357891999097774,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[k-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.025590807996195508,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[l-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.033145943001727574,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[p-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.029200297005445464,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[r-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.03341509500023676,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[s-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.025658964998001466,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[t-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.025756336999620544,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[x-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.027669057999446522,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[y-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.02796468199812807,
+      "message": null
+    },
+    {
+      "node_id": "test_word_repeat_errors.py::test_application_rejects_repeated_non_modal_word_letters[z-word]",
+      "outcome": "passed",
+      "duration_seconds": 0.02686500400159275,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 542,
+    "failed": 13,
+    "skipped": 0,
+    "error": 0,
+    "total": 555
+  },
+  "scores": {
+    "correctness": 0.9765765765765766,
+    "task_score": 0.9765765765765766,
+    "extension_scores": {
+      "subscore.active_gcode_groups.passed": 34.0,
+      "subscore.active_gcode_groups.total": 34.0,
+      "subscore.active_mcode_groups.passed": 10.0,
+      "subscore.active_mcode_groups.total": 10.0,
+      "subscore.arc_errors.passed": 5.0,
+      "subscore.arc_errors.total": 5.0,
+      "subscore.block_prefixes.passed": 6.0,
+      "subscore.block_prefixes.total": 6.0,
+      "subscore.canned_cycle_errors.passed": 24.0,
+      "subscore.canned_cycle_errors.total": 27.0,
+      "subscore.canned_cycles.passed": 23.0,
+      "subscore.canned_cycles.total": 23.0,
+      "subscore.comment_errors.passed": 3.0,
+      "subscore.comment_errors.total": 3.0,
+      "subscore.comment_parsing.passed": 5.0,
+      "subscore.comment_parsing.total": 5.0,
+      "subscore.cutter_radius_compensation.passed": 28.0,
+      "subscore.cutter_radius_compensation.total": 28.0,
+      "subscore.cutter_radius_compensation_errors.passed": 45.0,
+      "subscore.cutter_radius_compensation_errors.total": 45.0,
+      "subscore.feed_and_spindle_errors.passed": 1.0,
+      "subscore.feed_and_spindle_errors.total": 1.0,
+      "subscore.feed_and_spindle_state.passed": 6.0,
+      "subscore.feed_and_spindle_state.total": 6.0,
+      "subscore.feed_rate_mode.passed": 4.0,
+      "subscore.feed_rate_mode.total": 4.0,
+      "subscore.g10_coordinate_system_offsets.passed": 7.0,
+      "subscore.g10_coordinate_system_offsets.total": 9.0,
+      "subscore.g10_errors.passed": 2.0,
+      "subscore.g10_errors.total": 2.0,
+      "subscore.g28_g30.passed": 8.0,
+      "subscore.g28_g30.total": 8.0,
+      "subscore.g4_dwell.passed": 1.0,
+      "subscore.g4_dwell.total": 1.0,
+      "subscore.g4_errors.passed": 1.0,
+      "subscore.g4_errors.total": 1.0,
+      "subscore.g53_errors.passed": 2.0,
+      "subscore.g53_errors.total": 2.0,
+      "subscore.g87_submotions.passed": 3.0,
+      "subscore.g87_submotions.total": 3.0,
+      "subscore.g92_errors.passed": 1.0,
+      "subscore.g92_errors.total": 1.0,
+      "subscore.g92_offsets.passed": 11.0,
+      "subscore.g92_offsets.total": 11.0,
+      "subscore.gcode_group_errors.passed": 11.0,
+      "subscore.gcode_group_errors.total": 11.0,
+      "subscore.linear_motion_errors.passed": 4.0,
+      "subscore.linear_motion_errors.total": 4.0,
+      "subscore.mcode_group_errors.passed": 6.0,
+      "subscore.mcode_group_errors.total": 6.0,
+      "subscore.mcode_line_acceptance.passed": 4.0,
+      "subscore.mcode_line_acceptance.total": 4.0,
+      "subscore.output_schema.passed": 4.0,
+      "subscore.output_schema.total": 4.0,
+      "subscore.parameter_errors.passed": 21.0,
+      "subscore.parameter_errors.total": 21.0,
+      "subscore.parameter_expressions.passed": 37.0,
+      "subscore.parameter_expressions.total": 37.0,
+      "subscore.parameter_file_cli.passed": 9.0,
+      "subscore.parameter_file_cli.total": 11.0,
+      "subscore.parameter_output_file.passed": 3.0,
+      "subscore.parameter_output_file.total": 3.0,
+      "subscore.parameter_values.passed": 4.0,
+      "subscore.parameter_values.total": 4.0,
+      "subscore.position_tracking.passed": 35.0,
+      "subscore.position_tracking.total": 35.0,
+      "subscore.probing.passed": 9.0,
+      "subscore.probing.total": 11.0,
+      "subscore.probing_errors.passed": 12.0,
+      "subscore.probing_errors.total": 13.0,
+      "subscore.program_delimiters.passed": 2.0,
+      "subscore.program_delimiters.total": 2.0,
+      "subscore.program_end_reset.passed": 6.0,
+      "subscore.program_end_reset.total": 6.0,
+      "subscore.tool_length_compensation.passed": 1.0,
+      "subscore.tool_length_compensation.total": 4.0,
+      "subscore.tool_length_compensation_errors.passed": 3.0,
+      "subscore.tool_length_compensation_errors.total": 3.0,
+      "subscore.tool_selection_errors.passed": 3.0,
+      "subscore.tool_selection_errors.total": 3.0,
+      "subscore.tooling_state.passed": 16.0,
+      "subscore.tooling_state.total": 16.0,
+      "subscore.trace_format.passed": 40.0,
+      "subscore.trace_format.total": 40.0,
+      "subscore.trace_nonmodal.passed": 14.0,
+      "subscore.trace_nonmodal.total": 14.0,
+      "subscore.trace_stepping.passed": 50.0,
+      "subscore.trace_stepping.total": 50.0,
+      "subscore.word_repeat_errors.passed": 17.0,
+      "subscore.word_repeat_errors.total": 17.0
+    }
+  },
+  "source_stats": {
+    "file_count": 9,
+    "lines_of_code": 1825
+  },
+  "grading_environment": {
+    "mode": "docker",
+    "docker_image_tag": "clispecbench-base",
+    "docker_image_sha": "sha256:922c3bc7435e5546e737bf77b5bc8c07d15f86c9bad7f6fc68555cf8fbf04dc5"
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims broad simulator support and successful examples/fuzzing; acknowledges unverified CRC and interpretation choices. Thirteen hidden cycle, parameter, tool-length and probing failures qualify completion claims.",
+    "commentary": "claude-5-5-publication-oct13-2026"
+  }
+}
