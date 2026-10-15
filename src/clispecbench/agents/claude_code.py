@@ -24,6 +24,9 @@ HAIKU55_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-haiku55.Dockerfile"
 # OpenTelemetry export directory inside the container
 OTEL_COLLECTOR_DIR = "/tmp/otel"
 
+# Long-lived subscription token from `claude setup-token` (model requests only).
+OAUTH_TOKEN_ENV = "CLAUDE_CODE_OAUTH_TOKEN"
+
 # Per-message output-token ceiling for the CLI. The CLI default is 32000, which
 # truncates the most verbose models mid-task (Opus 4.8 at --effort max hit it on
 # every run, dying with stub submissions). We set a virtually-unlimited value;
@@ -339,6 +342,17 @@ class ClaudeCodeAdapter(AgentAdapter):
                 "bind": f"{home}/.claude/{filename}",
                 "mode": "ro",
             }
+        return mounts
+
+    def credential_mounts_for(
+        self, host_home: Path, environment: dict[str, str]
+    ) -> dict[str, dict[str, str]]:
+        mounts = self.credential_mounts(host_home)
+        if environment.get(OAUTH_TOKEN_ENV):
+            # A `claude setup-token` token outranks the /login credentials file;
+            # leave the file out so the run can only use the token.
+            # https://code.claude.com/docs/en/authentication#authentication-precedence
+            mounts.pop((host_home / ".claude" / ".credentials.json").as_posix(), None)
         return mounts
 
     @property

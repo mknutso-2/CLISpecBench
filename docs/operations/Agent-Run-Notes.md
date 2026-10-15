@@ -92,6 +92,30 @@ Use that only when the run launcher can keep the token out of logs and shell
 history, and verify the behavior with the Claude smoke test before counting
 the runs.
 
+The harness supports this with `clispecbench run --secret-env
+CLAUDE_CODE_OAUTH_TOKEN`, which copies the variable from the harness's own
+environment into the container, so the value never appears in argv, logs or
+launch receipts. When the container receives the token, the claude-code
+adapter stops mounting `.credentials.json`, so the run can only authenticate
+with the token. Claude Code ranks the token above `/login` credentials anyway.
+
+Verified October 14, 2026 with CLI 2.1.289: the token authenticates
+`claude --print` in the pinned image with no credentials file mounted. It is
+scoped to model requests only (`user:inference`). The ordinary usage endpoint
+(`/api/oauth/usage`) rejects it with HTTP 403 because it lacks `user:profile`,
+as [Anthropic's authentication docs](https://code.claude.com/docs/en/authentication#generate-a-long-lived-token)
+describe. Usage gates therefore still need the `/login` credential, the
+`rate_limit_event` that every stream-json run reports, or a minimal request.
+A `claude-haiku-5-5` request in a clean container reports the same
+account-wide five-hour and seven-day windows as a Sonnet request at about a
+tenth of the API-equivalent cost. Keep such probes outside benchmark
+containers so they never enter a run's transcript or accounting.
+
+In a WSL2 NAT setup, Windows rewrites traffic from WSL and every Docker
+container to the host's own LAN address. A host service that filters clients
+by home subnet therefore also admits benchmark containers unless it refuses
+the host's own address.
+
 ## Claude Code CLI Version Pins
 
 All Claude Code runs report the single agent identity `claude-code`; the pinned

@@ -233,14 +233,15 @@ def run_evaluation(
 
         # --- 3. Create and run container ---
         host_home = resolve_host_home()
+        environment = adapter.environment(api_key_env)
         config = ContainerConfig(
             image=adapter.image_tag,
-            environment=adapter.environment(api_key_env),
+            environment=environment,
             command=adapter.invoke_command(
                 prompt_path=PurePosixPath(CONTAINER_PROMPT),
                 work_dir=PurePosixPath(CONTAINER_WORKSPACE),
             ),
-            volumes=adapter.credential_mounts(host_home),
+            volumes=adapter.credential_mounts_for(host_home, environment),
             egress_allowlist=(
                 adapter.allowed_hosts if adapter.network_policy == "api-only" else []
             ),

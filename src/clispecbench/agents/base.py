@@ -93,6 +93,16 @@ class AgentAdapter(ABC):
         """
         return {}
 
+    def credential_mounts_for(
+        self, host_home: Path, environment: dict[str, str]
+    ) -> dict[str, dict[str, str]]:
+        """Return credential mounts given the container *environment*.
+
+        Adapters override this to drop credential files that an environment
+        credential supersedes, so a run never carries two competing logins.
+        """
+        return self.credential_mounts(host_home)
+
     @property
     def telemetry_paths(self) -> list[str]:
         """Container paths to extract for token usage and telemetry parsing.

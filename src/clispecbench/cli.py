@@ -5,7 +5,9 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 
 from clispecbench.agents.base import AgentAdapter
@@ -59,6 +61,20 @@ def _get_adapter(
 # ---------------------------------------------------------------------------
 
 
+def collect_secret_env(names: list[str], environ: Mapping[str, str]) -> dict[str, str]:
+    """Copy each named secret from *environ*, so values never appear in argv or logs.
+
+    Raises ``ValueError`` naming (never revealing) a missing or empty variable.
+    """
+    secrets: dict[str, str] = {}
+    for name in names:
+        value = environ.get(name)
+        if not value:
+            raise ValueError(f"--secret-env {name}: variable is not set or empty")
+        secrets[name] = value
+    return secrets
+
+
 def _cmd_run(args: argparse.Namespace) -> None:
     repo_root = _find_repo_root()
     task = resolve_task(repo_root, args.task, language=getattr(args, "language", None))
@@ -77,6 +93,11 @@ def _cmd_run(args: argparse.Namespace) -> None:
             sys.exit(1)
         key, value = kv.split("=", 1)
         api_key_env[key] = value
+    try:
+        api_key_env.update(collect_secret_env(args.secret_env or [], os.environ))
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
 
     num_runs: int = args.runs
     output_dir = Path(args.output_dir)
@@ -778,6 +799,16 @@ def main(argv: list[str] | None = None) -> None:
         ),
     )
     run_parser.add_argument("--api-key-env", action="append", help="VAR=value pairs for API keys")
+    run_parser.add_argument(
+        "--secret-env",
+        action="append",
+        metavar="NAME",
+        help=(
+            "Pass environment variable NAME from this process into the agent "
+            "container without putting its value on the command line (e.g. "
+            "CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`)."
+        ),
+    )
 
     # --- regrade ---
     regrade_parser = subparsers.add_parser(
