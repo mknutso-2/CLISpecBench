@@ -16,6 +16,7 @@ CLISpecBench is a benchmark for evaluating AI coding agents on doc-driven implem
 
 - **The parallel author-eval skills are authoritative** for prompt/docs/test/versioning rules, including `technical-requirements-prompt.md`, RS274 spec edits, reference-implementation bug fixes, and `VERSION`/`CHANGELOG.md` bumps. Use `.codex/skills/author-eval/SKILL.md` in Codex and `.claude/skills/author-eval/SKILL.md` in Claude.
 - **Keep `__init__.py` minimal.** Do not re-export from package roots unless it is an intentional public API. Import from the defining module instead.
+- **Same-model delegation only.** A model may delegate only to its own exact model, including version; a different model in the same family is not sufficient. Do not select another model for a subagent, teammate, workflow agent, or model-assisted sidecar. Inherit the parent model without an override when possible, and enforce the exact model with supported runtime controls for benchmark runs. Unknown or mismatched actual child-model evidence blocks pure-model approval; preserve the attempt and ask before any rerun. See `docs/operations/Same-Model-Delegation.md` for enforcement and provenance requirements.
 
 ## Key docs
 
