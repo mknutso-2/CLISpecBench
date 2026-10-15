@@ -100,6 +100,27 @@ class TestEstimateCost:
         assert cost is not None
         assert cost == pytest.approx(0.5 * 5.00 + 0.5 * 0.50 + 30.00)  # type: ignore[reportUnknownMemberType]
 
+    def test_gpt_6_sol_model(self) -> None:
+        cost = estimate_cost(
+            "gpt-6-sol",
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_input_tokens=500_000,
+            cache_creation_input_tokens=100_000,
+        )
+        # Sol cached input is $0.20/MTok, not GPT-6.1 Sol's $0.10.
+        assert cost == pytest.approx(11.15)  # type: ignore[reportUnknownMemberType]
+
+    def test_gpt_6_luna_model(self) -> None:
+        cost = estimate_cost(
+            "gpt-6-luna",
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_input_tokens=500_000,
+            cache_creation_input_tokens=100_000,
+        )
+        assert cost == pytest.approx(0.5575)  # type: ignore[reportUnknownMemberType]
+
     def test_gpt_6_1_sol_model(self) -> None:
         cost = estimate_cost(
             "gpt-6.1-sol",
@@ -177,6 +198,8 @@ class TestPricingTableCompleteness:
 
     def test_all_openai_models_present(self) -> None:
         for model in (
+            "gpt-6-sol",
+            "gpt-6-luna",
             "gpt-6.1-sol",
             "gpt-5.6-sol",
             "gpt-5.6-terra",

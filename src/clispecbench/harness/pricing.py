@@ -49,6 +49,7 @@ See also: https://github.com/anthropics/claude-code/issues/26762
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 
@@ -60,6 +61,70 @@ class ModelPricing:
     output: float  # $/MTok for output
     cached_input: float  # $/MTok for cache-hit (read) input
     cache_write: float  # $/MTok for cache creation/write (0 if same as input)
+
+
+# Verified 2026-10-07 against Anthropic's Haiku 5.5 model/pricing documentation.
+# The context threshold applies to EACH request's entire input, including cache
+# reads/writes, and selects the rates for all categories (including output).
+HAIKU55_STANDARD_PRICING = ModelPricing(0.10, 0.50, 0.01, 0.20)
+HAIKU55_LONG_CONTEXT_PRICING = ModelPricing(0.50, 2.50, 0.05, 1.00)
+
+
+def is_haiku55_model(model: str | None) -> bool:
+    """Recognize only the exact Haiku 5.5 family, not similarly prefixed models."""
+    return (
+        isinstance(model, str) and re.fullmatch(r"claude-haiku-5-5(?:-\d{8})?", model) is not None
+    )
+
+
+def _haiku55_token_count(value: object) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError("Invalid Haiku 5.5 request counts")
+    return value
+
+
+def estimate_haiku55_request_cost(
+    uncached_input_tokens: int,
+    output_tokens: int,
+    cache_read_input_tokens: int,
+    cache_creation_input_tokens: int,
+    cache_creation_5m_tokens: int | None = None,
+    cache_creation_1h_tokens: int | None = None,
+) -> float:
+    """Price one complete request, without rounding before session summation.
+
+    When both TTL counters are absent, use the repository's documented one-hour
+    cache-write convention. This remains an estimate, not authoritative billing.
+    Explicit TTL counters must cover every cache-creation token exactly.
+    """
+    for value in (
+        uncached_input_tokens,
+        output_tokens,
+        cache_read_input_tokens,
+        cache_creation_input_tokens,
+    ):
+        _haiku55_token_count(value)
+    if cache_creation_5m_tokens is None and cache_creation_1h_tokens is None:
+        five_minute, one_hour = 0, cache_creation_input_tokens
+    else:
+        five_minute = _haiku55_token_count(
+            cache_creation_5m_tokens if cache_creation_5m_tokens is not None else 0
+        )
+        one_hour = _haiku55_token_count(
+            cache_creation_1h_tokens if cache_creation_1h_tokens is not None else 0
+        )
+        if five_minute + one_hour != cache_creation_input_tokens:
+            raise ValueError("Invalid Haiku 5.5 cache-tier counts")
+    context = uncached_input_tokens + cache_read_input_tokens + cache_creation_input_tokens
+    pricing = HAIKU55_LONG_CONTEXT_PRICING if context > 100_000 else HAIKU55_STANDARD_PRICING
+    five_minute_rate = 0.625 if context > 100_000 else 0.125
+    return (
+        uncached_input_tokens * pricing.input
+        + output_tokens * pricing.output
+        + cache_read_input_tokens * pricing.cached_input
+        + one_hour * pricing.cache_write
+        + five_minute * five_minute_rate
+    ) / 1_000_000
 
 
 # ---------------------------------------------------------------------------
@@ -74,6 +139,14 @@ class ModelPricing:
 # https://platform.claude.com/docs/en/about-claude/pricing
 # cache_write = 1h ephemeral cache creation rate (2x base input)
 ANTHROPIC_PRICING: dict[str, ModelPricing] = {
+    # Base tier only for model registration. Aggregate estimates are forbidden
+    # below: Haiku 5.5 requires request-level context-tier reconciliation.
+    "claude-haiku-5-5": HAIKU55_STANDARD_PRICING,
+    # Verified 2026-10-06: https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+    # cache_write follows this table's existing one-hour ephemeral convention.
+    "claude-sonnet-5-5": ModelPricing(
+        input=2.00, output=10.00, cached_input=0.20, cache_write=4.00
+    ),
     "claude-opus-4-7": ModelPricing(input=5.00, output=25.00, cached_input=0.50, cache_write=10.00),  # noqa: E501
     "claude-opus-4-6": ModelPricing(input=5.00, output=25.00, cached_input=0.50, cache_write=10.00),  # noqa: E501
     "claude-sonnet-4-6": ModelPricing(
@@ -105,7 +178,7 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 
 # OpenAI GPT / Codex
 # https://developers.openai.com/api/docs/models/compare
-# Cache writes for GPT-6.1 Sol, GPT-6 Astra, and GPT-5.6 cost 1.25x uncached input.
+# Cache writes for GPT-6.1 Sol, GPT-6 Astra/Sol/Luna, and GPT-5.6 cost 1.25x input.
 # Older Codex telemetry omitted cache-creation tokens; newer streams expose
 # cache_write_input_tokens, which the adapter maps to cache creation.
 # These models' requests with prompts over 272K input tokens are billed at
@@ -115,6 +188,10 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 # OpenAI describes the current GPT-5.6 Sol rate as promotional through at least
 # 2026-11-21; verify it again before using the table after that date.
 OPENAI_PRICING: dict[str, ModelPricing] = {
+    # Verified 2026-10-04: https://developers.openai.com/api/docs/models/gpt-6-sol
+    "gpt-6-sol": ModelPricing(input=2.00, output=10.00, cached_input=0.20, cache_write=2.50),
+    # Verified 2026-10-03: https://developers.openai.com/api/docs/models/gpt-6-luna
+    "gpt-6-luna": ModelPricing(input=0.10, output=0.50, cached_input=0.01, cache_write=0.125),
     # Verified 2026-10-02: https://developers.openai.com/api/docs/models/gpt-6.1-sol
     "gpt-6.1-sol": ModelPricing(input=2.00, output=10.00, cached_input=0.10, cache_write=2.50),
     # Verified 2026-09-05: https://developers.openai.com/api/docs/models/gpt-6-astra
@@ -191,6 +268,9 @@ def estimate_cost(
     Returns None if the model is not in the pricing table.
     Uncached input = input_tokens - cache_read - cache_creation.
     """
+    # Session totals cannot identify which requests exceeded 100K context.
+    if is_haiku55_model(model):
+        return None
     pricing = ALL_PRICING.get(model)
     if pricing is None:
         return None

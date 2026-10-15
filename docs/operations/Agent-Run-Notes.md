@@ -96,7 +96,7 @@ the runs.
 
 All Claude Code runs report the single agent identity `claude-code`; the pinned
 CLI version actually used is recorded per-run in `metadata.agent_version` and
-surfaced on the dashboard. Three pins exist (see the variant table in
+surfaced on the dashboard. Five pins exist (see the variant table in
 `src/clispecbench/agents/claude_code.py`):
 
 - **2.1.120** (default, 2026-04-24) — the benchmark's standard pin; all
@@ -121,6 +121,42 @@ surfaced on the dashboard. Three pins exist (see the variant table in
   max and can legitimately stream for 20+ minutes, and a 2026-06-12 attempt
   died "Request timed out" after exhausting all API retries despite verified
   host- and container-level connectivity.
+
+- **2.1.197** (sonnet5, 2026-06-30) — preserves the original Sonnet 5
+  collection's CLI generation.
+- **2.1.289** (sonnet55, 2026-10-06) — for `claude-sonnet-5-5`. Anthropic
+  requires Claude Code 2.1.284 or newer for Sonnet 5.5. The separate image
+  preserves all older image pins; it retains explicit `--effort`, telemetry,
+  canonical transcript capture, the existing output ceiling and request
+  timeout. Sonnet 5.5 routes before the older Sonnet 5 prefix. The
+  served-model guard accepts Anthropic dated snapshots but rejects a
+  different model version such as Sonnet 5 versus Sonnet 5.5.
+
+  The initial October 6 smoke showed that 2.1.289 automatically discovers
+  Claude.ai connectors and imports cloud skills despite the minimal mounts.
+  The new variant therefore sets `ENABLE_CLAUDEAI_MCP_SERVERS=false` and passes
+  invocation-only `--settings` with `syncClaudeAiSkills:false` and
+  `syncClaudeAiPlugins:false`. This preserves OAuth, bundled coding tools,
+  local host settings and older CLI variants. Require an empty MCP inventory
+  and no Claude.ai-synced skills/plugins in the preflight and run transcripts.
+  Canonical transcripts can contain account identifiers; retain them privately,
+  never publish them without a separate privacy review.
+
+The Sonnet 5.5 standard API-equivalent rates verified on October 6 are $2 input,
+$10 output, and $0.20 cache read per million tokens. This repository's price
+table uses the one-hour cache-write rate of $4; the five-minute rate is $2.50.
+These are estimates, not subscription charges. Preserve transcript evidence
+about cache duration and any reported-versus-estimated discrepancy.
+
+The new variant does not change Claude's historical `web-enabled` network
+condition. `allowed_hosts` is not isolation enforcement. Do not relabel these
+runs as API-only or merge their network condition with the isolated Codex
+collection. A successful `claude auth status` alone does not prove unexpired
+credentials: pass an exact model/effort container smoke after checking actual
+authentication and ordinary usage. Never enable paid overflow automatically.
+
+Sources: [Claude Code model requirements](https://code.claude.com/docs/en/model-config),
+[Sonnet 5.5 model and pricing](https://platform.claude.com/docs/en/models/sonnet-5-5/overview).
 
 ## Antigravity CLI Status
 

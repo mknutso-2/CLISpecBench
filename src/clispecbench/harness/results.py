@@ -364,12 +364,9 @@ def models_compatible(requested: str | None, served: str | None) -> bool:
     guard only fires on a positively-detected mismatch, never on absence of a
     served-model signal.
 
-    Compatibility rule: case-insensitive equality, or one being a dotted/dashed
-    prefix of the other (``claude-opus-4-5`` ⊑ ``claude-opus-4-5-20251101``).
-    A prefix only counts on a segment boundary, so ``claude-opus-4`` does not
-    silently match ``claude-opus-4-7`` vs ``claude-opus-4-20250514`` — but
-    callers never pass bare-major IDs, and a real fallback (``...-4-20250514``
-    vs ``...-4-7``) fails the prefix test in both directions regardless.
+    Anthropic aliases may match an eight-digit dated snapshot, but not another
+    model version: ``claude-sonnet-5`` must not match ``claude-sonnet-5-5``.
+    Other providers retain their existing dashed-segment prefix behavior.
     """
     if not requested or not served:
         return True
@@ -377,6 +374,11 @@ def models_compatible(requested: str | None, served: str | None) -> bool:
     b = served.strip().lower()
     if a == b:
         return True
+
+    if a.startswith("claude-") or b.startswith("claude-"):
+        return bool(
+            re.fullmatch(re.escape(a) + r"-\d{8}", b) or re.fullmatch(re.escape(b) + r"-\d{8}", a)
+        )
 
     def _is_segment_prefix(short: str, long: str) -> bool:
         return long.startswith(short) and long[len(short) : len(short) + 1] == "-"
@@ -598,12 +600,29 @@ def save_network_audit(result_json_path: Path, audit_data: str) -> str:
     return "network-audit.jsonl"
 
 
+def _source_copy_path(path: Path) -> Path:
+    """Use Win32 extended paths without requiring system-wide long-path opt-in.
+
+    Rust incremental artifacts can exceed MAX_PATH once nested below a run
+    directory. Preserve them rather than silently filtering the source archive.
+    The prefix is only for filesystem operations, never persisted in results.
+    """
+    if os.name != "nt":
+        return path
+    absolute = os.path.abspath(path)
+    if absolute.startswith("\\\\?\\"):
+        return Path(absolute)
+    if absolute.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + absolute[2:])
+    return Path("\\\\?\\" + absolute)
+
+
 def save_source_dir(result_json_path: Path, source_dir: Path) -> str:
     """Copy agent source output alongside the result JSON. Returns the relative dir name."""
-    dest = result_json_path.parent / "source"
+    dest = _source_copy_path(result_json_path.parent / "source")
     if dest.exists():
         shutil.rmtree(dest)
-    shutil.copytree(source_dir, dest)
+    shutil.copytree(_source_copy_path(source_dir), dest)
     return "source"
 
 

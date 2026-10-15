@@ -348,7 +348,7 @@ class TestModelAndEffort:
         assert '--model "o3"' in bash_script
         assert 'model_reasoning_effort="high"' in bash_script
 
-    @pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6.1-sol"])
+    @pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6.1-sol", "gpt-6-luna", "gpt-6-sol"])
     @pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
     def test_codex_uses_external_sandbox_and_disables_hosted_network_tools(
         self, model: str, effort: str

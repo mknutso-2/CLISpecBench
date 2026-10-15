@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
@@ -18,6 +18,8 @@ DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code.Dockerfile"
 LEGACY_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-legacy.Dockerfile"
 FABLE_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-fable.Dockerfile"
 SONNET5_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-sonnet5.Dockerfile"
+SONNET55_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-sonnet55.Dockerfile"
+HAIKU55_DOCKERFILE = _AGENTS_DOCKER_DIR / "claude-code-haiku55.Dockerfile"
 
 # OpenTelemetry export directory inside the container
 OTEL_COLLECTOR_DIR = "/tmp/otel"
@@ -105,8 +107,38 @@ _SONNET5_VARIANT = _CliVariant(
     max_thinking_tokens=None,
     api_timeout_ms="1800000",
 )
+# Sonnet 5.5 requires Claude Code >=2.1.284. Preserve the Sonnet 5 pin and
+# invocation settings, selecting a separate image for the newer generation.
+_SONNET55_VARIANT = _CliVariant(
+    key="sonnet55",
+    image_tag="clispecbench-claude-code-sonnet55",
+    dockerfile=SONNET55_DOCKERFILE,
+    supports_effort=True,
+    telemetry=True,
+    max_thinking_tokens=None,
+    api_timeout_ms="1800000",
+)
+# Haiku 5.5 was added in Claude Code 2.1.293. Keep its launch-day CLI pin
+# separate from the existing generations and drive adaptive thinking via effort.
+_HAIKU55_VARIANT = _CliVariant(
+    key="haiku55",
+    image_tag="clispecbench-claude-code-haiku55",
+    dockerfile=HAIKU55_DOCKERFILE,
+    supports_effort=True,
+    telemetry=True,
+    max_thinking_tokens=None,
+    api_timeout_ms="1800000",
+)
 _VARIANTS: dict[str, _CliVariant] = {
-    v.key: v for v in (_DEFAULT_VARIANT, _LEGACY_VARIANT, _FABLE_VARIANT, _SONNET5_VARIANT)
+    v.key: v
+    for v in (
+        _DEFAULT_VARIANT,
+        _LEGACY_VARIANT,
+        _FABLE_VARIANT,
+        _SONNET5_VARIANT,
+        _SONNET55_VARIANT,
+        _HAIKU55_VARIANT,
+    )
 }
 
 # Models the current pinned CLI no longer serves faithfully — it silently falls
@@ -126,11 +158,12 @@ def _resolve_cli_variant(model: str | None, cli_version: str | None) -> _CliVari
     """Pick the CLI variant for a run: explicit override, else model-driven default.
 
     ``cli_version`` accepts a variant key
-    (``"default"``/``"legacy"``/``"fable"``/``"sonnet5"``) or the resolved CLI
-    version string (e.g. ``"2.0.2"``). When unset, models in
+    (``"default"``/``"legacy"``/``"fable"``/``"sonnet5"``/``"sonnet55"``/``"haiku55"``)
+    or the resolved CLI version string (e.g. ``"2.0.2"``). When unset, models in
     :data:`_LEGACY_MODELS` route to the legacy variant, Fable-family models to
-    the fable variant, Sonnet-5-family models to the sonnet5 variant, and
-    everything else to the default.
+    the fable variant, Sonnet-5.5-family models to sonnet55, Sonnet-5-family
+    models to sonnet5, Haiku-5.5-family models to haiku55, and everything else
+    to the default.
     """
     if cli_version:
         if cli_version in _VARIANTS:
@@ -148,9 +181,14 @@ def _resolve_cli_variant(model: str | None, cli_version: str | None) -> _CliVari
     # Any Fable-family model (alias or dated snapshot) needs the newer CLI.
     if model and model.startswith("claude-fable"):
         return _FABLE_VARIANT
+    # Check the more specific family first; 5.5 also starts with Sonnet 5.
+    if model and model.startswith("claude-sonnet-5-5"):
+        return _SONNET55_VARIANT
     # Sonnet 5 (alias or dated snapshot) likewise needs a launch-day CLI.
     if model and model.startswith("claude-sonnet-5"):
         return _SONNET5_VARIANT
+    if model and model.startswith("claude-haiku-5-5"):
+        return _HAIKU55_VARIANT
     return _DEFAULT_VARIANT
 
 
@@ -189,6 +227,11 @@ class ClaudeCodeAdapter(AgentAdapter):
 
     def environment(self, api_key_env: dict[str, str]) -> dict[str, str]:
         env = {**api_key_env}
+        if self._variant.key in {"sonnet55", "haiku55"}:
+            # Newer CLI generations fetch Claude.ai connectors from OAuth even
+            # without ~/.claude.json. Keep personal integrations out of evals.
+            # https://code.claude.com/docs/en/mcp#disable-claudeai-connectors
+            env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
         # Lift the 32k per-message output cap (CLI clamps to each model's max).
         env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = MAX_OUTPUT_TOKENS
         if self._variant.api_timeout_ms:
@@ -223,6 +266,12 @@ class ClaudeCodeAdapter(AgentAdapter):
         # fixed reasoning budget via MAX_THINKING_TOKENS inside the agent shell.
         if self._variant.supports_effort and self._effort:
             flags += f" --effort {self._effort}"
+        if self._variant.key in {"sonnet55", "haiku55"}:
+            # Prevent OAuth-driven personal cloud skill/plugin imports. Inline
+            # settings apply only to this invocation, not the user's account.
+            flags += (
+                ' --settings "{\\"syncClaudeAiSkills\\":false,\\"syncClaudeAiPlugins\\":false}"'
+            )
         thinking_prefix = ""
         if self._variant.max_thinking_tokens:
             thinking_prefix = f"export MAX_THINKING_TOKENS={self._variant.max_thinking_tokens}; "
@@ -251,6 +300,10 @@ class ClaudeCodeAdapter(AgentAdapter):
         """
         usage = _parse_stream_json_usage(container_logs)
         if usage is not None:
+            from clispecbench.harness.pricing import is_haiku55_model
+
+            if is_haiku55_model(self._model) or _has_haiku55_usage(container_logs):
+                _apply_haiku55_request_accounting(usage, container_logs, container_fs)
             return usage
 
         # copy_out() extracts /tmp/otel → extract_dir/otel
@@ -258,7 +311,13 @@ class ClaudeCodeAdapter(AgentAdapter):
         if not otel_dir.is_dir():
             log.info("No OpenTelemetry directory found at %s", otel_dir)
             return None
-        return _parse_otel_token_usage(otel_dir)
+        usage = _parse_otel_token_usage(otel_dir)
+        if usage is not None:
+            from clispecbench.harness.pricing import is_haiku55_model
+
+            if is_haiku55_model(self._model) or _has_haiku55_usage(container_logs):
+                usage.cost_estimate_blocked_reason = "haiku55_request_usage_unavailable"
+        return usage
 
     def credential_mounts(self, host_home: Path) -> dict[str, dict[str, str]]:
         home = "/home/agent"
@@ -476,10 +535,12 @@ def _aggregate_model_usage(entries: list[_ClaudeModelUsage]) -> _StreamJsonUsage
 
 
 def _estimate_model_usage_cost(entries: list[_ClaudeModelUsage]) -> float | None:
-    from clispecbench.harness.pricing import ALL_PRICING
+    from clispecbench.harness.pricing import ALL_PRICING, is_haiku55_model
 
     total_cost = 0.0
     for entry in entries:
+        if is_haiku55_model(entry.model):
+            return None  # Only the reconciled request-level path may price Haiku 5.5.
         pricing = ALL_PRICING.get(entry.model)
         if pricing is None:
             return None
@@ -490,6 +551,226 @@ def _estimate_model_usage_cost(entries: list[_ClaudeModelUsage]) -> float | None
             + entry.output_tokens * pricing.output / 1_000_000
         )
     return round(total_cost, 6)
+
+
+def _usage_events(lines: list[str]) -> list[dict[str, Any]]:
+    events: list[dict[str, Any]] = []
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(event, dict):
+            events.append(cast(dict[str, Any], event))
+    return events
+
+
+def _has_haiku55_usage(logs: str) -> bool:
+    from clispecbench.harness.pricing import is_haiku55_model
+
+    for event in _usage_events(logs.splitlines()):
+        message = event.get("message")
+        if isinstance(message, dict) and is_haiku55_model(
+            cast(dict[str, Any], message).get("model")
+        ):
+            return True
+        models = event.get("modelUsage") or event.get("model_usage")
+        if isinstance(models, dict) and any(
+            is_haiku55_model(m) for m in cast(dict[str, Any], models)
+        ):
+            return True
+    return False
+
+
+def _request_count(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError("haiku55_invalid_request_usage")
+    return value
+
+
+@dataclass(frozen=True)
+class _ClaudeRequestUsage:
+    model: str
+    message_id: str
+    uncached: int
+    output: int
+    read: int
+    write: int
+    write_5m: int | None
+    write_1h: int | None
+
+    @property
+    def input_categories(self) -> tuple[int, int, int]:
+        return self.uncached, self.read, self.write
+
+    @property
+    def cache_tiers(self) -> tuple[int | None, int | None]:
+        return self.write_5m, self.write_1h
+
+
+def _collect_request_usage(
+    events: list[dict[str, Any]],
+) -> tuple[dict[tuple[str, str], _ClaudeRequestUsage], set[tuple[str, str]]]:
+    requests: dict[tuple[str, str], _ClaudeRequestUsage] = {}
+    changing_output: set[tuple[str, str]] = set()
+    for event in events:
+        if event.get("type") != "assistant":
+            continue
+        message = event.get("message")
+        if not isinstance(message, dict):
+            raise ValueError("haiku55_missing_request_usage")
+        message = cast(dict[str, Any], message)
+        model, message_id = message.get("model"), message.get("id")
+        if isinstance(model, str) and "<synthetic>" in model:
+            continue
+        if (
+            not isinstance(model, str)
+            or not model
+            or not isinstance(message_id, str)
+            or not message_id
+        ):
+            raise ValueError("haiku55_missing_request_identity")
+        raw = message.get("usage")
+        if not isinstance(raw, dict):
+            raise ValueError("haiku55_missing_request_usage")
+        raw = cast(dict[str, Any], raw)
+        uncached = _request_count(raw.get("input_tokens"))
+        output = _request_count(raw.get("output_tokens"))
+        read = _request_count(raw.get("cache_read_input_tokens", 0))
+        write = _request_count(raw.get("cache_creation_input_tokens", 0))
+        five, hour = None, None
+        if "cache_creation" in raw:
+            tiers = raw["cache_creation"]
+            if not isinstance(tiers, dict):
+                raise ValueError("haiku55_invalid_cache_tier_usage")
+            tiers = cast(dict[str, Any], tiers)
+            if tiers:
+                five = _request_count(tiers.get("ephemeral_5m_input_tokens", 0))
+                hour = _request_count(tiers.get("ephemeral_1h_input_tokens", 0))
+                if five + hour != write:
+                    raise ValueError("haiku55_invalid_cache_tier_usage")
+        request = _ClaudeRequestUsage(model, message_id, uncached, output, read, write, five, hour)
+        key = model, message_id
+        previous = requests.get(key)
+        if previous is not None:
+            if previous.input_categories != request.input_categories or (
+                previous.write_5m is not None
+                and request.write_5m is not None
+                and previous.cache_tiers != request.cache_tiers
+            ):
+                raise ValueError("haiku55_conflicting_request_usage")
+            if previous.output != request.output:
+                changing_output.add(key)
+                # Retain the greatest provisional counter for the canonical
+                # consistency check; never price changing stream counters alone.
+                request = replace(request, output=max(previous.output, request.output))
+            if previous.write_5m is not None and request.write_5m is None:
+                request = replace(request, write_5m=previous.write_5m, write_1h=previous.write_1h)
+        requests[key] = request
+    return requests, changing_output
+
+
+def _apply_haiku55_request_accounting(usage: TokenUsage, logs: str, container_fs: Path) -> None:
+    """Reconcile captured requests before pricing; never alter aggregate token counts.
+
+    Stream assistant output counts may be provisional. The already captured
+    canonical projects supply completed counts, not additional billable calls.
+    Exact per-model four-category coverage is required, including helper models.
+    """
+    from clispecbench.harness.pricing import (
+        ALL_PRICING,
+        estimate_haiku55_request_cost,
+        is_haiku55_model,
+    )
+
+    usage.estimated_cost_usd = None
+    usage.cost_estimate_blocked_reason = "haiku55_request_usage_unavailable"
+    try:
+        events = _usage_events(logs.splitlines())
+        results = [event for event in events if event.get("type") == "result"]
+        if not results:
+            raise ValueError("haiku55_missing_model_usage")
+        raw_models = results[-1].get("modelUsage") or results[-1].get("model_usage")
+        if not isinstance(raw_models, dict) or not raw_models:
+            raise ValueError("haiku55_missing_model_usage")
+        expected: dict[str, tuple[int, int, int, int]] = {}
+        for model, raw in cast(dict[str, Any], raw_models).items():
+            if not isinstance(raw, dict):
+                raise ValueError("haiku55_invalid_model_usage")
+            raw = cast(dict[str, Any], raw)
+            expected[model] = (
+                _request_count(raw.get("inputTokens")),
+                _request_count(raw.get("outputTokens")),
+                _request_count(raw.get("cacheReadInputTokens")),
+                _request_count(raw.get("cacheCreationInputTokens")),
+            )
+        stream, stream_changing = _collect_request_usage(events)
+        canonical_events: list[dict[str, Any]] = []
+        for path in sorted((container_fs / "projects").rglob("*.jsonl")):
+            canonical_events.extend(
+                _usage_events(path.read_text(encoding="utf-8-sig").splitlines())
+            )
+        canonical, canonical_changing = _collect_request_usage(canonical_events)
+        if canonical_changing or stream_changing - canonical.keys():
+            raise ValueError("haiku55_conflicting_request_usage")
+        requests = dict(stream)
+        for key, request in canonical.items():
+            prior = stream.get(key)
+            if prior is not None:
+                if (
+                    prior.input_categories != request.input_categories
+                    or request.output < prior.output
+                ):
+                    raise ValueError("haiku55_conflicting_request_usage")
+                if (
+                    prior.write_5m is not None
+                    and request.write_5m is not None
+                    and prior.cache_tiers != request.cache_tiers
+                ):
+                    raise ValueError("haiku55_conflicting_request_usage")
+                if request.write_5m is None and prior.write_5m is not None:
+                    request = replace(request, write_5m=prior.write_5m, write_1h=prior.write_1h)
+            requests[key] = request
+        actual = {model: [0, 0, 0, 0] for model in expected}
+        for request in requests.values():
+            if request.model not in actual:
+                raise ValueError("haiku55_request_usage_coverage_mismatch")
+            counts = (request.uncached, request.output, request.read, request.write)
+            for index, count in enumerate(counts):
+                actual[request.model][index] += count
+        if any(tuple(actual[model]) != counts for model, counts in expected.items()):
+            raise ValueError("haiku55_request_usage_coverage_mismatch")
+        total = 0.0
+        for request in requests.values():
+            if is_haiku55_model(request.model):
+                total += estimate_haiku55_request_cost(
+                    request.uncached,
+                    request.output,
+                    request.read,
+                    request.write,
+                    request.write_5m,
+                    request.write_1h,
+                )
+            else:
+                pricing = ALL_PRICING.get(request.model)
+                if pricing is None:
+                    raise ValueError("haiku55_unpriced_model_usage")
+                # Preserve the existing flat-model/one-hour-cache convention
+                # for helper models; only Haiku 5.5 gains new context tiers.
+                total += (
+                    request.uncached * pricing.input
+                    + request.output * pricing.output
+                    + request.read * pricing.cached_input
+                    + request.write * (pricing.cache_write or pricing.input)
+                ) / 1_000_000
+        usage.estimated_cost_usd = round(total, 6)
+        usage.cost_estimate_blocked_reason = None
+        usage.source = "claude_haiku55_request_usage_reconciled"
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        reason = str(error)
+        usage.cost_estimate_blocked_reason = (
+            reason if reason.startswith("haiku55_") else "haiku55_request_usage_unavailable"
+        )
 
 
 def _count_tool_calls(container_logs: str) -> int:

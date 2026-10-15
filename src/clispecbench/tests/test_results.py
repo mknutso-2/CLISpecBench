@@ -1,4 +1,5 @@
 """Tests for result-model reporting helpers."""
+# pyright: reportPrivateUsage=false
 
 from __future__ import annotations
 
@@ -342,6 +343,40 @@ class TestModelEffortSlug:
             steered.release()
         finally:
             base.release()
+
+
+def test_save_source_dir_preserves_nested_artifacts(tmp_path: Path) -> None:
+    source = tmp_path / "input"
+    source.mkdir()
+    (source / "main.rs").write_bytes(b"source evidence")
+    # Both source and destination cross MAX_PATH; exercise copy AND replacement.
+    deep = source / ("a" * 80) / ("b" * 80) / ("c" * 80)
+    accessible = results._source_copy_path(deep)
+    accessible.mkdir(parents=True)
+    (accessible / "object.o").write_bytes(b"build evidence")
+    result_path = tmp_path / "results" / "eval1" / "run1" / "result.json"
+    try:
+        for _ in range(2):
+            assert results.save_source_dir(result_path, source) == "source"
+            copied = results._source_copy_path(result_path.parent / "source")
+            assert (copied / "main.rs").read_bytes() == b"source evidence"
+            assert (
+                copied / deep.relative_to(source) / "object.o"
+            ).read_bytes() == b"build evidence"
+    finally:
+        # Pytest's normal cleanup may itself lack long-path support on Windows.
+        import shutil
+
+        shutil.rmtree(results._source_copy_path(tmp_path))
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Win32 path syntax")
+def test_source_copy_path_handles_unc_and_existing_prefix() -> None:
+    assert str(results._source_copy_path(Path(r"\\server\share\folder"))) == (
+        r"\\?\UNC\server\share\folder"
+    )
+    extended = Path(r"\\?\C:\folder")
+    assert results._source_copy_path(extended) == extended
 
 
 def test_models_compatible_exact_and_alias() -> None:
