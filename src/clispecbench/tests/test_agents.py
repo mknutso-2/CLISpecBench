@@ -78,9 +78,12 @@ class TestClaudeCodeInvokeCommand:
         return cmd[2]
 
     @pytest.mark.parametrize("model", ["claude-sonnet-5-5", "claude-fable-5", "claude-sonnet-4-6"])
-    def test_blocks_wakeup_tools_that_cannot_fire_headless(self, model: str) -> None:
+    def test_blocks_wakeup_and_account_side_effect_tools(self, model: str) -> None:
         script = self._script(model=model)
-        assert '--disallowedTools "ScheduleWakeup,CronCreate,CronDelete,CronList"' in script
+        assert (
+            '--disallowedTools "ScheduleWakeup,CronCreate,CronDelete,CronList,RemoteTrigger"'
+            in script
+        )
 
     def test_carries_image_path_across_su(self) -> None:
         # su resets PATH and would drop /usr/local/cargo/bin for Rust tasks.

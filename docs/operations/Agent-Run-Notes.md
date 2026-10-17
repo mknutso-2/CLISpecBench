@@ -202,6 +202,11 @@ MARC21 C++; Opus 5.5 high ICal C++, ICal JS and IGES Rust. Mark such runs
 `Incomplete` and disclose the cause in commentary. The ending is a harness
 artifact, not a model choice to stop.
 
+**`RemoteTrigger` is no longer offered.** When signed in, Claude Code also
+offers `RemoteTrigger`, which creates scheduled cloud agents on the operator's
+Claude account. That acts outside the container and outlives the run. No
+audited run used it; it is blocked so none can.
+
 **The agent shell now keeps the image `PATH`.** The adapter drops to the
 `agent` user with `su agent -c`, which resets `PATH` to the `login.defs`
 default and removed `/usr/local/cargo/bin`. In harness 0.1.0 Claude Code agents

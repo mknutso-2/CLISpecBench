@@ -37,10 +37,12 @@ OAUTH_TOKEN_ENV = "CLAUDE_CODE_OAUTH_TOKEN"
 # exceed 32k (4.5/4.6/4.7 historically did so only twice ever) are unaffected.
 MAX_OUTPUT_TOKENS = "1000000"
 
-# Tools that end the turn and wait for a later wake-up. Headless --print never
-# re-invokes the agent, so the CLI exits and kills any background subagents,
-# grading half-finished work. They cannot succeed here, so they are not offered.
-HEADLESS_DEAD_TOOLS = ("ScheduleWakeup", "CronCreate", "CronDelete", "CronList")
+# Tools that are not offered to benchmark agents. ScheduleWakeup and Cron* end
+# the turn and wait for a later wake-up. Headless --print never re-invokes the
+# agent, so the CLI exits and kills any background subagents, grading
+# half-finished work. RemoteTrigger creates scheduled cloud agents on the
+# operator's account, outside the container and the run.
+BLOCKED_TOOLS = ("ScheduleWakeup", "CronCreate", "CronDelete", "CronList", "RemoteTrigger")
 
 
 @dataclass(frozen=True)
@@ -268,7 +270,7 @@ class ClaudeCodeAdapter(AgentAdapter):
         # ownership and drop to the non-root 'agent' user before running claude.
         # Claude Code refuses --dangerously-skip-permissions as root.
         flags = "--print --dangerously-skip-permissions --verbose --output-format stream-json"
-        flags += f' --disallowedTools "{",".join(HEADLESS_DEAD_TOOLS)}"'
+        flags += f' --disallowedTools "{",".join(BLOCKED_TOOLS)}"'
         if self._model:
             flags += f" --model {self._model}"
         # --effort only exists on 2.1+. On the legacy variant we instead set a
