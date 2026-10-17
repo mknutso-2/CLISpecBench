@@ -182,6 +182,35 @@ authentication and ordinary usage. Never enable paid overflow automatically.
 Sources: [Claude Code model requirements](https://code.claude.com/docs/en/model-config),
 [Sonnet 5.5 model and pricing](https://platform.claude.com/docs/en/models/sonnet-5-5/overview).
 
+## Claude Code Headless Run Conditions (harness 0.2.0, 2026-10-17)
+
+Harness 0.2.0 changes two Claude Code run conditions. Every result records the
+harness version in `metadata.harness_version`, so runs before and after the
+change can be told apart. Eval versions are unchanged: the prompt, docs and
+tests are the same.
+
+**Wake-up tools are no longer offered.** Claude Code 2.1.289 offers
+`ScheduleWakeup` and `CronCreate`/`CronDelete`/`CronList`. `ScheduleWakeup`
+tells the agent to end its turn and promises a later wake-up, usually while
+background subagents finish. Headless `--print` never wakes the agent: the CLI
+exits, kills the background subagents, and the harness grades unfinished work.
+No harness run can use these tools successfully, so the adapter now passes
+`--disallowedTools "ScheduleWakeup,CronCreate,CronDelete,CronList"` for every
+CLI variant (older CLIs simply lack the tools). Known affected harness 0.1.0
+runs: Opus 5.5 RS274 C++ high; Haiku 5.5 max ICal C++, IGES Python, LAS Rust and
+MARC21 C++; Opus 5.5 high ICal C++, ICal JS and IGES Rust. Mark such runs
+`Incomplete` and disclose the cause in commentary. The ending is a harness
+artifact, not a model choice to stop.
+
+**The agent shell now keeps the image `PATH`.** The adapter drops to the
+`agent` user with `su agent -c`, which resets `PATH` to the `login.defs`
+default and removed `/usr/local/cargo/bin`. In harness 0.1.0 Claude Code agents
+on Rust tasks started without `cargo` on `PATH` and had to find it themselves.
+Grading was unaffected because the harness build step uses the image `PATH`.
+Other agents were unaffected. The adapter now carries the image `PATH` across
+`su`. Treat 0.1.0 Claude Rust runs as having a small handicap in turns and
+tokens, and disclose it when comparing their cost with other agents.
+
 ## Antigravity CLI Status
 
 Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the

@@ -37,6 +37,11 @@ OAUTH_TOKEN_ENV = "CLAUDE_CODE_OAUTH_TOKEN"
 # exceed 32k (4.5/4.6/4.7 historically did so only twice ever) are unaffected.
 MAX_OUTPUT_TOKENS = "1000000"
 
+# Tools that end the turn and wait for a later wake-up. Headless --print never
+# re-invokes the agent, so the CLI exits and kills any background subagents,
+# grading half-finished work. They cannot succeed here, so they are not offered.
+HEADLESS_DEAD_TOOLS = ("ScheduleWakeup", "CronCreate", "CronDelete", "CronList")
+
 
 @dataclass(frozen=True)
 class _CliVariant:
@@ -263,6 +268,7 @@ class ClaudeCodeAdapter(AgentAdapter):
         # ownership and drop to the non-root 'agent' user before running claude.
         # Claude Code refuses --dangerously-skip-permissions as root.
         flags = "--print --dangerously-skip-permissions --verbose --output-format stream-json"
+        flags += f' --disallowedTools "{",".join(HEADLESS_DEAD_TOOLS)}"'
         if self._model:
             flags += f" --model {self._model}"
         # --effort only exists on 2.1+. On the legacy variant we instead set a
@@ -285,7 +291,11 @@ class ClaudeCodeAdapter(AgentAdapter):
             # the bind-mounted files inside are ro) so Claude Code can create
             # session-env/ (needed by its Bash tool).
             f" && mkdir -p /home/agent/.claude && chown agent:agent /home/agent/.claude"
-            f" && su agent -c '{thinking_prefix}cat {prompt_path}"
+            # su resets PATH to login.defs ENV_PATH, dropping the image's
+            # /usr/local/cargo/bin. Carry the image PATH across explicitly.
+            f' && export CLISPECBENCH_PATH="$PATH"'
+            f' && su agent -c \'export PATH="$CLISPECBENCH_PATH"; unset CLISPECBENCH_PATH; '
+            f"{thinking_prefix}cat {prompt_path}"
             f" | claude {flags}'"
         )
         return ["bash", "-c", setup]

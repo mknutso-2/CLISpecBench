@@ -70,6 +70,28 @@ class TestClaudeCodeCredentialMounts:
         assert "/home/user/.claude.json" not in mounts
 
 
+class TestClaudeCodeInvokeCommand:
+    def _script(self, **kwargs: str) -> str:
+        cmd = ClaudeCodeAdapter(**kwargs).invoke_command(
+            PurePosixPath("/workspace/prompt.md"), PurePosixPath("/workspace")
+        )
+        return cmd[2]
+
+    @pytest.mark.parametrize("model", ["claude-sonnet-5-5", "claude-fable-5", "claude-sonnet-4-6"])
+    def test_blocks_wakeup_tools_that_cannot_fire_headless(self, model: str) -> None:
+        script = self._script(model=model)
+        assert '--disallowedTools "ScheduleWakeup,CronCreate,CronDelete,CronList"' in script
+
+    def test_carries_image_path_across_su(self) -> None:
+        # su resets PATH and would drop /usr/local/cargo/bin for Rust tasks.
+        script = self._script(model="claude-sonnet-5-5")
+        before_su, agent_shell = script.split(" && su agent -c '", 1)
+        assert before_su.endswith('export CLISPECBENCH_PATH="$PATH"')
+        assert agent_shell.startswith(
+            'export PATH="$CLISPECBENCH_PATH"; unset CLISPECBENCH_PATH; cat /workspace/prompt.md'
+        )
+
+
 class TestCodexCLICredentialMounts:
     def test_mounts_auth_json_only(self) -> None:
         adapter = CodexCLIAdapter()
