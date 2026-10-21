@@ -4,6 +4,12 @@ This file records changes to the `clispecbench` harness that can change how an
 agent run behaves. Each result stamps the version in `metadata.harness_version`.
 Eval prompt, doc and test changes belong in each eval's `Evals/<Task>/CHANGELOG.md`.
 
+## v0.2.1 — 2026-10-21
+
+- Claude Code's built-in helper model, which summarizes `WebFetch` pages and
+  runs `WebSearch`, now uses the run's own model. It defaulted to Haiku 4.5,
+  which broke same-model delegation for runs that used the web tools.
+
 ## v0.2.0 — 2026-10-17
 
 - Claude Code no longer offers `ScheduleWakeup`, `CronCreate`, `CronDelete` or

@@ -216,6 +216,26 @@ Other agents were unaffected. The adapter now carries the image `PATH` across
 `su`. Treat 0.1.0 Claude Rust runs as having a small handicap in turns and
 tokens, and disclose it when comparing their cost with other agents.
 
+## Claude Code Web-Tool Helper Model (harness 0.2.1, 2026-10-21)
+
+Claude Code's `WebFetch` and `WebSearch` tools call a separate helper model
+that summarizes fetched pages and runs searches. In CLI 2.1.289 it defaults to
+`claude-haiku-4-5-20251001`, whatever `--model` is. The subagent controls
+(`CLAUDE_CODE_SUBAGENT_MODEL` and `..._FORCE`) do not cover it. The requests
+appear only in the result event's `modelUsage`, not in the stream or native
+transcripts.
+
+Sonnet 5.5 IGES C++ max (UID `43d2fb1d-445e-4ea7-9a5c-05a159edf98f`, harness
+0.2.0) made 15 `WebFetch` and 2 `WebSearch` calls and so recorded $0.115 of
+Haiku 4.5 usage. It is held as not pure-model and preserved. No other reviewed
+Claude 5.5 queue run used the web tools.
+
+From harness 0.2.1 the adapter sets `ANTHROPIC_SMALL_FAST_MODEL` and
+`ANTHROPIC_DEFAULT_HAIKU_MODEL` to the run's model. A live `WebFetch` in the
+benchmark image then reported only `claude-sonnet-5-5` (and, in a separate
+check, only `claude-opus-5-5`) in `modelUsage`. Network access is unchanged.
+Review must still check `modelUsage`, not only the stream and native models.
+
 ## Antigravity CLI Status
 
 Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the

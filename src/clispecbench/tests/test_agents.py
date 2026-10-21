@@ -70,6 +70,19 @@ class TestClaudeCodeCredentialMounts:
         assert "/home/user/.claude.json" not in mounts
 
 
+class TestClaudeCodeHelperModel:
+    @pytest.mark.parametrize("model", ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"])
+    def test_helper_model_is_the_run_model(self, model: str) -> None:
+        env = ClaudeCodeAdapter(model=model).environment({})
+        assert env["ANTHROPIC_SMALL_FAST_MODEL"] == model
+        assert env["ANTHROPIC_DEFAULT_HAIKU_MODEL"] == model
+
+    def test_no_model_leaves_helper_default(self) -> None:
+        env = ClaudeCodeAdapter().environment({})
+        assert "ANTHROPIC_SMALL_FAST_MODEL" not in env
+        assert "ANTHROPIC_DEFAULT_HAIKU_MODEL" not in env
+
+
 class TestClaudeCodeInvokeCommand:
     def _script(self, **kwargs: str) -> str:
         cmd = ClaudeCodeAdapter(**kwargs).invoke_command(

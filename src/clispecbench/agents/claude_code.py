@@ -37,6 +37,9 @@ OAUTH_TOKEN_ENV = "CLAUDE_CODE_OAUTH_TOKEN"
 # exceed 32k (4.5/4.6/4.7 historically did so only twice ever) are unaffected.
 MAX_OUTPUT_TOKENS = "1000000"
 
+# Variables the CLI reads for its small helper model, set to the run's own model.
+HELPER_MODEL_ENVS = ("ANTHROPIC_SMALL_FAST_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL")
+
 # Tools that are not offered to benchmark agents. ScheduleWakeup and Cron* end
 # the turn and wait for a later wake-up. Headless --print never re-invokes the
 # agent, so the CLI exits and kills any background subagents, grading
@@ -244,6 +247,11 @@ class ClaudeCodeAdapter(AgentAdapter):
             env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
         # Lift the 32k per-message output cap (CLI clamps to each model's max).
         env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = MAX_OUTPUT_TOKENS
+        if self._model:
+            # The CLI's built-in helper (WebFetch page summaries, WebSearch) defaults
+            # to a Haiku model. Same-model delegation requires the run's own model.
+            for name in HELPER_MODEL_ENVS:
+                env[name] = self._model
         if self._variant.api_timeout_ms:
             env["API_TIMEOUT_MS"] = self._variant.api_timeout_ms
         if self._variant.telemetry:

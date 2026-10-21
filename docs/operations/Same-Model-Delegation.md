@@ -15,6 +15,8 @@ CLAUDE_CODE_SUBAGENT_MODEL_FORCE=1
 
 The default-model variable alone does not prevent an explicit per-call override. The force variable alone leaves the built-in Explore exception. Both variables together force subagents, teammates, and workflow agents to the selected exact model and remove per-call model selection. See [Claude Code's official subagent documentation](https://code.claude.com/docs/en/sub-agents#run-every-subagent-on-one-model).
 
+The Claude Code adapter also sets `ANTHROPIC_SMALL_FAST_MODEL` and `ANTHROPIC_DEFAULT_HAIKU_MODEL` to the run's model (harness 0.2.1). Otherwise the CLI's `WebFetch`/`WebSearch` helper uses Haiku 4.5, and those requests appear only in the result event's `modelUsage`.
+
 Use the existing harness `--api-key-env NAME=value` mechanism to pass these non-secret controls without editing the benchmark's domain prompts, tests, reference code, images, resource limits, or submitted code. Verify the pinned CLI supports the controls, inspect the actual container environment, and check native/session request model identities during substantive review. Runtime controls are prevention, not a replacement for transcript validation. A configured advisor model without an actual request is not evidence of assistance.
 
 Unknown child-model coverage remains a review hold. Actual cross-model requests make an attempt ineligible for pure-model approval. Preserve its raw result, source, transcript, scores, request accounting, identity, and launch evidence. Do not relabel it as pure-model, assume missing usage is zero, manufacture an operator omission, or automatically retry it.
