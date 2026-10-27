@@ -40,6 +40,12 @@ MAX_OUTPUT_TOKENS = "1000000"
 # Variables the CLI reads for its small helper model, set to the run's own model.
 HELPER_MODEL_ENVS = ("ANTHROPIC_SMALL_FAST_MODEL", "ANTHROPIC_DEFAULT_HAIKU_MODEL")
 
+# When the API flags a request under a safety category, the CLI retries it on a
+# fallback model (cyber -> claude-opus-4-8) and stays there. Headless runs have no
+# one to answer the switch prompt, so it switches silently. Disabling it keeps
+# the run on its own model, and the flagged request ends as a refusal.
+REFUSAL_FALLBACK_ENV = "CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK"
+
 # Tools that are not offered to benchmark agents. ScheduleWakeup and Cron* end
 # the turn and wait for a later wake-up. Headless --print never re-invokes the
 # agent, so the CLI exits and kills any background subagents, grading
@@ -247,6 +253,7 @@ class ClaudeCodeAdapter(AgentAdapter):
             env["ENABLE_CLAUDEAI_MCP_SERVERS"] = "false"
         # Lift the 32k per-message output cap (CLI clamps to each model's max).
         env["CLAUDE_CODE_MAX_OUTPUT_TOKENS"] = MAX_OUTPUT_TOKENS
+        env[REFUSAL_FALLBACK_ENV] = "1"
         if self._model:
             # The CLI's built-in helper (WebFetch page summaries, WebSearch) defaults
             # to a Haiku model. Same-model delegation requires the run's own model.

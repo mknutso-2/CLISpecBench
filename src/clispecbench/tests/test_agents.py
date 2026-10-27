@@ -82,6 +82,12 @@ class TestClaudeCodeHelperModel:
         assert "ANTHROPIC_SMALL_FAST_MODEL" not in env
         assert "ANTHROPIC_DEFAULT_HAIKU_MODEL" not in env
 
+    @pytest.mark.parametrize("model", ["claude-sonnet-5-5", "claude-opus-5-5", None])
+    def test_refusal_fallback_is_disabled(self, model: str | None) -> None:
+        # Flagged requests would otherwise be retried on another model.
+        env = ClaudeCodeAdapter(model=model).environment({})
+        assert env["CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK"] == "1"
+
 
 class TestClaudeCodeInvokeCommand:
     def _script(self, **kwargs: str) -> str:

@@ -236,6 +236,26 @@ benchmark image then reported only `claude-sonnet-5-5` (and, in a separate
 check, only `claude-opus-5-5`) in `modelUsage`. Network access is unchanged.
 Review must still check `modelUsage`, not only the stream and native models.
 
+## Claude Code Refusal Fallback (harness 0.2.2, 2026-10-27)
+
+When the API flags a request under a safety category, Claude Code CLI 2.1.289
+retries it on a fallback model and keeps that agent on it. The mapping in the
+CLI sends the `cyber` category to `claude-opus-4-8`. Interactive sessions ask
+before switching. Headless `--print` runs have no one to answer, so the CLI
+switches without asking. The stream shows only the new `message.model`. No
+refusal stop reason or system event marks the switch.
+
+Opus 5.5 IGES Rust max (UID `bd41d708-7275-42d4-9fc7-57e984c6788a`, harness
+0.2.1) launched a background `general-purpose` subagent to fuzz its binary for
+crashes. After 213 Opus 5.5 responses, that subagent continued on
+`claude-opus-4-8`. The run is held as not pure-model and preserved for one
+rerun at the end of the queue. No earlier reviewed Claude 5.5 queue run showed
+the switch.
+
+From harness 0.2.2 the adapter sets `CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK=1`,
+so a flagged request stays on the run's own model and ends as a refusal.
+Review must still check stream, native and `modelUsage` models.
+
 ## Antigravity CLI Status
 
 Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the

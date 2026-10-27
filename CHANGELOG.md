@@ -4,6 +4,14 @@ This file records changes to the `clispecbench` harness that can change how an
 agent run behaves. Each result stamps the version in `metadata.harness_version`.
 Eval prompt, doc and test changes belong in each eval's `Evals/<Task>/CHANGELOG.md`.
 
+## v0.2.2 — 2026-10-27
+
+- Claude Code's refusal fallback is disabled. When the API flagged a request
+  under a safety category, the CLI retried it on another model
+  (`claude-opus-4-8` for the cyber category) and stayed there. That broke
+  same-model delegation. A flagged request now ends as a refusal on the run's
+  own model.
+
 ## v0.2.1 — 2026-10-21
 
 - Claude Code's built-in helper model, which summarizes `WebFetch` pages and
