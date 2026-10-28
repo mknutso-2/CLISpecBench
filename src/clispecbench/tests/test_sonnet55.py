@@ -87,7 +87,12 @@ def test_sonnet5_keeps_its_original_pin_and_environment(model: str) -> None:
     assert adapter.version == "2.1.197"
     sonnet55_environment = ClaudeCodeAdapter(model=MODEL).environment({})
     assert sonnet55_environment.pop("ENABLE_CLAUDEAI_MCP_SERVERS") == "false"
-    assert adapter.environment({}) == sonnet55_environment
+    # The helper model follows each adapter's own model.
+    assert adapter.environment({}) == {
+        **sonnet55_environment,
+        "ANTHROPIC_SMALL_FAST_MODEL": model,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": model,
+    }
     assert "ENABLE_CLAUDEAI_MCP_SERVERS" not in adapter.environment({})
     assert (
         "--settings"
@@ -106,6 +111,9 @@ def test_sonnet55_environment_keeps_telemetry_and_timeout_without_mutating_input
     assert environment == {
         "ANTHROPIC_API_KEY": "synthetic-key",
         "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "1000000",
+        "CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK": "1",
+        "ANTHROPIC_SMALL_FAST_MODEL": MODEL,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": MODEL,
         "API_TIMEOUT_MS": "1800000",
         "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
         "OTEL_METRICS_EXPORTER": "otlp",

@@ -88,7 +88,12 @@ def test_haiku45_keeps_its_original_pin_and_environment(model: str) -> None:
     haiku55_environment = ClaudeCodeAdapter(model=MODEL).environment({})
     assert haiku55_environment.pop("ENABLE_CLAUDEAI_MCP_SERVERS") == "false"
     assert haiku55_environment.pop("API_TIMEOUT_MS") == "1800000"
-    assert adapter.environment({}) == haiku55_environment
+    # The helper model follows each adapter's own model.
+    assert adapter.environment({}) == {
+        **haiku55_environment,
+        "ANTHROPIC_SMALL_FAST_MODEL": model,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": model,
+    }
 
 
 def test_haiku55_environment_preserves_telemetry_timeout_and_input() -> None:
@@ -100,6 +105,9 @@ def test_haiku55_environment_preserves_telemetry_timeout_and_input() -> None:
     assert environment == {
         "ANTHROPIC_API_KEY": "synthetic-key",
         "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "1000000",
+        "CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK": "1",
+        "ANTHROPIC_SMALL_FAST_MODEL": MODEL,
+        "ANTHROPIC_DEFAULT_HAIKU_MODEL": MODEL,
         "API_TIMEOUT_MS": "1800000",
         "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
         "OTEL_METRICS_EXPORTER": "otlp",
