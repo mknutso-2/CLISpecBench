@@ -344,7 +344,7 @@ wait
 @docker
 @pytest.mark.prompts_agent
 @skip_no_codex_image
-@pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6.1-sol"])
+@pytest.mark.parametrize("model", ["gpt-5.6-luna", "gpt-6.1-sol", "gpt-6.1-terra"])
 class TestCodexNetworkIsolation:
     """Live probes for shell, hosted search, and app internet-access surfaces.
 

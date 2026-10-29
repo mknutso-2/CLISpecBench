@@ -4,6 +4,45 @@ This file records cross-agent operational findings that affect how CLISpecBench
 runs should be interpreted. Eval-specific prompt, test, and version changes
 still belong in each eval's `CHANGELOG.md`.
 
+## GPT-6.1 Terra setup (2026-10-29)
+
+Use `--agent codex-cli --model gpt-6.1-terra` with an explicit `--effort`.
+OpenAI documents `none`, `low`, `medium` (default), `high`, `xhigh`, and `max`.
+The setup keeps the `api-only` network condition, disabled hosted web
+search/apps, and all frozen eval inputs.
+
+Codex CLI 0.160.0 has no catalog entry for the model; 0.165.0 (npm's stable
+`latest` on the setup date, released 2026-10-27) does. The Codex image is now
+pinned to **0.165.0**; only that image was rebuilt. Runs for every Codex model
+after this date cross a CLI-version boundary, so preserve each result's actual
+CLI/image metadata and do not relabel old runs.
+
+Validation passed: Ruff, Pyright, the non-Docker unit suite (apart from the
+three Windows-only failures CI does not have), and the nine live
+network-isolation probes for GPT-5.6 Luna, GPT-6.1 Sol and GPT-6.1 Terra at
+`max`. The first Terra app-connector probe failed once with an unparseable
+network-audit line and passed on rerun. No full benchmark evaluation was
+launched.
+
+- Local new agent image: `sha256:f676c90bab0ea28877b5dde6c4482b93dc27c3072a54b88a0afcc758372adc1f`.
+- Prior local 0.160.0 image: `sha256:7e18a42b7582a6b7a27a0498c70b85f2f44553992726c416c0285626e09960ed`.
+- Unchanged local base/grader: `sha256:94753907091d3b0c6a08785521685eddc077fd622d65d5ee96e60b9ad2ea27cf`.
+
+Pricing in `harness/pricing.py` is standard short-context USD per million
+tokens: input **$1**, cached input **$0.05**, cache write **$1.25** (30-minute
+retention), output **$5**. The same caveats as GPT-6.1 Sol apply: the per-request
+surcharge above 272K input tokens and Fast/regional premiums are not applied.
+
+Example first evaluation, when collection is authorized:
+
+```powershell
+$env:DOCKER_HOST = 'tcp://localhost:2375'
+uv run clispecbench run --task wordcount-py --agent codex-cli --model gpt-6.1-terra --effort max --runs 1
+```
+
+Sources: [model and pricing](https://developers.openai.com/api/docs/models/gpt-6.1-terra),
+[launch post](https://openai.com/index/introducing-gpt-6-1-terra/).
+
 ## GPT-6.1 Sol setup (2026-10-02)
 
 Use `--agent codex-cli --model gpt-6.1-sol` with an explicit `--effort`.

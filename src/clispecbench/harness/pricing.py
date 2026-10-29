@@ -178,7 +178,7 @@ ANTHROPIC_PRICING: dict[str, ModelPricing] = {
 
 # OpenAI GPT / Codex
 # https://developers.openai.com/api/docs/models/compare
-# Cache writes for GPT-6.1 Sol, GPT-6 Astra/Sol/Luna, and GPT-5.6 cost 1.25x input.
+# Cache writes for GPT-6.1 Sol/Terra, GPT-6 Astra/Sol/Luna, and GPT-5.6 cost 1.25x input.
 # Older Codex telemetry omitted cache-creation tokens; newer streams expose
 # cache_write_input_tokens, which the adapter maps to cache creation.
 # These models' requests with prompts over 272K input tokens are billed at
@@ -194,6 +194,8 @@ OPENAI_PRICING: dict[str, ModelPricing] = {
     "gpt-6-luna": ModelPricing(input=0.10, output=0.50, cached_input=0.01, cache_write=0.125),
     # Verified 2026-10-02: https://developers.openai.com/api/docs/models/gpt-6.1-sol
     "gpt-6.1-sol": ModelPricing(input=2.00, output=10.00, cached_input=0.10, cache_write=2.50),
+    # Verified 2026-10-29: https://developers.openai.com/api/docs/models/gpt-6.1-terra
+    "gpt-6.1-terra": ModelPricing(input=1.00, output=5.00, cached_input=0.05, cache_write=1.25),
     # Verified 2026-09-05: https://developers.openai.com/api/docs/models/gpt-6-astra
     "gpt-6-astra": ModelPricing(input=10.00, output=50.00, cached_input=1.00, cache_write=12.50),
     "gpt-5.6-sol": ModelPricing(input=4.00, output=20.00, cached_input=0.40, cache_write=5.00),  # noqa: E501
