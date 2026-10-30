@@ -368,11 +368,10 @@ def evaluate_entity(
         str(de_index),
         "--t",
         repr(t),
-        "--output",
-        str(out),
     ]
     if s is not None:
         args.extend(["--s", repr(s)])
+    args.extend(["--output", str(out)])
     completed = _run_cli(submission_command, *args, check=check)
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert isinstance(payload, dict), "expected a JSON object"
