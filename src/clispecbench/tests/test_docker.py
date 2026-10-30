@@ -3,7 +3,14 @@
 
 from __future__ import annotations
 
+import io
+import json
 import logging
+import socket
+import struct
+import sys
+import threading
+import time
 from types import SimpleNamespace
 from typing import Any, cast
 from unittest.mock import Mock
@@ -13,7 +20,12 @@ from docker import errors as docker_errors
 from requests import exceptions as requests_exceptions
 from urllib3 import exceptions as urllib3_exceptions
 
-from clispecbench.harness.docker import ContainerConfig, DockerSandbox, _resolve_docker_client
+from clispecbench.harness.docker import (
+    _EGRESS_PROXY_SOURCE,
+    ContainerConfig,
+    DockerSandbox,
+    _resolve_docker_client,
+)
 
 
 class TestContainerConfig:
@@ -265,3 +277,59 @@ class TestStartAndWait:
 
         assert exc_info.value is connection_error
         container.kill.assert_not_called()
+
+
+class TestEgressProxy:
+    def _audit_events(self, audit: io.StringIO, until_event: str) -> list[dict[str, Any]]:
+        deadline = time.monotonic() + 10
+        while True:
+            events = [json.loads(line) for line in audit.getvalue().splitlines()]
+            if any(event["event"] == until_event for event in events):
+                return events
+            if time.monotonic() > deadline:
+                raise AssertionError(f"no {until_event!r} event in audit: {audit.getvalue()!r}")
+            time.sleep(0.05)
+
+    def test_handler_exception_is_audited_as_json_line(
+        self, monkeypatch: pytest.MonkeyPatch, capfd: pytest.CaptureFixture[str]
+    ) -> None:
+        audit = io.StringIO()
+        monkeypatch.setattr(sys, "stdout", audit)
+        proxy: dict[str, Any] = {"__name__": "egress_proxy"}
+        exec(compile(_EGRESS_PROXY_SOURCE, "egress_proxy", "exec"), proxy)
+        proxy["ALLOWED_HOSTS"] = ("chatgpt.com",)
+        server = proxy["Server"](("127.0.0.1", 0), proxy["Handler"])
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            address = server.server_address
+            with socket.create_connection(address, timeout=5) as client:
+                client.sendall(b"CONNECT example.com:443 HTTP/1.1\r\n\r\n")
+                assert client.recv(4096).startswith(b"HTTP/1.1 403")
+            self._audit_events(audit, "denied")
+
+            # Reset the connection mid-header so the handler's recv raises.
+            client = socket.create_connection(address, timeout=5)
+            client.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+            client.sendall(b"CONNECT chatgpt.com:443 HTTP/1.1\r\n")
+            time.sleep(0.2)
+            client.close()
+            events = self._audit_events(audit, "error")
+        finally:
+            server.shutdown()
+            server.server_close()
+
+        denied = next(event for event in events if event["event"] == "denied")
+        assert denied["host"] == "example.com"
+        error = next(event for event in events if event["event"] == "error")
+        assert error["client"] == "127.0.0.1"
+        assert error["error_type"] == "ConnectionResetError"
+        assert "Traceback" not in capfd.readouterr().err
+
+    def test_audit_logs_exclude_proxy_stderr(self) -> None:
+        proxy = SimpleNamespace(logs=Mock(return_value=b'{"event": "ready"}\n'))
+        sandbox = object.__new__(DockerSandbox)
+        sandbox._egress_proxy = cast(Any, proxy)
+
+        assert sandbox.get_network_audit_logs() == '{"event": "ready"}\n'
+        proxy.logs.assert_called_once_with(stdout=True, stderr=False)

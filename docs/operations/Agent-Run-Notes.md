@@ -295,6 +295,22 @@ From harness 0.2.2 the adapter sets `CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK=1`,
 so a flagged request stays on the run's own model and ends as a refusal.
 Review must still check stream, native and `modelUsage` models.
 
+## Proxy Tracebacks in the Network Audit (harness 0.2.3, 2026-10-29)
+
+Before harness 0.2.3, a connection that failed mid-request in the API-only
+egress proxy made `socketserver` print a traceback to stderr. Docker merged it
+into the proxy log, so `network-audit.jsonl` could hold non-JSON lines. On
+2026-10-29, 48 saved audits under `transient_results` had such tracebacks, all
+`ConnectionResetError: [Errno 104] Connection reset by peer`. One is the GPT-6.1
+Terra RS274 Python max run 1 in `transient_results/gpt61-terra-max-oct29`
+(lines 91-103). The same thing made one Terra app-connector probe fail on
+2026-10-29. The allow/deny records in those files are still valid. Readers of
+older audits should skip lines that do not parse as JSON.
+
+From harness 0.2.3 the proxy writes these failures as
+`{"event": "error", "client", "error_type", "error"}` records, and the audit
+holds only the proxy's stdout.
+
 ## Antigravity CLI Status
 
 Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the

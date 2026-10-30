@@ -47,8 +47,7 @@ import sys
 import threading
 import time
 
-PORT = int(sys.argv[1])
-ALLOWED_HOSTS = tuple(json.loads(sys.argv[2]))
+ALLOWED_HOSTS = ()
 EMIT_LOCK = threading.Lock()
 
 
@@ -142,10 +141,24 @@ class Server(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
     daemon_threads = True
 
+    def handle_error(self, request, client_address):
+        # The default prints a traceback to stderr, which Docker interleaves
+        # with the audit. Record the failed connection as one JSON line.
+        exc = sys.exc_info()[1]
+        emit(
+            "error",
+            client=client_address[0],
+            error_type=type(exc).__name__,
+            error=str(exc),
+        )
 
-emit("ready", port=PORT, allowed_hosts=ALLOWED_HOSTS)
-with Server(("0.0.0.0", PORT), Handler) as server:
-    server.serve_forever()
+
+if __name__ == "__main__":
+    PORT = int(sys.argv[1])
+    ALLOWED_HOSTS = tuple(json.loads(sys.argv[2]))
+    emit("ready", port=PORT, allowed_hosts=ALLOWED_HOSTS)
+    with Server(("0.0.0.0", PORT), Handler) as server:
+        server.serve_forever()
 '''
 
 
@@ -420,8 +433,11 @@ class DockerSandbox:
         while time.monotonic() < deadline:
             proxy.reload()
             if proxy.status == "exited":
-                audit = self.get_network_audit_logs()
-                raise RuntimeError(f"Restricted-egress proxy exited: {audit}")
+                # Include stderr here: a startup crash prints its traceback there.
+                output: bytes = proxy.logs()
+                raise RuntimeError(
+                    f"Restricted-egress proxy exited: {output.decode('utf-8', errors='replace')}"
+                )
             if '"event": "ready"' in self.get_network_audit_logs():
                 log.info(
                     "Created restricted network %s (allowed hosts: %s)",
@@ -559,10 +575,14 @@ class DockerSandbox:
         return raw.decode("utf-8", errors="replace")
 
     def get_network_audit_logs(self) -> str:
-        """Return JSONL connection decisions from the restricted-egress proxy."""
+        """Return JSONL connection decisions from the restricted-egress proxy.
+
+        The audit is the proxy's stdout only, so anything the interpreter
+        writes to stderr cannot break the JSONL.
+        """
         if self._egress_proxy is None:
             return ""
-        raw: bytes = self._egress_proxy.logs()
+        raw: bytes = self._egress_proxy.logs(stdout=True, stderr=False)
         return raw.decode("utf-8", errors="replace")
 
     def run_oneshot(

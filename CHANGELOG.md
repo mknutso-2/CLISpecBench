@@ -4,6 +4,14 @@ This file records changes to the `clispecbench` harness that can change how an
 agent run behaves. Each result stamps the version in `metadata.harness_version`.
 Eval prompt, doc and test changes belong in each eval's `Evals/<Task>/CHANGELOG.md`.
 
+## v0.2.3 — 2026-10-29
+
+- The API-only egress proxy writes a JSON `error` record when a connection
+  fails mid-request (for example, a reset by the client). It used to print a
+  Python traceback, which landed in `network-audit.jsonl` and broke readers
+  that parse every line. The audit now holds only the proxy's stdout.
+  Allow/deny decisions are unchanged.
+
 ## v0.2.2 — 2026-10-27
 
 - Claude Code's refusal fallback is disabled. When the API flagged a request
