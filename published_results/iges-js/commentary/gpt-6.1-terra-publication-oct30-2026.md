@@ -12,6 +12,7 @@ GPT-6.1 Terra at low, high and max effort under the API-only Codex CLI 0.165.0 c
 - EVAL CONTRACT/TEST MISMATCH: technical-requirements-prompt.md section 1 says 'All subcommands take a final --output <path> flag' and its synopsis shows 'iges eval --input <file.iges> --de <n> --t <f> [--s <f>] --output <point.json>', but the IGES 1.0.21 hidden suite passes '--t <f> --output <path> --s <f>'. A submission that enforces the documented order loses every two-parameter (surface) evaluation test. 20 of this run's 22 failures come from that. The score is kept as graded under the frozen suite, but publication needs a note and the eval needs an author-eval decision (accept any flag order in the contract, or put --s before --output in the helper).
 - Session turn context shows only gpt-6.1-terra; 1 turn; 86 commands; files written through shell commands; non-partial token accounting.
 - Compared with published max runs: GPT-6.1 Sol 249/249, GPT-6 Sol 246/249, GPT-5.6 Terra 228/249.
+- Regrade under IGES 1.0.22, which passes `--s` before `--output` as the contract documents: 247/249 (`docs/validation/IGES-1.0.22.md`). The published score stays at the graded 227/249 under 1.0.21; promoting the regrade needs owner approval under `docs/operations/Regrading.md`.
 
 ### GPT-6.1 Terra high — `7231d8fb-a646-4d4b-bb2a-5a1b4c5c70c1`
 

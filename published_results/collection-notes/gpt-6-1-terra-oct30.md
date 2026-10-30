@@ -11,7 +11,7 @@ At max, Terra worked 10–25 minutes per cell and scored at or near the top on m
 ## Disclosures
 
 - Under the API-only proxy, many runs tried to install tools or fetch references (rustfmt, clang-format, a reference BibTeX via apt/pip/npm, sample CAD files from GitHub, Unicode or calendar tables). Every such request was denied and nothing was retrieved; each attempt is listed in the run's commentary entry.
-- IGES JS max scored 227/249, and 20 of its 22 failures come from argument order: the IGES 1.0.21 contract says `--output` is the final flag, but the hidden-suite helper passes `--s` after `--output`, and this submission enforces the documented order. The score is kept as graded; the contract/test mismatch is being handled separately. Other IGES JS runs may be affected the same way.
+- IGES JS max scored 227/249, and 20 of its 22 failures come from argument order: the IGES 1.0.21 contract says `--output` is the final flag, but the hidden-suite helper passes `--s` after `--output`, and this submission enforces the documented order. IGES 1.0.22 fixes the helper; under it this source regrades to 247/249. The published score stays at the graded 227 unless a regrade promotion is approved. The high and low IGES JS runs accept either order and regrade unchanged (178 and 153).
 - Some network audits contain an egress-proxy traceback from a reset connection, not an audit event; it does not affect the run.
 
 ## Accounting
