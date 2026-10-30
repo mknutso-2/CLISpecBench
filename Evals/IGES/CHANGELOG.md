@@ -1,5 +1,18 @@
 # IGES Changelog
 
+## v1.0.22 — 2026-10-29
+
+- Pass hidden surface `eval` flags in the documented order. The technical
+  contract makes `--output` the final flag on every subcommand and shows
+  `--t <f> [--s <f>] --output <point.json>`, but the shared eval helper
+  appended `--s` after `--output`. A submission enforcing the documented order
+  failed every two-parameter evaluation before computing a point. The helper
+  now places `--s` before `--output`; every other hidden invocation already
+  ended with `--output`.
+- Preserve all 249 case IDs, assertions, model-visible prompts and docs,
+  references and saved submission source. No behavior or weighting changes.
+  See `docs/validation/IGES-1.0.22.md` for evidence and saved-source regrades.
+
 ## v1.0.21 — 2026-09-30
 
 - Normalize one hidden ex1 appendix token: Type 406 Form 5 extension length
