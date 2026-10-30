@@ -1,0 +1,358 @@
+{
+  "schema_version": "2.3",
+  "metadata": {
+    "run_uid": "65b10098-5b4d-4950-a344-c1f3a05a2c59",
+    "task": "wordcount-js",
+    "agent": "claude-code",
+    "agent_version": "2.1.289",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-10-23T15:36:49.186152+00:00",
+    "test_suite_version": "fae4070",
+    "eval_version": "1.0.4",
+    "harness_version": "0.2.1",
+    "docker_image_sha": "sha256:899480aee4bcdca79c13837a5fbd60fd1aec55b8b7ce01071d2a910dd9015022",
+    "wall_clock_seconds": 2859.5629999999655,
+    "exit_reason": "completed",
+    "network_policy": "web-enabled",
+    "model": "claude-sonnet-5-5",
+    "served_model": "claude-sonnet-5-5",
+    "effort": "max",
+    "notes": null,
+    "benchmark_cost_preference": "estimated",
+    "prompt_content_sha": "39323f6c82b23f4fa012ded6afd600b8d90d59b706f886cfe228fd5263121ca9",
+    "test_suite_sha": "6a1dd66dabfc902c75af51537b6ab4e439d94e598e3aea92dc08081107426985",
+    "agent_last_message": "The tool is built and works as specified. `node main.js --input <file> --output <file>` runs from anywhere, and the entry point is `output/main.js`. It uses only the Node standard library and has no `package.json` or `node_modules`.\n\n**Testing**\n- **Shipped tests:** the 34 tests in `output/test/` pass. Run them with `cd output && node --test`.\n- **Independent oracle:** results match a separate Python implementation I wrote from the spec on 800 random Unicode-heavy files. They also match on a 200 MB corpus and two ~46 MB multi-chunk corpora.\n- **Mutation checks:** I injected about 30 realistic bugs. All were caught except one that behaves identically to the original and one that would need an impractical hash collision.\n- **Bugs found:** the checks turned up two gaps in my own tests, which I fixed.\n- **Slow pipe case:** the read loop took 30 s on a 64 MiB word with no spaces arriving through a pipe. It now takes 0.77 s.\n\n**Speed:** about 170 MB/s on typical text (200 MB in about 1.3 s), and about 65 MB/s with a million distinct words. A simple string-and-`Map` version managed about 10 MB/s. Peak memory was 53\u2013165 MiB on 200 MB inputs, whatever the file size.\n\n**Where the spec is silent, I chose:**\n- **Malformed input:** a file that isn't valid UTF-8 exits 1 with no output. Binary data and Latin-1 text are rejected this way; NUL bytes and BOMs are valid and count normally.\n- **Lowercasing:** this is Unicode-aware, so `\u00c9COLE` and `\u00e9cole` are the same word. If you wanted ASCII-only, that is a small change.\n- **Ties:** these sort by code-point order (UTF-8 byte order), not JavaScript's default string order.\n- **Output path errors:** a bad output path (missing directory, a directory, no permission) exits 1. A disk-full error exits 2.\n- **Same file:** the tool refuses to overwrite its own input file.\n- **Arguments:** `--flag=value` works. A repeated flag, a stray positional argument, or `--help` all exit 1.\n\n**Known limit:** I can't turn V8's hard out-of-memory abort or th",
+    "exit_class": "completed",
+    "agent_exit_reason": "completed",
+    "grading_status": "completed",
+    "grading_error": null
+  },
+  "token_usage": {
+    "input_tokens": 8989649,
+    "output_tokens": 200062,
+    "cache_read_input_tokens": 8761163,
+    "cache_creation_input_tokens": 228376,
+    "tool_calls": 74,
+    "tool_calls_definition": null,
+    "reasoning_output_tokens": null,
+    "reported_cost_usd": 4.666577,
+    "estimated_cost_usd": 4.666577,
+    "cost_estimate_blocked_reason": null,
+    "source": null,
+    "is_partial": false,
+    "total_tokens": 9189711
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.04562295399955474,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.04562295399955474,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestEmptyFile::test_empty_file",
+      "outcome": "passed",
+      "duration_seconds": 0.023455462011042982,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWhitespaceOnly::test_spaces_only",
+      "outcome": "passed",
+      "duration_seconds": 0.024043750992859714,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWhitespaceOnly::test_newlines_only",
+      "outcome": "passed",
+      "duration_seconds": 0.022869984997669235,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWhitespaceOnly::test_mixed_whitespace",
+      "outcome": "passed",
+      "duration_seconds": 0.02328184898942709,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_only_lf_terminates_a_line[a\\rb\\rc-1]",
+      "outcome": "passed",
+      "duration_seconds": 0.023359523009276018,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_only_lf_terminates_a_line[a\\r\\nb\\r\\n-2]",
+      "outcome": "passed",
+      "duration_seconds": 0.02398140799778048,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_only_lf_terminates_a_line[a\\n  -2]",
+      "outcome": "passed",
+      "duration_seconds": 0.023338154976954684,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_single_line_no_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.023625847999937832,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_single_line_with_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.02190057499683462,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_multiple_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.024365509001654573,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_multiple_lines_no_trailing_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.02832692001538817,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestLineCounting::test_consecutive_newlines",
+      "outcome": "passed",
+      "duration_seconds": 0.027301479000016116,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestCharacterCounting::test_counts_utf8_bytes",
+      "outcome": "passed",
+      "duration_seconds": 0.022276264979154803,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestCharacterCounting::test_preserves_crlf_bytes",
+      "outcome": "passed",
+      "duration_seconds": 0.024677358000189997,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestCharacterCounting::test_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.022693277016514912,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestCharacterCounting::test_with_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.023411347981891595,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestCharacterCounting::test_with_various_whitespace",
+      "outcome": "passed",
+      "duration_seconds": 0.023466357015422545,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWordCounting::test_only_the_six_defined_whitespace_characters_split_words",
+      "outcome": "passed",
+      "duration_seconds": 0.02479767700424418,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWordCounting::test_single_word",
+      "outcome": "passed",
+      "duration_seconds": 0.021371247989009134,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWordCounting::test_multiple_words",
+      "outcome": "passed",
+      "duration_seconds": 0.023540925001725554,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWordCounting::test_words_separated_by_various_whitespace",
+      "outcome": "passed",
+      "duration_seconds": 0.029939340995042585,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWordCounting::test_leading_and_trailing_whitespace",
+      "outcome": "passed",
+      "duration_seconds": 0.02763563000189606,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestWordCounting::test_multiple_spaces_between_words",
+      "outcome": "passed",
+      "duration_seconds": 0.02703150200250093,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestUniqueWords::test_all_unique",
+      "outcome": "passed",
+      "duration_seconds": 0.02453677900484763,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestUniqueWords::test_duplicates",
+      "outcome": "passed",
+      "duration_seconds": 0.028057611008989625,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestUniqueWords::test_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.0232284900121158,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestPunctuation::test_punctuation_attached",
+      "outcome": "passed",
+      "duration_seconds": 0.023635063000256196,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestPunctuation::test_various_punctuation",
+      "outcome": "passed",
+      "duration_seconds": 0.02261602999351453,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_descending_by_count",
+      "outcome": "passed",
+      "duration_seconds": 0.02373765099036973,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_alphabetical_tiebreaker",
+      "outcome": "passed",
+      "duration_seconds": 0.02125185499608051,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_max_ten_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.023932148003950715,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_ties_at_tenth_place_use_lexicographic_order",
+      "outcome": "passed",
+      "duration_seconds": 0.024657458983710967,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_case_variants_have_combined_frequency",
+      "outcome": "passed",
+      "duration_seconds": 0.021910358016612008,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_fewer_than_ten",
+      "outcome": "passed",
+      "duration_seconds": 0.02447581200976856,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_empty_top_words",
+      "outcome": "passed",
+      "duration_seconds": 0.024457898995024152,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestTopWords::test_case_insensitive_in_top_words",
+      "outcome": "passed",
+      "duration_seconds": 0.026357353999628685,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestJsonStructure::test_quoted_and_backslash_words_survive_json_serialization",
+      "outcome": "passed",
+      "duration_seconds": 0.021615666002617218,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestJsonStructure::test_required_keys_present",
+      "outcome": "passed",
+      "duration_seconds": 0.025185428006807342,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestJsonStructure::test_types",
+      "outcome": "passed",
+      "duration_seconds": 0.02192306102369912,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestJsonStructure::test_top_words_entry_structure",
+      "outcome": "passed",
+      "duration_seconds": 0.022984962997725233,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestExitCodes::test_unknown_argument_exit_code",
+      "outcome": "passed",
+      "duration_seconds": 0.028256218996830285,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestExitCodes::test_success_exit_code",
+      "outcome": "passed",
+      "duration_seconds": 0.027271031998679973,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestExitCodes::test_missing_args_exit_code",
+      "outcome": "passed",
+      "duration_seconds": 0.025827114019193687,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestExitCodes::test_missing_input_file_exit_code",
+      "outcome": "passed",
+      "duration_seconds": 0.027818670016131364,
+      "message": null
+    },
+    {
+      "node_id": "test_wordcount.py::TestIntegration::test_multiline_document",
+      "outcome": "passed",
+      "duration_seconds": 0.027695479002431966,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 46,
+    "failed": 0,
+    "skipped": 0,
+    "error": 0,
+    "total": 46
+  },
+  "scores": {
+    "correctness": 1.0,
+    "task_score": 1.0,
+    "extension_scores": {
+      "subscore.wordcount.passed": 45.0,
+      "subscore.wordcount.total": 45.0
+    }
+  },
+  "source_stats": {
+    "file_count": 5,
+    "lines_of_code": 978
+  },
+  "grading_environment": {
+    "mode": "docker",
+    "docker_image_tag": "clispecbench-base",
+    "docker_image_sha": "sha256:922c3bc7435e5546e737bf77b5bc8c07d15f86c9bad7f6fc68555cf8fbf04dc5"
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims a stdlib Node wordcount with 34 shipped tests, matching an independent spec-built Python oracle on 800 random Unicode-heavy files and 46-200 MB corpora, plus ~30 injected mutations to test the tests. Not a false completion claim.",
+    "commentary": "claude-5-5-publication-oct30-2026"
+  }
+}

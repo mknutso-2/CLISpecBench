@@ -1,0 +1,1362 @@
+{
+  "schema_version": "2.3",
+  "metadata": {
+    "run_uid": "db8006dc-27f8-4b42-a0a5-52d55e8e6e16",
+    "task": "gedcom-rs",
+    "agent": "claude-code",
+    "agent_version": "2.1.289",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-10-17T02:00:44.031463+00:00",
+    "test_suite_version": "9ba84a4",
+    "eval_version": "4.0.3",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:899480aee4bcdca79c13837a5fbd60fd1aec55b8b7ce01071d2a910dd9015022",
+    "wall_clock_seconds": 1358.875,
+    "exit_reason": "completed",
+    "network_policy": "web-enabled",
+    "model": "claude-opus-5-5",
+    "served_model": "claude-opus-5-5",
+    "effort": "high",
+    "notes": null,
+    "benchmark_cost_preference": "estimated",
+    "prompt_content_sha": "8d591940f986a858e4e8fc04765543101526f9ed2e00fb793a895739de907e18",
+    "test_suite_sha": "de8bb17fdab7b7a28fc3fde0b60dbc51e8827d8fe54d9f42ac124825913e14a6",
+    "agent_last_message": "I've built the tool in `output/` as a Rust 2021 Cargo project with no dependencies. It builds cleanly with `cargo build --release --manifest-path output/Cargo.toml` and handles all four actions: `inspect`, `render`, `inspect_gedzip` and `render_gedzip`.\n\n**Testing.** I ran about 200 cases, including the spec's own valid and invalid examples. All gave the expected result. Other checks:\n- **Round trips:** inspect \u2192 render \u2192 inspect gives back the same tree, and a 50,000-person file (450k lines) comes back byte-for-byte identical in about 1.4s.\n- **GEDZIP:** archives made by Python's `zipfile` with compression and in streaming mode read correctly. 30 random compressed files decompressed exactly, and archives the tool writes pass Python's integrity check.\n- **Deep nesting:** a file nested 20,000 levels deep works.\n\n**How it works**\n- **Reading GEDCOM text:** it follows the spec's line rules strictly: single spaces between parts, no leading zeros or blank lines, levels can't jump, a leading `@` in text must be written `@@`, no `@VOID@` as an ID, no banned characters, and no `CONC`. A byte-order mark and LF, CR or CRLF line endings are accepted. `CONT` lines are joined into the parent's `payload` with `\\n` and never appear as children.\n- **Checking against the spec:** I extracted the structure rules from the spec's HTML into a table of 178 structure types (`src/schema/tables.rs`). Each structure is checked for allowed child tags, required and at-most-once children, value format and pointer targets. Value formats include dates in all four calendars, ages, times, names, language tags, media types, file paths, URIs and coordinates. Extension tags (`_XXX`) are allowed anywhere and their contents are not checked.\n- **Errors:** an invalid document returns the earliest problem, with a `line` number wherever one applies.\n- **Rendering:** the output always uses LF and has no byte-order mark. Before returning, the tool re-reads and re-checks its own output. Any problem, such as a `",
+    "exit_class": "completed",
+    "agent_exit_reason": "completed",
+    "grading_status": "completed",
+    "grading_error": null
+  },
+  "token_usage": {
+    "input_tokens": 6209620,
+    "output_tokens": 106709,
+    "cache_read_input_tokens": 6001469,
+    "cache_creation_input_tokens": 208061,
+    "tool_calls": 48,
+    "tool_calls_definition": null,
+    "reasoning_output_tokens": null,
+    "reported_cost_usd": 4.999322,
+    "estimated_cost_usd": null,
+    "cost_estimate_blocked_reason": "unpriced_model_usage",
+    "source": null,
+    "is_partial": false,
+    "total_tokens": 6316329
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 1.3420376110589132,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 1.3420376110589132,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[]",
+      "outcome": "passed",
+      "duration_seconds": 0.0030117800342850387,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.0030224820075090975,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[JAN 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.005535752046853304,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[1 JAN 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.004464574012672529,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[ABT 1 JAN 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.002733209985308349,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[BET 1900 AND 1901]",
+      "outcome": "passed",
+      "duration_seconds": 0.002726244041696191,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[FROM JULIAN 1670 TO GREGORIAN 1800]",
+      "outcome": "passed",
+      "duration_seconds": 0.003110604011453688,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[1900/01]",
+      "outcome": "passed",
+      "duration_seconds": 0.003271499997936189,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[BET 1900 1901]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026234980032313615,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[1 FOO 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.00258829805534333,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[GREGORIAN BCE]",
+      "outcome": "passed",
+      "duration_seconds": 0.0029211840010248125,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[FRENCH_R 1 VEND 1 BCE]",
+      "outcome": "passed",
+      "duration_seconds": 0.002899743994930759,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_julian_bce_date_is_accepted",
+      "outcome": "passed",
+      "duration_seconds": 0.0030896700045559555,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_change_date_requires_date_exact",
+      "outcome": "passed",
+      "duration_seconds": 0.00252505304524675,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[2:50]",
+      "outcome": "passed",
+      "duration_seconds": 0.002588995994301513,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[02:50]",
+      "outcome": "passed",
+      "duration_seconds": 0.002511015016352758,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[23:59:59.123Z]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025537039909977466,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[24:00:00]",
+      "outcome": "passed",
+      "duration_seconds": 0.003558513999450952,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[12:60]",
+      "outcome": "passed",
+      "duration_seconds": 0.0030887100438121706,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[12:30:60]",
+      "outcome": "passed",
+      "duration_seconds": 0.0029537520022131503,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.0029774089925922453,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[< 8d]",
+      "outcome": "passed",
+      "duration_seconds": 0.0031481840123888105,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[> 1y 30m]",
+      "outcome": "passed",
+      "duration_seconds": 0.0037033139960840344,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[8w 30d]",
+      "outcome": "passed",
+      "duration_seconds": 0.002818138018483296,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_rejects_legacy_phrase_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.002381573023740202,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_language_payloads_are_validated",
+      "outcome": "passed",
+      "duration_seconds": 0.0024771869648247957,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_invalid_email_payload_is_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0030666020466014743,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0033950330107472837,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0031382890010718256,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.002499397989595309,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines3]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026836519537027925,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines4]",
+      "outcome": "passed",
+      "duration_seconds": 0.0034031050163321197,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_percent_encoded_local_file_path_is_accepted",
+      "outcome": "passed",
+      "duration_seconds": 0.004542717011645436,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0027439160039648414,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines1]",
+      "outcome": "failed",
+      "duration_seconds": 0.0038182979624252766,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/gedcom-build0/build/release/gedcom_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_latitude_and_longitude_pa1')\nmap_lines = ['4 LATI N90.1', '4 LONG W71.05']\n\n    @pytest.mark.parametrize(\n        \"map_lines\",\n        [\n            [\"4 LATI X42.36\", \"4 LONG W71.05\"],\n            [\"4 LATI N90.1\", \"4 LONG W71.05\"],\n            [\"4 LATI N42.36\", \"4 LONG W180.1\"],\n        ],\n    )\n    def test_latitude_and_longitude_payloads_are_validated(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        map_lines: list[str],\n    ) -> None:\n>       _assert_invalid_document(\n            submission_command,\n            tmp_path,\n            document_text(\n                individual_record_block(\n                    extra_lines=[\n                        \"1 BIRT Y\",\n                        \"2 PLAC Boston\",\n                        \"3 MAP\",\n                        *map_lines,\n                    ]\n                )\n            ),\n        )\n\n/tmp/tests/test_data_types.py:286: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/tmp/pytest-of-root/pytest-0/gedcom-build0/build/release/gedcom_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_latitude_and_longitude_pa1')\ntext = '0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n1 NOTE Supporting individual\\n1 BIRT Y\\n2 PLAC Boston\\n3 MAP\\n4 LATI N90.1\\n4 LONG W71.05\\n0 TRLR\\n'\n\n    def _assert_invalid_document(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        text: str,\n    ) -> None:\n        result, payload = run_gedcom(\n            submission_command,\n            {\"action\": \"inspect\", \"gedcom_text\": text},\n            tmp_path,\n        )\n>       assert result.returncode == 1\nE       AssertionError: assert 0 == 1\nE        +  where 0 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/gedcom-build0/build/release/gedcom_tool', '--input', '/tmp/pytest...ut', '/tmp/pytest-of-root/pytest-0/test_latitude_and_longitude_pa1/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_data_types.py:36: AssertionError"
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines2]",
+      "outcome": "failed",
+      "duration_seconds": 0.003866381972329691,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/gedcom-build0/build/release/gedcom_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_latitude_and_longitude_pa2')\nmap_lines = ['4 LATI N42.36', '4 LONG W180.1']\n\n    @pytest.mark.parametrize(\n        \"map_lines\",\n        [\n            [\"4 LATI X42.36\", \"4 LONG W71.05\"],\n            [\"4 LATI N90.1\", \"4 LONG W71.05\"],\n            [\"4 LATI N42.36\", \"4 LONG W180.1\"],\n        ],\n    )\n    def test_latitude_and_longitude_payloads_are_validated(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        map_lines: list[str],\n    ) -> None:\n>       _assert_invalid_document(\n            submission_command,\n            tmp_path,\n            document_text(\n                individual_record_block(\n                    extra_lines=[\n                        \"1 BIRT Y\",\n                        \"2 PLAC Boston\",\n                        \"3 MAP\",\n                        *map_lines,\n                    ]\n                )\n            ),\n        )\n\n/tmp/tests/test_data_types.py:286: \n_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ \n\nsubmission_command = ('/tmp/pytest-of-root/pytest-0/gedcom-build0/build/release/gedcom_tool',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_latitude_and_longitude_pa2')\ntext = '0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n1 NOTE Supporting individual\\n1 BIRT Y\\n2 PLAC Boston\\n3 MAP\\n4 LATI N42.36\\n4 LONG W180.1\\n0 TRLR\\n'\n\n    def _assert_invalid_document(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        text: str,\n    ) -> None:\n        result, payload = run_gedcom(\n            submission_command,\n            {\"action\": \"inspect\", \"gedcom_text\": text},\n            tmp_path,\n        )\n>       assert result.returncode == 1\nE       AssertionError: assert 0 == 1\nE        +  where 0 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/gedcom-build0/build/release/gedcom_tool', '--input', '/tmp/pytest...ut', '/tmp/pytest-of-root/pytest-0/test_latitude_and_longitude_pa2/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_data_types.py:36: AssertionError"
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.0034416670096106827,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025190930464304984,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.002444996003760025,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines3]",
+      "outcome": "passed",
+      "duration_seconds": 0.002760724979452789,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines4]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026846339751500636,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.002396367024630308,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.00191963798715733,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022775520337745547,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines3]",
+      "outcome": "passed",
+      "duration_seconds": 0.0020717009902000427,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines4]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022782000014558434,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_render_rejects_invalid_datatype_payloads",
+      "outcome": "passed",
+      "duration_seconds": 0.002688172011403367,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_inspect_gedzip_returns_dataset_and_attachments",
+      "outcome": "passed",
+      "duration_seconds": 0.0028456970176193863,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_render_gedzip_writes_dataset_and_attachments",
+      "outcome": "passed",
+      "duration_seconds": 0.002808321005431935,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_requires_gedcom_dataset_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.002056864002952352,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_requires_local_file_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.0020647609781008214,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_rejects_local_file_url_payloads",
+      "outcome": "passed",
+      "duration_seconds": 0.0019337480189278722,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_data_stream_allows_file_url_payloads_outside_gedzip",
+      "outcome": "passed",
+      "duration_seconds": 0.002077617042232305,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_matches_percent_encoded_file_payload_to_unescaped_entry_name",
+      "outcome": "passed",
+      "duration_seconds": 0.0021952159877400845,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_render_gedzip_rejects_missing_required_attachment",
+      "outcome": "passed",
+      "duration_seconds": 0.0017300209729000926,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_rejects_reserved_dataset_entry_as_local_file",
+      "outcome": "passed",
+      "duration_seconds": 0.002370551024796441,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_parses_sample_dataset_to_generic_tree",
+      "outcome": "passed",
+      "duration_seconds": 0.001999937987420708,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_roundtrip_preserves_sample_dataset_tree",
+      "outcome": "passed",
+      "duration_seconds": 0.0037060770264361054,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_render_preserves_multiline_and_escaped_payload_content",
+      "outcome": "passed",
+      "duration_seconds": 0.003401325986487791,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_parses_extended_dataset_with_repository_source_and_multimedia_records",
+      "outcome": "passed",
+      "duration_seconds": 0.0034785789903253317,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_roundtrip_preserves_extended_dataset_tree",
+      "outcome": "passed",
+      "duration_seconds": 0.0038502130191773176,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[lines::cb5-0 @I1234@ INDI]",
+      "outcome": "passed",
+      "duration_seconds": 0.002239682973595336,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extensions::cb8-0 @P1@ _LOC\\n1 NAME \\u0392\\u03c5\\u03b6\\u03ac\\u03bd\\u03c4\\u03b9\\u03bf\\u03bd\\n2 DATE FROM 667 BCE TO 324\\n1 _POP 15149358\\n2 DATE 31 DEC 2020\\n0 @I1@ INDI\\n1 BIRT\\n2 _LOC @P1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.002503549971152097,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extensions::cb9-0 @I1@ INDI\\n1 NAME John /Doe/\\n2 _DATE FROM 6 APR 1917 TO 11 NOV 1918\\n3 PHRASE During America's involvement in the Great War\\n1 BIRT\\n2 PLAC Queens, New York, New York, USA]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026035879855044186,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb12-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n2 TAG _MEMBER http://xmlns.com/foaf/0.1/member]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025888789677992463,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb13-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SKYPEID example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022044470242690295,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb14-0 HEAD\\n1 SCHMA\\n2 TAG _SI http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SI example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021427329920697957,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[removing-data::cb16-0 @I1@ INDI\\n1 NAME John /Doe/\\n1 NAME John /Doe/\\n1 FAMC @F1@\\n1 FAMC @F1@\\n0 @F1@ FAM\\n1 CHIL @I1@\\n1 CHIL @I1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022865759674459696,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[removing-data::cb17-0 @I1@ INDI\\n1 NAME John /Doe/]",
+      "outcome": "passed",
+      "duration_seconds": 0.0027535120025277138,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDIVIDUAL_RECORD::cb39-0 @I1@ INDI\\n1 ASSO @I2@\\n2 ROLE GODP]",
+      "outcome": "passed",
+      "duration_seconds": 0.0023210460203699768,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[SHARED_NOTE_RECORD::cb43-0 @GORDON@ SNOTE \"Gordon\" is a traditional Scottish surname.\\n1 CONT It became a given name in honor of Charles George Gordon.\\n0 @I1@ INDI\\n1 NAME Gordon /Jones/\\n2 NOTE Named after the astronaut Gordon Cooper\\n2 SNOTE @GORDON@]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025478449824731797,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ASSOCIATION_STRUCTURE::cb48-0 @I1@ INDI\\n1 ASSO @VOID@\\n2 PHRASE Mr Stockdale\\n2 ROLE OTHER\\n3 PHRASE Teacher\\n1 BAPM\\n2 DATE 1930\\n2 ASSO @I2@\\n3 ROLE CLERGY]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021949530055280775,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[PLACE_STRUCTURE::cb71-0 @S1@ SOUR\\n1 DATA\\n2 EVEN BIRT\\n3 PLAC , Oneida, Idaho, USA\\n4 FORM City, County, State, Country]",
+      "outcome": "passed",
+      "duration_seconds": 0.002496370958397165,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDI-EVEN::cb79-0 @I1@ INDI\\n1 EVEN\\n2 TYPE Land Lease\\n2 DATE 2 OCT 1837\\n1 EVEN Mining equipment\\n2 TYPE Equipment Lease\\n2 DATE 4 NOV 1837]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026061850076075643,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDI-FACT::cb80-0 @I1@ INDI\\n1 FACT Woodworking\\n2 TYPE Skills]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021680400241166353,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[HEIGHT::cb82-0 @I45@ INDI\\n1 DSCR brown eyes, 5ft 10in, 198 pounds]",
+      "outcome": "passed",
+      "duration_seconds": 0.002898270031437278,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[HUSB::cb83-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 HUSB\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.003985630988609046,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ROLE::cb97-0 @I1@ INDI\\n1 NAME Mary //\\n2 SOUR @S1@\\n3 EVEN BIRT\\n4 ROLE MOTH]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022830450034234673,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ROLE::cb98-0 @I2@ INDI\\n1 ASSO @I3@\\n2 ROLE FRIEND\\n3 PHRASE best friend\\n1 BAPM\\n2 ASSO @I3@\\n3 ROLE WITN]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021037870028521866,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[FILE-TRAN::cb102-0 @EX@ OBJE\\n1 FILE media/original.mp3\\n2 FORM audio/mp3\\n2 TRAN media/derived.oga\\n3 FORM audio/ogg\\n2 TRAN media/transcript.vtt\\n3 FORM text/vtt]",
+      "outcome": "passed",
+      "duration_seconds": 0.002283812005771324,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[TYPE::cb103-0 @I1@ INDI\\n1 ORDN\\n2 TYPE Bishop]",
+      "outcome": "passed",
+      "duration_seconds": 0.002301339991390705,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[WIFE::cb104-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 WIFE\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.003035362984519452,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[lines::cb5-0 @I1234@ INDI]",
+      "outcome": "passed",
+      "duration_seconds": 0.002827612013788894,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extensions::cb8-0 @P1@ _LOC\\n1 NAME \\u0392\\u03c5\\u03b6\\u03ac\\u03bd\\u03c4\\u03b9\\u03bf\\u03bd\\n2 DATE FROM 667 BCE TO 324\\n1 _POP 15149358\\n2 DATE 31 DEC 2020\\n0 @I1@ INDI\\n1 BIRT\\n2 _LOC @P1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.002575184014858678,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extensions::cb9-0 @I1@ INDI\\n1 NAME John /Doe/\\n2 _DATE FROM 6 APR 1917 TO 11 NOV 1918\\n3 PHRASE During America's involvement in the Great War\\n1 BIRT\\n2 PLAC Queens, New York, New York, USA]",
+      "outcome": "passed",
+      "duration_seconds": 0.0018569680396467447,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extension-tags::cb12-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n2 TAG _MEMBER http://xmlns.com/foaf/0.1/member]",
+      "outcome": "passed",
+      "duration_seconds": 0.0016279470000881702,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extension-tags::cb13-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SKYPEID example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.0017155040113721043,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extension-tags::cb14-0 HEAD\\n1 SCHMA\\n2 TAG _SI http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SI example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019523720256984234,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[removing-data::cb16-0 @I1@ INDI\\n1 NAME John /Doe/\\n1 NAME John /Doe/\\n1 FAMC @F1@\\n1 FAMC @F1@\\n0 @F1@ FAM\\n1 CHIL @I1@\\n1 CHIL @I1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.0036309110291767865,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[removing-data::cb17-0 @I1@ INDI\\n1 NAME John /Doe/]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022111379948910326,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[INDIVIDUAL_RECORD::cb39-0 @I1@ INDI\\n1 ASSO @I2@\\n2 ROLE GODP]",
+      "outcome": "passed",
+      "duration_seconds": 0.0018141440232284367,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[SHARED_NOTE_RECORD::cb43-0 @GORDON@ SNOTE \"Gordon\" is a traditional Scottish surname.\\n1 CONT It became a given name in honor of Charles George Gordon.\\n0 @I1@ INDI\\n1 NAME Gordon /Jones/\\n2 NOTE Named after the astronaut Gordon Cooper\\n2 SNOTE @GORDON@]",
+      "outcome": "passed",
+      "duration_seconds": 0.0016453620337415487,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[ASSOCIATION_STRUCTURE::cb48-0 @I1@ INDI\\n1 ASSO @VOID@\\n2 PHRASE Mr Stockdale\\n2 ROLE OTHER\\n3 PHRASE Teacher\\n1 BAPM\\n2 DATE 1930\\n2 ASSO @I2@\\n3 ROLE CLERGY]",
+      "outcome": "passed",
+      "duration_seconds": 0.0016971650184132159,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[PLACE_STRUCTURE::cb71-0 @S1@ SOUR\\n1 DATA\\n2 EVEN BIRT\\n3 PLAC , Oneida, Idaho, USA\\n4 FORM City, County, State, Country]",
+      "outcome": "passed",
+      "duration_seconds": 0.0017068040033336729,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[INDI-EVEN::cb79-0 @I1@ INDI\\n1 EVEN\\n2 TYPE Land Lease\\n2 DATE 2 OCT 1837\\n1 EVEN Mining equipment\\n2 TYPE Equipment Lease\\n2 DATE 4 NOV 1837]",
+      "outcome": "passed",
+      "duration_seconds": 0.0017258440202567726,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[INDI-FACT::cb80-0 @I1@ INDI\\n1 FACT Woodworking\\n2 TYPE Skills]",
+      "outcome": "passed",
+      "duration_seconds": 0.002171290951082483,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[HEIGHT::cb82-0 @I45@ INDI\\n1 DSCR brown eyes, 5ft 10in, 198 pounds]",
+      "outcome": "passed",
+      "duration_seconds": 0.001675348001299426,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[HUSB::cb83-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 HUSB\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.0017563110159244388,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[ROLE::cb97-0 @I1@ INDI\\n1 NAME Mary //\\n2 SOUR @S1@\\n3 EVEN BIRT\\n4 ROLE MOTH]",
+      "outcome": "passed",
+      "duration_seconds": 0.001798877987312153,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[ROLE::cb98-0 @I2@ INDI\\n1 ASSO @I3@\\n2 ROLE FRIEND\\n3 PHRASE best friend\\n1 BAPM\\n2 ASSO @I3@\\n3 ROLE WITN]",
+      "outcome": "passed",
+      "duration_seconds": 0.001840170967625454,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[FILE-TRAN::cb102-0 @EX@ OBJE\\n1 FILE media/original.mp3\\n2 FORM audio/mp3\\n2 TRAN media/derived.oga\\n3 FORM audio/ogg\\n2 TRAN media/transcript.vtt\\n3 FORM text/vtt]",
+      "outcome": "passed",
+      "duration_seconds": 0.0016848209488671273,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[TYPE::cb103-0 @I1@ INDI\\n1 ORDN\\n2 TYPE Bishop]",
+      "outcome": "passed",
+      "duration_seconds": 0.0015622919891029596,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[WIFE::cb104-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 WIFE\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.0017862659879028797,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_inspect_ignores_initial_bom",
+      "outcome": "passed",
+      "duration_seconds": 0.0023413470189552754,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_success_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.0016800089797470719,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_success_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.0016631889739073813,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_error_response_schema_for_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.0016008360253181309,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_missing_head_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0015134099521674216,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_missing_trailer_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0014372299774549901,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_head_requires_gedc_and_vers",
+      "outcome": "passed",
+      "duration_seconds": 0.0017325939843431115,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_second_head_record_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0016923410003073514,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_second_trailer_record_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0023363630170933902,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_conc_is_invalid_in_gedcom7",
+      "outcome": "passed",
+      "duration_seconds": 0.0018139030144084245,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_trailer_may_not_have_children",
+      "outcome": "passed",
+      "duration_seconds": 0.0016669139731675386,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_multiple_spaces_between_components_are_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0016148190188687295,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_duplicate_xref_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0017325549852102995,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_dangling_pointer_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0016408450028393418,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_void_pointer_is_allowed",
+      "outcome": "passed",
+      "duration_seconds": 0.0014904069830663502,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unescaped_leading_at_in_non_pointer_payload_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.002683069003978744,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_illegal_level_jump_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0018787780136335641,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_banned_control_character_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0020500679966062307,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_invalid_line_syntax_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0019746319740079343,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_list_records",
+      "outcome": "passed",
+      "duration_seconds": 0.0017244749760720879,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_node_with_non_string_tag",
+      "outcome": "passed",
+      "duration_seconds": 0.001871369982836768,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_duplicate_xref_in_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.0022076819732319564,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_escapes_leading_at_in_non_pointer_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.001989257027162239,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_explicit_conc_node",
+      "outcome": "passed",
+      "duration_seconds": 0.002146779006579891,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_banned_control_character",
+      "outcome": "passed",
+      "duration_seconds": 0.0024484620080329478,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unknown_top_level_record_tag_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0015452089719474316,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[FAM]",
+      "outcome": "passed",
+      "duration_seconds": 0.00195588797214441,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[INDI]",
+      "outcome": "passed",
+      "duration_seconds": 0.0018847020110115409,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[OBJE]",
+      "outcome": "passed",
+      "duration_seconds": 0.0020316640147939324,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[REPO]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019970030116382986,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[SNOTE]",
+      "outcome": "passed",
+      "duration_seconds": 0.002103153005009517,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[SOUR]",
+      "outcome": "passed",
+      "duration_seconds": 0.002318804996320978,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[SUBM]",
+      "outcome": "passed",
+      "duration_seconds": 0.002734259993303567,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-ANUL]",
+      "outcome": "passed",
+      "duration_seconds": 0.0026072570180986077,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-CENS]",
+      "outcome": "passed",
+      "duration_seconds": 0.0018726660055108368,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-DIV]",
+      "outcome": "passed",
+      "duration_seconds": 0.00191672399523668,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-DIVF]",
+      "outcome": "passed",
+      "duration_seconds": 0.001964603958185762,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-ENGA]",
+      "outcome": "passed",
+      "duration_seconds": 0.002257471001939848,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARB]",
+      "outcome": "passed",
+      "duration_seconds": 0.002713038004003465,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARC]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019850130192935467,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARL]",
+      "outcome": "passed",
+      "duration_seconds": 0.002099036966683343,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARR]",
+      "outcome": "passed",
+      "duration_seconds": 0.0023243490140885115,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARS]",
+      "outcome": "passed",
+      "duration_seconds": 0.002032206015428528,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-ADOP]",
+      "outcome": "passed",
+      "duration_seconds": 0.0022693399514537305,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BAPM]",
+      "outcome": "passed",
+      "duration_seconds": 0.0028449050150811672,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BARM]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021952080132905394,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BASM]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019428020459599793,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BIRT]",
+      "outcome": "passed",
+      "duration_seconds": 0.002111825015163049,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BLES]",
+      "outcome": "passed",
+      "duration_seconds": 0.002147725987015292,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BURI]",
+      "outcome": "passed",
+      "duration_seconds": 0.002156807022402063,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CENS]",
+      "outcome": "passed",
+      "duration_seconds": 0.002794187021208927,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CHR]",
+      "outcome": "passed",
+      "duration_seconds": 0.003174412006046623,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CHRA]",
+      "outcome": "passed",
+      "duration_seconds": 0.002676997013622895,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CONF]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019749869825318456,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CREM]",
+      "outcome": "passed",
+      "duration_seconds": 0.002181236050091684,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-DEAT]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019105450483039021,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-EMIG]",
+      "outcome": "passed",
+      "duration_seconds": 0.002424282021820545,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-FCOM]",
+      "outcome": "passed",
+      "duration_seconds": 0.002791042992612347,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-GRAD]",
+      "outcome": "passed",
+      "duration_seconds": 0.002041594998445362,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-IMMI]",
+      "outcome": "passed",
+      "duration_seconds": 0.002055838005617261,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-NATU]",
+      "outcome": "passed",
+      "duration_seconds": 0.001858032017480582,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-ORDN]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021401940030045807,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-PROB]",
+      "outcome": "passed",
+      "duration_seconds": 0.0024830609909258783,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-RETI]",
+      "outcome": "passed",
+      "duration_seconds": 0.002094506984576583,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-WILL]",
+      "outcome": "passed",
+      "duration_seconds": 0.00252519897185266,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_head_payload_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.00213525298750028,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_shared_note_record_requires_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.001892145024612546,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_header_place_requires_form",
+      "outcome": "passed",
+      "duration_seconds": 0.0018547209911048412,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_header_place_may_not_have_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.002166566002415493,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_submitter_requires_name",
+      "outcome": "passed",
+      "duration_seconds": 0.002410675020655617,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_repository_requires_name",
+      "outcome": "passed",
+      "duration_seconds": 0.0019546679977793247,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_multimedia_record_requires_file",
+      "outcome": "passed",
+      "duration_seconds": 0.0016321740113198757,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_file_requires_form",
+      "outcome": "passed",
+      "duration_seconds": 0.0016941819922067225,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_file_tran_requires_form",
+      "outcome": "passed",
+      "duration_seconds": 0.0016943489899858832,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_change_date_requires_date",
+      "outcome": "passed",
+      "duration_seconds": 0.0016936069878283888,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_creation_date_requires_date",
+      "outcome": "passed",
+      "duration_seconds": 0.0017442609823774546,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_association_requires_role",
+      "outcome": "passed",
+      "duration_seconds": 0.0022989979770500213,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_map_requires_lati",
+      "outcome": "passed",
+      "duration_seconds": 0.0020341489871498197,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_map_requires_long",
+      "outcome": "passed",
+      "duration_seconds": 0.0018151600088458508,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_name_translation_requires_lang",
+      "outcome": "passed",
+      "duration_seconds": 0.0017547339666634798,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_individual_even_tag_requires_type",
+      "outcome": "passed",
+      "duration_seconds": 0.0018032380030490458,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_event_husb_requires_age",
+      "outcome": "passed",
+      "duration_seconds": 0.0017802220245357603,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_child_link_is_only_valid_under_family_records",
+      "outcome": "passed",
+      "duration_seconds": 0.001810955989640206,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_individual_fact_requires_type",
+      "outcome": "passed",
+      "duration_seconds": 0.0018099659646395594,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_translation_requires_lang",
+      "outcome": "passed",
+      "duration_seconds": 0.0021594010177068412,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_adoption_famc_substructure_allows_enum_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.003410350007470697,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.0020301170006860048,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SUBM]",
+      "outcome": "passed",
+      "duration_seconds": 0.002044028020463884,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SNOTE]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019785789772868156,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[OBJE]",
+      "outcome": "passed",
+      "duration_seconds": 0.001904033008031547,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SOUR]",
+      "outcome": "passed",
+      "duration_seconds": 0.00207497802330181,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.0036386619904078543,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SUBM]",
+      "outcome": "passed",
+      "duration_seconds": 0.0032701159943826497,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SNOTE]",
+      "outcome": "passed",
+      "duration_seconds": 0.002203983982326463,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[OBJE]",
+      "outcome": "passed",
+      "duration_seconds": 0.002557961968705058,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SOUR]",
+      "outcome": "passed",
+      "duration_seconds": 0.0021839599939994514,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_name_translation_without_lang",
+      "outcome": "passed",
+      "duration_seconds": 0.0029807079990860075,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_multimedia_record_without_file_form",
+      "outcome": "passed",
+      "duration_seconds": 0.0033367620198987424,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_multimedia_record_with_top_level_titl",
+      "outcome": "passed",
+      "duration_seconds": 0.0024091389786917716,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_submitter_without_name",
+      "outcome": "passed",
+      "duration_seconds": 0.0023119400430005044,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_empty_individual_structure_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.002492044965038076,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_empty_individual_structure",
+      "outcome": "passed",
+      "duration_seconds": 0.002597456012153998,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[inspect-HUSB-FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.003605081990826875,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[inspect-WIFE-FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.0035598000104073435,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[inspect-CHIL-FAMC]",
+      "outcome": "passed",
+      "duration_seconds": 0.0032168219913728535,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[render-HUSB-FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.0034242929832544178,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[render-WIFE-FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.003431145043577999,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[render-CHIL-FAMC]",
+      "outcome": "passed",
+      "duration_seconds": 0.004361738974694163,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 210,
+    "failed": 2,
+    "skipped": 0,
+    "error": 0,
+    "total": 212
+  },
+  "scores": {
+    "correctness": 0.9905660377358491,
+    "task_score": 0.9905660377358491,
+    "extension_scores": {
+      "subscore.data_types.passed": 45.0,
+      "subscore.data_types.total": 47.0,
+      "subscore.gedzip.passed": 9.0,
+      "subscore.gedzip.total": 9.0,
+      "subscore.parse.passed": 48.0,
+      "subscore.parse.total": 48.0,
+      "subscore.schema.passed": 3.0,
+      "subscore.schema.total": 3.0,
+      "subscore.validation.passed": 104.0,
+      "subscore.validation.total": 104.0
+    }
+  },
+  "source_stats": {
+    "file_count": 11,
+    "lines_of_code": 5176
+  },
+  "grading_environment": {
+    "mode": "docker",
+    "docker_image_tag": "clispecbench-base",
+    "docker_image_sha": "sha256:922c3bc7435e5546e737bf77b5bc8c07d15f86c9bad7f6fc68555cf8fbf04dc5"
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims a dependency-free Rust tool with all four actions, ~200 cases including the spec's own examples, byte-identical round trips of a 450k-line file, GEDZIP interoperability with Python's zipfile and 20,000-level nesting. Two hidden lat/long failures. Not a false completion claim.",
+    "commentary": "claude-5-5-publication-oct30-2026"
+  }
+}

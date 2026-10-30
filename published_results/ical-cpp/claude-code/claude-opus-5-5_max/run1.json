@@ -1,0 +1,2952 @@
+{
+  "schema_version": "2.3",
+  "metadata": {
+    "run_uid": "d58c38d5-b9c2-48ac-94af-d2d561f9595a",
+    "task": "ical-cpp",
+    "agent": "claude-code",
+    "agent_version": "2.1.289",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-10-25T08:24:44.449902+00:00",
+    "test_suite_version": "fae4070",
+    "eval_version": "3.0.5",
+    "harness_version": "0.2.1",
+    "docker_image_sha": "sha256:8772383e9ea9de81a662afa87ca7a8e2abd7e78b6b00d50182527520f871b8a5",
+    "wall_clock_seconds": 7721.656999999999,
+    "exit_reason": "completed",
+    "network_policy": "web-enabled",
+    "model": "claude-opus-5-5",
+    "served_model": "claude-opus-5-5",
+    "effort": "max",
+    "notes": null,
+    "benchmark_cost_preference": "estimated",
+    "prompt_content_sha": "ca877cbcf277042d2dbf580596eb340c213f51286e99615fee005e4573f9246c",
+    "test_suite_sha": "975e15674d3802b6d44a5ccc401121319a4ab3d18f0c594a34d600a29f68adb1",
+    "agent_last_message": "The `ical` tool is in `/workspace/output` (C++20, standard library only, no build directory left behind). It builds cleanly with `cmake -B build && cmake --build build`, with no warnings even under `-Wall -Wextra -Wpedantic`. `parse` and `expand` follow the mandated JSON schemas key-for-key, and `README.md` documents the design and the interpretation choices below.\n\n**How I verified it**\n- **Recurrence:** all 42 RFC 5545 recurrence examples pass, including the historical America/New_York zone. About 2,000 random rules matched python-dateutil, apart from three known dateutil quirks where my output follows the RFC instead.\n- **Non-Gregorian calendars:** all four RFC 7529 examples pass. The Chinese calendar matches an independent astronomical oracle for every month from 1901 to 2100. Hebrew, Islamic-civil, Coptic, Persian and Indian dates match the `convertdate` library.\n- **Time zones:** about 3,750 local times around DST changes (New York, Berlin, London, Sydney, Santiago, Chatham) match Python's zoneinfo.\n- **Robustness:** about 9,000 randomly corrupted files, plus a run under AddressSanitizer/UBSan, produced no crashes, hangs or invalid JSON.\n- **Independent review:** two separate reviewers checked the code against the spec and attacked it with partner-style files. They found two crashes, wrong results in a few cases and several slow inputs; all are fixed and re-tested.\n\n**Where I followed the RFCs over `summary.md`** (you said the RFCs govern):\n- **DST gap:** a local time that doesn't exist uses the offset from before the gap, so 02:30 on spring-forward day in New York is 03:30 EDT, as RFC 5545 states. A time that happens twice uses the first occurrence.\n- **DTSTART** is always the first instance and counts toward COUNT, even when it doesn't fit the rule.\n- **iTIP checks** follow RFC 5546's tables literally. For example, a VTODO REFRESH must not carry ORGANIZER or SEQUENCE, and a VTODO DECLINECOUNTER requires SEQUENCE.\n- **BYSETPOS** picks from the whole period (a",
+    "exit_class": "completed",
+    "agent_exit_reason": "completed",
+    "grading_status": "completed",
+    "grading_error": null
+  },
+  "token_usage": {
+    "input_tokens": 168283070,
+    "output_tokens": 837747,
+    "cache_read_input_tokens": 166365601,
+    "cache_creation_input_tokens": 1916717,
+    "tool_calls": 414,
+    "tool_calls_definition": null,
+    "reasoning_output_tokens": null,
+    "reported_cost_usd": 62.329767,
+    "estimated_cost_usd": null,
+    "cost_estimate_blocked_reason": "unpriced_model_usage",
+    "source": null,
+    "is_partial": false,
+    "total_tokens": 169120817
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.0013877899982617237,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_spring_forward_day_3am",
+      "outcome": "passed",
+      "duration_seconds": 14.356649821998872,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_spring_forward_day_1am_before_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.0022953990010137204,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_fall_back_day_after_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.0022112969963927753,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_dst_recurring_event_crosses_spring_forward",
+      "outcome": "passed",
+      "duration_seconds": 0.0020748530041601043,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_london_timezone_gmt_vs_bst",
+      "outcome": "passed",
+      "duration_seconds": 0.002044524997472763,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_london_winter_gmt",
+      "outcome": "passed",
+      "duration_seconds": 0.002059730002656579,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_multi_year_tz_resolution",
+      "outcome": "passed",
+      "duration_seconds": 0.002195602995925583,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_hourly_crosses_midnight",
+      "outcome": "passed",
+      "duration_seconds": 0.0023632399970665574,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_minutely_crosses_hour",
+      "outcome": "passed",
+      "duration_seconds": 0.0019141269985993858,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_hourly_crosses_month",
+      "outcome": "passed",
+      "duration_seconds": 0.001899931001389632,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_weekly_with_byhour",
+      "outcome": "passed",
+      "duration_seconds": 0.001796866999939084,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_monthly_byday_ordinal_plus_byhour",
+      "outcome": "passed",
+      "duration_seconds": 0.0023482169963244814,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_yearly_bymonth_bymonthday_byhour",
+      "outcome": "passed",
+      "duration_seconds": 0.0020980109984520823,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_range_thisandfuture_replaces_future",
+      "outcome": "passed",
+      "duration_seconds": 0.002077290995657677,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_exrule_monthly_second_friday",
+      "outcome": "passed",
+      "duration_seconds": 0.0021501329938473646,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_exrule_combined_with_exdate",
+      "outcome": "passed",
+      "duration_seconds": 0.0019893700009561144,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_yearly_byyearday_specific_day",
+      "outcome": "passed",
+      "duration_seconds": 0.0020025099911435973,
+      "message": null
+    },
+    {
+      "node_id": "test_adversarial_corners.py::test_yearly_byyearday_negative",
+      "outcome": "passed",
+      "duration_seconds": 0.0021262929985823575,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_attendee_value_is_cal_address_uri",
+      "outcome": "passed",
+      "duration_seconds": 0.0019667880042106844,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_attendee_non_mailto_scheme",
+      "outcome": "passed",
+      "duration_seconds": 0.0020779419974132907,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cn_unquoted",
+      "outcome": "passed",
+      "duration_seconds": 0.0025678139936644584,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cn_quoted_with_comma",
+      "outcome": "passed",
+      "duration_seconds": 0.0025896150000335183,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cutype_group",
+      "outcome": "passed",
+      "duration_seconds": 0.0020579599986376707,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cutype_room",
+      "outcome": "passed",
+      "duration_seconds": 0.001993573001527693,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_role_chair",
+      "outcome": "passed",
+      "duration_seconds": 0.0020046570025442634,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_role_opt_participant_hyphen_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0020945799988112412,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_partstat_needs_action",
+      "outcome": "passed",
+      "duration_seconds": 0.001966964999155607,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_rsvp_true_becomes_boolean",
+      "outcome": "passed",
+      "duration_seconds": 0.0022319169947877526,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_rsvp_false_becomes_boolean",
+      "outcome": "passed",
+      "duration_seconds": 0.0025195190028171055,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_member_single_quoted",
+      "outcome": "passed",
+      "duration_seconds": 0.002941990995168453,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_member_multiple_comma_separated",
+      "outcome": "passed",
+      "duration_seconds": 0.002027085003646789,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_delegated_from",
+      "outcome": "passed",
+      "duration_seconds": 0.002038584996626014,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_delegated_to_multiple",
+      "outcome": "passed",
+      "duration_seconds": 0.0020930929968017153,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_dir_quoted_uri",
+      "outcome": "passed",
+      "duration_seconds": 0.0020074509993719403,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_sent_by",
+      "outcome": "passed",
+      "duration_seconds": 0.0019997050003439654,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_language_tag",
+      "outcome": "passed",
+      "duration_seconds": 0.0019831850004266016,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_combined_parameters_all",
+      "outcome": "passed",
+      "duration_seconds": 0.0019474470027489588,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_folded_attendee_across_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.002055125998595031,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_multiple_attendees_order_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0025909839969244786,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_absent_params_are_null_or_missing",
+      "outcome": "passed",
+      "duration_seconds": 0.002078750003420282,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_parameter_name_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.001949928995600203,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_cutype_x_name_passthrough",
+      "outcome": "passed",
+      "duration_seconds": 0.0019070469970756676,
+      "message": null
+    },
+    {
+      "node_id": "test_attendee_grammar.py::test_organizer_uses_cal_address_object",
+      "outcome": "passed",
+      "duration_seconds": 0.0019504070005496033,
+      "message": null
+    },
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.0013877899982617237,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_has_rfc7986_keys_even_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.001962013000593288,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_name_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.002158462997613242,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_name_with_text_escapes",
+      "outcome": "passed",
+      "duration_seconds": 0.0024099879992718343,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_description_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.002439883999613812,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_refresh_interval_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0024741140005062334,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_refresh_interval_complex_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.0023653280004509725,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_source_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0020785130000149366,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_color_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0020088249984837603,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_url_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0020070880018465687,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_categories_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0023001670015219133,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_categories_multiple_properties_union",
+      "outcome": "passed",
+      "duration_seconds": 0.0025431360008951742,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_image_uri_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0022210820025065914,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_image_multiple_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.0019804910007223953,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_image_display_values_comma_list",
+      "outcome": "passed",
+      "duration_seconds": 0.0021542419999605045,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_conference_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0019730179992620833,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_conference_multiple_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.0021325370034901425,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_all_rfc7986_properties_together",
+      "outcome": "passed",
+      "duration_seconds": 0.002318530998309143,
+      "message": null
+    },
+    {
+      "node_id": "test_calendar_properties.py::test_calendar_properties_with_timezone_only",
+      "outcome": "passed",
+      "duration_seconds": 0.0024661139977979474,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_fall_back_ambiguous_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.002749242994468659,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_fall_back_unambiguous_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.0020999750013288576,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_spring_forward_gap_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0022150129989313427,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_spring_forward_before_gap_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.002304289002495352,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_spring_forward_after_gap_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.0022533470000780653,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_no_dst_zone_does_not_emit_fold_warnings",
+      "outcome": "passed",
+      "duration_seconds": 0.0020682279973698314,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_floating_time_does_not_trigger_dst_warnings",
+      "outcome": "passed",
+      "duration_seconds": 0.0021879539999645203,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_historical_fold_on_pre_2007_date",
+      "outcome": "passed",
+      "duration_seconds": 0.00205367499802378,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_historical_post_2007_fold_still_fires",
+      "outcome": "passed",
+      "duration_seconds": 0.002070615995762637,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_rdate_driven_fold_fires_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0020236510026734322,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_recurring_event_crossing_dst_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.0020993479956814554,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_yearend_gap_detected_via_neighbor_year_scan",
+      "outcome": "passed",
+      "duration_seconds": 0.00203840800531907,
+      "message": null
+    },
+    {
+      "node_id": "test_dst_warnings.py::test_yearend_gap_mirror_detected_via_same_year_scan",
+      "outcome": "passed",
+      "duration_seconds": 0.002109679000568576,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_json_has_error_object",
+      "outcome": "passed",
+      "duration_seconds": 0.0019140029980917461,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_has_line_field",
+      "outcome": "passed",
+      "duration_seconds": 0.00198392900347244,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_has_column_field",
+      "outcome": "passed",
+      "duration_seconds": 0.0023713869995845016,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_error_has_message_field",
+      "outcome": "passed",
+      "duration_seconds": 0.002266714996949304,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_unclosed_vevent_is_error",
+      "outcome": "passed",
+      "duration_seconds": 0.0019015279940504115,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_mismatched_end_component",
+      "outcome": "passed",
+      "duration_seconds": 0.0018877239999710582,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_malformed_value_does_not_exit_one",
+      "outcome": "passed",
+      "duration_seconds": 0.002054599997791229,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_unknown_component_is_warning_not_error",
+      "outcome": "passed",
+      "duration_seconds": 0.0019699890035553835,
+      "message": null
+    },
+    {
+      "node_id": "test_error_precision.py::test_warning_includes_uid_when_applicable",
+      "outcome": "passed",
+      "duration_seconds": 0.002164203000575071,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_unmatched_begin_end",
+      "outcome": "passed",
+      "duration_seconds": 0.0021715430011681747,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_malformed_content_line",
+      "outcome": "passed",
+      "duration_seconds": 0.0021950880000076722,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_unclosed_vcalendar",
+      "outcome": "passed",
+      "duration_seconds": 0.002271081000799313,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_error_has_line_message",
+      "outcome": "passed",
+      "duration_seconds": 0.0018410670018056408,
+      "message": null
+    },
+    {
+      "node_id": "test_errors.py::test_invalid_expand_bounds",
+      "outcome": "passed",
+      "duration_seconds": 0.0019446420010353904,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_priority_integer",
+      "outcome": "passed",
+      "duration_seconds": 0.0020072199986316264,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_priority_absent_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.0019629430025815964,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_transp_opaque",
+      "outcome": "passed",
+      "duration_seconds": 0.0019857610022882,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_transp_transparent",
+      "outcome": "passed",
+      "duration_seconds": 0.002559167995059397,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_url_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.002721512999414699,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_url_absent_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.002025151999987429,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_geo_two_floats",
+      "outcome": "passed",
+      "duration_seconds": 0.002124942999216728,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_geo_absent_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.0020157069993729237,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_geo_malformed_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.002176521000365028,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_resources_comma_separated_list",
+      "outcome": "passed",
+      "duration_seconds": 0.002013587003602879,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_resources_absent_is_empty_list",
+      "outcome": "passed",
+      "duration_seconds": 0.0026612979963829275,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_contact_text",
+      "outcome": "passed",
+      "duration_seconds": 0.0030632880007033236,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_created_utc_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.0019868010058416985,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_last_modified_utc_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.0019609100017987657,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_attach_uri_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0019658129931485746,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_attach_fmttype_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.001935585998580791,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_attach_inline_base64_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0019952230031776708,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_color_preserved_on_event",
+      "outcome": "passed",
+      "duration_seconds": 0.0020525410000118427,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_image_on_event",
+      "outcome": "passed",
+      "duration_seconds": 0.0027855030057253316,
+      "message": null
+    },
+    {
+      "node_id": "test_event_fields.py::test_conference_on_event",
+      "outcome": "passed",
+      "duration_seconds": 0.0022910150000825524,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_unfolded_line_over_75_octets_preserves_content",
+      "outcome": "passed",
+      "duration_seconds": 0.00233826900148415,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_exactly_75_octet_line_preserves_content",
+      "outcome": "passed",
+      "duration_seconds": 0.0021772359978058375,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_properly_folded_long_line_preserves_content",
+      "outcome": "passed",
+      "duration_seconds": 0.0022656970031675883,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_fold_before_escape_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.0020491550021688454,
+      "message": null
+    },
+    {
+      "node_id": "test_folding_edges.py::test_multibyte_char_straddling_75_octet_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.002245151001261547,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_publish_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.0025264300020353403,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_request_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.0022015460017428268,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_reply_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.0020417840023583267,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_request_missing_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.001945233998412732,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_well_formed_request_emits_no_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0020418379972397815,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_reply_missing_attendee_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.002308831000846112,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_reply_missing_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0021379030040407088,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_reply_attendee_without_partstat_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0025184450023516547,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_well_formed_reply_emits_no_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0023661659979552496,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_with_status_cancelled_is_valid",
+      "outcome": "passed",
+      "duration_seconds": 0.0020994999977119733,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_without_explicit_status_is_valid",
+      "outcome": "passed",
+      "duration_seconds": 0.0021815929976582993,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_missing_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0020997999963583425,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_status_if_present_must_be_cancelled",
+      "outcome": "passed",
+      "duration_seconds": 0.0021795149987156037,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_cancel_status_cancelled_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.002101525999023579,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_organizer_emits_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0021712979978474323,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_attendee_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.0021146520011825487,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_dtstart_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.002045449997240212,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_publish_without_summary_emits_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.00268235100156744,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_no_method_means_no_itip_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0028459880013542715,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_calendar_method_null_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.0022089880003477447,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods.py::test_method_value_canonicalized_uppercase",
+      "outcome": "passed",
+      "duration_seconds": 0.002058328002021881,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_publish_forbids_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.001991668999835383,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_publish_without_attendee_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.002064651005639462,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.0020813099981751293,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_with_organizer_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.001951860002009198,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_sequence_must_be_greater_than_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.0024229059963545296,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_add_forbids_recurrence_id",
+      "outcome": "failed",
+      "duration_seconds": 0.002895677993365098,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/ical-build0/build/ical',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_add_forbids_recurrence_id0')\n\n    def test_add_forbids_recurrence_id(submission_command: tuple[str, ...], tmp_path: Path) -> None:\n        # RFC 5546 \u00a73.2.4 marks RECURRENCE-ID presence 0. Supply all required\n        # properties so only this row can account for the named warning.\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260305T100000Z\\n\"\n            \"SEQUENCE:1\\nSUMMARY:Added instance\\n\"\n            \"ORGANIZER:mailto:boss@example.com\\n\"\n            \"RECURRENCE-ID:20260305T100000Z\\n\"\n        )\n        out = run_parse(submission_command, _wrap(\"ADD\", body), tmp_path)\n        # The public warning schema (tech-reqs \"Warning schema\") requires\n        # method/component metadata, but its property-name list omits\n        # RECURRENCE-ID. Score the sole invalid ADD row without inventing an\n        # enumeration extension; retain exact property checks on other cases.\n        warnings = cast(list[dict[str, Any]], out.get(\"warnings\") or [])\n>       assert any(\n            warning.get(\"kind\") == \"itip_missing_property\"\n            and warning.get(\"method\") == \"ADD\"\n            and warning.get(\"component\") == \"VEVENT\"\n            for warning in warnings\n        )\nE       assert False\nE        +  where False = any(<generator object test_add_forbids_recurrence_id.<locals>.<genexpr> at 0x7f973620c2b0>)\n\n/tmp/tests/test_itip_methods_deep.py:145: AssertionError"
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.002532127000449691,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.0023414250026689842,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_with_both_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.0022602330027439166,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_refresh_forbids_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.002054930999292992,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.0021667559994966723,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_does_not_require_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.0022342350021062884,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_requires_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.0020913290027237963,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_counter_with_both_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.0019706609964487143,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_declinecounter_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.002025033998506842,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_declinecounter_with_organizer_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.0019731580032384954,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_method_value_canonicalization",
+      "outcome": "passed",
+      "duration_seconds": 0.0024562399994465522,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_cancel_requires_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.003493500997137744,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_request_allows_omitted_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.002360776001296472,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_itip_requires_dtstamp",
+      "outcome": "passed",
+      "duration_seconds": 0.0020698190019174945,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_declinecounter_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.0019947849941672757,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_request_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.0021156479997443967,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_publish_does_not_require_sequence",
+      "outcome": "passed",
+      "duration_seconds": 0.002248786000563996,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_methods_deep.py::test_itip_warning_per_event",
+      "outcome": "passed",
+      "duration_seconds": 0.002888763996452326,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_request_is_undefined_method",
+      "outcome": "passed",
+      "duration_seconds": 0.003517869994539069,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_refresh_is_undefined_method",
+      "outcome": "passed",
+      "duration_seconds": 0.002393028000369668,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.0021326950009097345,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_with_organizer_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.002059959999314742,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_add_requires_sequence_greater_than_zero",
+      "outcome": "passed",
+      "duration_seconds": 0.012934578000567853,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_requires_description",
+      "outcome": "passed",
+      "duration_seconds": 0.0022212310032045934,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_publish_requires_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.002181291001761565,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vjournal_add_requires_description_and_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.0022833570001239423,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_counter_requires_priority",
+      "outcome": "passed",
+      "duration_seconds": 0.002159007006412139,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_counter_requires_summary",
+      "outcome": "passed",
+      "duration_seconds": 0.002256296000268776,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_counter_with_priority_and_summary_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.0021711099943786394,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_publish_requires_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.002255761999549577,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_publish_requires_priority",
+      "outcome": "passed",
+      "duration_seconds": 0.0024842909988365136,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vtodo_request_requires_priority_and_summary",
+      "outcome": "passed",
+      "duration_seconds": 0.0025957840007322375,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_cancel_is_undefined_method",
+      "outcome": "passed",
+      "duration_seconds": 0.002198342997871805,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_request_requires_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.002112477999617113,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_publish_requires_dtstart_and_dtend",
+      "outcome": "passed",
+      "duration_seconds": 0.0021096640011819545,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_shared_checks_carry_structured_metadata",
+      "outcome": "passed",
+      "duration_seconds": 0.0023821379982109647,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_publish_forbids_attendee",
+      "outcome": "passed",
+      "duration_seconds": 0.0020495019998634234,
+      "message": null
+    },
+    {
+      "node_id": "test_itip_per_component.py::test_vfreebusy_publish_well_formed_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.002443528996082023,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_bysetpos_with_byhour_picks_last_time_slot",
+      "outcome": "passed",
+      "duration_seconds": 0.0030223750000004657,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_bysetpos_multiple_positions",
+      "outcome": "passed",
+      "duration_seconds": 0.0022357699999702163,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_weekly_wkst_sunday_changes_week_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.002175261000957107,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_exdate_removes_before_override_replaces",
+      "outcome": "passed",
+      "duration_seconds": 0.0020632679988921154,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_orphan_override_non_matching_uid",
+      "outcome": "passed",
+      "duration_seconds": 0.002271544002724113,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_orphan_override_time_mismatch",
+      "outcome": "passed",
+      "duration_seconds": 0.0026287150030839257,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_dst_fall_back_ambiguous_time_uses_pre_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.003291167002316797,
+      "message": null
+    },
+    {
+      "node_id": "test_library_divergence.py::test_dst_spring_forward_gap_uses_rfc_pre_transition_offset",
+      "outcome": "passed",
+      "duration_seconds": 0.0029146189990569837,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_crlf_space_joins_zero_space",
+      "outcome": "passed",
+      "duration_seconds": 0.002179644001444103,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_crlf_tab_also_unfolds",
+      "outcome": "passed",
+      "duration_seconds": 0.0021590489996015094,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_preserves_extra_whitespace_in_continuation",
+      "outcome": "passed",
+      "duration_seconds": 0.0021538189976126887,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_multiple_consecutive_folds",
+      "outcome": "passed",
+      "duration_seconds": 0.002068321999104228,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_unfold_does_not_join_lines_without_ws",
+      "outcome": "passed",
+      "duration_seconds": 0.002344554002775112,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_utf8_two_byte_char_preserved_after_unfold",
+      "outcome": "passed",
+      "duration_seconds": 0.002803046998451464,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_utf8_three_byte_char_intact_across_fold",
+      "outcome": "passed",
+      "duration_seconds": 0.0021252049955364782,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_long_description_with_utf8_folded_at_char_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.002173283002775861,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_four_byte_emoji_intact_across_fold",
+      "outcome": "passed",
+      "duration_seconds": 0.0020969160032109357,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_utf8_prefix_exactly_75_octets_then_fold",
+      "outcome": "passed",
+      "duration_seconds": 0.00210586400135071,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_folding_at_realistic_75_octet_wrap",
+      "outcome": "passed",
+      "duration_seconds": 0.002105592004227219,
+      "message": null
+    },
+    {
+      "node_id": "test_line_folding_octets.py::test_short_line_without_fold_unchanged",
+      "outcome": "passed",
+      "duration_seconds": 0.002104621999023948,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_caret_apostrophe_decodes_to_quote",
+      "outcome": "passed",
+      "duration_seconds": 0.0024701459988136776,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_caret_n_decodes_to_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.002613460001157364,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_double_caret_decodes_to_single_caret",
+      "outcome": "passed",
+      "duration_seconds": 0.0025722150021465495,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_three_carets",
+      "outcome": "passed",
+      "duration_seconds": 0.002173479999328265,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_unknown_sequence_preserves_both_chars",
+      "outcome": "passed",
+      "duration_seconds": 0.0022037740018276963,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_trailing_caret_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0021874869962630328,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_not_applied_to_property_text_value",
+      "outcome": "passed",
+      "duration_seconds": 0.002153765999537427,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_works_inside_quoted_value",
+      "outcome": "passed",
+      "duration_seconds": 0.00246669800253585,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_reflected_in_raw_properties",
+      "outcome": "passed",
+      "duration_seconds": 0.002706691000639694,
+      "message": null
+    },
+    {
+      "node_id": "test_param_escape.py::test_param_escape_multiple_params_with_escapes",
+      "outcome": "passed",
+      "duration_seconds": 0.0024545929991290905,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_simple_vevent",
+      "outcome": "passed",
+      "duration_seconds": 0.0020918650006933603,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_content_line_unfolding",
+      "outcome": "passed",
+      "duration_seconds": 0.0020301570002629887,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_text_escape_backslash",
+      "outcome": "passed",
+      "duration_seconds": 0.00203049599804217,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_text_escape_newline",
+      "outcome": "passed",
+      "duration_seconds": 0.0019964450038969517,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_text_escape_semicolon",
+      "outcome": "passed",
+      "duration_seconds": 0.0028424449956219178,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_property_name_case_insensitive",
+      "outcome": "passed",
+      "duration_seconds": 0.002722273999097524,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_property_parameter_parsing",
+      "outcome": "passed",
+      "duration_seconds": 0.002213475003372878,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_quoted_parameter_value",
+      "outcome": "passed",
+      "duration_seconds": 0.002099711007758742,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_date_value_type",
+      "outcome": "passed",
+      "duration_seconds": 0.0019969870008935686,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_floating_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.0020118190041102935,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_utc_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.002101105001202086,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_two_events",
+      "outcome": "passed",
+      "duration_seconds": 0.0027615299986791797,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_categories_split",
+      "outcome": "passed",
+      "duration_seconds": 0.0021126939973328263,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_tzid_param_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.0021042810003564227,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_explicit_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.002239454996015411,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_start_duration_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0025040440013981424,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_multiple_comma_separated",
+      "outcome": "passed",
+      "duration_seconds": 0.002968230994156329,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_mixed_value_types_not_allowed_but_period_only_ok",
+      "outcome": "passed",
+      "duration_seconds": 0.002641257000504993,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_adds_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.002195331999246264,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_explicit_sets_occurrence_end",
+      "outcome": "passed",
+      "duration_seconds": 0.002114684000844136,
+      "message": null
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_invalid_end_before_start_warns",
+      "outcome": "failed",
+      "duration_seconds": 0.0022765339999750722,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/ical-build0/build/ical',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rdate_period_invalid_end_0')\n\n    def test_rdate_period_invalid_end_before_start_warns(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        \"\"\"\u00a73.3.9: \"The start MUST be before the end.\" A reversed period is malformed;\n        the parser emits `malformed_value` and either drops the entry or preserves\n        it untouched, but MUST NOT crash.\"\"\"\n        body = (\n            \"UID:e1\\nDTSTAMP:20260101T120000Z\\nDTSTART:20260301T100000Z\\n\"\n            # end < start\n            \"RDATE;VALUE=PERIOD:20260310T110000Z/20260310T090000Z\\n\"\n            \"SUMMARY:ok\\n\"\n        )\n        out = run_parse(submission_command, wrap_event(body), tmp_path)\n        ev = find_event(out, \"e1\")\n        # Event itself must remain intact.\n        assert ev.get(\"summary\") == \"ok\"\n        kinds = [w.get(\"kind\") for w in out.get(\"warnings\", [])]\n>       assert \"malformed_value\" in kinds\nE       AssertionError: assert 'malformed_value' in []\n\n/tmp/tests/test_rdate_period.py:170: AssertionError"
+    },
+    {
+      "node_id": "test_rdate_period.py::test_rdate_period_raw_property_retained",
+      "outcome": "passed",
+      "duration_seconds": 0.0035945210001955274,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_parses_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.0033953160054807086,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_surfaces_timezone",
+      "outcome": "passed",
+      "duration_seconds": 0.002782722000119975,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_event_has_full_attendee_grammar",
+      "outcome": "passed",
+      "duration_seconds": 0.002728225001192186,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_expands_to_weekly_occurrences",
+      "outcome": "passed",
+      "duration_seconds": 0.00290889200186939,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_gmail_export_alarm_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.003608219001762336,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_outlook_export_parses_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.0027931020049436484,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_outlook_quoted_tzid_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.0029092300064803567,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_outlook_x_properties_in_raw",
+      "outcome": "passed",
+      "duration_seconds": 0.0029444479987432715,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_itip_request_has_organizer_and_three_attendees",
+      "outcome": "passed",
+      "duration_seconds": 0.0024044940000749193,
+      "message": null
+    },
+    {
+      "node_id": "test_real_world_corpora.py::test_itip_request_no_missing_property_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0025012239966599736,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_recurrence_id_without_range_has_null_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0034821160006686114,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_recurrence_id_with_range_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.002565794002293842,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_shifts_all_future_occurrences",
+      "outcome": "passed",
+      "duration_seconds": 0.002148916999431094,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_does_not_affect_past_occurrences",
+      "outcome": "passed",
+      "duration_seconds": 0.0021317790015018545,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_flag_surfaces_on_override_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.0022265419975155964,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_with_unbounded_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.0022541800026374403,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_does_not_affect_other_uid",
+      "outcome": "passed",
+      "duration_seconds": 0.0023326170012296643,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_with_mismatched_recurrence_id_warns",
+      "outcome": "passed",
+      "duration_seconds": 0.0025045709990081377,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_orphan_override_on_vjournal_warns",
+      "outcome": "passed",
+      "duration_seconds": 0.0031247250008163974,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_orphan_override_on_vtodo_warns",
+      "outcome": "passed",
+      "duration_seconds": 0.002251028003229294,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_single_instance_override_does_not_shift_future",
+      "outcome": "passed",
+      "duration_seconds": 0.002323126002011122,
+      "message": null
+    },
+    {
+      "node_id": "test_recurrence_id_range.py::test_range_flag_null_for_single_instance_overrides",
+      "outcome": "passed",
+      "duration_seconds": 0.002304464996996103,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_structured_data_uri",
+      "outcome": "passed",
+      "duration_seconds": 0.0020756509984494187,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_structured_data_inline_text",
+      "outcome": "passed",
+      "duration_seconds": 0.0027227150021644775,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_structured_data_binary_base64",
+      "outcome": "passed",
+      "duration_seconds": 0.0027642800014291424,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_styled_description_html",
+      "outcome": "passed",
+      "duration_seconds": 0.0022162850000313483,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_styled_description_markdown",
+      "outcome": "passed",
+      "duration_seconds": 0.0020773059986822773,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_styled_description_with_language",
+      "outcome": "passed",
+      "duration_seconds": 0.0021825760013598483,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_multiple_styled_descriptions_for_multilingual",
+      "outcome": "passed",
+      "duration_seconds": 0.0021765839992440306,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_location_with_location_type",
+      "outcome": "passed",
+      "duration_seconds": 0.0020879610019619577,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_participant_component_is_not_dropped",
+      "outcome": "passed",
+      "duration_seconds": 0.0028458700035116635,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_vlocation_component_does_not_crash_parser",
+      "outcome": "passed",
+      "duration_seconds": 0.002745081001194194,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_vresource_component_does_not_crash_parser",
+      "outcome": "passed",
+      "duration_seconds": 0.00236701600078959,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_nested_location_does_not_overwrite_event_properties",
+      "outcome": "passed",
+      "duration_seconds": 0.002396423995378427,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_rfc9073_props_alongside_standard_event",
+      "outcome": "passed",
+      "duration_seconds": 0.00227931500194245,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_calendar_address_property_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0025263989991799463,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9073_event_publishing.py::test_resources_parameter_on_vevent",
+      "outcome": "passed",
+      "duration_seconds": 0.004098774999874877,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_link_property_preserved_in_raw",
+      "outcome": "passed",
+      "duration_seconds": 0.0025470969994785264,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_link_with_linkrel_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.0021978220029268414,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_related_to_gap_parameter",
+      "outcome": "passed",
+      "duration_seconds": 0.0021651419992849696,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_reltype_finishtofinish",
+      "outcome": "passed",
+      "duration_seconds": 0.0021646979985234793,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_reltype_dependson",
+      "outcome": "passed",
+      "duration_seconds": 0.0022201600004336797,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_structured_categories_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0024421650014119223,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_concept_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0031483170023420826,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_refid_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0023985430016182363,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_event_related_to_surfaced_as_typed_field",
+      "outcome": "passed",
+      "duration_seconds": 0.0023082639963831753,
+      "message": null
+    },
+    {
+      "node_id": "test_rfc9253_relationships.py::test_journal_related_to_surfaced_as_typed_field",
+      "outcome": "passed",
+      "duration_seconds": 0.0021930920047452673,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_daily_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.002164900997740915,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_daily_interval",
+      "outcome": "passed",
+      "duration_seconds": 0.0025973060000978876,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_daily_until",
+      "outcome": "passed",
+      "duration_seconds": 0.004225306998705491,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_weekly_byday_multiple",
+      "outcome": "passed",
+      "duration_seconds": 0.0024594269998488016,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_weekly_interval_2",
+      "outcome": "passed",
+      "duration_seconds": 0.0021446729952003807,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bymonthday",
+      "outcome": "passed",
+      "duration_seconds": 0.002105719999235589,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_byday_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.0023183319935924374,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_byday_negative_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.002262396999867633,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bymonthday_invalid_dates_dropped",
+      "outcome": "passed",
+      "duration_seconds": 0.004351997999037849,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bysetpos_last",
+      "outcome": "passed",
+      "duration_seconds": 0.0025314120030088816,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_monthly_bymonthday_plus_byday_filter",
+      "outcome": "passed",
+      "duration_seconds": 0.0021810110010846984,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_yearly_simple",
+      "outcome": "passed",
+      "duration_seconds": 0.0021371599978010636,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_yearly_bymonth",
+      "outcome": "passed",
+      "duration_seconds": 0.0023715389979770407,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_exdate_removes_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.002291599001182476,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_rdate_adds_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.0035271939959784504,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_occurrences_sorted_ascending",
+      "outcome": "passed",
+      "duration_seconds": 0.003113760998530779,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_window_excludes_outside",
+      "outcome": "passed",
+      "duration_seconds": 0.002159477000532206,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_non_recurring_event_in_window",
+      "outcome": "passed",
+      "duration_seconds": 0.0022955140011617914,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_expand.py::test_non_recurring_event_outside_window",
+      "outcome": "passed",
+      "duration_seconds": 0.0021599290012090933,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_freq",
+      "outcome": "passed",
+      "duration_seconds": 0.0021846970048500225,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_interval_default_1",
+      "outcome": "passed",
+      "duration_seconds": 0.00207425900225644,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_interval_custom",
+      "outcome": "passed",
+      "duration_seconds": 0.002624670996738132,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_count",
+      "outcome": "passed",
+      "duration_seconds": 0.002863413996237796,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_until",
+      "outcome": "passed",
+      "duration_seconds": 0.0022133919992484152,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_byday",
+      "outcome": "passed",
+      "duration_seconds": 0.002188774000387639,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_byday_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.0022576529991056304,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_byday_negative_ordinal",
+      "outcome": "passed",
+      "duration_seconds": 0.00234609799736063,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_bymonthday",
+      "outcome": "passed",
+      "duration_seconds": 0.0026191470060439315,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_bymonth",
+      "outcome": "passed",
+      "duration_seconds": 0.003503783998894505,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_bysetpos",
+      "outcome": "passed",
+      "duration_seconds": 0.002320202002010774,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_wkst",
+      "outcome": "passed",
+      "duration_seconds": 0.002211024002463091,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_hourly_freq_supported_v02",
+      "outcome": "passed",
+      "duration_seconds": 0.00225616500392789,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_byhour_supported_v02",
+      "outcome": "passed",
+      "duration_seconds": 0.002207669003837509,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_count_and_until_mutually_exclusive",
+      "outcome": "passed",
+      "duration_seconds": 0.0024304129983647726,
+      "message": null
+    },
+    {
+      "node_id": "test_rrule_parse.py::test_rrule_count_without_until_does_not_warn",
+      "outcome": "passed",
+      "duration_seconds": 0.0025743519981915597,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_gregorian_parsed_on_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.0026794839977810625,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_gregorian_yearly_expands_correctly",
+      "outcome": "passed",
+      "duration_seconds": 0.002521115999115864,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_gregorian_skip_forward_fills_missing_dates",
+      "outcome": "passed",
+      "duration_seconds": 0.002276926999911666,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_chinese_either_expand_or_unsupported_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0036734150016854983,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_hebrew_either_expand_or_unsupported_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0025748190018930472,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_islamic_warning_preserves_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.002314214001671644,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_surfaces_on_rrule_object",
+      "outcome": "passed",
+      "duration_seconds": 0.002615315002913121,
+      "message": null
+    },
+    {
+      "node_id": "test_rscale.py::test_rscale_skip_field_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.002590738997241715,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_parse_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.00208749900048133,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_parse_top_level_value_types",
+      "outcome": "passed",
+      "duration_seconds": 0.0021466520011017565,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_expand_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.002062938001472503,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_expand_top_level_value_types",
+      "outcome": "passed",
+      "duration_seconds": 0.002301097996678436,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_calendar_has_prodid_version",
+      "outcome": "passed",
+      "duration_seconds": 0.002264302998810308,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_events_array_is_always_a_list",
+      "outcome": "passed",
+      "duration_seconds": 0.002501200000551762,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_absent_component_arrays_are_empty_lists",
+      "outcome": "passed",
+      "duration_seconds": 0.0027574890009418596,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_warnings_entries_have_kind_key",
+      "outcome": "passed",
+      "duration_seconds": 0.0024777789985819254,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_event_dtstart_matches_iso_format",
+      "outcome": "passed",
+      "duration_seconds": 0.0024067600024864078,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_occurrence_dtstart_matches_iso_utc",
+      "outcome": "passed",
+      "duration_seconds": 0.002195820998167619,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_occurrences_sorted_by_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.0022540409991052,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_occurrences_uid_tiebreak_on_equal_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.002194527998653939,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_calendar_object_has_all_rfc7986_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.002611027997772908,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_calendar_categories_array_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.0026431389997014776,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_calendar_images_array_when_absent",
+      "outcome": "passed",
+      "duration_seconds": 0.002210735998232849,
+      "message": null
+    },
+    {
+      "node_id": "test_schema_depth.py::test_event_has_all_required_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.0022205400018719956,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_parse_500_events_in_reasonable_time",
+      "outcome": "passed",
+      "duration_seconds": 0.014172682993375929,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_rrule_count_1000_expands",
+      "outcome": "passed",
+      "duration_seconds": 0.005144179001945304,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_rrule_hourly_expansion_bounded_by_window",
+      "outcome": "passed",
+      "duration_seconds": 0.0024773590012046043,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_deep_override_chain",
+      "outcome": "passed",
+      "duration_seconds": 0.0027985150009044446,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_malformed_midfile_preserves_later_valid_events",
+      "outcome": "passed",
+      "duration_seconds": 0.0025168540014419705,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_many_alarms_on_one_event",
+      "outcome": "passed",
+      "duration_seconds": 0.0028853389994765166,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_yearly_bymonthday_across_decade",
+      "outcome": "passed",
+      "duration_seconds": 0.002837047999491915,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_until_at_exact_window_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.0025010369972733315,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_expand_window_before_event_is_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.0022586449995287694,
+      "message": null
+    },
+    {
+      "node_id": "test_stress.py::test_mixed_timekinds_coexist",
+      "outcome": "passed",
+      "duration_seconds": 0.002199946000473574,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_hourly_expansion",
+      "outcome": "passed",
+      "duration_seconds": 0.0022820530030003283,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_minutely_expansion",
+      "outcome": "passed",
+      "duration_seconds": 0.0022771379990444984,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_secondly_expansion",
+      "outcome": "passed",
+      "duration_seconds": 0.0022888600033184048,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_daily_byhour_expands",
+      "outcome": "passed",
+      "duration_seconds": 0.002264454997202847,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_daily_byhour_byminute_grid",
+      "outcome": "passed",
+      "duration_seconds": 0.002516488002584083,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_recurrence_id_replaces_occurrence",
+      "outcome": "passed",
+      "duration_seconds": 0.002588825998827815,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_recurrence_id_cancel_marks_occurrence_cancelled",
+      "outcome": "passed",
+      "duration_seconds": 0.002394287999777589,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_override_flag_set",
+      "outcome": "passed",
+      "duration_seconds": 0.0022552510017703753,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_exrule_subtracts",
+      "outcome": "passed",
+      "duration_seconds": 0.002405155995802488,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_exrule_emits_deprecated_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.002576508002675837,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_vtodo_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.0027862300012202468,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_vjournal_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.002800827998726163,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_vfreebusy_parsed",
+      "outcome": "passed",
+      "duration_seconds": 0.002398706001258688,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_calendar_method_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.00232913599757012,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_calendar_calscale_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.0037749519979115576,
+      "message": null
+    },
+    {
+      "node_id": "test_v02_features.py::test_attendee_partstat_surfaced",
+      "outcome": "passed",
+      "duration_seconds": 0.00265162799769314,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_event_without_alarm_has_empty_alarms_list",
+      "outcome": "passed",
+      "duration_seconds": 0.0028768800002580974,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_display_alarm_basic_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.002734974001214141,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_default_related_is_start",
+      "outcome": "passed",
+      "duration_seconds": 0.0024075840010482352,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_related_end_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.002430055003060261,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_positive_duration_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.002548328997363569,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_trigger_absolute_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.0029995980075909756,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_audio_alarm_action",
+      "outcome": "passed",
+      "duration_seconds": 0.0029043350004940294,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_email_alarm_full_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.002284354002767941,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_duration_and_repeat_together",
+      "outcome": "passed",
+      "duration_seconds": 0.002401192999968771,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_no_repeat_no_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.002311928001290653,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_audio_alarm_with_attach",
+      "outcome": "passed",
+      "duration_seconds": 0.00238099499620148,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_multiple_alarms_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0027875420018972363,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_acknowledged_property",
+      "outcome": "passed",
+      "duration_seconds": 0.0028506839989859145,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_alarm_raw_properties_include_action_trigger",
+      "outcome": "passed",
+      "duration_seconds": 0.0023525979995611124,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_alarm_on_vtodo",
+      "outcome": "passed",
+      "duration_seconds": 0.002175918001739774,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm.py::test_non_standard_action_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0023381339997285977,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_valarm_uid_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0022298740041151177,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_acknowledged_absolute_datetime",
+      "outcome": "passed",
+      "duration_seconds": 0.002519054000003962,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_acknowledged_absence_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.0027554740008781664,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_arrive",
+      "outcome": "passed",
+      "duration_seconds": 0.0024625870028103236,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_depart",
+      "outcome": "passed",
+      "duration_seconds": 0.0021824970026500523,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_xname_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.0021496809968084563,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_proximity_absence_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.0021673170049325563,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_related_to_plain_uid",
+      "outcome": "passed",
+      "duration_seconds": 0.002327933001652127,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_related_to_with_reltype",
+      "outcome": "passed",
+      "duration_seconds": 0.002749349001533119,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_related_to_multiple_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.003056261997699039,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_snooze_via_repeat_and_acknowledged",
+      "outcome": "passed",
+      "duration_seconds": 0.002264602000650484,
+      "message": null
+    },
+    {
+      "node_id": "test_valarm_rfc9074.py::test_rfc9074_properties_in_raw_even_if_unfielded",
+      "outcome": "passed",
+      "duration_seconds": 0.002356125998630887,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_with_uid_and_dtstamp",
+      "outcome": "passed",
+      "duration_seconds": 0.0022697749991493765,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_busytype_busy",
+      "outcome": "passed",
+      "duration_seconds": 0.0022803449974162504,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_busytype_absent_emits_null",
+      "outcome": "passed",
+      "duration_seconds": 0.002769295002508443,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_busytype_busy_unavailable",
+      "outcome": "passed",
+      "duration_seconds": 0.0029855350039724726,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_priority",
+      "outcome": "passed",
+      "duration_seconds": 0.0024576240030000918,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_with_one_available",
+      "outcome": "passed",
+      "duration_seconds": 0.002292794997629244,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_multiple_available",
+      "outcome": "passed",
+      "duration_seconds": 0.0022789580034441315,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.0021689189961762168,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_organizer",
+      "outcome": "passed",
+      "duration_seconds": 0.002156399998057168,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_vavailability_description_unescaped",
+      "outcome": "passed",
+      "duration_seconds": 0.0027820399991469458,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_empty_vavailability_parses",
+      "outcome": "passed",
+      "duration_seconds": 0.0029824650009686593,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_multiple_vavailability_components",
+      "outcome": "passed",
+      "duration_seconds": 0.0023628899980394635,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_availabilities_key_present_when_empty",
+      "outcome": "passed",
+      "duration_seconds": 0.0024764379995758645,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_location_and_contact",
+      "outcome": "passed",
+      "duration_seconds": 0.0023173450026661158,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_created_and_last_modified",
+      "outcome": "passed",
+      "duration_seconds": 0.0023619740022695623,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_recurrence_id",
+      "outcome": "passed",
+      "duration_seconds": 0.002685021001525456,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_recurrence_id_with_tzid_and_range",
+      "outcome": "passed",
+      "duration_seconds": 0.0029518059964175336,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_categories_and_comment",
+      "outcome": "passed",
+      "duration_seconds": 0.002473703003488481,
+      "message": null
+    },
+    {
+      "node_id": "test_vavailability.py::test_available_with_exdate",
+      "outcome": "passed",
+      "duration_seconds": 0.002360667996981647,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_with_one_freebusy_property",
+      "outcome": "passed",
+      "duration_seconds": 0.002482110998244025,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_default_fbtype_is_busy",
+      "outcome": "passed",
+      "duration_seconds": 0.0025694770010886714,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_fbtype_free",
+      "outcome": "passed",
+      "duration_seconds": 0.002729253999859793,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_fbtype_busy_unavailable",
+      "outcome": "passed",
+      "duration_seconds": 0.0028644340018217918,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_fbtype_busy_tentative",
+      "outcome": "passed",
+      "duration_seconds": 0.0029417030018521473,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_multiple_freebusy_properties_accumulate",
+      "outcome": "passed",
+      "duration_seconds": 0.002433058001770405,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_comma_separated_periods",
+      "outcome": "passed",
+      "duration_seconds": 0.002376817999902414,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_period_with_explicit_end",
+      "outcome": "passed",
+      "duration_seconds": 0.0022584099970117677,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_period_with_duration",
+      "outcome": "passed",
+      "duration_seconds": 0.002338423997571226,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_reports_uid_and_dtstart",
+      "outcome": "passed",
+      "duration_seconds": 0.00311956299628946,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_organizer_is_cal_address",
+      "outcome": "passed",
+      "duration_seconds": 0.0023552569982712157,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_attendees_accumulate",
+      "outcome": "passed",
+      "duration_seconds": 0.0022757650003768504,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_xname_fbtype_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.002186128003813792,
+      "message": null
+    },
+    {
+      "node_id": "test_vfreebusy.py::test_vfreebusy_without_freebusy_property",
+      "outcome": "passed",
+      "duration_seconds": 0.002143535002687713,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_vtimezone_parsed_into_timezones",
+      "outcome": "passed",
+      "duration_seconds": 0.002454157998727169,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_vtimezone_observance_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.0031623110007785726,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_tzid_resolves_to_utc_in_expand",
+      "outcome": "passed",
+      "duration_seconds": 0.0028383580029185396,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_tzid_resolves_in_standard_time",
+      "outcome": "passed",
+      "duration_seconds": 0.0025189910011249594,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone.py::test_unresolved_tzid_uses_permitted_policy",
+      "outcome": "passed",
+      "duration_seconds": 0.002428177002002485,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_last_modified",
+      "outcome": "passed",
+      "duration_seconds": 0.0022767060036130715,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_last_modified_absence_is_null",
+      "outcome": "passed",
+      "duration_seconds": 0.0023078609992808197,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_tzurl",
+      "outcome": "passed",
+      "duration_seconds": 0.002795403001073282,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_single_comment",
+      "outcome": "passed",
+      "duration_seconds": 0.0027022399990528356,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_multiple_comments",
+      "outcome": "passed",
+      "duration_seconds": 0.0025891110017255414,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_vtimezone_absence_is_empty_comment_list",
+      "outcome": "passed",
+      "duration_seconds": 0.0021867679970455356,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_duplicate_uid_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.002411139001196716,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_override_same_uid_does_not_warn_duplicate",
+      "outcome": "passed",
+      "duration_seconds": 0.0022852219990454614,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_unique_uids_no_warning",
+      "outcome": "passed",
+      "duration_seconds": 0.0022952710023673717,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_utc_offset_seconds_preserved_on_output",
+      "outcome": "passed",
+      "duration_seconds": 0.002368019995628856,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_fields.py::test_utc_offset_without_seconds_stays_hhmm",
+      "outcome": "passed",
+      "duration_seconds": 0.002276452003570739,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_vtimezone_two_standard_observances",
+      "outcome": "passed",
+      "duration_seconds": 0.0024378970010729972,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_vtimezone_two_daylight_observances",
+      "outcome": "passed",
+      "duration_seconds": 0.0029397899998002686,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_observance_dtstart_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.002697838001040509,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_observance_rrule_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.002689830998860998,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2005_uses_pre_2007_april_rule",
+      "outcome": "passed",
+      "duration_seconds": 0.0024572100010118447,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2005_early_march_is_standard_time",
+      "outcome": "passed",
+      "duration_seconds": 0.002717627001402434,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2010_uses_post_2007_march_rule",
+      "outcome": "passed",
+      "duration_seconds": 0.0024969370024336968,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2010_late_october_is_still_dst",
+      "outcome": "passed",
+      "duration_seconds": 0.0025181509990943596,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_dst_rule_2005_late_october_is_standard_time",
+      "outcome": "passed",
+      "duration_seconds": 0.0031208489963319153,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_recurring_event_spans_rule_change_boundary",
+      "outcome": "passed",
+      "duration_seconds": 0.002631829000165453,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_event_before_any_observance_dtstart_uses_earliest_observance",
+      "outcome": "passed",
+      "duration_seconds": 0.002386809002928203,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_observance_dtstart_is_floating_not_utc",
+      "outcome": "passed",
+      "duration_seconds": 0.002345595996303018,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_tzoffsets_normalized_with_colon",
+      "outcome": "passed",
+      "duration_seconds": 0.002453916000376921,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_observances_preserve_tzname",
+      "outcome": "passed",
+      "duration_seconds": 0.0024155909995897673,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_three_era_observance_stack",
+      "outcome": "passed",
+      "duration_seconds": 0.002932956998847658,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_historical.py::test_historical_vtimezone_no_warnings",
+      "outcome": "passed",
+      "duration_seconds": 0.002802128001349047,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_utc_zone_resolves_without_daylight",
+      "outcome": "passed",
+      "duration_seconds": 0.0025431259964534547,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_arizona_no_daylight_zone",
+      "outcome": "passed",
+      "duration_seconds": 0.0025248389974876773,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_sydney_dst_month_order",
+      "outcome": "passed",
+      "duration_seconds": 0.0026801260028150864,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_without_rrule_uses_dtstart_literally",
+      "outcome": "passed",
+      "duration_seconds": 0.0026413000014144927,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_rdate_adds_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.0031840939991525374,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_until_bounds_rrule",
+      "outcome": "passed",
+      "duration_seconds": 0.0029473779977706727,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_bymonthday",
+      "outcome": "passed",
+      "duration_seconds": 0.002497890000086045,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_observance_yearly_bymonthday_transition",
+      "outcome": "passed",
+      "duration_seconds": 0.0027678950027620886,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_missing_iana_timezone_is_not_resolved_from_host",
+      "outcome": "passed",
+      "duration_seconds": 0.00267725500089,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_one_off_half_hour_gap_uses_pre_transition_offset",
+      "outcome": "passed",
+      "duration_seconds": 0.0025943189939425793,
+      "message": null
+    },
+    {
+      "node_id": "test_vtimezone_resolution.py::test_before_one_off_observance_uses_earliest_offset_from",
+      "outcome": "passed",
+      "duration_seconds": 0.006360196995956358,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 465,
+    "failed": 2,
+    "skipped": 0,
+    "error": 0,
+    "total": 467
+  },
+  "scores": {
+    "correctness": 0.9957173447537473,
+    "task_score": 0.9957173447537473,
+    "extension_scores": {
+      "subscore.adversarial_corners.passed": 18.0,
+      "subscore.adversarial_corners.total": 18.0,
+      "subscore.attendee_grammar.passed": 25.0,
+      "subscore.attendee_grammar.total": 25.0,
+      "subscore.calendar_properties.passed": 18.0,
+      "subscore.calendar_properties.total": 18.0,
+      "subscore.dst_warnings.passed": 13.0,
+      "subscore.dst_warnings.total": 13.0,
+      "subscore.error_precision.passed": 9.0,
+      "subscore.error_precision.total": 9.0,
+      "subscore.errors.passed": 5.0,
+      "subscore.errors.total": 5.0,
+      "subscore.event_fields.passed": 20.0,
+      "subscore.event_fields.total": 20.0,
+      "subscore.folding_edges.passed": 5.0,
+      "subscore.folding_edges.total": 5.0,
+      "subscore.itip_methods.passed": 21.0,
+      "subscore.itip_methods.total": 21.0,
+      "subscore.itip_methods_deep.passed": 23.0,
+      "subscore.itip_methods_deep.total": 24.0,
+      "subscore.itip_per_component.passed": 20.0,
+      "subscore.itip_per_component.total": 20.0,
+      "subscore.library_divergence.passed": 8.0,
+      "subscore.library_divergence.total": 8.0,
+      "subscore.line_folding_octets.passed": 12.0,
+      "subscore.line_folding_octets.total": 12.0,
+      "subscore.param_escape.passed": 10.0,
+      "subscore.param_escape.total": 10.0,
+      "subscore.parse.passed": 14.0,
+      "subscore.parse.total": 14.0,
+      "subscore.rdate_period.passed": 7.0,
+      "subscore.rdate_period.total": 8.0,
+      "subscore.real_world_corpora.passed": 10.0,
+      "subscore.real_world_corpora.total": 10.0,
+      "subscore.recurrence_id_range.passed": 12.0,
+      "subscore.recurrence_id_range.total": 12.0,
+      "subscore.rfc9073_event_publishing.passed": 15.0,
+      "subscore.rfc9073_event_publishing.total": 15.0,
+      "subscore.rfc9253_relationships.passed": 10.0,
+      "subscore.rfc9253_relationships.total": 10.0,
+      "subscore.rrule_expand.passed": 19.0,
+      "subscore.rrule_expand.total": 19.0,
+      "subscore.rrule_parse.passed": 16.0,
+      "subscore.rrule_parse.total": 16.0,
+      "subscore.rscale.passed": 8.0,
+      "subscore.rscale.total": 8.0,
+      "subscore.schema.passed": 5.0,
+      "subscore.schema.total": 5.0,
+      "subscore.schema_depth.passed": 11.0,
+      "subscore.schema_depth.total": 11.0,
+      "subscore.stress.passed": 10.0,
+      "subscore.stress.total": 10.0,
+      "subscore.v02_features.passed": 16.0,
+      "subscore.v02_features.total": 16.0,
+      "subscore.valarm.passed": 16.0,
+      "subscore.valarm.total": 16.0,
+      "subscore.valarm_rfc9074.passed": 12.0,
+      "subscore.valarm_rfc9074.total": 12.0,
+      "subscore.vavailability.passed": 19.0,
+      "subscore.vavailability.total": 19.0,
+      "subscore.vfreebusy.passed": 14.0,
+      "subscore.vfreebusy.total": 14.0,
+      "subscore.vtimezone.passed": 5.0,
+      "subscore.vtimezone.total": 5.0,
+      "subscore.vtimezone_fields.passed": 11.0,
+      "subscore.vtimezone_fields.total": 11.0,
+      "subscore.vtimezone_historical.passed": 16.0,
+      "subscore.vtimezone_historical.total": 16.0,
+      "subscore.vtimezone_resolution.passed": 11.0,
+      "subscore.vtimezone_resolution.total": 11.0
+    }
+  },
+  "source_stats": {
+    "file_count": 26,
+    "lines_of_code": 5085
+  },
+  "grading_environment": {
+    "mode": "docker",
+    "docker_image_tag": "clispecbench-base",
+    "docker_image_sha": "sha256:94753907091d3b0c6a08785521685eddc077fd622d65d5ee96e60b9ad2ea27cf"
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims a C++20 stdlib RFC 5545/5546/7529 tool passing all 42 RFC 5545 recurrence examples and the RFC 7529 examples, matching python-dateutil (~2,000 rules), an astronomical Chinese-calendar oracle for 1901-2100, convertdate and zoneinfo (~3,750 DST-edge times), with ~9,000 corrupted files under sanitizers and two same-model reviewers whose findings it fixed. Lists RFC-over-summary choices. Not a false completion claim.",
+    "commentary": "claude-5-5-publication-oct30-2026"
+  }
+}

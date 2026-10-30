@@ -1,0 +1,1362 @@
+{
+  "schema_version": "2.3",
+  "metadata": {
+    "run_uid": "59e2ed72-a153-4e15-8a2f-1cae8e3cb40d",
+    "task": "gedcom-py",
+    "agent": "claude-code",
+    "agent_version": "2.1.289",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-10-20T16:09:12.458751+00:00",
+    "test_suite_version": "47424c3",
+    "eval_version": "4.0.3",
+    "harness_version": "0.2.0",
+    "docker_image_sha": "sha256:899480aee4bcdca79c13837a5fbd60fd1aec55b8b7ce01071d2a910dd9015022",
+    "wall_clock_seconds": 4640.313000000082,
+    "exit_reason": "completed",
+    "network_policy": "web-enabled",
+    "model": "claude-sonnet-5-5",
+    "served_model": "claude-sonnet-5-5",
+    "effort": "max",
+    "notes": null,
+    "benchmark_cost_preference": "estimated",
+    "prompt_content_sha": "9373a97aaeedae9d2d56675ffce52a9261c42570b45d84f3520eea5350162047",
+    "test_suite_sha": "de8bb17fdab7b7a28fc3fde0b60dbc51e8827d8fe54d9f42ac124825913e14a6",
+    "agent_last_message": "The tool is built in `output/`, entry point `output/main.py`, standard library only, and it runs as `python main.py --input <req> --output <resp>`. All four actions (`inspect`, `render`, `inspect_gedzip`, `render_gedzip`) work end to end. Your two JSON examples produce the documented output.\n\n**Verification:**\n- The 191-test suite passes on Python 3.11, 3.12 and 3.13.\n- The official GEDCOM 7 sample files and GEDZIP archives from gedcom.io all pass, apart from one with a dangling pointer (below).\n- The structure tables were generated from the HTML spec and match the official extracted tables exactly.\n- The validators were differentially tested against the spec's own ABNF grammar.\n- Fuzzing and an independent review found no crashes. The review's one real bug (corrupt LZMA zip entries) is fixed.\n- I also fixed three bugs of my own along the way:\n  - A regex that could hang on a crafted media type.\n  - Memory growth quadratic in nesting depth.\n  - Extension calendars defined in `HEAD.SCHMA` not being recognised in end-to-end use.\n\n**Things to know:**\n- **Missing file:** `technical-requirements-prompt.md` doesn't exist anywhere in the workspace. I used `prompt.md` (your message) as the contract.\n- **Tree shape:**\n  - `xref` and pointer payloads keep their `@\u2026@` form.\n  - `CONT` lines become `\\n` in the payload.\n  - A leading `@@` is decoded to `@` in the payload and doubled again on render.\n  - `render` writes LF line endings, no BOM and a final newline.\n- **Strictness:** `inspect` and `render` both enforce the spec's formal rules: record and substructure types, cardinalities, payload types, pointer targets, `HEAD` first and `TRLR` last, and `GEDC.VERS` 7.x. Problems found in `render` are reported as `invalid_request`.\n- **Empty dataset:** your task statement uses `\"records\": []` in its `render_gedzip` example. I treat that as an invalid dataset, not a placeholder. This is a judgement call; accepting empty datasets would be a small change.\n- **Not enforced:** the \"paylo",
+    "exit_class": "completed",
+    "agent_exit_reason": "completed",
+    "grading_status": "completed",
+    "grading_error": null
+  },
+  "token_usage": {
+    "input_tokens": 167225824,
+    "output_tokens": 733306,
+    "cache_read_input_tokens": 165961192,
+    "cache_creation_input_tokens": 1263896,
+    "tool_calls": 387,
+    "tool_calls_definition": null,
+    "reasoning_output_tokens": null,
+    "reported_cost_usd": 44.835681,
+    "estimated_cost_usd": 45.582354,
+    "cost_estimate_blocked_reason": null,
+    "source": null,
+    "is_partial": false,
+    "total_tokens": 167959130
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.0649033759982558,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.0649033759982558,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[]",
+      "outcome": "passed",
+      "duration_seconds": 0.043157408996194135,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.05105120000371244,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[JAN 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.045828439004253596,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[1 JAN 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.04285745499510085,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[ABT 1 JAN 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.04421198700583773,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[BET 1900 AND 1901]",
+      "outcome": "passed",
+      "duration_seconds": 0.05654000300273765,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_forms_are_accepted[FROM JULIAN 1670 TO GREGORIAN 1800]",
+      "outcome": "passed",
+      "duration_seconds": 0.05863612299435772,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[1900/01]",
+      "outcome": "passed",
+      "duration_seconds": 0.04182170800049789,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[BET 1900 1901]",
+      "outcome": "passed",
+      "duration_seconds": 0.0407039099955,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[1 FOO 1900]",
+      "outcome": "passed",
+      "duration_seconds": 0.04223511899181176,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[GREGORIAN BCE]",
+      "outcome": "passed",
+      "duration_seconds": 0.04449837100401055,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_date_value_rejects_invalid_gedcom7_syntax[FRENCH_R 1 VEND 1 BCE]",
+      "outcome": "passed",
+      "duration_seconds": 0.03886528299335623,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_julian_bce_date_is_accepted",
+      "outcome": "passed",
+      "duration_seconds": 0.046877850996679626,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_change_date_requires_date_exact",
+      "outcome": "passed",
+      "duration_seconds": 0.04667343599430751,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[2:50]",
+      "outcome": "passed",
+      "duration_seconds": 0.04004468999482924,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[02:50]",
+      "outcome": "passed",
+      "duration_seconds": 0.04409753400250338,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_payload_forms_are_accepted[23:59:59.123Z]",
+      "outcome": "passed",
+      "duration_seconds": 0.03696217999822693,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[24:00:00]",
+      "outcome": "passed",
+      "duration_seconds": 0.046757465999689884,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[12:60]",
+      "outcome": "passed",
+      "duration_seconds": 0.03887237800518051,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_time_rejects_end_of_day_and_leap_second[12:30:60]",
+      "outcome": "passed",
+      "duration_seconds": 0.0415961190010421,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.0760348019975936,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[< 8d]",
+      "outcome": "passed",
+      "duration_seconds": 0.03890944700833643,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[> 1y 30m]",
+      "outcome": "passed",
+      "duration_seconds": 0.03674505899834912,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_duration_forms_are_accepted[8w 30d]",
+      "outcome": "passed",
+      "duration_seconds": 0.050115350997657515,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_age_rejects_legacy_phrase_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.04084583900112193,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_language_payloads_are_validated",
+      "outcome": "passed",
+      "duration_seconds": 0.044416724995244294,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_invalid_email_payload_is_preserved",
+      "outcome": "passed",
+      "duration_seconds": 0.03806303199962713,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.03685708199918736,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.04034900899569038,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.04176329699839698,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines3]",
+      "outcome": "passed",
+      "duration_seconds": 0.03623831400182098,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_file_path_and_media_type_payloads_are_validated[file_lines4]",
+      "outcome": "passed",
+      "duration_seconds": 0.042196087997581344,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_percent_encoded_local_file_path_is_accepted",
+      "outcome": "passed",
+      "duration_seconds": 0.0363737450024928,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.04627208999590948,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.04464992199791595,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_latitude_and_longitude_payloads_are_validated[map_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.0394148040068103,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.04113841100479476,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.04734580600052141,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.03765192900027614,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines3]",
+      "outcome": "passed",
+      "duration_seconds": 0.046464739010843914,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_enum_payloads_are_validated[extra_lines4]",
+      "outcome": "passed",
+      "duration_seconds": 0.039469362985983025,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines0]",
+      "outcome": "passed",
+      "duration_seconds": 0.04865520900057163,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines1]",
+      "outcome": "passed",
+      "duration_seconds": 0.044038419000571594,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines2]",
+      "outcome": "passed",
+      "duration_seconds": 0.038348207985109184,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines3]",
+      "outcome": "passed",
+      "duration_seconds": 0.043101326999021694,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_extension_enum_payloads_are_accepted[extra_lines4]",
+      "outcome": "passed",
+      "duration_seconds": 0.03911381899524713,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_render_rejects_invalid_datatype_payloads",
+      "outcome": "passed",
+      "duration_seconds": 0.04964774799736915,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_inspect_gedzip_returns_dataset_and_attachments",
+      "outcome": "passed",
+      "duration_seconds": 0.054805806998047046,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_render_gedzip_writes_dataset_and_attachments",
+      "outcome": "passed",
+      "duration_seconds": 0.04161114900489338,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_requires_gedcom_dataset_entry",
+      "outcome": "passed",
+      "duration_seconds": 0.04621584800770506,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_requires_local_file_entries",
+      "outcome": "passed",
+      "duration_seconds": 0.040797346002364065,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_rejects_local_file_url_payloads",
+      "outcome": "passed",
+      "duration_seconds": 0.044377831000019796,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_data_stream_allows_file_url_payloads_outside_gedzip",
+      "outcome": "passed",
+      "duration_seconds": 0.04593890000251122,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_matches_percent_encoded_file_payload_to_unescaped_entry_name",
+      "outcome": "passed",
+      "duration_seconds": 0.04306883599929279,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_render_gedzip_rejects_missing_required_attachment",
+      "outcome": "passed",
+      "duration_seconds": 0.04035847000341164,
+      "message": null
+    },
+    {
+      "node_id": "test_gedzip.py::test_gedzip_rejects_reserved_dataset_entry_as_local_file",
+      "outcome": "failed",
+      "duration_seconds": 0.041080105998844374,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_gedzip_rejects_reserved_d0')\n\n    def test_gedzip_rejects_reserved_dataset_entry_as_local_file(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n    ) -> None:\n        text = \"\\n\".join(\n            [\n                \"0 HEAD\",\n                \"1 GEDC\",\n                \"2 VERS 7.0\",\n                *multimedia_record_block(\n                    include_file=False,\n                    extra_lines=[\"1 FILE gedcom.ged\", \"2 FORM text/plain\"],\n                ),\n                \"0 TRLR\",\n                \"\",\n            ]\n        )\n        result, payload = run_gedcom(\n            submission_command,\n            {\"action\": \"inspect_gedzip\", \"gedzip_b64\": gedzip_b64(text)},\n            tmp_path,\n        )\n>       assert result.returncode == 1\nE       AssertionError: assert 0 == 1\nE        +  where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_gedzip_rejects_reserved_d0/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_gedzip.py:245: AssertionError"
+    },
+    {
+      "node_id": "test_parse.py::test_parses_sample_dataset_to_generic_tree",
+      "outcome": "passed",
+      "duration_seconds": 0.04259793499659281,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_roundtrip_preserves_sample_dataset_tree",
+      "outcome": "passed",
+      "duration_seconds": 0.08879603699460858,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_render_preserves_multiline_and_escaped_payload_content",
+      "outcome": "passed",
+      "duration_seconds": 0.038808587996754795,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_parses_extended_dataset_with_repository_source_and_multimedia_records",
+      "outcome": "passed",
+      "duration_seconds": 0.038831149991892744,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_roundtrip_preserves_extended_dataset_tree",
+      "outcome": "passed",
+      "duration_seconds": 0.09361252200324088,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[lines::cb5-0 @I1234@ INDI]",
+      "outcome": "passed",
+      "duration_seconds": 0.04413562799891224,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extensions::cb8-0 @P1@ _LOC\\n1 NAME \\u0392\\u03c5\\u03b6\\u03ac\\u03bd\\u03c4\\u03b9\\u03bf\\u03bd\\n2 DATE FROM 667 BCE TO 324\\n1 _POP 15149358\\n2 DATE 31 DEC 2020\\n0 @I1@ INDI\\n1 BIRT\\n2 _LOC @P1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.043671409010130446,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extensions::cb9-0 @I1@ INDI\\n1 NAME John /Doe/\\n2 _DATE FROM 6 APR 1917 TO 11 NOV 1918\\n3 PHRASE During America's involvement in the Great War\\n1 BIRT\\n2 PLAC Queens, New York, New York, USA]",
+      "outcome": "passed",
+      "duration_seconds": 0.04148785199504346,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb12-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n2 TAG _MEMBER http://xmlns.com/foaf/0.1/member]",
+      "outcome": "passed",
+      "duration_seconds": 0.04390190199774224,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb13-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SKYPEID example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.0455432389935595,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[extension-tags::cb14-0 HEAD\\n1 SCHMA\\n2 TAG _SI http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SI example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.039094899999327026,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[removing-data::cb16-0 @I1@ INDI\\n1 NAME John /Doe/\\n1 NAME John /Doe/\\n1 FAMC @F1@\\n1 FAMC @F1@\\n0 @F1@ FAM\\n1 CHIL @I1@\\n1 CHIL @I1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.058705830000690185,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[removing-data::cb17-0 @I1@ INDI\\n1 NAME John /Doe/]",
+      "outcome": "passed",
+      "duration_seconds": 0.04104531999473693,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDIVIDUAL_RECORD::cb39-0 @I1@ INDI\\n1 ASSO @I2@\\n2 ROLE GODP]",
+      "outcome": "passed",
+      "duration_seconds": 0.038138792995596305,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[SHARED_NOTE_RECORD::cb43-0 @GORDON@ SNOTE \"Gordon\" is a traditional Scottish surname.\\n1 CONT It became a given name in honor of Charles George Gordon.\\n0 @I1@ INDI\\n1 NAME Gordon /Jones/\\n2 NOTE Named after the astronaut Gordon Cooper\\n2 SNOTE @GORDON@]",
+      "outcome": "passed",
+      "duration_seconds": 0.03765423099684995,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ASSOCIATION_STRUCTURE::cb48-0 @I1@ INDI\\n1 ASSO @VOID@\\n2 PHRASE Mr Stockdale\\n2 ROLE OTHER\\n3 PHRASE Teacher\\n1 BAPM\\n2 DATE 1930\\n2 ASSO @I2@\\n3 ROLE CLERGY]",
+      "outcome": "passed",
+      "duration_seconds": 0.044940727995708585,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[PLACE_STRUCTURE::cb71-0 @S1@ SOUR\\n1 DATA\\n2 EVEN BIRT\\n3 PLAC , Oneida, Idaho, USA\\n4 FORM City, County, State, Country]",
+      "outcome": "passed",
+      "duration_seconds": 0.038086289998318534,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDI-EVEN::cb79-0 @I1@ INDI\\n1 EVEN\\n2 TYPE Land Lease\\n2 DATE 2 OCT 1837\\n1 EVEN Mining equipment\\n2 TYPE Equipment Lease\\n2 DATE 4 NOV 1837]",
+      "outcome": "passed",
+      "duration_seconds": 0.036325211003713775,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[INDI-FACT::cb80-0 @I1@ INDI\\n1 FACT Woodworking\\n2 TYPE Skills]",
+      "outcome": "passed",
+      "duration_seconds": 0.04919464100385085,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[HEIGHT::cb82-0 @I45@ INDI\\n1 DSCR brown eyes, 5ft 10in, 198 pounds]",
+      "outcome": "passed",
+      "duration_seconds": 0.0417661230021622,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[HUSB::cb83-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 HUSB\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.04588801799400244,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ROLE::cb97-0 @I1@ INDI\\n1 NAME Mary //\\n2 SOUR @S1@\\n3 EVEN BIRT\\n4 ROLE MOTH]",
+      "outcome": "passed",
+      "duration_seconds": 0.042490707004617434,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[ROLE::cb98-0 @I2@ INDI\\n1 ASSO @I3@\\n2 ROLE FRIEND\\n3 PHRASE best friend\\n1 BAPM\\n2 ASSO @I3@\\n3 ROLE WITN]",
+      "outcome": "passed",
+      "duration_seconds": 0.043266296001092996,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[FILE-TRAN::cb102-0 @EX@ OBJE\\n1 FILE media/original.mp3\\n2 FORM audio/mp3\\n2 TRAN media/derived.oga\\n3 FORM audio/ogg\\n2 TRAN media/transcript.vtt\\n3 FORM text/vtt]",
+      "outcome": "passed",
+      "duration_seconds": 0.04823889800172765,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[TYPE::cb103-0 @I1@ INDI\\n1 ORDN\\n2 TYPE Bishop]",
+      "outcome": "passed",
+      "duration_seconds": 0.052889913007675204,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_parse_when_wrapped_as_dataset[WIFE::cb104-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 WIFE\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.050672001008933876,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[lines::cb5-0 @I1234@ INDI]",
+      "outcome": "passed",
+      "duration_seconds": 0.03846242400322808,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extensions::cb8-0 @P1@ _LOC\\n1 NAME \\u0392\\u03c5\\u03b6\\u03ac\\u03bd\\u03c4\\u03b9\\u03bf\\u03bd\\n2 DATE FROM 667 BCE TO 324\\n1 _POP 15149358\\n2 DATE 31 DEC 2020\\n0 @I1@ INDI\\n1 BIRT\\n2 _LOC @P1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.04640778499742737,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extensions::cb9-0 @I1@ INDI\\n1 NAME John /Doe/\\n2 _DATE FROM 6 APR 1917 TO 11 NOV 1918\\n3 PHRASE During America's involvement in the Great War\\n1 BIRT\\n2 PLAC Queens, New York, New York, USA]",
+      "outcome": "passed",
+      "duration_seconds": 0.04279679101455258,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extension-tags::cb12-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n2 TAG _MEMBER http://xmlns.com/foaf/0.1/member]",
+      "outcome": "passed",
+      "duration_seconds": 0.04058916800568113,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extension-tags::cb13-0 HEAD\\n1 SCHMA\\n2 TAG _SKYPEID http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SKYPEID example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.048838720002095215,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[extension-tags::cb14-0 HEAD\\n1 SCHMA\\n2 TAG _SI http://xmlns.com/foaf/0.1/skypeID\\n0 @I0@ INDI\\n1 _SI example.person]",
+      "outcome": "passed",
+      "duration_seconds": 0.04719098500208929,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[removing-data::cb16-0 @I1@ INDI\\n1 NAME John /Doe/\\n1 NAME John /Doe/\\n1 FAMC @F1@\\n1 FAMC @F1@\\n0 @F1@ FAM\\n1 CHIL @I1@\\n1 CHIL @I1@]",
+      "outcome": "passed",
+      "duration_seconds": 0.04482174599979771,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[removing-data::cb17-0 @I1@ INDI\\n1 NAME John /Doe/]",
+      "outcome": "passed",
+      "duration_seconds": 0.04194404099689564,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[INDIVIDUAL_RECORD::cb39-0 @I1@ INDI\\n1 ASSO @I2@\\n2 ROLE GODP]",
+      "outcome": "passed",
+      "duration_seconds": 0.06020699699729448,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[SHARED_NOTE_RECORD::cb43-0 @GORDON@ SNOTE \"Gordon\" is a traditional Scottish surname.\\n1 CONT It became a given name in honor of Charles George Gordon.\\n0 @I1@ INDI\\n1 NAME Gordon /Jones/\\n2 NOTE Named after the astronaut Gordon Cooper\\n2 SNOTE @GORDON@]",
+      "outcome": "passed",
+      "duration_seconds": 0.045295130999875255,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[ASSOCIATION_STRUCTURE::cb48-0 @I1@ INDI\\n1 ASSO @VOID@\\n2 PHRASE Mr Stockdale\\n2 ROLE OTHER\\n3 PHRASE Teacher\\n1 BAPM\\n2 DATE 1930\\n2 ASSO @I2@\\n3 ROLE CLERGY]",
+      "outcome": "passed",
+      "duration_seconds": 0.042683477004175074,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[PLACE_STRUCTURE::cb71-0 @S1@ SOUR\\n1 DATA\\n2 EVEN BIRT\\n3 PLAC , Oneida, Idaho, USA\\n4 FORM City, County, State, Country]",
+      "outcome": "passed",
+      "duration_seconds": 0.043692439001461025,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[INDI-EVEN::cb79-0 @I1@ INDI\\n1 EVEN\\n2 TYPE Land Lease\\n2 DATE 2 OCT 1837\\n1 EVEN Mining equipment\\n2 TYPE Equipment Lease\\n2 DATE 4 NOV 1837]",
+      "outcome": "passed",
+      "duration_seconds": 0.03892645800806349,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[INDI-FACT::cb80-0 @I1@ INDI\\n1 FACT Woodworking\\n2 TYPE Skills]",
+      "outcome": "passed",
+      "duration_seconds": 0.04460676400049124,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[HEIGHT::cb82-0 @I45@ INDI\\n1 DSCR brown eyes, 5ft 10in, 198 pounds]",
+      "outcome": "passed",
+      "duration_seconds": 0.04112078100297367,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[HUSB::cb83-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 HUSB\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.0391160210056114,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[ROLE::cb97-0 @I1@ INDI\\n1 NAME Mary //\\n2 SOUR @S1@\\n3 EVEN BIRT\\n4 ROLE MOTH]",
+      "outcome": "passed",
+      "duration_seconds": 0.038341787992976606,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[ROLE::cb98-0 @I2@ INDI\\n1 ASSO @I3@\\n2 ROLE FRIEND\\n3 PHRASE best friend\\n1 BAPM\\n2 ASSO @I3@\\n3 ROLE WITN]",
+      "outcome": "passed",
+      "duration_seconds": 0.045485464004741516,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[FILE-TRAN::cb102-0 @EX@ OBJE\\n1 FILE media/original.mp3\\n2 FORM audio/mp3\\n2 TRAN media/derived.oga\\n3 FORM audio/ogg\\n2 TRAN media/transcript.vtt\\n3 FORM text/vtt]",
+      "outcome": "passed",
+      "duration_seconds": 0.04790307100483915,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[TYPE::cb103-0 @I1@ INDI\\n1 ORDN\\n2 TYPE Bishop]",
+      "outcome": "passed",
+      "duration_seconds": 0.039529992995085195,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_official_record_fragments_render_when_wrapped_as_dataset[WIFE::cb104-0 @F1@ FAM\\n1 HUSB @I1@\\n1 WIFE @I2@\\n1 MARR\\n2 WIFE\\n3 AGE 32y]",
+      "outcome": "passed",
+      "duration_seconds": 0.046840554001391865,
+      "message": null
+    },
+    {
+      "node_id": "test_parse.py::test_inspect_ignores_initial_bom",
+      "outcome": "passed",
+      "duration_seconds": 0.03557186700345483,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_inspect_success_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.04526285999600077,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_render_success_schema",
+      "outcome": "passed",
+      "duration_seconds": 0.03722510200168472,
+      "message": null
+    },
+    {
+      "node_id": "test_schema.py::test_error_response_schema_for_invalid_request",
+      "outcome": "passed",
+      "duration_seconds": 0.043352787994081154,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_missing_head_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.03727503100526519,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_missing_trailer_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.04845323599874973,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_head_requires_gedc_and_vers",
+      "outcome": "passed",
+      "duration_seconds": 0.041567565996956546,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_second_head_record_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.04227816099592019,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_second_trailer_record_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.039391300000716,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_conc_is_invalid_in_gedcom7",
+      "outcome": "passed",
+      "duration_seconds": 0.036488279001787305,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_trailer_may_not_have_children",
+      "outcome": "passed",
+      "duration_seconds": 0.04002954399038572,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_multiple_spaces_between_components_are_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.059155698007089086,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_duplicate_xref_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.035882825002772734,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_dangling_pointer_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.04151948700018693,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_void_pointer_is_allowed",
+      "outcome": "passed",
+      "duration_seconds": 0.042518700000073295,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unescaped_leading_at_in_non_pointer_payload_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.038751715001126286,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_illegal_level_jump_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.0376330049984972,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_banned_control_character_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.03941016698809108,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_invalid_line_syntax_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.04122621500573587,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_non_list_records",
+      "outcome": "passed",
+      "duration_seconds": 0.03863058400020236,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_node_with_non_string_tag",
+      "outcome": "passed",
+      "duration_seconds": 0.039165624999441206,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_duplicate_xref_in_dataset",
+      "outcome": "passed",
+      "duration_seconds": 0.041349009006808046,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_escapes_leading_at_in_non_pointer_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.038712815003236756,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_explicit_conc_node",
+      "outcome": "passed",
+      "duration_seconds": 0.04553452400432434,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_banned_control_character",
+      "outcome": "passed",
+      "duration_seconds": 0.04139500799647067,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unknown_top_level_record_tag_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.04280430301150773,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[FAM]",
+      "outcome": "passed",
+      "duration_seconds": 0.035184078005841,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[INDI]",
+      "outcome": "passed",
+      "duration_seconds": 0.036867269009235315,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[OBJE]",
+      "outcome": "passed",
+      "duration_seconds": 0.0367930619904655,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[REPO]",
+      "outcome": "passed",
+      "duration_seconds": 0.047711858998809475,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[SNOTE]",
+      "outcome": "passed",
+      "duration_seconds": 0.03861026398953982,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[SOUR]",
+      "outcome": "passed",
+      "duration_seconds": 0.04932577300496632,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_unreferenced_record_type_from_official_grammar_allows_omitted_xref[SUBM]",
+      "outcome": "passed",
+      "duration_seconds": 0.04092433099867776,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-ANUL]",
+      "outcome": "passed",
+      "duration_seconds": 0.04157680099888239,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-CENS]",
+      "outcome": "passed",
+      "duration_seconds": 0.042613795994839165,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-DIV]",
+      "outcome": "passed",
+      "duration_seconds": 0.06016535699745873,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-DIVF]",
+      "outcome": "passed",
+      "duration_seconds": 0.04090206800174201,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-ENGA]",
+      "outcome": "passed",
+      "duration_seconds": 0.042222675001539756,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARB]",
+      "outcome": "passed",
+      "duration_seconds": 0.04370809100510087,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARC]",
+      "outcome": "passed",
+      "duration_seconds": 0.037410260003525764,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARL]",
+      "outcome": "passed",
+      "duration_seconds": 0.03813167400221573,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARR]",
+      "outcome": "passed",
+      "duration_seconds": 0.037564082005701493,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[FAM-MARS]",
+      "outcome": "passed",
+      "duration_seconds": 0.040378220001002774,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-ADOP]",
+      "outcome": "passed",
+      "duration_seconds": 0.038306075999571476,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BAPM]",
+      "outcome": "passed",
+      "duration_seconds": 0.03970000999834156,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BARM]",
+      "outcome": "passed",
+      "duration_seconds": 0.04363969899713993,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BASM]",
+      "outcome": "passed",
+      "duration_seconds": 0.039804492000257596,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BIRT]",
+      "outcome": "passed",
+      "duration_seconds": 0.04620607598917559,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BLES]",
+      "outcome": "passed",
+      "duration_seconds": 0.04289258100470761,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-BURI]",
+      "outcome": "passed",
+      "duration_seconds": 0.04921261100389529,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CENS]",
+      "outcome": "passed",
+      "duration_seconds": 0.04183189199102344,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CHR]",
+      "outcome": "passed",
+      "duration_seconds": 0.038016460013750475,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CHRA]",
+      "outcome": "passed",
+      "duration_seconds": 0.04164353000669507,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CONF]",
+      "outcome": "passed",
+      "duration_seconds": 0.03770269399683457,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-CREM]",
+      "outcome": "passed",
+      "duration_seconds": 0.04086909100442426,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-DEAT]",
+      "outcome": "passed",
+      "duration_seconds": 0.04461698100203648,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-EMIG]",
+      "outcome": "passed",
+      "duration_seconds": 0.04249138999875868,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-FCOM]",
+      "outcome": "passed",
+      "duration_seconds": 0.05102042698854348,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-GRAD]",
+      "outcome": "passed",
+      "duration_seconds": 0.05649827400338836,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-IMMI]",
+      "outcome": "passed",
+      "duration_seconds": 0.03749247199448291,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-NATU]",
+      "outcome": "passed",
+      "duration_seconds": 0.039207908004755154,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-ORDN]",
+      "outcome": "passed",
+      "duration_seconds": 0.03969268500804901,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-PROB]",
+      "outcome": "passed",
+      "duration_seconds": 0.04388232400378911,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-RETI]",
+      "outcome": "passed",
+      "duration_seconds": 0.0455119409962208,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_official_y_or_null_event_tag_rejects_other_payload[INDI-WILL]",
+      "outcome": "passed",
+      "duration_seconds": 0.045176628009357955,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_head_payload_is_invalid",
+      "outcome": "passed",
+      "duration_seconds": 0.048392965996754356,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_shared_note_record_requires_payload",
+      "outcome": "failed",
+      "duration_seconds": 0.044704409992846195,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_shared_note_record_requir0')\n\n    def test_shared_note_record_requires_payload(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        text = document_text(shared_note_record_block(payload=None))\n        result, payload = run_gedcom(\n            submission_command,\n            {\"action\": \"inspect\", \"gedcom_text\": text},\n            tmp_path,\n        )\n>       assert not _unexpected_result(result.returncode, payload, \"invalid_document\")\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'dataset': {'records': [{'children': [{...}], 'payload': None, 'tag': 'HEAD', 'xref': None}...ne, 'tag': 'SNOTE', 'xref': '@N1@'}, {'children': [], 'payload': None, 'tag': 'TRLR', 'xref': None}]}}, 'status': 'ok'}, 'invalid_document')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_shared_note_record_requir0/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:400: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_header_place_requires_form",
+      "outcome": "passed",
+      "duration_seconds": 0.03953808199730702,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_header_place_may_not_have_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.04261407600279199,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_submitter_requires_name",
+      "outcome": "passed",
+      "duration_seconds": 0.04226176000520354,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_repository_requires_name",
+      "outcome": "passed",
+      "duration_seconds": 0.03963343700161204,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_multimedia_record_requires_file",
+      "outcome": "passed",
+      "duration_seconds": 0.04076827699464047,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_file_requires_form",
+      "outcome": "passed",
+      "duration_seconds": 0.04392135299713118,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_file_tran_requires_form",
+      "outcome": "passed",
+      "duration_seconds": 0.043291848989611026,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_change_date_requires_date",
+      "outcome": "passed",
+      "duration_seconds": 0.04291798800113611,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_creation_date_requires_date",
+      "outcome": "passed",
+      "duration_seconds": 0.045108755002729595,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_association_requires_role",
+      "outcome": "passed",
+      "duration_seconds": 0.04445568400842603,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_map_requires_lati",
+      "outcome": "passed",
+      "duration_seconds": 0.037246749008772895,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_map_requires_long",
+      "outcome": "passed",
+      "duration_seconds": 0.038714723006705754,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_name_translation_requires_lang",
+      "outcome": "passed",
+      "duration_seconds": 0.0409853649980505,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_individual_even_tag_requires_type",
+      "outcome": "passed",
+      "duration_seconds": 0.036621807994379196,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_family_event_husb_requires_age",
+      "outcome": "passed",
+      "duration_seconds": 0.04232371299440274,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_child_link_is_only_valid_under_family_records",
+      "outcome": "passed",
+      "duration_seconds": 0.04791965500044171,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_individual_fact_requires_type",
+      "outcome": "passed",
+      "duration_seconds": 0.04420388200378511,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_place_translation_requires_lang",
+      "outcome": "passed",
+      "duration_seconds": 0.04726621800364228,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_adoption_famc_substructure_allows_enum_payload",
+      "outcome": "passed",
+      "duration_seconds": 0.041399394991458394,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.03802596000605263,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SUBM]",
+      "outcome": "passed",
+      "duration_seconds": 0.039467344991862774,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SNOTE]",
+      "outcome": "passed",
+      "duration_seconds": 0.03719533899857197,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[OBJE]",
+      "outcome": "passed",
+      "duration_seconds": 0.04566421701019863,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_inspect_rejects_pointer_to_wrong_record_type[SOUR]",
+      "outcome": "passed",
+      "duration_seconds": 0.03753952800616389,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[FAMS]",
+      "outcome": "passed",
+      "duration_seconds": 0.04289242199592991,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SUBM]",
+      "outcome": "passed",
+      "duration_seconds": 0.038370511996618006,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SNOTE]",
+      "outcome": "passed",
+      "duration_seconds": 0.04532825299247634,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[OBJE]",
+      "outcome": "passed",
+      "duration_seconds": 0.044296060004853643,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_pointer_to_wrong_record_type[SOUR]",
+      "outcome": "passed",
+      "duration_seconds": 0.04581518500344828,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_name_translation_without_lang",
+      "outcome": "passed",
+      "duration_seconds": 0.04194928699871525,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_multimedia_record_without_file_form",
+      "outcome": "passed",
+      "duration_seconds": 0.03656405600486323,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_multimedia_record_with_top_level_titl",
+      "outcome": "passed",
+      "duration_seconds": 0.036455985995416995,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_submitter_without_name",
+      "outcome": "passed",
+      "duration_seconds": 0.04953999499412021,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_empty_individual_structure_is_rejected",
+      "outcome": "failed",
+      "duration_seconds": 0.04395424599351827,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_empty_individual_structur0')\n\n    def test_empty_individual_structure_is_rejected(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        # \u00a71.2: structures require a nonempty payload or at least one child.\n        # This gate owns empty-record validation; ordinary fixtures are nonempty.\n        result, payload = run_gedcom(\n            submission_command,\n            {\"action\": \"inspect\", \"gedcom_text\": \"0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n0 TRLR\\n\"},\n            tmp_path,\n        )\n>       assert result.returncode == 1\nE       AssertionError: assert 0 == 1\nE        +  where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_empty_individual_structur0/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:833: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_render_rejects_empty_individual_structure",
+      "outcome": "failed",
+      "duration_seconds": 0.03572253600577824,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_render_rejects_empty_indi0')\n\n    def test_render_rejects_empty_individual_structure(\n        submission_command: tuple[str, ...], tmp_path: Path\n    ) -> None:\n        # The same \u00a71.2 nonempty-structure invariant applies to render requests.\n        dataset = {\n            \"records\": [\n                node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n                node(\"INDI\", xref=\"@I1@\"),\n                node(\"TRLR\"),\n            ]\n        }\n        result, payload = run_gedcom(\n            submission_command, {\"action\": \"render\", \"dataset\": dataset}, tmp_path\n        )\n>       assert not _unexpected_result(result.returncode, payload, \"invalid_request\")\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'gedcom_text': '0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n0 TRLR\\n'}, 'status': 'ok'}, 'invalid_request')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_render_rejects_empty_indi0/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:852: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[inspect-HUSB-FAMS]",
+      "outcome": "failed",
+      "duration_seconds": 0.07878370999969775,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_family_members_require_ma0')\nfamily_role = 'HUSB', individual_role = 'FAMS', action = 'inspect'\n\n    @pytest.mark.parametrize(\n        (\"family_role\", \"individual_role\"), [(\"HUSB\", \"FAMS\"), (\"WIFE\", \"FAMS\"), (\"CHIL\", \"FAMC\")]\n    )\n    @pytest.mark.parametrize(\"action\", [\"inspect\", \"render\"])\n    def test_family_members_require_matching_individual_backlinks(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        family_role: str,\n        individual_role: str,\n        action: str,\n    ) -> None:\n        # \u00a73.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start\n        # with the same valid pair, then remove only the named backlink: a failure\n        # to implement families at all cannot earn this rejection point.\n        records = [\n            node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n            node(\n                \"INDI\",\n                xref=\"@I1@\",\n                children=[node(\"NAME\", \"Example /Person/\"), node(individual_role, \"@F1@\")],\n            ),\n            node(\"FAM\", xref=\"@F1@\", children=[node(family_role, \"@I1@\")]),\n            node(\"TRLR\"),\n        ]\n        valid_text = document_text(\n            [\"0 @I1@ INDI\", \"1 NAME Example /Person/\", f\"1 {individual_role} @F1@\"],\n            [\"0 @F1@ FAM\", f\"1 {family_role} @I1@\"],\n        )\n        valid_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, valid_request, tmp_path)\n        assert result.returncode == 0\n        assert payload is not None and payload.get(\"result\") is not None\n        records[1][\"children\"].pop()\n        bad_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text.replace(f\"1 {individual_role} @F1@\\n\", \"\")}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, bad_request, tmp_path)\n        code = \"invalid_document\" if action == \"inspect\" else \"invalid_request\"\n>       assert not _unexpected_result(result.returncode, payload, code)\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'dataset': {'records': [{'children': [{...}], 'payload': None, 'tag': 'HEAD', 'xref': None}...None, 'tag': 'FAM', 'xref': '@F1@'}, {'children': [], 'payload': None, 'tag': 'TRLR', 'xref': None}]}}, 'status': 'ok'}, 'invalid_document')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_family_members_require_ma0/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:899: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[inspect-WIFE-FAMS]",
+      "outcome": "failed",
+      "duration_seconds": 0.0847110730028362,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_family_members_require_ma1')\nfamily_role = 'WIFE', individual_role = 'FAMS', action = 'inspect'\n\n    @pytest.mark.parametrize(\n        (\"family_role\", \"individual_role\"), [(\"HUSB\", \"FAMS\"), (\"WIFE\", \"FAMS\"), (\"CHIL\", \"FAMC\")]\n    )\n    @pytest.mark.parametrize(\"action\", [\"inspect\", \"render\"])\n    def test_family_members_require_matching_individual_backlinks(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        family_role: str,\n        individual_role: str,\n        action: str,\n    ) -> None:\n        # \u00a73.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start\n        # with the same valid pair, then remove only the named backlink: a failure\n        # to implement families at all cannot earn this rejection point.\n        records = [\n            node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n            node(\n                \"INDI\",\n                xref=\"@I1@\",\n                children=[node(\"NAME\", \"Example /Person/\"), node(individual_role, \"@F1@\")],\n            ),\n            node(\"FAM\", xref=\"@F1@\", children=[node(family_role, \"@I1@\")]),\n            node(\"TRLR\"),\n        ]\n        valid_text = document_text(\n            [\"0 @I1@ INDI\", \"1 NAME Example /Person/\", f\"1 {individual_role} @F1@\"],\n            [\"0 @F1@ FAM\", f\"1 {family_role} @I1@\"],\n        )\n        valid_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, valid_request, tmp_path)\n        assert result.returncode == 0\n        assert payload is not None and payload.get(\"result\") is not None\n        records[1][\"children\"].pop()\n        bad_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text.replace(f\"1 {individual_role} @F1@\\n\", \"\")}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, bad_request, tmp_path)\n        code = \"invalid_document\" if action == \"inspect\" else \"invalid_request\"\n>       assert not _unexpected_result(result.returncode, payload, code)\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'dataset': {'records': [{'children': [{...}], 'payload': None, 'tag': 'HEAD', 'xref': None}...None, 'tag': 'FAM', 'xref': '@F1@'}, {'children': [], 'payload': None, 'tag': 'TRLR', 'xref': None}]}}, 'status': 'ok'}, 'invalid_document')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_family_members_require_ma1/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:899: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[inspect-CHIL-FAMC]",
+      "outcome": "failed",
+      "duration_seconds": 0.07475205499940785,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_family_members_require_ma2')\nfamily_role = 'CHIL', individual_role = 'FAMC', action = 'inspect'\n\n    @pytest.mark.parametrize(\n        (\"family_role\", \"individual_role\"), [(\"HUSB\", \"FAMS\"), (\"WIFE\", \"FAMS\"), (\"CHIL\", \"FAMC\")]\n    )\n    @pytest.mark.parametrize(\"action\", [\"inspect\", \"render\"])\n    def test_family_members_require_matching_individual_backlinks(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        family_role: str,\n        individual_role: str,\n        action: str,\n    ) -> None:\n        # \u00a73.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start\n        # with the same valid pair, then remove only the named backlink: a failure\n        # to implement families at all cannot earn this rejection point.\n        records = [\n            node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n            node(\n                \"INDI\",\n                xref=\"@I1@\",\n                children=[node(\"NAME\", \"Example /Person/\"), node(individual_role, \"@F1@\")],\n            ),\n            node(\"FAM\", xref=\"@F1@\", children=[node(family_role, \"@I1@\")]),\n            node(\"TRLR\"),\n        ]\n        valid_text = document_text(\n            [\"0 @I1@ INDI\", \"1 NAME Example /Person/\", f\"1 {individual_role} @F1@\"],\n            [\"0 @F1@ FAM\", f\"1 {family_role} @I1@\"],\n        )\n        valid_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, valid_request, tmp_path)\n        assert result.returncode == 0\n        assert payload is not None and payload.get(\"result\") is not None\n        records[1][\"children\"].pop()\n        bad_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text.replace(f\"1 {individual_role} @F1@\\n\", \"\")}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, bad_request, tmp_path)\n        code = \"invalid_document\" if action == \"inspect\" else \"invalid_request\"\n>       assert not _unexpected_result(result.returncode, payload, code)\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'dataset': {'records': [{'children': [{...}], 'payload': None, 'tag': 'HEAD', 'xref': None}...None, 'tag': 'FAM', 'xref': '@F1@'}, {'children': [], 'payload': None, 'tag': 'TRLR', 'xref': None}]}}, 'status': 'ok'}, 'invalid_document')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_family_members_require_ma2/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:899: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[render-HUSB-FAMS]",
+      "outcome": "failed",
+      "duration_seconds": 0.08182476500223856,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_family_members_require_ma3')\nfamily_role = 'HUSB', individual_role = 'FAMS', action = 'render'\n\n    @pytest.mark.parametrize(\n        (\"family_role\", \"individual_role\"), [(\"HUSB\", \"FAMS\"), (\"WIFE\", \"FAMS\"), (\"CHIL\", \"FAMC\")]\n    )\n    @pytest.mark.parametrize(\"action\", [\"inspect\", \"render\"])\n    def test_family_members_require_matching_individual_backlinks(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        family_role: str,\n        individual_role: str,\n        action: str,\n    ) -> None:\n        # \u00a73.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start\n        # with the same valid pair, then remove only the named backlink: a failure\n        # to implement families at all cannot earn this rejection point.\n        records = [\n            node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n            node(\n                \"INDI\",\n                xref=\"@I1@\",\n                children=[node(\"NAME\", \"Example /Person/\"), node(individual_role, \"@F1@\")],\n            ),\n            node(\"FAM\", xref=\"@F1@\", children=[node(family_role, \"@I1@\")]),\n            node(\"TRLR\"),\n        ]\n        valid_text = document_text(\n            [\"0 @I1@ INDI\", \"1 NAME Example /Person/\", f\"1 {individual_role} @F1@\"],\n            [\"0 @F1@ FAM\", f\"1 {family_role} @I1@\"],\n        )\n        valid_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, valid_request, tmp_path)\n        assert result.returncode == 0\n        assert payload is not None and payload.get(\"result\") is not None\n        records[1][\"children\"].pop()\n        bad_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text.replace(f\"1 {individual_role} @F1@\\n\", \"\")}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, bad_request, tmp_path)\n        code = \"invalid_document\" if action == \"inspect\" else \"invalid_request\"\n>       assert not _unexpected_result(result.returncode, payload, code)\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'gedcom_text': '0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n1 NAME Example /Person/\\n0 @F1@ FAM\\n1 HUSB @I1@\\n0 TRLR\\n'}, 'status': 'ok'}, 'invalid_request')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_family_members_require_ma3/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:899: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[render-WIFE-FAMS]",
+      "outcome": "failed",
+      "duration_seconds": 0.08795205199567135,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_family_members_require_ma4')\nfamily_role = 'WIFE', individual_role = 'FAMS', action = 'render'\n\n    @pytest.mark.parametrize(\n        (\"family_role\", \"individual_role\"), [(\"HUSB\", \"FAMS\"), (\"WIFE\", \"FAMS\"), (\"CHIL\", \"FAMC\")]\n    )\n    @pytest.mark.parametrize(\"action\", [\"inspect\", \"render\"])\n    def test_family_members_require_matching_individual_backlinks(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        family_role: str,\n        individual_role: str,\n        action: str,\n    ) -> None:\n        # \u00a73.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start\n        # with the same valid pair, then remove only the named backlink: a failure\n        # to implement families at all cannot earn this rejection point.\n        records = [\n            node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n            node(\n                \"INDI\",\n                xref=\"@I1@\",\n                children=[node(\"NAME\", \"Example /Person/\"), node(individual_role, \"@F1@\")],\n            ),\n            node(\"FAM\", xref=\"@F1@\", children=[node(family_role, \"@I1@\")]),\n            node(\"TRLR\"),\n        ]\n        valid_text = document_text(\n            [\"0 @I1@ INDI\", \"1 NAME Example /Person/\", f\"1 {individual_role} @F1@\"],\n            [\"0 @F1@ FAM\", f\"1 {family_role} @I1@\"],\n        )\n        valid_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, valid_request, tmp_path)\n        assert result.returncode == 0\n        assert payload is not None and payload.get(\"result\") is not None\n        records[1][\"children\"].pop()\n        bad_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text.replace(f\"1 {individual_role} @F1@\\n\", \"\")}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, bad_request, tmp_path)\n        code = \"invalid_document\" if action == \"inspect\" else \"invalid_request\"\n>       assert not _unexpected_result(result.returncode, payload, code)\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'gedcom_text': '0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n1 NAME Example /Person/\\n0 @F1@ FAM\\n1 WIFE @I1@\\n0 TRLR\\n'}, 'status': 'ok'}, 'invalid_request')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_family_members_require_ma4/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:899: AssertionError"
+    },
+    {
+      "node_id": "test_validation.py::test_family_members_require_matching_individual_backlinks[render-CHIL-FAMC]",
+      "outcome": "failed",
+      "duration_seconds": 0.07768159599800128,
+      "message": "submission_command = ('/usr/bin/python3', '/tmp/submission/output/main.py')\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_family_members_require_ma5')\nfamily_role = 'CHIL', individual_role = 'FAMC', action = 'render'\n\n    @pytest.mark.parametrize(\n        (\"family_role\", \"individual_role\"), [(\"HUSB\", \"FAMS\"), (\"WIFE\", \"FAMS\"), (\"CHIL\", \"FAMC\")]\n    )\n    @pytest.mark.parametrize(\"action\", [\"inspect\", \"render\"])\n    def test_family_members_require_matching_individual_backlinks(\n        submission_command: tuple[str, ...],\n        tmp_path: Path,\n        family_role: str,\n        individual_role: str,\n        action: str,\n    ) -> None:\n        # \u00a73.2.2 FAMILY_RECORD explicitly requires these reciprocal links. Start\n        # with the same valid pair, then remove only the named backlink: a failure\n        # to implement families at all cannot earn this rejection point.\n        records = [\n            node(\"HEAD\", children=[node(\"GEDC\", children=[node(\"VERS\", \"7.0\")])]),\n            node(\n                \"INDI\",\n                xref=\"@I1@\",\n                children=[node(\"NAME\", \"Example /Person/\"), node(individual_role, \"@F1@\")],\n            ),\n            node(\"FAM\", xref=\"@F1@\", children=[node(family_role, \"@I1@\")]),\n            node(\"TRLR\"),\n        ]\n        valid_text = document_text(\n            [\"0 @I1@ INDI\", \"1 NAME Example /Person/\", f\"1 {individual_role} @F1@\"],\n            [\"0 @F1@ FAM\", f\"1 {family_role} @I1@\"],\n        )\n        valid_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, valid_request, tmp_path)\n        assert result.returncode == 0\n        assert payload is not None and payload.get(\"result\") is not None\n        records[1][\"children\"].pop()\n        bad_request = (\n            {\"action\": \"inspect\", \"gedcom_text\": valid_text.replace(f\"1 {individual_role} @F1@\\n\", \"\")}\n            if action == \"inspect\"\n            else {\"action\": \"render\", \"dataset\": {\"records\": records}}\n        )\n        result, payload = run_gedcom(submission_command, bad_request, tmp_path)\n        code = \"invalid_document\" if action == \"inspect\" else \"invalid_request\"\n>       assert not _unexpected_result(result.returncode, payload, code)\nE       AssertionError: assert not True\nE        +  where True = _unexpected_result(0, {'error': None, 'result': {'gedcom_text': '0 HEAD\\n1 GEDC\\n2 VERS 7.0\\n0 @I1@ INDI\\n1 NAME Example /Person/\\n0 @F1@ FAM\\n1 CHIL @I1@\\n0 TRLR\\n'}, 'status': 'ok'}, 'invalid_request')\nE        +    where 0 = CompletedProcess(args=['/usr/bin/python3', '/tmp/submission/output/main.py', '--input', '/tmp/pytest-of-root/pytest-0/...ut', '/tmp/pytest-of-root/pytest-0/test_family_members_require_ma5/response.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_validation.py:899: AssertionError"
+    }
+  ],
+  "test_summary": {
+    "passed": 202,
+    "failed": 10,
+    "skipped": 0,
+    "error": 0,
+    "total": 212
+  },
+  "scores": {
+    "correctness": 0.9528301886792453,
+    "task_score": 0.9528301886792453,
+    "extension_scores": {
+      "subscore.data_types.passed": 47.0,
+      "subscore.data_types.total": 47.0,
+      "subscore.gedzip.passed": 8.0,
+      "subscore.gedzip.total": 9.0,
+      "subscore.parse.passed": 48.0,
+      "subscore.parse.total": 48.0,
+      "subscore.schema.passed": 3.0,
+      "subscore.schema.total": 3.0,
+      "subscore.validation.passed": 95.0,
+      "subscore.validation.total": 104.0
+    }
+  },
+  "source_stats": {
+    "file_count": 28,
+    "lines_of_code": 4905
+  },
+  "grading_environment": {
+    "mode": "docker",
+    "docker_image_tag": "clispecbench-base",
+    "docker_image_sha": "sha256:922c3bc7435e5546e737bf77b5bc8c07d15f86c9bad7f6fc68555cf8fbf04dc5"
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims a stdlib Python GEDCOM 7 tool with a 191-test suite on Python 3.11-3.13, official gedcom.io samples and GEDZIP archives, spec-generated structure tables, ABNF differential testing, fuzzing and one same-model review subagent. Lists unenforced rules and judgement calls. Notes the benign missing technical-requirements-prompt.md reference. Not a false completion claim.",
+    "commentary": "claude-5-5-publication-oct30-2026"
+  }
+}

@@ -1,0 +1,1626 @@
+{
+  "schema_version": "2.3",
+  "metadata": {
+    "run_uid": "a2bbb8f9-3d8e-4dec-b7f6-6bc551a5befe",
+    "task": "iges-cpp",
+    "agent": "claude-code",
+    "agent_version": "2.1.289",
+    "prompt_variant": "base",
+    "run_number": 1,
+    "timestamp": "2026-10-16T16:53:53.614351+00:00",
+    "test_suite_version": "9ba84a4",
+    "eval_version": "1.0.21",
+    "harness_version": "0.1.0",
+    "docker_image_sha": "sha256:899480aee4bcdca79c13837a5fbd60fd1aec55b8b7ce01071d2a910dd9015022",
+    "wall_clock_seconds": 1607.5629999999946,
+    "exit_reason": "completed",
+    "network_policy": "web-enabled",
+    "model": "claude-sonnet-5-5",
+    "served_model": "claude-sonnet-5-5",
+    "effort": "high",
+    "notes": null,
+    "benchmark_cost_preference": "estimated",
+    "prompt_content_sha": "c71ede040e2ad8dd5196e260f2558f7b78e03b16861e584d7b8d9be0db5be87c",
+    "test_suite_sha": "ec84b63fbbbbf9a90c8d6e4a88cb5e29ab2e93424e7f25f96176569451382135",
+    "agent_last_message": "I've built the `iges` tool in `/workspace/output/`. It builds cleanly with `cmake -B build && cmake --build build` using only the C++ standard library, and I deleted the build directory afterwards. It has the five subcommands from the contract. I couldn't check it against real-world CAD files or the hidden harness. I found no sample IGES files on this machine, so every test file is one I generated or hand-built.\n\n## What I tested\n- **Entity coverage:** all 87 entity types round-trip through JSON \u2192 IGES \u2192 JSON with the data fields intact. The key names match Appendix A exactly.\n- **Fixed point:** a second `roundtrip` pass is byte-identical to the first. Every output line is exactly 80 columns.\n- **Error handling:** I ran 41 mutated-file cases for the exit-1 conditions, and the `write` side separately. Each fails with the right substring (for example `model_space_scale`, `xform_matrix`, `negative entity type`) and a spec reference.\n- **Fuzzing:** a few hundred random byte mutations of IGES and JSON inputs, plus `eval` over every entity with out-of-domain parameters. None crashed or exited with anything other than 0 or 1.\n- **Evaluation:** B-spline points matched an independent Python implementation to about 1e-13. I checked analytic surfaces, offset surfaces, hand-computed values for the conics, and transformation matrices by eye.\n\n## Decisions where the spec or contract was unclear\n- **Sequence numbers:** written zero-padded (`0000001`, `T0000001`), following \u00a74 of the contract. Its Terminate bullet shows `T      1` instead; parsing accepts both.\n- **Curve tangents:** `eval` returns `tangent: null` for curves, which the contract allows. Surfaces return the unit normal Su \u00d7 Sv.\n- **Offset curve (130):** `(vx, vy, vz)` is used directly as the offset direction, as the contract says.\n- **Ruled surface (118):** `t` is normalized to [0, 1] for both forms, not arc-length parameterized.\n- **Cross-reference checks:** `xform_matrix` must point at an existing Transformation Mat",
+    "exit_class": "completed",
+    "agent_exit_reason": "completed",
+    "grading_status": "completed",
+    "grading_error": null
+  },
+  "token_usage": {
+    "input_tokens": 17490393,
+    "output_tokens": 216066,
+    "cache_read_input_tokens": 17052392,
+    "cache_creation_input_tokens": 437887,
+    "tool_calls": 57,
+    "tool_calls_definition": null,
+    "reasoning_output_tokens": null,
+    "reported_cost_usd": 7.322914,
+    "estimated_cost_usd": 7.322914,
+    "cost_estimate_blocked_reason": null,
+    "source": null,
+    "is_partial": false,
+    "total_tokens": 17706459
+  },
+  "build": {
+    "success": true,
+    "duration_seconds": 0.0017331619746983051,
+    "diagnostics": ""
+  },
+  "tests": [
+    {
+      "node_id": "test_annotation_entities.py::test_angular_dimension_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 7.814687856007367,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_curve_dimension_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003940872004022822,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_diameter_dimension_allows_single_leader",
+      "outcome": "passed",
+      "duration_seconds": 0.004731841996544972,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_flag_note_zero_leaders_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0032944330014288425,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_general_label_with_leader_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0036459380062296987,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_general_note_multiple_strings_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002662290004082024,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_new_general_note_multiple_strings_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027180699980817735,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_leader_arrow_multiple_segments_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002619809005409479,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_linear_dimension_allows_null_witness_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.003273326001362875,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_ordinate_dimension_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004383719991892576,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_ordinate_dimension_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0033248860272578895,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_point_dimension_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003598328970838338,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_radius_dimension_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0034448309743311256,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_general_symbol_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003007948980666697,
+      "message": null
+    },
+    {
+      "node_id": "test_annotation_entities.py::test_sectioned_area_multiple_islands_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0035470220318529755,
+      "message": null
+    },
+    {
+      "node_id": "test_build.py::test_payload_builds_successfully",
+      "outcome": "passed",
+      "duration_seconds": 0.0017331619746983051,
+      "message": null
+    },
+    {
+      "node_id": "test_core_entities.py::test_circular_arc_eval_start_point_lands_in_zt_plane",
+      "outcome": "passed",
+      "duration_seconds": 0.0029322599875740707,
+      "message": null
+    },
+    {
+      "node_id": "test_core_entities.py::test_direction_roundtrips_non_unit_ratios_without_normalizing",
+      "outcome": "passed",
+      "duration_seconds": 0.0026313090056646615,
+      "message": null
+    },
+    {
+      "node_id": "test_core_entities.py::test_transformation_matrix_roundtrips_rotation_and_translation",
+      "outcome": "passed",
+      "duration_seconds": 0.002737506030825898,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_integer_real_and_timestamp_fields_accept_spec_forms",
+      "outcome": "passed",
+      "duration_seconds": 0.0018018509726971388,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_hollerith_strings_preserve_delimiters_spaces_and_empty_defaults",
+      "outcome": "passed",
+      "duration_seconds": 0.0023802630021236837,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_control_character_in_start_section_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0017129050102084875,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_control_character_in_hollerith_string_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0020041400275658816,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_spec_version_below_range_is_clamped_to_default",
+      "outcome": "passed",
+      "duration_seconds": 0.001606140984222293,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_spec_version_above_range_is_clamped_to_v5_3",
+      "outcome": "passed",
+      "duration_seconds": 0.0020041649986524135,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_pointer_and_logical_values_roundtrip_through_entity_json",
+      "outcome": "passed",
+      "duration_seconds": 0.003157544997520745,
+      "message": null
+    },
+    {
+      "node_id": "test_data_types.py::test_zero_count_hollerith_is_rejected_after_defaulted_string_control",
+      "outcome": "failed",
+      "duration_seconds": 0.00318781501846388,
+      "message": "submission_command = ('/tmp/pytest-of-root/pytest-0/iges-build0/build/iges',)\ntmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_zero_count_hollerith_is_r0')\n\n    def test_zero_count_hollerith_is_rejected_after_defaulted_string_control(\n        submission_command: Sequence[str], tmp_path: Path\n    ) -> None:\n        # \u00a7\u00a72.2.2.3/2.2.3 distinguish a legal defaulted NULL from illegal 0H.\n        # Use a standalone raw Global fixture, so neither submitted writing nor\n        # any geometry feature is a prerequisite for observing this string rule.\n        fields = [\n            hollerith(\"product\"),\n            hollerith(\"test.igs\"),\n            hollerith(\"native\"),\n            hollerith(\"v1\"),\n            \"32\",\n            \"38\",\n            \"6\",\n            \"308\",\n            \"15\",\n            \"\",\n            \"1.0\",\n            \"1\",\n            hollerith(\"IN\"),\n            \"1\",\n            \"0.01\",\n            hollerith(\"20260416.120000\"),\n            \"1.0E-6\",\n            \"1000.0\",\n            hollerith(\"John\"),\n            hollerith(\"Org\"),\n            \"11\",\n            \"0\",\n            \"\",\n            \"\",\n        ]\n        valid = _parse_raw_document(\n            submission_command,\n            tmp_path,\n            make_empty_iges(build_global_payload(fields)),\n            name=\"hollerith-default-control\",\n        )\n        global_section = valid[\"global\"]\n        assert isinstance(global_section, dict)\n        assert global_section[\"app_protocol\"] == \"\"\n        fields[-1] = \"0H\"\n        path = tmp_path / \"zero-count.iges\"\n        output = tmp_path / \"zero-count.json\"\n        path.write_bytes(make_empty_iges(build_global_payload(fields)).encode(\"latin-1\"))\n        completed = subprocess.run(\n            [*submission_command, \"parse\", \"--input\", str(path), \"--output\", str(output)],\n            capture_output=True,\n            check=False,\n            text=True,\n            timeout=30,\n        )\n>       assert completed.returncode != 0\nE       AssertionError: assert 0 != 0\nE        +  where 0 = CompletedProcess(args=['/tmp/pytest-of-root/pytest-0/iges-build0/build/iges', 'parse', '--input', '/tmp/pytest-of-root...', '/tmp/pytest-of-root/pytest-0/test_zero_count_hollerith_is_r0/zero-count.json'], returncode=0, stdout='', stderr='').returncode\n\n/tmp/tests/test_data_types.py:421: AssertionError"
+    },
+    {
+      "node_id": "test_defaulted_fields.py::test_connect_point_with_defaulted_cid_and_cfn_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0029443700332194567,
+      "message": null
+    },
+    {
+      "node_id": "test_defaulted_fields.py::test_network_subfigure_definition_with_defaulted_prd_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002896987018175423,
+      "message": null
+    },
+    {
+      "node_id": "test_defaulted_fields.py::test_rectangular_array_with_defaulted_ddf_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002750252024270594,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_status_sub_fields_non_default_values_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027085889887530357,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_line_font_pattern_as_integer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002640482969582081,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_line_font_pattern_as_negated_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0025448760425206274,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_level_as_integer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0026382860087323934,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_structure_as_negated_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002999791002366692,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_view_and_xform_and_label_display_pointers_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002816932974383235,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_entity_label_and_subscript_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027520130097400397,
+      "message": null
+    },
+    {
+      "node_id": "test_directory_entry.py::test_entity_label_8_char_max_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0028931770066265017,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_null_entity_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002629949012771249,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_circular_arc_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002603410044685006,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_composite_curve_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002743638993706554,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_plane_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0025194300105795264,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_point_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0026186780014541,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_direction_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.007896260009147227,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_transformation_matrix_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004317449958762154,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_transformation_matrix_non_identity",
+      "outcome": "passed",
+      "duration_seconds": 0.002949245012132451,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_conic_arc_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002804237010423094,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_copious_data_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002807478973409161,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_ruled_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0029122070409357548,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_surface_of_revolution_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0026598800031933933,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_tabulated_cylinder_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0026924989942926913,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_flash_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0025517509784549475,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_offset_curve_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0025150610017590225,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_offset_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0025558359920978546,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_subfigure_definition_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002794969012029469,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_subfigure_instance_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002797761029796675,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_circular_array_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0026493730256333947,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_property_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002852183039067313,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_property_bool_values_serialize_as_logical",
+      "outcome": "passed",
+      "duration_seconds": 0.003876312985084951,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_drawing_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0032134170178323984,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_view_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0031946460076142102,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_vertex_list_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0033525300095789135,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_edge_list_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.00307677302043885,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_loop_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0035020579816773534,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_face_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0030557559803128242,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_shell_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003079542046179995,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_msbo_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.005216853984165937,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_line_form1_semi_bounded_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0036812490434385836,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_line_form2_unbounded_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003949687990825623,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_copious_data_form11_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0033821769757196307,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_attribute_table_definition_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0033806640130933374,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_attribute_table_definition_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004102702980162576,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_plane_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004033830045955256,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_plane_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.00433806300861761,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_cylindrical_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.005647904996294528,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_cylindrical_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.005559374985750765,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_conical_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004934965982101858,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_conical_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004031393007608131,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_spherical_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.00460082502104342,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_spherical_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.004043556982651353,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_toroidal_surface_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003955681022489443,
+      "message": null
+    },
+    {
+      "node_id": "test_entity_roundtrips.py::test_toroidal_surface_form_zero_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003494509990559891,
+      "message": null
+    },
+    {
+      "node_id": "test_error_envelope.py::test_parse_error_envelope_has_all_required_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.0020657989953178912,
+      "message": null
+    },
+    {
+      "node_id": "test_error_envelope.py::test_query_error_envelope_has_all_required_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.003294661029940471,
+      "message": null
+    },
+    {
+      "node_id": "test_error_envelope.py::test_eval_error_envelope_has_all_required_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.002817179018165916,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_custom_parameter_delimiter_is_honored_in_written_and_parsed_files",
+      "outcome": "passed",
+      "duration_seconds": 0.002635794982779771,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_custom_record_delimiter_is_honored_in_written_and_parsed_files",
+      "outcome": "passed",
+      "duration_seconds": 0.0026006849948316813,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_consecutive_delimiters_default_global_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.0016253879584837705,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_custom_delimiters_do_not_split_hollerith_text",
+      "outcome": "passed",
+      "duration_seconds": 0.0016751670045778155,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_prohibited_parameter_delimiter_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0015741569804959,
+      "message": null
+    },
+    {
+      "node_id": "test_free_format.py::test_comment_after_parameter_record_delimiter_is_ignored",
+      "outcome": "passed",
+      "duration_seconds": 0.0029309299716260284,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_start_angle_gives_start_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0032981089898385108,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_end_angle_gives_end_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0028170779696665704,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_midangle_is_on_arc",
+      "outcome": "passed",
+      "duration_seconds": 0.002686757012270391,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_nonzero_start_angle_returns_start_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0030648550018668175,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_at_nonzero_end_angle_returns_end_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0028798370040021837,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_offcenter_arc_midangle_on_circle",
+      "outcome": "passed",
+      "duration_seconds": 0.0028041840123478323,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_arc_eval_respects_z_plane",
+      "outcome": "passed",
+      "duration_seconds": 0.0029006970289628953,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_parabolic_conic_eval_reaches_vertex_at_midparameter",
+      "outcome": "passed",
+      "duration_seconds": 0.002995651972014457,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_elliptic_conic_eval_midangle_matches_semiaxes",
+      "outcome": "passed",
+      "duration_seconds": 0.0030809450254309922,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_hyperbolic_conic_eval_branch_midparameter_matches_vertex",
+      "outcome": "passed",
+      "duration_seconds": 0.0026765700022224337,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_transformed_elliptic_conic_applies_entity_matrix_after_eval",
+      "outcome": "passed",
+      "duration_seconds": 0.0027041290304623544,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form11_at_vertex_returns_point",
+      "outcome": "passed",
+      "duration_seconds": 0.003140888991765678,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form11_midpoint_interpolates",
+      "outcome": "passed",
+      "duration_seconds": 0.00285263400292024,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form12_3d_path_at_fractional_t",
+      "outcome": "passed",
+      "duration_seconds": 0.0029615029925480485,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_copious_data_form63_midpoint_interpolates",
+      "outcome": "passed",
+      "duration_seconds": 0.002732515014940873,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_at_start_returns_first_constituent_start",
+      "outcome": "passed",
+      "duration_seconds": 0.0027531049854587764,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_inside_first_constituent",
+      "outcome": "passed",
+      "duration_seconds": 0.002791038015857339,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_at_boundary_goes_to_first_leg_endpoint",
+      "outcome": "passed",
+      "duration_seconds": 0.0029595889791380614,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_inside_second_constituent",
+      "outcome": "passed",
+      "duration_seconds": 0.0028333509690128267,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_composite_curve_eval_at_terminus_returns_second_constituent_end",
+      "outcome": "passed",
+      "duration_seconds": 0.0031697969825472683,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_curve_eval_at_start_is_displaced_base_start",
+      "outcome": "passed",
+      "duration_seconds": 0.002763914002571255,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_curve_eval_at_midparam_follows_base",
+      "outcome": "passed",
+      "duration_seconds": 0.002729877975070849,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_curve_eval_nonzero_offset_follows_base",
+      "outcome": "passed",
+      "duration_seconds": 0.002706925995880738,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_interior_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0027645160153042525,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_on_first_curve_returns_curve1_point",
+      "outcome": "passed",
+      "duration_seconds": 0.004608116025337949,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_on_second_curve_returns_curve2_point",
+      "outcome": "passed",
+      "duration_seconds": 0.003056927991565317,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_ruled_surface_eval_dirflg_reverses_second_curve",
+      "outcome": "passed",
+      "duration_seconds": 0.002963765029562637,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_of_revolution_eval_at_start_angle",
+      "outcome": "passed",
+      "duration_seconds": 0.0030435250082518905,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_of_revolution_eval_quarter_rotation",
+      "outcome": "passed",
+      "duration_seconds": 0.0029763490019831806,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_of_revolution_eval_half_rotation",
+      "outcome": "passed",
+      "duration_seconds": 0.0031345219758804888,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_tabulated_cylinder_over_line_interpolates_along_generatrix",
+      "outcome": "passed",
+      "duration_seconds": 0.002971821988467127,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_tabulated_cylinder_over_arc_keeps_generatrix_parallel",
+      "outcome": "passed",
+      "duration_seconds": 0.003080022957874462,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_eval_on_non_parametric_entity_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.00314066099235788,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_curve_eval_with_s_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.004502175986999646,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_eval_without_s_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.004559863999020308,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_curve_eval_success_has_null_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.0029043340182397515,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_surface_eval_success_has_null_tangent",
+      "outcome": "passed",
+      "duration_seconds": 0.0030568979564122856,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_line_form1_eval_beyond_terminate",
+      "outcome": "passed",
+      "duration_seconds": 0.0027625830261968076,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_line_form2_eval_before_start",
+      "outcome": "passed",
+      "duration_seconds": 0.0031717319798190147,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_offset_surface_over_plane_offsets_along_plane_normal",
+      "outcome": "passed",
+      "duration_seconds": 0.0028305670130066574,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_plane_surface_eval_uses_reference_direction_basis",
+      "outcome": "passed",
+      "duration_seconds": 0.0029709499794989824,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_transformed_plane_surface_applies_entity_matrix_after_eval",
+      "outcome": "passed",
+      "duration_seconds": 0.003108043980319053,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_cylindrical_surface_eval_matches_spec_angles_and_axis",
+      "outcome": "passed",
+      "duration_seconds": 0.0032783380011096597,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_conical_surface_eval_expands_radius_by_v_tan_angle",
+      "outcome": "passed",
+      "duration_seconds": 0.00359514300362207,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_spherical_surface_eval_uses_latitude_and_longitude_degrees",
+      "outcome": "passed",
+      "duration_seconds": 0.0032898070057854056,
+      "message": null
+    },
+    {
+      "node_id": "test_geometric_eval.py::test_toroidal_surface_eval_matches_major_and_minor_radii",
+      "outcome": "passed",
+      "duration_seconds": 0.0030983189935795963,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_parse_line_from_pd",
+      "outcome": "passed",
+      "duration_seconds": 0.0027700499922502786,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_line_starting_at_origin",
+      "outcome": "passed",
+      "duration_seconds": 0.0028547689726110548,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_line_with_negative_coordinates",
+      "outcome": "passed",
+      "duration_seconds": 0.003251274029025808,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_evaluate_at_t_zero_yields_start_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0027068909839726985,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_evaluate_at_t_one_yields_terminate_point",
+      "outcome": "passed",
+      "duration_seconds": 0.0027326129493303597,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_evaluate_at_midpoint",
+      "outcome": "passed",
+      "duration_seconds": 0.002753594977548346,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_query_returns_single_line_entity",
+      "outcome": "passed",
+      "duration_seconds": 0.002829157980158925,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_roundtrip_preserves_line_entity",
+      "outcome": "passed",
+      "duration_seconds": 0.0034226340358145535,
+      "message": null
+    },
+    {
+      "node_id": "test_line_entity.py::test_roundtrip_subcommand_reparses_cleanly",
+      "outcome": "passed",
+      "duration_seconds": 0.0037042489857412875,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_file_without_start_section_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0016492770228069276,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_empty_file_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0015781319816596806,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_truncated_file_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0015963240002747625,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_minimal_valid_file_parses",
+      "outcome": "passed",
+      "duration_seconds": 0.0016349650104530156,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_query_with_nonexistent_de_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0016447060042992234,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_query_with_even_de_is_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0030863399733789265,
+      "message": null
+    },
+    {
+      "node_id": "test_malformed.py::test_random_bytes_are_rejected",
+      "outcome": "passed",
+      "duration_seconds": 0.0016832889523357153,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_associativity_definition_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0026231739902868867,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_line_font_definition_form_one_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0031004089978523552,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_line_font_definition_form_two_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027453729999251664,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_text_font_definition_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0029457180062308908,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_text_display_template_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027003620052710176,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_color_definition_optional_name_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0026058260118588805,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_units_data_multiple_units_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027135959826409817,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_attribute_table_definition_form_two_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002874008991057053,
+      "message": null
+    },
+    {
+      "node_id": "test_metadata_entities.py::test_solid_instance_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.003481505991658196,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_parse_success_envelope_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.004109358007553965,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_parse_global_section_has_required_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.0030774030019529164,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_parse_error_envelope_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.0016975540202111006,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_eval_success_envelope_has_required_top_level_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.008652483025798574,
+      "message": null
+    },
+    {
+      "node_id": "test_output_schema.py::test_query_success_envelope_has_entity_keys",
+      "outcome": "passed",
+      "duration_seconds": 0.0029717140132561326,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_plane_bounded_pointer_field_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0028543369844555855,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_node_ndcsp_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002678638993529603,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_nodal_displacement_node_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0032423619995824993,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_nodal_results_gnote_and_np_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0029466399864759296,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_element_results_gnote_and_ep_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.00305291500990279,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_network_subfigure_definition_display_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0029202130099292845,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_nodal_load_constraint_node_pointer_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0028628530271817,
+      "message": null
+    },
+    {
+      "node_id": "test_pointer_backed_fields.py::test_network_subfigure_instance_definition_and_display_pointers_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0030605509818997234,
+      "message": null
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_appendix_file_parse_and_roundtrip[ex1.iges-21]",
+      "outcome": "passed",
+      "duration_seconds": 0.005981533031444997,
+      "message": null
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_appendix_file_parse_and_roundtrip[ex2.iges-90]",
+      "outcome": "passed",
+      "duration_seconds": 0.00930595601676032,
+      "message": null
+    },
+    {
+      "node_id": "test_reference_fixtures.py::test_appendix_file_parse_and_roundtrip[ex3.iges-109]",
+      "outcome": "passed",
+      "duration_seconds": 0.010356404993217438,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_start_section_preserves_multiple_comment_lines",
+      "outcome": "passed",
+      "duration_seconds": 0.0020908309961669147,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_directory_section_uses_two_lines_per_entity_and_odd_de_indices",
+      "outcome": "passed",
+      "duration_seconds": 0.004040315019665286,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_parameter_line_uses_column_65_space_and_de_back_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.0022717899992130697,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_terminate_section_counts_match_actual_physical_sections",
+      "outcome": "passed",
+      "duration_seconds": 0.0021174159774091095,
+      "message": null
+    },
+    {
+      "node_id": "test_sections.py::test_parameter_data_spanning_multiple_physical_lines_is_concatenated",
+      "outcome": "passed",
+      "duration_seconds": 0.003107344004092738,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_block_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0036047949688509107,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_wedge_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0033601770119275898,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_right_circular_cylinder_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002851616038242355,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_cone_frustum_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0027578230074141175,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_sphere_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002898771985201165,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_torus_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0028819459839724004,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_solid_of_revolution_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002904958004364744,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_solid_of_linear_extrusion_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.0029336299921851605,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_ellipsoid_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002889872033847496,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_boolean_tree_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002609919960377738,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_selected_component_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002745451027294621,
+      "message": null
+    },
+    {
+      "node_id": "test_solid_entities.py::test_solid_assembly_roundtrip",
+      "outcome": "passed",
+      "duration_seconds": 0.002711803012061864,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_parametric_spline_curve_roundtrips_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.004761854972457513,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_parametric_spline_surface_roundtrips_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.005237831006525084,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_rational_bspline_curve_roundtrips_plane_normal_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.005577217991231009,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_rational_bspline_curve_nonplanar_still_roundtrips_plane_normal_field",
+      "outcome": "passed",
+      "duration_seconds": 0.002721841970924288,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_rational_bspline_surface_roundtrips_ranges_and_evaluates",
+      "outcome": "passed",
+      "duration_seconds": 0.005129139026394114,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_connect_point_roundtrips_full_metadata_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.002980232995469123,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_and_fea_entities.py::test_finite_element_roundtrips_connectivity_and_zero_node_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.0028720480331685394,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_surface_layout.py::test_eval_second_spline_surface_row_skips_boundary_placeholders",
+      "outcome": "passed",
+      "duration_seconds": 0.0029266870114952326,
+      "message": null
+    },
+    {
+      "node_id": "test_spline_surface_layout.py::test_write_spline_surface_includes_boundary_patch_slots",
+      "outcome": "passed",
+      "duration_seconds": 0.0018373999919276685,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_subfigure_definition_roundtrips_empty_member_list",
+      "outcome": "passed",
+      "duration_seconds": 0.002846650982974097,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_drawing_form_one_roundtrips_angles_and_annotations",
+      "outcome": "passed",
+      "duration_seconds": 0.002958478027721867,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_view_form_one_roundtrips_perspective_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.003420118009671569,
+      "message": null
+    },
+    {
+      "node_id": "test_structure_and_view_entities.py::test_rectangular_array_roundtrips_do_dont_list",
+      "outcome": "passed",
+      "duration_seconds": 0.00276177900377661,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_boundary_with_parameter_space_curve_collections_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0029554229986388236,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_curve_on_parametric_surface_roundtrips_creation_and_preference",
+      "outcome": "passed",
+      "duration_seconds": 0.003120508015854284,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_bounded_surface_with_multiple_boundaries_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.003157460014335811,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_trimmed_surface_with_default_outer_boundary_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002780128997983411,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_trimmed_surface_with_inner_boundaries_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0031433609838131815,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_associativity_instance_group_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.0028249000024516135,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_associativity_instance_empty_group_roundtrips",
+      "outcome": "passed",
+      "duration_seconds": 0.002609926013974473,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_external_reference_form_zero_roundtrips_filename_and_entity_name",
+      "outcome": "passed",
+      "duration_seconds": 0.0026356199814472347,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_external_reference_form_one_roundtrips_filename_only",
+      "outcome": "passed",
+      "duration_seconds": 0.002856650040484965,
+      "message": null
+    },
+    {
+      "node_id": "test_surface_boundary_entities.py::test_external_reference_form_two_roundtrips_logical_reference",
+      "outcome": "passed",
+      "duration_seconds": 0.002856518985936418,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_accepts_valid_file_with_no_validation_diagnostics",
+      "outcome": "passed",
+      "duration_seconds": 0.003244557010475546,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_invalid_xform_matrix_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.003286817984189838,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_invalid_view_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.0035598569666035473,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_invalid_label_display_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.003165150003042072,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_negative_entity_type",
+      "outcome": "passed",
+      "duration_seconds": 0.0033691660210024565,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_zero_param_line_count_for_non_null_entity",
+      "outcome": "passed",
+      "duration_seconds": 0.0031365159957204014,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_model_space_scale",
+      "outcome": "passed",
+      "duration_seconds": 0.001865316997282207,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_integer_bits",
+      "outcome": "passed",
+      "duration_seconds": 0.0035724069748539478,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[8-sp_magnitude]",
+      "outcome": "passed",
+      "duration_seconds": 0.00213919798261486,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[9-sp_significance]",
+      "outcome": "passed",
+      "duration_seconds": 0.0019142420205753297,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[10-dp_magnitude]",
+      "outcome": "passed",
+      "duration_seconds": 0.001866578997578472,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[11-dp_significance]",
+      "outcome": "passed",
+      "duration_seconds": 0.001926668977830559,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[16-max_line_weight_grads]",
+      "outcome": "passed",
+      "duration_seconds": 0.002227644989034161,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_non_positive_required_global_field[19-min_resolution]",
+      "outcome": "passed",
+      "duration_seconds": 0.0025962269864976406,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_non_positive_global_field",
+      "outcome": "passed",
+      "duration_seconds": 0.0018864150333683938,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_invalid_xform_matrix_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.002282917994307354,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_invalid_view_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.001896403991850093,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_invalid_label_display_pointer",
+      "outcome": "passed",
+      "duration_seconds": 0.0016983959649223834,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_write_rejects_zero_length_line",
+      "outcome": "passed",
+      "duration_seconds": 0.0019311599899083376,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_rejects_zero_length_line",
+      "outcome": "passed",
+      "duration_seconds": 0.0032611209608148783,
+      "message": null
+    },
+    {
+      "node_id": "test_validation.py::test_parse_accepts_valid_empty_file_with_no_entities",
+      "outcome": "passed",
+      "duration_seconds": 0.0017378180054947734,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_file.py::test_written_file_has_all_five_sections_and_80_column_records",
+      "outcome": "passed",
+      "duration_seconds": 0.0020149349875282496,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_file.py::test_empty_start_lines_produce_one_or_more_blank_start_records",
+      "outcome": "passed",
+      "duration_seconds": 0.002706867962842807,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_global_strings_use_hollerith_encoding_in_g_section",
+      "outcome": "passed",
+      "duration_seconds": 0.0018363540002610534,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_real_values_in_parameter_records_are_spec_legal",
+      "outcome": "passed",
+      "duration_seconds": 0.0021004459995310754,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_string_values_in_parameter_records_use_hollerith_encoding",
+      "outcome": "passed",
+      "duration_seconds": 0.0017268579977098852,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_format.py::test_logical_values_in_parameter_records_use_zero_and_one",
+      "outcome": "passed",
+      "duration_seconds": 0.0033099110005423427,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_global.py::test_write_and_parse_preserve_all_26_global_fields",
+      "outcome": "passed",
+      "duration_seconds": 0.002695339993806556,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_global.py::test_write_empty_document_roundtrips_default_global_values",
+      "outcome": "passed",
+      "duration_seconds": 0.0027578669833019376,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_param.py::test_line_parameter_record_has_entity_type_prefix_and_expected_field_count",
+      "outcome": "passed",
+      "duration_seconds": 0.0019496189779601991,
+      "message": null
+    },
+    {
+      "node_id": "test_writer_param.py::test_parameter_records_use_selected_custom_delimiters",
+      "outcome": "passed",
+      "duration_seconds": 0.0026561779668554664,
+      "message": null
+    }
+  ],
+  "test_summary": {
+    "passed": 248,
+    "failed": 1,
+    "skipped": 0,
+    "error": 0,
+    "total": 249
+  },
+  "scores": {
+    "correctness": 0.9959839357429718,
+    "task_score": 0.9959839357429718,
+    "extension_scores": {
+      "subscore.annotation_entities.passed": 15.0,
+      "subscore.annotation_entities.total": 15.0,
+      "subscore.core_entities.passed": 3.0,
+      "subscore.core_entities.total": 3.0,
+      "subscore.data_types.passed": 7.0,
+      "subscore.data_types.total": 8.0,
+      "subscore.defaulted_fields.passed": 3.0,
+      "subscore.defaulted_fields.total": 3.0,
+      "subscore.directory_entry.passed": 8.0,
+      "subscore.directory_entry.total": 8.0,
+      "subscore.entity_roundtrips.passed": 44.0,
+      "subscore.entity_roundtrips.total": 44.0,
+      "subscore.error_envelope.passed": 3.0,
+      "subscore.error_envelope.total": 3.0,
+      "subscore.free_format.passed": 6.0,
+      "subscore.free_format.total": 6.0,
+      "subscore.geometric_eval.passed": 46.0,
+      "subscore.geometric_eval.total": 46.0,
+      "subscore.line_entity.passed": 9.0,
+      "subscore.line_entity.total": 9.0,
+      "subscore.malformed.passed": 7.0,
+      "subscore.malformed.total": 7.0,
+      "subscore.metadata_entities.passed": 9.0,
+      "subscore.metadata_entities.total": 9.0,
+      "subscore.output_schema.passed": 5.0,
+      "subscore.output_schema.total": 5.0,
+      "subscore.pointer_backed_fields.passed": 8.0,
+      "subscore.pointer_backed_fields.total": 8.0,
+      "subscore.reference_fixtures.passed": 3.0,
+      "subscore.reference_fixtures.total": 3.0,
+      "subscore.sections.passed": 5.0,
+      "subscore.sections.total": 5.0,
+      "subscore.solid_entities.passed": 12.0,
+      "subscore.solid_entities.total": 12.0,
+      "subscore.spline_and_fea_entities.passed": 7.0,
+      "subscore.spline_and_fea_entities.total": 7.0,
+      "subscore.spline_surface_layout.passed": 2.0,
+      "subscore.spline_surface_layout.total": 2.0,
+      "subscore.structure_and_view_entities.passed": 4.0,
+      "subscore.structure_and_view_entities.total": 4.0,
+      "subscore.surface_boundary_entities.passed": 10.0,
+      "subscore.surface_boundary_entities.total": 10.0,
+      "subscore.validation.passed": 21.0,
+      "subscore.validation.total": 21.0,
+      "subscore.writer_file.passed": 2.0,
+      "subscore.writer_file.total": 2.0,
+      "subscore.writer_format.passed": 4.0,
+      "subscore.writer_format.total": 4.0,
+      "subscore.writer_global.passed": 2.0,
+      "subscore.writer_global.total": 2.0,
+      "subscore.writer_param.passed": 2.0,
+      "subscore.writer_param.total": 2.0
+    }
+  },
+  "source_stats": {
+    "file_count": 20,
+    "lines_of_code": 4011
+  },
+  "grading_environment": {
+    "mode": "docker",
+    "docker_image_tag": "clispecbench-base",
+    "docker_image_sha": "sha256:922c3bc7435e5546e737bf77b5bc8c07d15f86c9bad7f6fc68555cf8fbf04dc5"
+  },
+  "editorial": {
+    "status": "Complete",
+    "last_message": "Claims all five subcommands and 87 entity types round-trip with byte-identical second passes, 41 mutated error cases, fuzzing and B-spline evaluation matching an independent implementation to ~1e-13; says it had no real CAD files and lists its unclear-spec decisions. One hidden failure. Not a false completion claim.",
+    "commentary": "claude-5-5-publication-oct30-2026"
+  }
+}
