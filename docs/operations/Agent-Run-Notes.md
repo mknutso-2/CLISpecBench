@@ -311,6 +311,56 @@ From harness 0.2.3 the proxy writes these failures as
 `{"event": "error", "client", "error_type", "error"}` records, and the audit
 holds only the proxy's stdout.
 
+## Antigravity CLI 1.4.10 and Gemini 4 Argon (harness 0.2.4, 2026-10-29)
+
+Use `--agent antigravity-cli --model gemini-4-argon --effort <low|medium|high>`.
+`agy models` lists Argon as Low, Medium and High only; the CLI log confirms the
+selected variant (for example `Gemini 4 Argon (High)`).
+
+1.4.10 removes most of the 1.0.5 blockers described below. The adapter now runs
+`agy --print --output-format stream-json` without a TTY; the stream reports the
+model (`init`), every tool step and token usage (`result.usage`), which the
+harness records. Pricing uses Google's standard Argon rate ($2 input, $0.10
+cached, $10 output per million tokens, output including thinking), which is
+introductory through 2026-11-30 and doubles on 2026-12-01.
+
+Run conditions:
+
+- **Restricted agent.** The default agent offers `search_web`,
+  `read_url_content`, a browser, image generation, MCP, `schedule` and
+  subagents. `search_web` runs on Google's side of the model API, so the egress
+  proxy cannot block it (a probe returned live results). Runs use a project
+  agent, written to `/workspace/.agents/agents/clispecbench.md`, whose `tools`
+  list keeps only shell, file and task tools; a probe confirmed the model then
+  reports no web search tool. Settings `permissions` rules cannot remove
+  `search_web`: the rule grammar covers only `command`, `read_file`,
+  `write_file`, `read_url`, `execute_url` and `mcp`.
+- **API-only network.** Model traffic goes to
+  `daily-cloudcode-pa.googleapis.com`. Config (`aicode.googleapis.com`) and
+  feature flags (`antigravity-unleash.goog`) are allowed; telemetry
+  (`play.googleapis.com`), the auto-updater and profile images are denied.
+- **Token-only credential mount.** Only `antigravity-oauth-token` is mounted,
+  so conversations and databases stay in the container instead of the
+  operator's `~/.gemini/antigravity-cli`.
+- **Pinned CLI.** `AGY_CLI_DISABLE_AUTO_UPDATE=true`; the value `1` still
+  starts the updater.
+
+Built-in safety monitors review each pending tool call: `agy_tool_safety`
+(heuristic, log only), `sir_flash_lite` (a Flash-Lite model, log only) and
+`severe_internal_risks_agy` (LLM, can block). They do not produce submission
+content and are not disabled. Review each run's `antigravity-cli.log` for
+`triggered=true` on a blocking monitor; treat any intervention as a hold.
+
+Quota: `agy -p /quota --output-format json` reports the Argon weekly bucket
+without starting a turn. On the Pro plan Argon has its own small weekly limit,
+separate from the Gemini group. `useG1Credits` stays false.
+
+A WordCount Python smoke run at `high` scored 46/46 in 9.2 minutes (estimated
+$0.67) and served `gemini-4-argon`. It ran on a pre-release build of this change
+(stamped 0.2.3, before the auto-update value and the config hosts were fixed), so
+it is a setup check, not a benchmark result. Afterwards the Argon weekly limit showed
+about 1% remaining; its level before the setup probes and smoke run was not
+recorded.
 ## Antigravity CLI Status
 
 Antigravity CLI (`agy`) support is experimental as of 1.0.5. With a TTY and the

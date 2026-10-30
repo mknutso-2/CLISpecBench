@@ -157,17 +157,17 @@ class TestGeminiCLICredentialMounts:
 
 
 class TestAntigravityCLICredentialMounts:
-    def test_mounts_expected_antigravity_state_dirs_without_stat(self, tmp_path: Path) -> None:
+    def test_mounts_only_the_oauth_token_without_stat(self, tmp_path: Path) -> None:
+        # The rest of agy's state stays in the container, out of the operator's history.
         adapter = AntigravityCLIAdapter()
         mounts = adapter.credential_mounts(tmp_path)
-        gemini_dir = tmp_path / ".gemini"
 
-        antigravity_key = (gemini_dir / "antigravity-cli").as_posix()
-        config_key = (gemini_dir / "config").as_posix()
-        assert mounts[antigravity_key]["bind"] == "/root/.gemini/antigravity-cli"
-        assert mounts[antigravity_key]["mode"] == "rw"
-        assert mounts[config_key]["bind"] == "/root/.gemini/config"
-        assert mounts[config_key]["mode"] == "rw"
+        token_key = (
+            tmp_path / ".gemini" / "antigravity-cli" / "antigravity-oauth-token"
+        ).as_posix()
+        assert list(mounts) == [token_key]
+        assert mounts[token_key]["bind"] == "/root/.gemini/antigravity-cli/antigravity-oauth-token"
+        assert mounts[token_key]["mode"] == "rw"
 
 
 class TestAntigravityCLIEnvironment:
@@ -181,6 +181,7 @@ class TestAntigravityCLIEnvironment:
         assert env["NO_COLOR"] == "1"
         assert env["TERM"] == "dumb"
         assert env["AGY_CLI_HIDE_ACCOUNT_INFO"] == "1"
+        assert env["AGY_CLI_DISABLE_AUTO_UPDATE"] == "true"
 
     def test_invoke_command_points_at_prompt_file(self) -> None:
         adapter = AntigravityCLIAdapter()
@@ -193,13 +194,39 @@ class TestAntigravityCLIEnvironment:
         bash_script = cmd[2]
         assert "agy" in bash_script
         assert "--dangerously-skip-permissions" in bash_script
-        assert "--print-timeout 24h" in bash_script
+        assert "--print-timeout 0" in bash_script
+        assert "--output-format stream-json" in bash_script
         assert "--log-file /tmp/antigravity-cli.log" in bash_script
         assert "--model gemini-3.5-flash" in bash_script
         assert "--add-dir /workspace" in bash_script
         assert "/workspace/prompt.md" in bash_script
         assert "/workspace/output" in bash_script
         assert "$(cat" not in bash_script
+
+    def test_runs_a_project_agent_without_web_or_browser_tools(self) -> None:
+        adapter = AntigravityCLIAdapter(model="gemini-4-argon", effort="high")
+
+        bash_script = adapter.invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )[2]
+
+        assert "--agent clispecbench" in bash_script
+        assert "/workspace/.agents/agents/clispecbench.md" in bash_script
+        assert "tools: [run_command," in bash_script
+        for tool in (
+            "search_web",
+            "read_url_content",
+            "open_browser_url",
+            "browser_subagent",
+            "invoke_subagent",
+            "schedule",
+            "call_mcp_tool",
+            "generate_image",
+        ):
+            assert tool not in bash_script
+        assert adapter.network_policy == "api-only"
+        assert "daily-cloudcode-pa.googleapis.com" in adapter.allowed_hosts
 
 
 class TestCopilotCLICredentialMounts:
@@ -461,16 +488,22 @@ class TestModelAndEffort:
         assert adapter.model == "gemini-3.5-flash"
         assert adapter.effort is None
 
-    def test_antigravity_supports_model_override_but_ignores_effort(self) -> None:
-        adapter = AntigravityCLIAdapter(model="gemini-2.5-pro", effort="high")
+    def test_antigravity_passes_model_and_effort(self) -> None:
+        adapter = AntigravityCLIAdapter(model="gemini-4-argon", effort="high")
         cmd = adapter.invoke_command(
             PurePosixPath("/workspace/prompt.md"),
             PurePosixPath("/workspace"),
         )
 
-        assert adapter.model == "gemini-2.5-pro"
-        assert adapter.effort is None
-        assert "--model gemini-2.5-pro" in cmd[2]
+        assert adapter.model == "gemini-4-argon"
+        assert adapter.effort == "high"
+        assert "--model gemini-4-argon --effort high" in cmd[2]
+
+    def test_antigravity_omits_effort_when_unset(self) -> None:
+        cmd = AntigravityCLIAdapter().invoke_command(
+            PurePosixPath("/workspace/prompt.md"),
+            PurePosixPath("/workspace"),
+        )
         assert "--effort" not in cmd[2]
 
     def test_opencode_model_in_command(self) -> None:
@@ -543,7 +576,7 @@ class TestTelemetryPaths:
         adapter = AntigravityCLIAdapter()
         assert "/tmp/antigravity-cli-events.log" in adapter.telemetry_paths
         assert "/tmp/antigravity-cli.log" in adapter.telemetry_paths
-        assert adapter.requires_tty is True
+        assert adapter.requires_tty is False
 
     def test_gemini_has_request_audit_path(self) -> None:
         adapter = GeminiCLIAdapter()
@@ -1103,24 +1136,48 @@ class TestOpenCodeTokenUsage:
 
 
 class TestAntigravityCLITokenUsage:
-    def test_parse_token_usage_returns_none(self, tmp_path: Path) -> None:
-        adapter = AntigravityCLIAdapter()
-        assert adapter.parse_token_usage(tmp_path, "hello") is None
+    LOGS = "\n".join(
+        [
+            "warning: some stderr noise",
+            '{"event": "init", "conversation_id": "c1", "init": {"model": "gemini-4-argon"}}',
+            '{"event": "step_update", "step_update": {"step_index": 2, "state": "ACTIVE",'
+            ' "step_type": "tool", "tool_name": "run_command"}}',
+            '{"event": "step_update", "step_update": {"step_index": 2, "state": "DONE",'
+            ' "step_type": "tool", "tool_name": "run_command"}}',
+            '{"event": "step_update", "step_update": {"step_index": 3, "state": "DONE",'
+            ' "step_type": "tool", "tool_name": "write_to_file"}}',
+            '{"event": "result", "result": {"status": "SUCCESS", "response": "All done.\\n",'
+            ' "usage": {"input_tokens": 9095, "output_tokens": 206, "thinking_tokens": 144,'
+            ' "cache_read_tokens": 4726, "total_tokens": 9301}}}',
+        ]
+    )
 
-    def test_extract_last_agent_message_filters_auth_noise(self) -> None:
-        adapter = AntigravityCLIAdapter()
-        logs = "\n".join(
-            [
-                "Authentication required. Please visit the URL to log in:",
-                "https://accounts.google.com/o/oauth2/auth?state=test",
-                "Waiting for authentication (timeout 30s)...",
-                "Or, paste the authorization code here and press Enter:",
-                "Error: authentication interrupted.",
-                "All done.",
-            ]
-        )
+    def test_parse_token_usage_from_stream_json_result(self, tmp_path: Path) -> None:
+        usage = AntigravityCLIAdapter().parse_token_usage(tmp_path, self.LOGS)
 
-        assert adapter.extract_last_agent_message(logs) == "All done."
+        assert usage is not None
+        # agy reports uncached input; TokenUsage input includes the cached part.
+        assert usage.input_tokens == 9095 + 4726
+        assert usage.cache_read_input_tokens == 4726
+        assert usage.output_tokens == 206
+        assert usage.reasoning_output_tokens == 144
+        assert usage.tool_calls == 2
+
+    def test_parse_token_usage_without_result_returns_none(self, tmp_path: Path) -> None:
+        assert AntigravityCLIAdapter().parse_token_usage(tmp_path, "hello") is None
+
+    def test_last_message_and_served_model_come_from_the_stream(self) -> None:
+        adapter = AntigravityCLIAdapter(model="gemini-4-argon")
+
+        assert adapter.extract_last_agent_message(self.LOGS) == "All done."
+        assert adapter.detect_served_model(self.LOGS) == "gemini-4-argon"
+
+    def test_non_success_result_refines_exit_to_error(self, tmp_path: Path) -> None:
+        adapter = AntigravityCLIAdapter()
+        failed = self.LOGS.replace('"status": "SUCCESS"', '"status": "ERROR"')
+
+        assert adapter.refine_exit_reason(tmp_path, self.LOGS, "completed") == "completed"
+        assert adapter.refine_exit_reason(tmp_path, failed, "completed") == "error"
 
 
 class TestOpenHandsTokenUsage:

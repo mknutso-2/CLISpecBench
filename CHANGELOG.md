@@ -4,6 +4,20 @@ This file records changes to the `clispecbench` harness that can change how an
 agent run behaves. Each result stamps the version in `metadata.harness_version`.
 Eval prompt, doc and test changes belong in each eval's `Evals/<Task>/CHANGELOG.md`.
 
+## v0.2.4 — 2026-10-29
+
+- Antigravity CLI moves from 1.0.5 to 1.4.10 and runs headless with
+  `--output-format stream-json` instead of under a TTY. Runs now record token
+  usage, the served model and the final response from the stream, and pass
+  `--effort`.
+- Antigravity runs use a project agent limited to shell, file and task tools.
+  The default agent offers web search, URL fetching, a browser, image
+  generation, MCP, scheduled wake-ups and subagents; its `search_web` runs on
+  Google's side of the model API, where the egress proxy cannot block it.
+- Antigravity runs use the API-only network condition, mount only the OAuth
+  token instead of the whole `~/.gemini/antigravity-cli` directory, and turn
+  off the CLI's auto-updater.
+
 ## v0.2.3 — 2026-10-29
 
 - The API-only egress proxy writes a JSON `error` record when a connection

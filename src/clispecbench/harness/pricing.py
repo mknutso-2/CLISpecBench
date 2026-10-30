@@ -218,6 +218,9 @@ OPENAI_PRICING: dict[str, ModelPricing] = {
 # https://ai.google.dev/gemini-api/docs/pricing
 # cache_write = 0 (Gemini CLI doesn't report cache creation tokens)
 GOOGLE_PRICING: dict[str, ModelPricing] = {
+    # Verified 2026-10-29. Introductory rate through 2026-11-30; it doubles to
+    # $4 / $20 / $0.20 on 2026-12-01. Output includes thinking tokens.
+    "gemini-4-argon": ModelPricing(input=2.00, output=10.00, cached_input=0.10, cache_write=0),
     "gemini-3.1-pro-preview": ModelPricing(
         input=2.00, output=12.00, cached_input=0.20, cache_write=0
     ),  # noqa: E501

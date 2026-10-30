@@ -141,6 +141,15 @@ class TestEstimateCost:
         )
         assert cost == pytest.approx(5.55)  # type: ignore[reportUnknownMemberType]
 
+    def test_gemini_4_argon_model(self) -> None:
+        cost = estimate_cost(
+            "gemini-4-argon",
+            input_tokens=1_000_000,
+            output_tokens=1_000_000,
+            cache_read_input_tokens=500_000,
+        )
+        assert cost == pytest.approx(0.5 * 2.00 + 0.5 * 0.10 + 10.00)  # type: ignore[reportUnknownMemberType]
+
     def test_gpt_5_6_sol_model(self) -> None:
         cost = estimate_cost(
             "gpt-5.6-sol",
@@ -228,6 +237,7 @@ class TestPricingTableCompleteness:
 
     def test_all_gemini_models_present(self) -> None:
         for model in (
+            "gemini-4-argon",
             "gemini-3.1-pro-preview",
             "gemini-3-flash-preview",
             "gemini-2.5-pro",
